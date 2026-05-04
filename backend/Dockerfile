@@ -26,4 +26,4 @@ RUN test -f dist/main.js || (echo "ERROR: dist/main.js no fue generado" && exit 
 EXPOSE 3001
 
 # Correr migraciones y arrancar
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && ([ \"$RUN_SEED\" = \"true\" ] && node prisma/seed.js || true) && node dist/main"]
