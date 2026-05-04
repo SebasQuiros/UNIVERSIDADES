@@ -1,44 +1,27 @@
 # ================================================================
-#  CONTAFÁCIL SQ — Backend Dockerfile
+#  CONTAFÁCIL SQ — Backend Dockerfile (single-stage, production)
 # ================================================================
 
-# ── Stage: base ──────────────────────────────────────────────
-FROM node:20-alpine AS base
+FROM node:20-alpine
 WORKDIR /app
+
 RUN apk add --no-cache python3 make g++ openssl
 
-# ── Stage: dependencies ──────────────────────────────────────
-FROM base AS dependencies
+# Instalar dependencias
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm install --legacy-peer-deps
-# Generar cliente Prisma (usar binario local, no npx que descarga la última versión)
+
+# Generar cliente Prisma con binario local
 RUN ./node_modules/.bin/prisma generate
 
-# ── Stage: development ───────────────────────────────────────
-FROM dependencies AS development
+# Copiar código fuente y assets
 COPY . .
-EXPOSE 3001
-# El comando se define en docker-compose para incluir migrate + seed
-CMD ["npm", "run", "start:dev"]
 
-# ── Stage: build ─────────────────────────────────────────────
-FROM dependencies AS build
-COPY . .
+# Compilar TypeScript
 RUN npm run build
 
-# ── Stage: production ────────────────────────────────────────
-FROM base AS production
-WORKDIR /app
-ENV NODE_ENV=production
-
-COPY package*.json ./
-# Copiar node_modules del stage dependencies (incluye prisma CLI y cliente ya generado)
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY prisma ./prisma/
-COPY --from=build /app/dist ./dist
-# Assets estáticos consumidos en runtime (logo SJQA para PDF de facturas, etc.)
-COPY --from=build /app/assets ./assets
-
 EXPOSE 3001
+
+# Correr migraciones y arrancar
 CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node dist/main"]
