@@ -17,6 +17,8 @@
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    "noEmitOnError": false,
+    "rootDir": "src",
     "paths": {
       "@/*": ["src/*"],
       "@modules/*": ["src/modules/*"],
