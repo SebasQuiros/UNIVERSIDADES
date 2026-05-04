@@ -32,6 +32,7 @@ FROM base AS production
 WORKDIR /app
 ENV NODE_ENV=production
 
+COPY package*.json ./
 # Copiar node_modules del stage dependencies (incluye prisma CLI y cliente ya generado)
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY prisma ./prisma/
