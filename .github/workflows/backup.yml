@@ -1,0 +1,30 @@
+name: Daily Backup Verification
+
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 8 AM UTC = 2 AM Costa Rica
+  workflow_dispatch:
+
+jobs:
+  verify-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify backup exists
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            BACKUP_DIR="/opt/sjqagroup/backups"
+            LATEST=$(ls -t $BACKUP_DIR/*.sql.gz 2>/dev/null | head -1)
+            if [ -z "$LATEST" ]; then
+              echo "❌ No backup found!"
+              exit 1
+            fi
+            AGE=$(( ($(date +%s) - $(stat -c %Y "$LATEST")) / 3600 ))
+            if [ $AGE -gt 26 ]; then
+              echo "❌ Latest backup is ${AGE}h old!"
+              exit 1
+            fi
+            echo "✅ Backup OK: $LATEST (${AGE}h ago)"

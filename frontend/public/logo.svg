@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="55%" stop-color="#4338ca"/>
+      <stop offset="100%" stop-color="#5b21b6"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="200" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo redondeado -->
+  <rect width="200" height="200" rx="38" fill="url(#bg)"/>
+  <!-- Brillo interior -->
+  <rect width="200" height="200" rx="38" fill="url(#shine)"/>
+
+  <!-- Líneas de libro contable (ledger lines) -->
+  <rect x="30" y="44" width="140" height="9" rx="4.5" fill="white" opacity="0.90"/>
+  <rect x="30" y="62" width="105" height="9" rx="4.5" fill="white" opacity="0.55"/>
+  <rect x="30" y="80" width="70"  height="9" rx="4.5" fill="white" opacity="0.30"/>
+
+  <!-- Separador -->
+  <line x1="30" y1="102" x2="170" y2="102" stroke="white" stroke-opacity="0.20" stroke-width="1.5"/>
+
+  <!-- Texto CS en blanco -->
+  <text x="28" y="158"
+    font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+    font-weight="900"
+    font-size="68"
+    letter-spacing="-3"
+    fill="white">CS</text>
+
+  <!-- Q en azul claro/acento -->
+  <text x="126" y="158"
+    font-family="'Segoe UI', system-ui, -apple-system, sans-serif"
+    font-weight="900"
+    font-size="68"
+    fill="#93c5fd">Q</text>
+
+  <!-- Punto decorativo abajo derecha -->
+  <circle cx="168" cy="172" r="6" fill="#93c5fd" opacity="0.7"/>
+</svg>

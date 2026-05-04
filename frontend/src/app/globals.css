@@ -1,0 +1,355 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F3F4F6;
+  --foreground: #0f172a;
+
+  /* CSQ Brand Palette */
+  --csq-dark:         #03080F;
+  --csq-dark-2:       #060F1C;
+  --csq-dark-hover:   #0B1A2E;
+  --csq-mid:          #0F2657;
+  --csq-active:       #1E3A8A;
+  --csq-accent:       #3B82F6;
+  --csq-accent-bright:#60A5FA;
+  --csq-accent-dim:   #93c5fd;
+  --csq-white:        #FFFFFF;
+  --csq-light:        #EFF6FF;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Intro screen animations ───────────────────────────────────────────── */
+
+@keyframes intro-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes intro-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes intro-scale-in {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes orb-float-a {
+  0%, 100% { transform: translate(0, 0)   scale(1);    opacity: 0.55; }
+  50%       { transform: translate(30px, -20px) scale(1.08); opacity: 0.7;  }
+}
+
+@keyframes orb-float-b {
+  0%, 100% { transform: translate(0, 0)    scale(1);    opacity: 0.4; }
+  50%       { transform: translate(-25px, 18px) scale(1.06); opacity: 0.6; }
+}
+
+@keyframes orb-float-c {
+  0%, 100% { transform: translate(0, 0)   scale(1);    opacity: 0.3; }
+  50%       { transform: translate(15px, 25px) scale(1.05); opacity: 0.45; }
+}
+
+@keyframes shimmer-width {
+  from { width: 0;   opacity: 0; }
+  to   { width: 80px; opacity: 1; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.35), 0 0 40px rgba(59,130,246,0.15); }
+  50%       { box-shadow: 0 0 30px rgba(59,130,246,0.55), 0 0 60px rgba(59,130,246,0.25); }
+}
+
+.intro-item-1  { animation: intro-fade-up 0.7s cubic-bezier(.22,1,.36,1) both; animation-delay: 0.25s; }
+.intro-item-2  { animation: intro-fade-up 0.7s cubic-bezier(.22,1,.36,1) both; animation-delay: 0.5s;  }
+.intro-item-3  { animation: intro-fade-in 0.6s ease both;                       animation-delay: 0.8s;  }
+.intro-item-4  { animation: intro-fade-up 0.65s cubic-bezier(.22,1,.36,1) both; animation-delay: 1.0s; }
+.intro-item-5  { animation: intro-fade-up 0.65s cubic-bezier(.22,1,.36,1) both; animation-delay: 1.2s; }
+.intro-item-6  { animation: intro-fade-up 0.6s cubic-bezier(.22,1,.36,1) both;  animation-delay: 1.4s; }
+.intro-item-7  { animation: intro-scale-in 0.55s cubic-bezier(.22,1,.36,1) both; animation-delay: 1.75s; }
+
+.intro-screen {
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.intro-exit {
+  opacity: 0 !important;
+  transform: scale(0.98) !important;
+  pointer-events: none;
+}
+
+/* ── Landing page animations ───────────────────────────────────────────── */
+
+@keyframes lp-fade-up {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes lp-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes lp-scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes lp-bounce {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(6px); }
+}
+
+@keyframes lp-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg);  }
+  33%       { transform: translateY(-8px) rotate(1deg); }
+  66%       { transform: translateY(4px) rotate(-1deg); }
+}
+
+@keyframes lp-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.lp-in     { animation: lp-fade-up   0.7s cubic-bezier(.22,1,.36,1) both; }
+.lp-in-d1  { animation-delay: 0.1s;  }
+.lp-in-d2  { animation-delay: 0.25s; }
+.lp-in-d3  { animation-delay: 0.4s;  }
+.lp-in-d4  { animation-delay: 0.55s; }
+.lp-in-d5  { animation-delay: 0.7s;  }
+.lp-in-d6  { animation-delay: 0.85s; }
+.lp-in-d7  { animation-delay: 1.0s;  }
+
+.lp-bounce { animation: lp-bounce 2.2s ease-in-out infinite; }
+.lp-float  { animation: lp-float  6s ease-in-out infinite;   }
+
+.lp-card-hover {
+  transition: transform 0.25s cubic-bezier(.22,1,.36,1), box-shadow 0.25s ease;
+}
+.lp-card-hover:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(27,46,110,0.12) !important;
+}
+
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s cubic-bezier(.22,1,.36,1), transform 0.65s cubic-bezier(.22,1,.36,1);
+}
+.lp-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Logo floating animations ──────────────────────────────────────────────── */
+
+@keyframes logo-float-a {
+  0%, 100% { transform: translateY(0px)   rotate(-1deg); }
+  25%       { transform: translateY(-10px) rotate(0deg);  }
+  50%       { transform: translateY(-14px) rotate(1deg);  }
+  75%       { transform: translateY(-6px)  rotate(0deg);  }
+}
+
+@keyframes logo-float-b {
+  0%, 100% { transform: translateY(0px)   rotate(1deg);  }
+  25%       { transform: translateY(-8px)  rotate(0deg);  }
+  50%       { transform: translateY(-12px) rotate(-1deg); }
+  75%       { transform: translateY(-4px)  rotate(0deg);  }
+}
+
+@keyframes logo-float-c {
+  0%, 100% { transform: translateY(-6px)  scale(1);    }
+  30%       { transform: translateY(-16px) scale(1.02); }
+  60%       { transform: translateY(-10px) scale(0.99); }
+  80%       { transform: translateY(-18px) scale(1.01); }
+}
+
+/* ── Extended landing animations (sin tocar el HERO ni la seccion creador) ─── */
+
+/* 1. Slide from left/right cuando entra al viewport */
+@keyframes lp-slide-left {
+  from { opacity: 0; transform: translateX(-40px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+@keyframes lp-slide-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+/* 2. Zoom-in dramatico para CTAs */
+@keyframes lp-zoom-in {
+  from { opacity: 0; transform: scale(0.85); }
+  60%  { opacity: 1; transform: scale(1.04); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+/* 3. Gradient animado para fondos / texto destacado */
+@keyframes lp-gradient-flow {
+  0%, 100% { background-position: 0% 50%;  }
+  50%       { background-position: 100% 50%; }
+}
+
+/* 4. Sparkle / shimmer overlay (efecto pasada de brillo) */
+@keyframes lp-shine-sweep {
+  0%   { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(250%)  skewX(-20deg); }
+}
+
+/* 5. Pulse glow (botones / badges importantes) */
+@keyframes lp-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0.55), 0 4px 16px rgba(27,46,110,0.25); }
+  50%       { box-shadow: 0 0 0 10px rgba(96,165,250,0),  0 4px 24px rgba(27,46,110,0.35); }
+}
+
+/* 6. Subtle tilt al hover */
+@keyframes lp-tilt-cycle {
+  0%, 100% { transform: rotate(-0.4deg); }
+  50%       { transform: rotate(0.4deg);  }
+}
+
+/* 7. Number ticker (acompañar StatItem) */
+@keyframes lp-number-pop {
+  0%   { transform: scale(0.8); opacity: 0;   }
+  50%  { transform: scale(1.08); opacity: 0.8; }
+  100% { transform: scale(1);   opacity: 1;   }
+}
+
+/* 8. Marquee infinito (para barra de "tags" o convenio) */
+@keyframes lp-marquee {
+  from { transform: translateX(0);     }
+  to   { transform: translateX(-50%);  }
+}
+
+/* 9. Border travel — dibujo de borde animado en cards */
+@keyframes lp-border-travel {
+  0%   { background-position: 0% 0;   }
+  100% { background-position: 200% 0; }
+}
+
+/* 10. Reveal con escala (mas dramatico que el reveal lineal) */
+@keyframes lp-pop-up {
+  from { opacity: 0; transform: translateY(40px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1);       }
+}
+
+/* ── Utility classes ───────────────────────────────────────────────────────── */
+
+.lp-slide-left   { animation: lp-slide-left 0.8s cubic-bezier(.22,1,.36,1) both; }
+.lp-slide-right  { animation: lp-slide-right 0.8s cubic-bezier(.22,1,.36,1) both; }
+.lp-zoom         { animation: lp-zoom-in 0.7s cubic-bezier(.22,1,.36,1) both; }
+.lp-pop          { animation: lp-pop-up 0.65s cubic-bezier(.22,1,.36,1) both; }
+.lp-pulse        { animation: lp-pulse-glow 2.4s ease-in-out infinite; }
+.lp-tilt         { animation: lp-tilt-cycle 5s ease-in-out infinite; }
+.lp-number-pop   { animation: lp-number-pop 0.9s cubic-bezier(.22,1,.36,1) both; }
+
+/* Texto con gradiente animado */
+.lp-text-flow {
+  background: linear-gradient(90deg, #60A5FA, #A78BFA, #34D399, #60A5FA);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: lp-gradient-flow 6s ease infinite;
+}
+
+/* Efecto shine (pasada de brillo) — usar con un wrapper position:relative;overflow:hidden */
+.lp-shine {
+  position: relative;
+  overflow: hidden;
+}
+.lp-shine::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  animation: lp-shine-sweep 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Card hover potenciada (mas elevacion + escala micro) */
+.lp-card-pro {
+  transition:
+    transform 0.35s cubic-bezier(.22,1,.36,1),
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+.lp-card-pro:hover {
+  transform: translateY(-8px) scale(1.015);
+  box-shadow: 0 28px 56px rgba(27,46,110,0.18) !important;
+  border-color: rgba(96,165,250,0.4) !important;
+}
+
+/* Marquee container */
+.lp-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: lp-marquee 28s linear infinite;
+}
+.lp-marquee-track:hover { animation-play-state: paused; }
+
+/* IntersectionObserver reveal con stagger por hijo (data-stagger) */
+.lp-reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 0.7s cubic-bezier(.22,1,.36,1),
+    transform 0.7s cubic-bezier(.22,1,.36,1);
+}
+.lp-reveal-stagger.visible > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
+.lp-reveal-stagger.visible > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.15s; }
+.lp-reveal-stagger.visible > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.25s; }
+.lp-reveal-stagger.visible > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: 0.35s; }
+.lp-reveal-stagger.visible > *:nth-child(5) { opacity: 1; transform: translateY(0); transition-delay: 0.45s; }
+.lp-reveal-stagger.visible > *:nth-child(6) { opacity: 1; transform: translateY(0); transition-delay: 0.55s; }
+
+/* Background con blobs animados */
+.lp-blob-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lp-blob-bg::before,
+.lp-blob-bg::after {
+  content: "";
+  position: absolute;
+  width: 480px; height: 480px;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.35;
+  animation: lp-float 14s ease-in-out infinite;
+}
+.lp-blob-bg::before {
+  top: -120px; left: -100px;
+  background: #60A5FA;
+}
+.lp-blob-bg::after {
+  bottom: -140px; right: -80px;
+  background: #A78BFA;
+  animation-delay: -7s;
+}
+
+/* Respeta usuarios con preferencia de menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .lp-slide-left, .lp-slide-right, .lp-zoom, .lp-pop,
+  .lp-pulse, .lp-tilt, .lp-number-pop,
+  .lp-text-flow, .lp-shine::after, .lp-card-pro,
+  .lp-marquee-track, .lp-reveal-stagger > *,
+  .lp-blob-bg::before, .lp-blob-bg::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .lp-card-pro:hover { transform: none !important; }
+  .lp-text-flow {
+    background: none !important;
+    -webkit-text-fill-color: #60A5FA !important;
+    color: #60A5FA !important;
+  }
+}

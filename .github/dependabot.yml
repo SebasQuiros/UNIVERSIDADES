@@ -1,0 +1,70 @@
+# Dependabot — actualiza dependencias automáticamente y abre PRs
+# cuando aparecen patches de seguridad.
+#
+# Frecuencia: semanal. Agrupa minor/patch para reducir ruido y deja
+# major bumps en PRs separados (suelen requerir revisión manual).
+
+version: 2
+updates:
+  # ── Backend npm deps ─────────────────────────────────────────
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Costa_Rica
+    open-pull-requests-limit: 5
+    labels: [dependencies, backend]
+    groups:
+      backend-minor-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # Prisma 7 cambia la API significativamente — bump manual.
+      - dependency-name: prisma
+        update-types: [version-update:semver-major]
+      - dependency-name: '@prisma/client'
+        update-types: [version-update:semver-major]
+
+  # ── Frontend npm deps ────────────────────────────────────────
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Costa_Rica
+    open-pull-requests-limit: 5
+    labels: [dependencies, frontend]
+    groups:
+      frontend-minor-patch:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # Next.js majors cambian convenciones — bump manual.
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+
+  # ── GitHub Actions ───────────────────────────────────────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [dependencies, ci]
+
+  # ── Docker base images ───────────────────────────────────────
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: monthly
+    labels: [dependencies, docker]
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule:
+      interval: monthly
+    labels: [dependencies, docker]

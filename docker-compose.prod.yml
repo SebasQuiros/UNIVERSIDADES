@@ -1,0 +1,252 @@
+# ================================================================
+#  SJQA GROUP — docker-compose.prod.yml
+#
+#  Build de producción listo para 500 usuarios simultáneos, con:
+#    · HTTPS automático (Let's Encrypt / certbot)
+#    · Respaldos diarios de PostgreSQL con rotación
+#    · PgBouncer + Redis tunados para carga
+#
+#  Arranque:
+#    1. Copia .env.production como .env
+#    2. docker compose -f docker-compose.prod.yml up --build -d
+#    3. (primera vez) ./deploy/init-ssl.sh
+# ================================================================
+version: '3.9'
+
+services:
+
+  # ── 1. PostgreSQL 15 (tuned para 500 conexiones) ─────────────
+  database:
+    image: postgres:15-alpine
+    container_name: sjqa_db
+    restart: always
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-contafacil}
+      POSTGRES_USER:     ${POSTGRES_USER:-contafacil}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD es requerido en .env}
+    command: >
+      postgres
+      -c max_connections=500
+      -c shared_buffers=512MB
+      -c effective_cache_size=1536MB
+      -c work_mem=6MB
+      -c maintenance_work_mem=128MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=32MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c synchronous_commit=off
+    # No exponemos 5432 al host: la DB solo es accesible desde la red interna
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-contafacil} -d ${POSTGRES_DB:-contafacil}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - sjqa_net
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # ── 2. PgBouncer — connection pooler ─────────────────────────
+  pgbouncer:
+    image: bitnami/pgbouncer:latest
+    container_name: sjqa_pgbouncer
+    restart: always
+    environment:
+      POSTGRESQL_HOST:           database
+      POSTGRESQL_PORT:           5432
+      POSTGRESQL_DATABASE:       ${POSTGRES_DB:-contafacil}
+      POSTGRESQL_USERNAME:       ${POSTGRES_USER:-contafacil}
+      POSTGRESQL_PASSWORD:       ${POSTGRES_PASSWORD}
+      PGBOUNCER_POOL_MODE:       transaction
+      PGBOUNCER_MAX_CLIENT_CONN: 1000
+      PGBOUNCER_DEFAULT_POOL_SIZE: 150
+      PGBOUNCER_RESERVE_POOL_SIZE: 30
+      PGBOUNCER_SERVER_RESET_QUERY: DISCARD ALL
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - sjqa_net
+
+  # ── 3. Redis — cache + rate limiting distribuido ─────────────
+  redis:
+    image: redis:7-alpine
+    container_name: sjqa_redis
+    restart: always
+    command: >
+      sh -c "redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+      $${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}"
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+    networks:
+      - sjqa_net
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+
+  # ── 4. NestJS Backend ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: sjqa_backend
+    restart: always
+    environment:
+      DATABASE_URL:    "postgresql://${POSTGRES_USER:-contafacil}:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB:-contafacil}?connection_limit=40&pool_timeout=20"
+      REDIS_URL:       "${REDIS_URL:-redis://redis:6379}"
+      JWT_SECRET:      "${JWT_SECRET:?JWT_SECRET es requerido en .env}"
+      JWT_EXPIRES:     "${JWT_EXPIRES:-15m}"
+      REFRESH_SECRET:  "${REFRESH_SECRET:?REFRESH_SECRET es requerido en .env}"
+      REFRESH_EXPIRES: "${REFRESH_EXPIRES:-7d}"
+      PORT:            "3001"
+      NODE_ENV:        "production"
+      CORS_ORIGIN:     "${CORS_ORIGIN:?CORS_ORIGIN es requerido en .env}"
+      FRONTEND_URL:    "${FRONTEND_URL}"
+      GOOGLE_CLIENT_ID:     "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      GOOGLE_CALLBACK_URL:  "${GOOGLE_CALLBACK_URL:-}"
+      MICROSOFT_CLIENT_ID:     "${MICROSOFT_CLIENT_ID:-}"
+      MICROSOFT_CLIENT_SECRET: "${MICROSOFT_CLIENT_SECRET:-}"
+      MICROSOFT_CALLBACK_URL:  "${MICROSOFT_CALLBACK_URL:-}"
+      ANTHROPIC_API_KEY:       "${ANTHROPIC_API_KEY:-}"
+    depends_on:
+      database:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - sjqa_net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    command: sh -c "npx prisma migrate deploy && node dist/main"
+
+  # ── 5. Next.js Frontend ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL}"
+    container_name: sjqa_frontend
+    restart: always
+    environment:
+      NODE_ENV:            "production"
+      PORT:                "3000"
+      HOSTNAME:            "0.0.0.0"
+      BACKEND_URL:         "http://backend:3001"
+      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL}"
+    depends_on:
+      - backend
+    networks:
+      - sjqa_net
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+  # ── 6. Nginx — reverse proxy HTTPS ───────────────────────────
+  #  Al arrancar:
+  #    · Si NO existe cert en /etc/letsencrypt/live/$PUBLIC_DOMAIN/ → usa bootstrap (solo HTTP)
+  #    · Si existe → usa configuración HTTPS completa con redirect 80→443
+  #  ./deploy/init-ssl.sh pide el cert y recarga nginx con la config HTTPS.
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: sjqa_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_DOMAIN: "${PUBLIC_DOMAIN:?PUBLIC_DOMAIN es requerido en .env}"
+    volumes:
+      - ./deploy/nginx.prod.conf.template:/etc/nginx/templates/nginx.prod.conf.template:ro
+      - ./deploy/nginx.bootstrap.conf.template:/etc/nginx/templates/nginx.bootstrap.conf.template:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - sjqa_net
+    command: >
+      sh -c "
+        set -e;
+        if [ -f /etc/letsencrypt/live/$${PUBLIC_DOMAIN}/fullchain.pem ]; then
+          echo '→ Certificado encontrado, usando nginx.prod.conf';
+          envsubst '\$${PUBLIC_DOMAIN}' < /etc/nginx/templates/nginx.prod.conf.template > /etc/nginx/conf.d/default.conf;
+        else
+          echo '→ Sin certificado aún, usando nginx.bootstrap.conf (solo HTTP)';
+          envsubst '\$${PUBLIC_DOMAIN}' < /etc/nginx/templates/nginx.bootstrap.conf.template > /etc/nginx/conf.d/default.conf;
+        fi;
+        nginx -g 'daemon off;'
+      "
+
+  # ── 7. Certbot — renovación automática TLS ───────────────────
+  #  Se despierta cada 12 h y renueva los certs que falten <30 días
+  #  para expirar. Después envía SIGHUP a nginx para que los recargue.
+  certbot:
+    image: certbot/certbot
+    container_name: sjqa_certbot
+    restart: always
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: >
+      sh -c "trap exit TERM;
+             while :;
+             do certbot renew --webroot --webroot-path=/var/www/certbot --quiet;
+                sleep 12h & wait $${!};
+             done"
+
+  # ── 8. Respaldo automático de PostgreSQL ─────────────────────
+  #  · Diario a las 02:00 hora del servidor
+  #  · Mantiene: 30 días, 12 semanas, 12 meses
+  #  · Los archivos quedan en ./backups/ montado desde el host
+  #  · Restaurar:  gunzip < backups/daily/<archivo>.sql.gz | psql ...
+  db-backup:
+    image: prodrigestivill/postgres-backup-local
+    container_name: sjqa_backup
+    restart: always
+    environment:
+      POSTGRES_HOST:      database
+      POSTGRES_DB:        ${POSTGRES_DB:-contafacil}
+      POSTGRES_USER:      ${POSTGRES_USER:-contafacil}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD}
+      SCHEDULE:           "0 2 * * *"   # todos los días a las 02:00
+      BACKUP_KEEP_DAYS:   30
+      BACKUP_KEEP_WEEKS:  12
+      BACKUP_KEEP_MONTHS: 12
+      HEALTHCHECK_PORT:   8080
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - sjqa_net
+
+volumes:
+  pgdata_prod:
+    name: sjqa_pgdata_prod
+  letsencrypt:
+    name: sjqa_letsencrypt
+  certbot_www:
+    name: sjqa_certbot_www
+
+networks:
+  sjqa_net:
+    name: sjqa_network_prod
+    driver: bridge

@@ -1,0 +1,1533 @@
+// ================================================================
+//  CONTAFÁCIL SQ — Prisma Schema v1.0
+//  Sebastián Quirós Arroyo © 2026
+//
+//  Modelos: 26
+//  Base de datos: PostgreSQL 15
+// ================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================================================
+//  ENUMS
+// ================================================================
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum OAuthProvider {
+  LOCAL
+  GOOGLE
+  MICROSOFT
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum InvoiceType {
+  FE   // Factura Electrónica
+  NC   // Nota de Crédito
+  ND   // Nota de Débito
+  TE   // Tiquete Electrónico
+}
+
+enum SaleCondition {
+  CASH        // 01 - Contado
+  CREDIT      // 02 - Crédito
+  CONSIGNMENT // 03 - Consignación
+  APART       // 04 - Apartado
+  LEASE       // 05 - Arrendamiento con opción de compra
+  OTHER       // 99 - Otros
+}
+
+enum PaymentMethod {
+  CASH        // 01 - Efectivo
+  CARD        // 02 - Tarjeta
+  CHECK       // 03 - Cheque
+  TRANSFER    // 04 - Transferencia
+  OTHER       // 99 - Otros
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REVERSED
+}
+
+enum PeriodType {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum PeriodStatus {
+  OPEN
+  CLOSED
+  LOCKED
+}
+
+enum JournalSource {
+  MANUAL
+  AUTO_INVOICE
+  AUTO_PAYMENT
+  AUTO_PURCHASE
+  ADJUSTMENT
+  PERIOD_CLOSING
+  OPENING_BALANCE
+  REVERSAL
+}
+
+/// Estado de un asiento contable:
+///   CONFIRMED — final, afecta saldos y reportes (default).
+///   PENDING   — generado por la engine en modo HYBRID, esperando aprobación; NO afecta saldos.
+///   REJECTED  — descartado por el usuario; conserva trazabilidad pero se excluye de saldos.
+enum JournalEntryStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum MovementType {
+  SALE
+  PURCHASE
+  ADJUSTMENT
+  RETURN
+  INITIAL_STOCK
+}
+
+enum ExerciseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+}
+
+enum ExerciseDifficulty {
+  BASIC
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum ExerciseType {
+  FULL_CYCLE
+  JOURNAL_ONLY
+  INVOICING_ONLY
+  INVENTORY_ONLY
+}
+
+// ── Fase 1 (Config Engine + Multi-company) ──────────────────────
+enum CompanyMode {
+  INDIVIDUAL
+  GROUP
+}
+
+enum CompanyRole {
+  OWNER
+  MEMBER
+}
+
+enum TrackingEvent {
+  EXERCISE_OPENED
+  EXERCISE_RESUMED
+  INVOICE_CREATED
+  INVOICE_ISSUED
+  JOURNAL_ENTRY_SAVED
+  REPORT_VIEWED
+  EXERCISE_SUBMITTED
+  CLIENT_CREATED
+  PRODUCT_CREATED
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  EXERCISE_ASSIGNED
+  EXERCISE_DUE
+  GRADED
+  SYSTEM
+}
+
+// ================================================================
+//  BLOQUE 1 — PLANES Y UNIVERSIDADES
+// ================================================================
+
+model Plan {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  maxStudents Int      @default(50)   @map("max_students")
+  maxCourses  Int      @default(5)    @map("max_courses")
+  priceUsd    Decimal  @default(0)    @map("price_usd")    @db.Decimal(10,2)
+  isActive    Boolean  @default(true) @map("is_active")
+  features    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  universities University[]
+
+  @@map("plans")
+}
+
+model University {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  shortName   String?  @map("short_name")
+  country     String   @default("Costa Rica")
+  website     String?
+  logoUrl     String?  @map("logo_url")
+  planId      String?  @map("plan_id") @db.Uuid
+  maxStudents Int      @default(50)   @map("max_students")
+  isActive    Boolean  @default(true) @map("is_active")
+  settings    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt     @map("updated_at")
+
+  plan    Plan?    @relation(fields: [planId], references: [id])
+  users   User[]
+  courses Course[]
+
+  @@map("universities")
+}
+
+// ================================================================
+//  BLOQUE 2 — USUARIOS Y SESIONES
+// ================================================================
+
+model User {
+  id                 String        @id @default(uuid()) @db.Uuid
+  name               String
+  email              String        @unique
+  passwordHash       String?       @map("password_hash")
+  role               Role          @default(STUDENT)
+  universityId       String?       @map("university_id") @db.Uuid
+  avatarUrl          String?       @map("avatar_url")
+  oauthProvider      OAuthProvider @default(LOCAL) @map("oauth_provider")
+  oauthId            String?       @map("oauth_id")
+  isActive           Boolean       @default(true) @map("is_active")
+  emailVerified      Boolean       @default(false) @map("email_verified")
+  emailVerifyToken        String?  @map("email_verify_token")
+  emailVerifyTokenExpires DateTime? @map("email_verify_token_expires")
+  mustChangePassword Boolean       @default(false) @map("must_change_password")
+  // ── 2FA TOTP (RFC 6238) ──────────────────────────────────
+  totpSecret         String?       @map("totp_secret")     // base32 secret
+  totpEnabled        Boolean       @default(false) @map("totp_enabled")
+  resetToken         String?       @map("reset_token")
+  resetTokenExpires  DateTime?     @map("reset_token_expires")
+  lastLogin          DateTime?     @map("last_login")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt      @map("updated_at")
+
+  university         University?        @relation(fields: [universityId], references: [id])
+  sessions           Session[]
+  teacherCourses     Course[]           @relation("TeacherCourses")
+  enrollments        Enrollment[]
+  exercises          Exercise[]         @relation("TeacherExercises")
+  attempts           ExerciseAttempt[]
+  companies          Company[]
+  companyMemberships CompanyMembership[]
+  gradedAttempts     ExerciseAttempt[]  @relation("GradedBy")
+  journalEntries     JournalEntry[]
+  invoicesCreated    Invoice[]          @relation("InvoiceCreatedBy")
+  notifications      Notification[]
+  activityLogs       ActivityLog[]
+  sessionTrackings   SessionTracking[]
+  taxDeclarations    TaxDeclaration[]
+
+  @@unique([oauthProvider, oauthId])
+  @@index([email])
+  @@index([universityId])
+  @@index([role])
+  @@map("users")
+}
+
+model Session {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  token        String    @unique           // JWT ID (jti)
+  refreshToken String    @unique           @map("refresh_token")
+  ipAddress    String?   @map("ip_address")
+  userAgent    String?   @map("user_agent")
+  deviceInfo   String?   @map("device_info")
+  isActive     Boolean   @default(true)   @map("is_active")
+  expiresAt    DateTime  @map("expires_at")
+  lastUsedAt   DateTime  @default(now())  @map("last_used_at")
+  revokedAt    DateTime? @map("revoked_at")
+  revokedBy    String?   @map("revoked_by") @db.Uuid
+  createdAt    DateTime  @default(now())  @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([refreshToken])
+  @@map("sessions")
+}
+
+// ================================================================
+//  BLOQUE 3 — SISTEMA ACADÉMICO
+// ================================================================
+
+model Course {
+  id           String   @id @default(uuid()) @db.Uuid
+  universityId String   @map("university_id") @db.Uuid
+  teacherId    String   @map("teacher_id")    @db.Uuid
+  name         String
+  description  String?
+  code         String?
+  period       String?  // "2026-I", "2026-II"
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt      @map("updated_at")
+
+  university  University   @relation(fields: [universityId], references: [id])
+  teacher     User         @relation("TeacherCourses", fields: [teacherId], references: [id])
+  enrollments Enrollment[]
+  exercises   Exercise[]
+
+  @@index([universityId])
+  @@index([teacherId])
+  @@map("courses")
+}
+
+model Enrollment {
+  id         String   @id @default(uuid()) @db.Uuid
+  courseId   String   @map("course_id")  @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  isActive   Boolean  @default(true) @map("is_active")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId])
+  @@index([courseId])
+  @@index([studentId])
+  @@map("enrollments")
+}
+
+model Exercise {
+  id           String             @id @default(uuid()) @db.Uuid
+  courseId     String             @map("course_id")  @db.Uuid
+  teacherId    String             @map("teacher_id") @db.Uuid
+  title        String
+  description  String?
+  instructions String?            @db.Text
+  difficulty   ExerciseDifficulty @default(BASIC)
+  type         ExerciseType       @default(FULL_CYCLE)
+  maxScore     Decimal            @default(100) @map("max_score") @db.Decimal(5,2)
+  dueDate      DateTime?          @map("due_date")
+  isPublished  Boolean            @default(false) @map("is_published")
+  isArchived   Boolean            @default(false) @map("is_archived")
+  settings     Json               @default("{}")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt      @map("updated_at")
+
+  course    Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teacher   User              @relation("TeacherExercises", fields: [teacherId], references: [id])
+  rubrics   ExerciseRubric[]
+  attempts  ExerciseAttempt[]
+  config    ExerciseConfig?
+  companies Company[]         @relation("ExerciseCompanies")
+
+  @@index([courseId])
+  @@index([teacherId])
+  @@index([isPublished])
+  @@map("exercises")
+}
+
+// ── ExerciseConfig (Fase 1) ─────────────────────────────────────
+//
+// Configuración por plantilla de Ejercicio. Toda Company y Attempt
+// derivado de ese Ejercicio comparte esta config. El profesor la
+// modifica mientras Exercise.isPublished = false; al publicar
+// queda BLOQUEADA para garantizar consistencia académica.
+//
+// Defaults reflejan el comportamiento histórico del sistema:
+// journal/ledger/trialBalance/AR/AP en true (es como funciona hoy).
+// inventory e inter-company en false porque son features nuevos opt-in.
+model ExerciseConfig {
+  id           String      @id @default(uuid()) @db.Uuid
+  exerciseId   String      @unique @map("exercise_id") @db.Uuid
+  companyMode  CompanyMode @default(INDIVIDUAL) @map("company_mode")
+
+  autoJournal                      Boolean @default(true)  @map("auto_journal")
+  autoLedger                       Boolean @default(true)  @map("auto_ledger")
+  autoTrialBalance                 Boolean @default(true)  @map("auto_trial_balance")
+  autoAR                           Boolean @default(true)  @map("auto_ar")
+  autoAP                           Boolean @default(true)  @map("auto_ap")
+  autoInventory                    Boolean @default(false) @map("auto_inventory")
+  autoTransactionsBetweenCompanies Boolean @default(false) @map("auto_inter_company")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@map("exercise_configs")
+}
+
+model ExerciseRubric {
+  id            String   @id @default(uuid()) @db.Uuid
+  exerciseId    String   @map("exercise_id") @db.Uuid
+  criterion     String                           // 'min_invoices', 'balanced_sheet', etc.
+  description   String
+  expectedValue String?  @map("expected_value")
+  points        Decimal  @db.Decimal(5,2)
+  order         Int      @default(0)
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId])
+  @@map("exercise_rubrics")
+}
+
+model ExerciseAttempt {
+  id          String         @id @default(uuid()) @db.Uuid
+  exerciseId  String         @map("exercise_id") @db.Uuid
+  studentId   String         @map("student_id")  @db.Uuid
+  status      ExerciseStatus @default(NOT_STARTED)
+  score       Decimal?       @db.Decimal(5,2)
+  maxScore    Decimal        @default(100) @map("max_score") @db.Decimal(5,2)
+  feedback    String?        @db.Text
+  gradedById  String?        @map("graded_by") @db.Uuid
+  gradedAt    DateTime?      @map("graded_at")
+  startedAt   DateTime?      @map("started_at")
+  submittedAt DateTime?      @map("submitted_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt      @map("updated_at")
+
+  exercise         Exercise          @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  student          User              @relation(fields: [studentId], references: [id])
+  gradedBy         User?             @relation("GradedBy", fields: [gradedById], references: [id])
+  company          Company?
+  purchaseInvoices PurchaseInvoice[]
+  activityTracking ActivityTracking[]
+  sessionTracking  SessionTracking[]
+  studentProgress  StudentProgress?
+
+  @@unique([exerciseId, studentId])
+  @@index([exerciseId])
+  @@index([studentId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@index([gradedById])
+  @@map("exercise_attempts")
+}
+
+model ActivityTracking {
+  id         String        @id @default(uuid()) @db.Uuid
+  attemptId  String        @map("attempt_id") @db.Uuid
+  studentId  String        @map("student_id") @db.Uuid
+  event      TrackingEvent
+  metadata   Json          @default("{}")
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  attempt ExerciseAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+  @@index([studentId])
+  @@map("activity_tracking")
+}
+
+model SessionTracking {
+  id              String    @id @default(uuid()) @db.Uuid
+  attemptId       String    @map("attempt_id") @db.Uuid
+  studentId       String    @map("student_id") @db.Uuid
+  startedAt       DateTime  @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+  durationSeconds Int?      @map("duration_seconds")
+  lastPingAt      DateTime  @default(now()) @map("last_ping_at")
+
+  attempt ExerciseAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  student User            @relation(fields: [studentId], references: [id])
+
+  @@index([attemptId])
+  @@index([studentId])
+  @@map("session_tracking")
+}
+
+model StudentProgress {
+  id             String    @id @default(uuid()) @db.Uuid
+  attemptId      String    @unique @map("attempt_id") @db.Uuid
+  studentId      String    @map("student_id")  @db.Uuid
+  exerciseId     String    @map("exercise_id") @db.Uuid
+  companyId      String?   @map("company_id")  @db.Uuid
+  progressPct    Decimal   @default(0) @map("progress_pct") @db.Decimal(5,2)
+  invoicesCount  Int       @default(0) @map("invoices_count")
+  entriesCount   Int       @default(0) @map("entries_count")
+  clientsCount   Int       @default(0) @map("clients_count")
+  productsCount  Int       @default(0) @map("products_count")
+  timeSpentMin   Int       @default(0) @map("time_spent_min")
+  lastActivity   DateTime? @map("last_activity")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  attempt ExerciseAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([exerciseId])
+  @@map("student_progress")
+}
+
+// ================================================================
+//  BLOQUE 4 — EMPRESA SIMULADA
+// ================================================================
+
+model Company {
+  id                 String       @id @default(uuid()) @db.Uuid
+  // ── Fase 1: scoping multi-modo ─────────────────────────────
+  // INDIVIDUAL → attemptId + studentId set (modelo histórico, 1:1).
+  // GROUP      → exerciseId set, miembros via CompanyMembership;
+  //              attemptId/studentId quedan NULL.
+  attemptId          String?      @unique @map("attempt_id")  @db.Uuid
+  studentId          String?      @map("student_id")          @db.Uuid
+  exerciseId         String?      @map("exercise_id")         @db.Uuid
+  mode               CompanyMode  @default(INDIVIDUAL)
+  isCompanyEnabled   Boolean      @default(true) @map("is_company_enabled")
+  name               String
+  legalId            String       @map("legal_id")
+  legalIdType        String       @default("02") @map("legal_id_type")  // 01 física, 02 jurídica
+  economicActivity   String       @default("510101") @map("economic_activity")
+  address            String?
+  province           String?   // Provincia Hacienda: '1'=SJ, '2'=Alajuela... '7'=Limón
+  canton             String?   // Canton code, e.g. '01'
+  district           String?   // Distrito code, e.g. '01'
+  phone              String?
+  email              String?
+  currency           String       @default("CRC")
+  fiscalPeriodStart  DateTime?    @map("fiscal_period_start")
+  fiscalPeriodEnd    DateTime?    @map("fiscal_period_end")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt      @map("updated_at")
+
+  attempt           ExerciseAttempt?    @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  student           User?               @relation(fields: [studentId], references: [id])
+  exercise          Exercise?           @relation("ExerciseCompanies", fields: [exerciseId], references: [id], onDelete: Cascade)
+  memberships       CompanyMembership[]
+  accountingPeriods AccountingPeriod[]
+  accounts          Account[]
+  journalEntries    JournalEntry[]
+  clients           Client[]
+  suppliers         Supplier[]
+  products          Product[]
+  invoices          Invoice[]
+  payments          Payment[]
+  activityLogs      ActivityLog[]
+  bankAccounts      BankAccount[]
+  bankStatements    BankStatement[]
+  bankTransactions  BankTransaction[]
+  journalSequence   JournalSequence?  @relation("JournalSequenceCompany")
+  invoiceSequence   InvoiceSequence?  @relation("InvoiceSequenceCompany")
+  journalLines      JournalLine[]     @relation("JournalLineCompany")
+  fixedAssets       FixedAsset[]
+  employees         Employee[]
+  payrolls          Payroll[]
+  purchaseInvoices  PurchaseInvoice[]
+  partialPayments   PartialPayment[]
+  retenciones       Retencion[]
+  arPayments        ArPayment[]
+  apPayments        ApPayment[]
+  accountsReceivable AccountReceivable[]
+  accountsPayable    AccountPayable[]
+  inventoryLots      InventoryLot[]
+
+  @@index([studentId])
+  @@index([exerciseId])
+  @@index([mode])
+  @@index([isCompanyEnabled])
+  @@map("companies")
+}
+
+// ── CompanyMembership (Fase 1) ──────────────────────────────────
+// Solo se usa en companies modo GROUP. Para INDIVIDUAL la
+// pertenencia se sigue derivando de Company.studentId.
+model CompanyMembership {
+  id        String      @id @default(uuid()) @db.Uuid
+  companyId String      @map("company_id") @db.Uuid
+  userId    String      @map("user_id")    @db.Uuid
+  role      CompanyRole @default(MEMBER)
+  joinedAt  DateTime    @default(now()) @map("joined_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId],   references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId])
+  @@index([userId])
+  @@index([companyId])
+  @@map("company_memberships")
+}
+
+model AccountingPeriod {
+  id        String       @id @default(uuid()) @db.Uuid
+  companyId String       @map("company_id") @db.Uuid
+  name      String                           // "Enero 2026"
+  type      PeriodType   @default(MONTHLY)
+  startDate DateTime     @map("start_date")
+  endDate   DateTime     @map("end_date")
+  status    PeriodStatus @default(OPEN)
+  closedAt  DateTime?    @map("closed_at")
+  closedBy  String?      @map("closed_by") @db.Uuid
+  notes     String?
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, startDate, endDate])
+  @@index([companyId])
+  @@index([status])
+  @@map("accounting_periods")
+}
+
+// ================================================================
+//  BLOQUE 5 — MOTOR CONTABLE
+// ================================================================
+
+model Account {
+  id            String        @id @default(uuid()) @db.Uuid
+  companyId     String        @map("company_id") @db.Uuid
+  code          String                               // "1.1.02.01"
+  name          String
+  type          AccountType
+  subType       String?       @map("sub_type")
+  parentId      String?       @map("parent_id") @db.Uuid
+  level         Int           @default(1)            // 1-4
+  isHeader      Boolean       @default(false) @map("is_header")
+  normalBalance NormalBalance @map("normal_balance")
+  description   String?
+  isActive      Boolean       @default(true) @map("is_active")
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parent       Account?       @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children     Account[]      @relation("AccountHierarchy")
+  journalLines JournalLine[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([parentId])
+  @@index([type])
+  @@map("accounts")
+}
+
+model JournalEntry {
+  id           String        @id @default(uuid()) @db.Uuid
+  companyId    String        @map("company_id") @db.Uuid
+  invoiceId    String?       @map("invoice_id") @db.Uuid
+  paymentId    String?       @map("payment_id") @db.Uuid
+  entryNumber  Int           @map("entry_number")       // consecutivo por empresa
+  description  String
+  entryDate    DateTime      @map("entry_date")  @db.Date
+  reference    String?
+  source       JournalSource @default(MANUAL)
+  // ── Generic source link (extends invoiceId/paymentId for any business event) ──
+  sourceType   String?       @map("source_type")          // 'sale','purchase','collection','payment','payroll','depreciation', etc.
+  // String (no UUID) para soportar IDs compuestos en eventos N→1 como cobros
+  // parciales sobre la misma factura: `${invoiceId}:${timestamp}`.
+  sourceId     String?       @map("source_id")            // FK lógico al objeto de negocio que originó el asiento
+  // ── Estado del asiento (HYBRID workflow) ──────────────────────
+  //   CONFIRMED: default, afecta saldos. PENDING: pre-generado en modo
+  //   HYBRID, no afecta saldos. REJECTED: descartado por el usuario.
+  status       JournalEntryStatus @default(CONFIRMED)
+  // Mantenemos isPending por backward-compat (== status == PENDING).
+  // Se actualizan a la par.
+  isPending    Boolean       @default(false) @map("is_pending")
+  isReversed   Boolean       @default(false) @map("is_reversed")
+  reversedById String?       @map("reversed_by") @db.Uuid
+  createdById  String        @map("created_by")  @db.Uuid
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoice      Invoice?      @relation(fields: [invoiceId], references: [id])
+  payment      Payment?      @relation(fields: [paymentId], references: [id])
+  createdBy    User          @relation(fields: [createdById], references: [id])
+  lines        JournalLine[]
+
+  @@unique([companyId, entryNumber])
+  // Unique parcial: si `sourceType` y `sourceId` están presentes, NO puede
+  // existir otro asiento con esa misma fuente. Postgres trata pares con
+  // algún NULL como distintos, así que las filas legacy (NULL,NULL) no
+  // colisionan. Es la red de seguridad final contra duplicados.
+  @@unique([sourceType, sourceId], name: "uniq_source")
+  @@index([companyId])
+  @@index([entryDate])
+  @@index([invoiceId])
+  @@index([sourceType, sourceId])
+  @@index([status])
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  entryId     String   @map("entry_id")   @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  debit       Decimal  @default(0) @db.Decimal(15,2)
+  credit      Decimal  @default(0) @db.Decimal(15,2)
+  description String?
+
+  entry   JournalEntry @relation(fields: [entryId],   references: [id], onDelete: Cascade)
+  account Account      @relation(fields: [accountId], references: [id])
+  company Company      @relation("JournalLineCompany", fields: [companyId], references: [id])
+
+  @@index([entryId])
+  @@index([accountId])
+  @@index([companyId, accountId])
+  @@index([accountId, entryId])
+  @@map("journal_lines")
+}
+
+// Atomic consecutive number per company — prevents race conditions
+model JournalSequence {
+  companyId  String  @id @map("company_id") @db.Uuid
+  lastNumber Int     @default(0) @map("last_number")
+
+  company Company @relation("JournalSequenceCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("journal_sequences")
+}
+
+// Atomic invoice consecutive number per company — same pattern as JournalSequence
+model InvoiceSequence {
+  companyId  String  @id @map("company_id") @db.Uuid
+  lastNumber Int     @default(0) @map("last_number")
+
+  company Company @relation("InvoiceSequenceCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_sequences")
+}
+
+// ================================================================
+//  BLOQUE 6 — CLIENTES Y PROVEEDORES
+// ================================================================
+
+model Client {
+  id             String   @id @default(uuid()) @db.Uuid
+  companyId      String   @map("company_id") @db.Uuid
+  name           String
+  identification String
+  idType         String   @default("01") @map("id_type")
+  // 01 física, 02 jurídica, 03 DIMEX, 04 NITE
+  email          String?
+  phone          String?
+  address        String?
+  creditDays     Int      @default(0) @map("credit_days")
+  creditLimit    Decimal  @default(0) @map("credit_limit") @db.Decimal(15,2)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt      @map("updated_at")
+
+  company  Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+  payments Payment[]
+  accountsReceivable AccountReceivable[]
+
+  @@index([companyId])
+  @@map("clients")
+}
+
+model Supplier {
+  id             String   @id @default(uuid()) @db.Uuid
+  companyId      String   @map("company_id") @db.Uuid
+  name           String
+  identification String?
+  idType         String?  @map("id_type")
+  email          String?
+  phone          String?
+  address        String?
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt      @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("suppliers")
+}
+
+// ================================================================
+//  BLOQUE 7 — INVENTARIO
+// ================================================================
+
+model ProductCategory {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  products Product[]
+
+  @@map("product_categories")
+}
+
+model Product {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id")  @db.Uuid
+  categoryId   String?  @map("category_id") @db.Uuid
+  name         String
+  description  String?
+  sku          String?
+  cabysCode    String?  @map("cabys_code")  // 13 dígitos — obligatorio para facturación CR
+  cabysDesc    String?  @map("cabys_desc")  // Descripción desde catálogo CABYS
+  price        Decimal  @db.Decimal(15,2)
+  cost         Decimal  @default(0) @db.Decimal(15,2)
+  taxRate      Decimal  @default(13) @map("tax_rate") @db.Decimal(5,2)
+  // Tasas válidas CR: 0, 1, 2, 4, 8, 13
+  stock        Decimal  @default(0) @db.Decimal(15,3)
+  minStock     Decimal  @default(0) @map("min_stock") @db.Decimal(15,3)
+  unit         String   @default("Unid")
+  isService    Boolean  @default(false) @map("is_service")
+  // Fase 2: si trackInventory=true, las ventas consumen lotes FIFO y registran COGS.
+  // Para servicios siempre debería ser false (validado en service layer).
+  trackInventory Boolean @default(true) @map("track_inventory")
+  isActive     Boolean  @default(true)  @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt      @map("updated_at")
+
+  company      Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category     ProductCategory?     @relation(fields: [categoryId], references: [id])
+  invoiceItems InvoiceItem[]
+  movements    InventoryMovement[]
+  lots         InventoryLot[]
+
+  @@index([companyId])
+  @@index([cabysCode])
+  @@map("products")
+}
+
+model InventoryMovement {
+  id            String       @id @default(uuid()) @db.Uuid
+  productId     String       @map("product_id") @db.Uuid
+  companyId     String       @map("company_id") @db.Uuid
+  type          MovementType
+  quantity      Decimal      @db.Decimal(15,3)  // negativo = salida
+  unitCost      Decimal?     @map("unit_cost") @db.Decimal(15,2)
+  // Fase 2: totalCost almacena qty * unitCost para auditoría de COGS sin recalc.
+  totalCost     Decimal?     @map("total_cost") @db.Decimal(15,2)
+  // Fase 2: lotId apunta al lote consumido (SALE) o creado (PURCHASE/INITIAL).
+  lotId         String?      @map("lot_id")     @db.Uuid
+  referenceId   String?      @map("reference_id") @db.Uuid  // invoice_id u otro
+  referenceType String?      @map("reference_type")
+  balanceAfter  Decimal      @map("balance_after") @db.Decimal(15,3)
+  notes         String?
+  createdById   String       @map("created_by") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  product Product       @relation(fields: [productId], references: [id])
+  lot     InventoryLot? @relation(fields: [lotId], references: [id])
+
+  @@index([productId])
+  @@index([companyId])
+  @@index([lotId])
+  @@map("inventory_movements")
+}
+
+// ── InventoryLot (Fase 2 — FIFO) ────────────────────────────────
+//
+// Cada compra (o stock inicial) crea un lote con su qty y costo unitario.
+// Las ventas consumen lotes ordenados por receivedAt asc (FIFO).
+// El índice compuesto [productId, qtyRemaining, receivedAt] está pensado
+// para que el query de consumo sea sub-milisegundo aún con miles de lotes:
+//   WHERE productId = ? AND qtyRemaining > 0
+//   ORDER BY receivedAt ASC
+model InventoryLot {
+  id           String   @id @default(uuid()) @db.Uuid
+  productId    String   @map("product_id") @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  qtyOriginal  Decimal  @map("qty_original")  @db.Decimal(15,3)
+  qtyRemaining Decimal  @map("qty_remaining") @db.Decimal(15,3)
+  unitCost     Decimal  @map("unit_cost")     @db.Decimal(15,2)
+  source       String   // 'PURCHASE' | 'INITIAL' | 'ADJUSTMENT'
+  sourceId     String?  @map("source_id")     // UUID del documento origen (string para no acoplar tipo)
+  receivedAt   DateTime @default(now()) @map("received_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  product   Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  company   Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  movements InventoryMovement[]
+
+  @@index([productId, qtyRemaining, receivedAt])
+  @@index([companyId])
+  @@index([source, sourceId])
+  @@map("inventory_lots")
+}
+
+// ================================================================
+//  BLOQUE 8 — FACTURACIÓN ELECTRÓNICA CR
+// ================================================================
+
+model Invoice {
+  id                    String        @id @default(uuid()) @db.Uuid
+  companyId             String        @map("company_id") @db.Uuid
+  clientId              String?       @map("client_id")  @db.Uuid
+  clientName            String        @map("client_name")
+  clientIdentification  String        @map("client_identification")
+  consecutiveNumber     String        @map("consecutive_number")
+  clave                 String?
+  type                  InvoiceType   @default(FE)
+  saleCondition         SaleCondition @default(CASH) @map("sale_condition")
+  paymentMethod         PaymentMethod @default(CASH) @map("payment_method")
+  currency              String        @default("CRC")
+  exchangeRate          Decimal       @default(1)    @map("exchange_rate") @db.Decimal(10,4)
+  status                InvoiceStatus @default(DRAFT)
+  haciendaStatus        String        @default("PENDING") @map("hacienda_status")
+  subtotal              Decimal       @default(0) @db.Decimal(15,2)
+  discount              Decimal       @default(0) @db.Decimal(15,2)
+  tax                   Decimal       @default(0) @db.Decimal(15,2)
+  total                 Decimal       @default(0) @db.Decimal(15,2)
+  paidAmount            Decimal       @default(0) @map("paid_amount") @db.Decimal(15,2)
+  balanceDue            Decimal       @default(0) @map("balance_due") @db.Decimal(15,2)
+  xml                   String?       @db.Text
+  pdfUrl                String?       @map("pdf_url")
+  haciendaResponse      Json?         @map("hacienda_response")
+  haciendaMessage       String?       @map("hacienda_message") @db.Text
+  notes                 String?
+  issueDate             DateTime      @map("issue_date")
+  issuedAt              DateTime?     @map("issued_at")
+  createdById           String        @map("created_by_id") @db.Uuid
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt      @map("updated_at")
+
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client              Client?              @relation(fields: [clientId], references: [id])
+  createdBy           User                 @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  items               InvoiceItem[]
+  electronicDocument  ElectronicDocument?
+  journalEntries      JournalEntry[]
+  invoicePayments     InvoicePayment[]
+  arPayments          ArPayment[]
+  accountReceivable   AccountReceivable?
+
+  @@unique([companyId, consecutiveNumber])
+  @@index([companyId])
+  @@index([clientId])
+  @@index([status])
+  @@index([haciendaStatus])
+  @@index([createdById])
+  @@index([issueDate(sort: Desc)])
+  @@index([companyId, status])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  invoiceId   String   @map("invoice_id") @db.Uuid
+  productId   String?  @map("product_id") @db.Uuid
+  lineNo      Int      @map("line_no")
+  description String
+  quantity    Decimal  @db.Decimal(15,3)
+  unit        String   @default("Unid")
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(15,2)
+  discount    Decimal  @default(0) @db.Decimal(15,2)
+  taxRate     Decimal  @map("tax_rate")   @db.Decimal(5,2)
+  taxAmount   Decimal  @map("tax_amount") @db.Decimal(15,2)
+  subtotal    Decimal  @db.Decimal(15,2)
+  total       Decimal  @db.Decimal(15,2)
+  cabysCode   String?  @map("cabys_code")  // 13 dígitos
+
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model ElectronicDocument {
+  id           String    @id @default(uuid()) @db.Uuid
+  invoiceId    String    @unique @map("invoice_id") @db.Uuid
+  clave        String                              // 50 dígitos
+  consecutive  String
+  xmlContent   String    @map("xml_content") @db.Text
+  status       String    @default("PENDING")       // PENDING, ACCEPTED, REJECTED
+  haciendaMsg  String?   @map("hacienda_msg") @db.Text
+  qrData       String?   @map("qr_data")
+  validatedAt  DateTime? @map("validated_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("electronic_documents")
+}
+
+// ================================================================
+//  BLOQUE 9 — PAGOS Y CUENTAS POR COBRAR
+// ================================================================
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  companyId    String        @map("company_id") @db.Uuid
+  clientId     String        @map("client_id")  @db.Uuid
+  amount       Decimal       @db.Decimal(15,2)
+  currency     String        @default("CRC")
+  exchangeRate Decimal       @default(1) @map("exchange_rate") @db.Decimal(10,4)
+  amountCRC    Decimal       @map("amount_crc") @db.Decimal(15,2)
+  method       PaymentMethod
+  reference    String?
+  status       PaymentStatus @default(PENDING)
+  notes        String?
+  paidAt       DateTime      @map("paid_at")
+  createdById  String        @map("created_by") @db.Uuid
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  company         Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client          Client           @relation(fields: [clientId], references: [id])
+  invoicePayments InvoicePayment[]
+  journalEntries  JournalEntry[]
+
+  @@index([companyId])
+  @@index([clientId])
+  @@map("payments")
+}
+
+model InvoicePayment {
+  id        String   @id @default(uuid()) @db.Uuid
+  invoiceId String   @map("invoice_id") @db.Uuid
+  paymentId String   @map("payment_id") @db.Uuid
+  amount    Decimal  @db.Decimal(15,2)
+  appliedAt DateTime @default(now()) @map("applied_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, paymentId])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@map("invoice_payments")
+}
+
+// ================================================================
+//  BLOQUE 10 — SISTEMA GENERAL
+// ================================================================
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  title     String
+  body      String?
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false) @map("is_read")
+  link      String?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ================================================================
+//  BANK RECONCILIATION
+// ================================================================
+
+model BankAccount {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  name          String                          // "Cuenta BAC #001"
+  bankName      String   @map("bank_name")     // "BAC", "BCR", "BN"
+  accountNumber String?  @map("account_number")
+  currency      String   @default("CRC")
+  currentBalance Decimal @default(0) @db.Decimal(15,2) @map("current_balance")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  company       Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  statements    BankStatement[]
+  transactions  BankTransaction[]
+
+  @@index([companyId])
+  @@map("bank_accounts")
+}
+
+model BankStatement {
+  id             String   @id @default(uuid()) @db.Uuid
+  bankAccountId  String   @map("bank_account_id") @db.Uuid
+  companyId      String   @map("company_id") @db.Uuid
+  fileName       String   @map("file_name")
+  periodStart    DateTime @map("period_start")
+  periodEnd      DateTime @map("period_end")
+  totalCredits   Decimal  @db.Decimal(15,2) @map("total_credits")
+  totalDebits    Decimal  @db.Decimal(15,2) @map("total_debits")
+  closingBalance Decimal  @db.Decimal(15,2) @map("closing_balance")
+  status         String   @default("PENDING")  // PENDING, IN_PROGRESS, COMPLETED
+  reconciledAt   DateTime? @map("reconciled_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  bankAccount    BankAccount          @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  company        Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lines          BankStatementLine[]
+
+  @@index([companyId])
+  @@index([bankAccountId])
+  @@map("bank_statements")
+}
+
+model BankStatementLine {
+  id              String   @id @default(uuid()) @db.Uuid
+  statementId     String   @map("statement_id") @db.Uuid
+  date            DateTime
+  description     String
+  reference       String?
+  debit           Decimal  @default(0) @db.Decimal(15,2)
+  credit          Decimal  @default(0) @db.Decimal(15,2)
+  balance         Decimal? @db.Decimal(15,2)
+  status          String   @default("UNMATCHED")  // UNMATCHED, MATCHED, IGNORED
+  matchedTxId     String?  @map("matched_tx_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  statement       BankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+
+  @@index([statementId])
+  @@map("bank_statement_lines")
+}
+
+model BankTransaction {
+  id             String   @id @default(uuid()) @db.Uuid
+  bankAccountId  String?  @map("bank_account_id") @db.Uuid
+  companyId      String   @map("company_id") @db.Uuid
+  date           DateTime
+  description    String
+  reference      String?
+  amount         Decimal  @db.Decimal(15,2)
+  type           String   // DEBIT, CREDIT
+  source         String   @default("MANUAL") // INVOICE, PURCHASE, PAYROLL, MANUAL
+  sourceId       String?  @map("source_id") @db.Uuid
+  isReconciled   Boolean  @default(false) @map("is_reconciled")
+  reconciledAt   DateTime? @map("reconciled_at")
+  statementLineId String? @map("statement_line_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  bankAccount    BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([bankAccountId])
+  @@map("bank_transactions")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id")    @db.Uuid
+  companyId  String?  @map("company_id") @db.Uuid
+  action     String
+  entity     String?
+  entityId   String?  @map("entity_id") @db.Uuid
+  ipAddress  String?  @map("ip_address")
+  details    Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([createdAt(sort: Desc)])
+  @@map("activity_log")
+}
+
+// ================================================================
+//  BLOQUE 11 — ACTIVOS FIJOS
+// ================================================================
+
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  SUM_OF_DIGITS
+  DOUBLE_DECLINING
+}
+
+model FixedAsset {
+  id                  String             @id @default(uuid()) @db.Uuid
+  companyId           String             @map("company_id") @db.Uuid
+  name                String
+  description         String?
+  acquisitionDate     DateTime           @map("acquisition_date") @db.Date
+  acquisitionCost     Decimal            @map("acquisition_cost") @db.Decimal(15,2)
+  salvageValue        Decimal            @default(0) @map("salvage_value") @db.Decimal(15,2)
+  usefulLifeYears     Int                @map("useful_life_years")
+  depreciationMethod  DepreciationMethod @default(STRAIGHT_LINE) @map("depreciation_method")
+  accumulatedDeprec   Decimal            @default(0) @map("accumulated_depreciation") @db.Decimal(15,2)
+  bookValue           Decimal            @map("book_value") @db.Decimal(15,2)
+  isActive            Boolean            @default(true) @map("is_active")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  company              Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  depreciationRecords  DepreciationRecord[]
+
+  @@index([companyId])
+  @@map("fixed_assets")
+}
+
+model DepreciationRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  assetId        String   @map("asset_id") @db.Uuid
+  companyId      String   @map("company_id") @db.Uuid
+  period         String
+  amount         Decimal  @db.Decimal(15,2)
+  bookValueAfter Decimal  @map("book_value_after") @db.Decimal(15,2)
+  journalEntryId String?  @map("journal_entry_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  asset FixedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, period])
+  @@index([assetId])
+  @@index([companyId])
+  @@map("depreciation_records")
+}
+
+// ================================================================
+//  BLOQUE 12 — NÓMINA
+// ================================================================
+
+model Employee {
+  id             String    @id @default(uuid()) @db.Uuid
+  companyId      String    @map("company_id") @db.Uuid
+  attemptId      String?   @map("attempt_id") @db.Uuid
+  name           String
+  identification String
+  position       String?
+  department     String?
+  salary         Decimal   @db.Decimal(15,2)
+  salaryType     String    @default("MENSUAL") @map("salary_type")
+  startDate      DateTime  @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payrollLines PayrollLine[]
+
+  @@index([companyId])
+  @@map("employees")
+}
+
+model Payroll {
+  id                String   @id @default(uuid()) @db.Uuid
+  companyId         String   @map("company_id") @db.Uuid
+  attemptId         String?  @map("attempt_id") @db.Uuid
+  period            String   // "2026-04" (YYYY-MM)
+  periodType        String   @default("MENSUAL") @map("period_type")
+  totalGross        Decimal  @db.Decimal(15,2) @map("total_gross")
+  totalNet          Decimal  @db.Decimal(15,2) @map("total_net")
+  totalPatrono      Decimal  @db.Decimal(15,2) @map("total_patrono")
+  totalTrabajador   Decimal  @db.Decimal(15,2) @map("total_trabajador")
+  totalAguinaldo    Decimal  @db.Decimal(15,2) @map("total_aguinaldo")
+  totalRenta        Decimal  @default(0) @db.Decimal(15,2) @map("total_renta")
+  journalEntryId    String?  @map("journal_entry_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  company Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lines   PayrollLine[]
+
+  @@unique([companyId, period])
+  @@index([companyId])
+  @@map("payrolls")
+}
+
+model PayrollLine {
+  id               String   @id @default(uuid()) @db.Uuid
+  payrollId        String   @map("payroll_id") @db.Uuid
+  employeeId       String   @map("employee_id") @db.Uuid
+
+  // Ingresos
+  salaryGross      Decimal  @db.Decimal(15,2) @map("salary_gross")
+  overtime         Decimal  @default(0) @db.Decimal(15,2)
+  bonus            Decimal  @default(0) @db.Decimal(15,2)
+  totalGross       Decimal  @db.Decimal(15,2) @map("total_gross")
+
+  // Deducciones trabajador
+  ccssWorker       Decimal  @db.Decimal(15,2) @map("ccss_worker")
+  rentaDeduccion   Decimal  @default(0) @db.Decimal(15,2) @map("renta_deduccion")
+  otherDeductions  Decimal  @default(0) @db.Decimal(15,2) @map("other_deductions")
+  totalDeductions  Decimal  @db.Decimal(15,2) @map("total_deductions")
+  netSalary        Decimal  @db.Decimal(15,2) @map("net_salary")
+
+  // Cargas patronales
+  ccssPatrono      Decimal  @db.Decimal(15,2) @map("ccss_patrono")
+  aguinaldo        Decimal  @db.Decimal(15,2)
+  totalEmployerCost Decimal @db.Decimal(15,2) @map("total_employer_cost")
+
+  // Breakdown JSON (for UI)
+  breakdown        Json     @default("{}")
+
+  payroll  Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([payrollId])
+  @@index([employeeId])
+  @@map("payroll_lines")
+}
+
+// ================================================================
+//  BLOQUE 13 — FACTURAS DE COMPRA (CRÉDITO FISCAL IVA)
+// ================================================================
+
+model PurchaseInvoice {
+  id             String   @id @default(uuid()) @db.Uuid
+  companyId      String   @map("company_id")   @db.Uuid
+  // Fase 4: opcional para soportar GROUP companies (sin attempt 1:1) y
+  // mirror inter-company. INDIVIDUAL siempre lo trae set.
+  attemptId      String?  @map("attempt_id")   @db.Uuid
+  supplierName   String   @map("supplier_name")
+  supplierCedula String?  @map("supplier_cedula")
+  invoiceNumber  String   @map("invoice_number")
+  date           DateTime
+  subtotal       Decimal  @db.Decimal(15, 2)
+  taxRate        Decimal  @default(0.13) @map("tax_rate")   @db.Decimal(5, 4)
+  taxAmount      Decimal  @db.Decimal(15, 2)               @map("tax_amount")
+  total          Decimal  @db.Decimal(15, 2)
+  description    String?
+  isAccepted     Boolean  @default(true)  @map("is_accepted")
+  isPaid         Boolean  @default(false) @map("is_paid")
+  paidAmount     Decimal  @default(0)     @map("paid_amount") @db.Decimal(15,2)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt      @map("updated_at")
+
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  attempt        ExerciseAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+  apPayments     ApPayment[]
+  accountPayable AccountPayable?
+
+  @@index([companyId])
+  @@index([attemptId])
+  @@map("purchase_invoices")
+}
+
+// ================================================================
+//  BLOQUE 14b — IMPUESTO SOBRE LA RENTA (D-101)
+// ================================================================
+
+model PartialPayment {
+  id          String    @id @default(uuid()) @db.Uuid
+  companyId   String    @map("company_id") @db.Uuid
+  attemptId   String    @map("attempt_id") @db.Uuid
+  fiscalYear  Int       @map("fiscal_year")
+  quarter     Int       // 1, 2, 3, 4
+  dueDate     DateTime  @map("due_date")
+  amount      Decimal   @db.Decimal(15, 2)
+  paidDate    DateTime? @map("paid_date")
+  isPaid      Boolean   @default(false) @map("is_paid")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([fiscalYear])
+  @@map("partial_payments")
+}
+
+model Retencion {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyId       String    @map("company_id") @db.Uuid
+  attemptId       String    @map("attempt_id") @db.Uuid
+  // 'SERVICIOS_PROFESIONALES' | 'ALQUILER' | 'DIVIDENDOS' | 'TRANSPORTE'
+  type            String
+  supplierName    String    @map("supplier_name")
+  supplierCedula  String?   @map("supplier_cedula")
+  grossAmount     Decimal   @db.Decimal(15, 2) @map("gross_amount")
+  retentionRate   Decimal   @db.Decimal(5, 4)  @map("retention_rate")
+  retentionAmount Decimal   @db.Decimal(15, 2) @map("retention_amount")
+  netPaid         Decimal   @db.Decimal(15, 2) @map("net_paid")
+  date            DateTime
+  description     String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("retenciones")
+}
+
+// ================================================================
+//  BLOQUE 14 — DECLARACIONES TRIBUTARIAS (PRÁCTICA TRIBU CR)
+// ================================================================
+
+enum TaxDeclarationType {
+  D104_IVA        // Declaración IVA mensual
+  D101_RENTA      // Declaración Renta anual personas jurídicas
+  D103_RETENCION  // Retención en la fuente mensual
+  D115_DIVIDENDOS // Dividendos y participaciones
+}
+
+enum TaxDeclarationStatus {
+  DRAFT
+  SUBMITTED
+}
+
+model TaxDeclaration {
+  id          String               @id @default(uuid()) @db.Uuid
+  userId      String               @map("user_id") @db.Uuid
+  type        TaxDeclarationType
+  period      String               // "2026-03" para D-104 | "2025-2026" para D-101
+  status      TaxDeclarationStatus @default(DRAFT)
+  formData    Json                 @map("form_data")   // casillas ingresadas
+  result      Json                 @default("{}")       // cálculos finales
+  referenceNo String?              @map("reference_no") // número simulado
+  submittedAt DateTime?            @map("submitted_at")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt      @map("updated_at")
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments TaxAttachment[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([period])
+  @@map("tax_declarations")
+}
+
+model TaxAttachment {
+  id            String   @id @default(uuid()) @db.Uuid
+  declarationId String   @map("declaration_id") @db.Uuid
+  lineKey       String   @map("line_key")    // "ventas13", "gastosSueldos", etc.
+  lineLabel     String   @map("line_label")  // etiqueta legible de la casilla
+  fileName      String   @map("file_name")
+  fileSize      Int      @map("file_size")   // bytes
+  mimeType      String   @map("mime_type")
+  fileData      String   @map("file_data")   @db.Text // base64
+  uploadedAt    DateTime @default(now())     @map("uploaded_at")
+
+  declaration TaxDeclaration @relation(fields: [declarationId], references: [id], onDelete: Cascade)
+
+  @@index([declarationId])
+  @@index([lineKey])
+  @@map("tax_attachments")
+}
+
+// ================================================================
+//  BLOQUE 15 — AR/AP PAYMENTS (Phase 13)
+// ================================================================
+
+model ArPayment {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  invoiceId   String   @map("invoice_id") @db.Uuid
+  amount      Decimal  @db.Decimal(15,2)
+  paymentDate DateTime @map("payment_date")
+  method      String   @default("TRANSFER")  // CASH, TRANSFER, CHECK, CARD
+  reference   String?
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoice  Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([invoiceId])
+  @@map("ar_payments")
+}
+
+model ApPayment {
+  id                String   @id @default(uuid()) @db.Uuid
+  companyId         String   @map("company_id")          @db.Uuid
+  purchaseInvoiceId String   @map("purchase_invoice_id") @db.Uuid
+  amount            Decimal  @db.Decimal(15,2)
+  paymentDate       DateTime @map("payment_date")
+  method            String   @default("TRANSFER")
+  reference         String?
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  company         Company         @relation(fields: [companyId],         references: [id], onDelete: Cascade)
+  purchaseInvoice PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([purchaseInvoiceId])
+  @@map("ap_payments")
+}
+
+// ================================================================
+//  BLOQUE 16 — CUENTAS POR COBRAR / POR PAGAR (Tablas reales)
+//
+//  Espejo persistente del saldo de cada factura. Lo poblamos desde
+//  BusinessEventsService.recordSale / recordPurchase y lo reducimos
+//  desde recordCollection / recordPayment.
+//
+//  Las APIs que ya derivan AR/AP en runtime (aging, statement) siguen
+//  funcionando — estas tablas son una vista materializada para tener
+//  un saldo confiable y un punto único de verdad.
+// ================================================================
+
+enum ARStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum APStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+model AccountReceivable {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id")  @db.Uuid
+  customerId  String?  @map("customer_id") @db.Uuid     // null si la factura no tenía Client (ventas a contado)
+  invoiceId   String   @unique @map("invoice_id") @db.Uuid
+  total       Decimal  @db.Decimal(15, 2)
+  balance     Decimal  @db.Decimal(15, 2)
+  status      ARStatus @default(PENDING)
+  dueDate     DateTime? @map("due_date")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  company  Company  @relation(fields: [companyId],  references: [id], onDelete: Cascade)
+  customer Client?  @relation(fields: [customerId], references: [id])
+  invoice  Invoice  @relation(fields: [invoiceId],  references: [id], onDelete: Cascade)
+
+  @@index([companyId, status])
+  @@index([customerId])
+  @@map("accounts_receivable")
+}
+
+model AccountPayable {
+  id                String   @id @default(uuid()) @db.Uuid
+  companyId         String   @map("company_id")          @db.Uuid
+  supplierName      String   @map("supplier_name")       // PurchaseInvoice usa nombre denormalizado
+  supplierCedula    String?  @map("supplier_cedula")
+  purchaseInvoiceId String   @unique @map("purchase_invoice_id") @db.Uuid
+  total             Decimal  @db.Decimal(15, 2)
+  balance           Decimal  @db.Decimal(15, 2)
+  status            APStatus @default(PENDING)
+  dueDate           DateTime? @map("due_date")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt      @map("updated_at")
+
+  company         Company         @relation(fields: [companyId],         references: [id], onDelete: Cascade)
+  purchaseInvoice PurchaseInvoice @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, status])
+  @@index([supplierName])
+  @@map("accounts_payable")
+}

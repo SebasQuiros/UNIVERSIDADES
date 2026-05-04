@@ -1,0 +1,191 @@
+# ================================================================
+#  CONTAFÁCIL SQ — docker-compose.yml
+#  Sebastián Quirós Arroyo © 2026
+#  Arranque: docker compose up --build
+# ================================================================
+version: '3.9'
+
+services:
+
+  # ── 1. PostgreSQL 15 ─────────────────────────────────────────
+  database:
+    image: postgres:15-alpine
+    container_name: contafacil_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-contafacil}
+      POSTGRES_USER:     ${POSTGRES_USER:-contafacil}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerido — definí en .env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-contafacil} -d ${POSTGRES_DB:-contafacil}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - contafacil_net
+
+  # ── 2a. Redis (caché de sesiones) ────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: contafacil_redis
+    restart: unless-stopped
+    command: >
+      sh -c "redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --save ''
+      $${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}"
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+    networks:
+      - contafacil_net
+
+  # ── 2b. PgBouncer (connection pooler) ────────────────────────
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: contafacil_pgbouncer
+    restart: unless-stopped
+    environment:
+      DB_USER:     "${POSTGRES_USER:-contafacil}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerido — definí en .env}"
+      DB_HOST:     database
+      DB_NAME:     "${POSTGRES_DB:-contafacil}"
+      POOL_MODE:   transaction
+      MAX_CLIENT_CONN: 5000
+      DEFAULT_POOL_SIZE: 100
+      RESERVE_POOL_SIZE: 20
+      SERVER_RESET_QUERY: DISCARD ALL
+      AUTH_TYPE:   plain
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - contafacil_net
+
+  # ── 2. NestJS Backend ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: contafacil_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL:  "postgresql://${POSTGRES_USER:-contafacil}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerido — definí en .env}@pgbouncer:5432/${POSTGRES_DB:-contafacil}?pgbouncer=true&connection_limit=100"
+      REDIS_URL:     "${REDIS_URL:-redis://redis:6379}"
+      JWT_SECRET:    "${JWT_SECRET:?JWT_SECRET requerido — generar con: node -e \"console.log(require('crypto').randomBytes(48).toString('hex'))\"}"
+      JWT_EXPIRES:   "${JWT_EXPIRES:-15m}"
+      REFRESH_SECRET:  "${REFRESH_SECRET:?REFRESH_SECRET requerido — debe ser distinto a JWT_SECRET}"
+      REFRESH_EXPIRES: "${REFRESH_EXPIRES:-7d}"
+      PORT:          "${BACKEND_PORT:-3001}"
+      NODE_ENV:      "${NODE_ENV:-development}"
+      CORS_ORIGIN:   "${CORS_ORIGIN:-http://localhost:3000,http://localhost}"
+      # OAuth (configurar después)
+      GOOGLE_CLIENT_ID:     "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      MICROSOFT_CLIENT_ID:     "${MICROSOFT_CLIENT_ID:-}"
+      MICROSOFT_CLIENT_SECRET: "${MICROSOFT_CLIENT_SECRET:-}"
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      - ./backend/assets:/app/assets:ro
+      - ./backend/ecosystem.config.js:/app/ecosystem.config.js:ro
+      - /app/node_modules
+      - backend_dist:/app/dist
+    depends_on:
+      database:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - contafacil_net
+    command: >
+      sh -c "npm install --legacy-peer-deps --prefer-offline 2>/dev/null || npm install --legacy-peer-deps;
+      npm rebuild bcrypt --build-from-source 2>/dev/null || true;
+      npx prisma generate;
+      npx prisma migrate deploy;
+      npx prisma db seed || true;
+      ([ -f /app/dist/src/main.js ] || npm run build) &&
+      node dist/src/main.js"
+
+  # ── 3. Nginx Reverse Proxy ───────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: contafacil_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - contafacil_net
+
+  # ── 4. Next.js Frontend ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: contafacil_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:3001}"
+      NODE_ENV: "development"
+      BACKEND_URL: "http://backend:3001"
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - contafacil_net
+    command: npm run dev
+
+  # ── 5. Backup automático de PostgreSQL ──────────────────────
+  db-backup:
+    image: prodrigestivill/postgres-backup-local
+    container_name: contafacil_backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST:     database
+      POSTGRES_DB:       ${POSTGRES_DB:-contafacil}
+      POSTGRES_USER:     ${POSTGRES_USER:-contafacil}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SCHEDULE:          "@daily"
+      BACKUP_KEEP_DAYS:  7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+      HEALTHCHECK_PORT:  8080
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - contafacil_net
+
+# ── IMPORTANTE: crear el volumen manualmente antes del primer arranque:
+#    docker volume create contafacil_pgdata
+# ── Esto protege los datos de un accidente con "docker-compose down -v"
+volumes:
+  pgdata:
+    name: contafacil_pgdata
+    external: true
+  backend_dist:
+    name: contafacil_backend_dist
+
+networks:
+  contafacil_net:
+    name: contafacil_network
+    driver: bridge

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice">
+  <!-- Background blue -->
+  <rect width="900" height="600" fill="#002B7F"/>
+  <!-- White stripe -->
+  <rect y="100" width="900" height="100" fill="#FFFFFF"/>
+  <!-- Red stripe -->
+  <rect y="200" width="900" height="200" fill="#CE1126"/>
+  <!-- White stripe -->
+  <rect y="400" width="900" height="100" fill="#FFFFFF"/>
+
+  <!-- Subtle wave texture overlays for depth -->
+  <defs>
+    <linearGradient id="wave1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#001f5e" stop-opacity="0.5"/>
+      <stop offset="25%"  stop-color="#002B7F" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#001f5e" stop-opacity="0.35"/>
+      <stop offset="75%"  stop-color="#002B7F" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#001a50" stop-opacity="0.45"/>
+    </linearGradient>
+    <linearGradient id="wave2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#a80e1e" stop-opacity="0.4"/>
+      <stop offset="30%"  stop-color="#CE1126" stop-opacity="0"/>
+      <stop offset="55%"  stop-color="#a80e1e" stop-opacity="0.3"/>
+      <stop offset="80%"  stop-color="#CE1126" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#8c0b1a" stop-opacity="0.4"/>
+    </linearGradient>
+    <linearGradient id="vignette" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#000000" stop-opacity="0.18"/>
+      <stop offset="40%"  stop-color="#000000" stop-opacity="0"/>
+      <stop offset="60%"  stop-color="#000000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.22"/>
+    </linearGradient>
+    <filter id="blur1">
+      <feGaussianBlur stdDeviation="1.5"/>
+    </filter>
+  </defs>
+
+  <!-- Wave folds on blue stripes -->
+  <rect width="900" height="100" fill="url(#wave1)"/>
+  <rect y="500" width="900" height="100" fill="url(#wave1)"/>
+  <!-- Wave folds on red stripe -->
+  <rect y="200" width="900" height="200" fill="url(#wave2)"/>
+
+  <!-- Diagonal light sweep (simulates sun on waving flag) -->
+  <rect width="900" height="600" fill="url(#vignette)"/>
+
+  <!-- Light diagonal sheen -->
+  <polygon points="180,0 320,0 140,600 0,600" fill="rgba(255,255,255,0.04)"/>
+  <polygon points="500,0 560,0 380,600 320,600" fill="rgba(255,255,255,0.03)"/>
+  <polygon points="750,0 830,0 650,600 570,600" fill="rgba(255,255,255,0.03)"/>
+
+  <!-- Coat of arms placeholder (oval centered on red stripe) -->
+  <ellipse cx="450" cy="300" rx="52" ry="62" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+  <ellipse cx="450" cy="300" rx="44" ry="53" fill="rgba(255,255,255,0.08)"/>
+</svg>

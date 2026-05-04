@@ -1,0 +1,81 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Cada lunes 9am UTC — encuentra CVEs nuevas en deps existentes
+  schedule:
+    - cron: '0 9 * * 1'
+
+# Permisos mínimos — el job solo lee el repo y comenta en PRs.
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+
+jobs:
+  npm-audit:
+    name: npm audit (${{ matrix.workspace }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.workspace }}/package-lock.json
+
+      - name: Install (skip scripts to avoid arbitrary code execution)
+        working-directory: ${{ matrix.workspace }}
+        run: npm ci --ignore-scripts
+
+      - name: Audit (HIGH+ falla el job)
+        working-directory: ${{ matrix.workspace }}
+        run: npm audit --audit-level=high
+
+      - name: Audit (full report — informativo)
+        if: always()
+        working-directory: ${{ matrix.workspace }}
+        run: npm audit --json > ../audit-${{ matrix.workspace }}.json || true
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-${{ matrix.workspace }}
+          path: audit-${{ matrix.workspace }}.json
+          retention-days: 30
+
+  codeql:
+    name: CodeQL (JS/TS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-and-quality
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript-typescript'
+
+  secret-scan:
+    name: Gitleaks (secrets en commits)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # gitleaks necesita historial completo
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
