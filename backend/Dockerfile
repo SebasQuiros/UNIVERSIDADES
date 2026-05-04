@@ -12,8 +12,8 @@ FROM base AS dependencies
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm install --legacy-peer-deps
-# Generar cliente Prisma
-RUN npx prisma generate
+# Generar cliente Prisma (usar binario local, no npx que descarga la última versión)
+RUN ./node_modules/.bin/prisma generate
 
 # ── Stage: development ───────────────────────────────────────
 FROM dependencies AS development
@@ -35,11 +35,11 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm install --omit=dev --legacy-peer-deps
-RUN npx prisma generate
+RUN ./node_modules/.bin/prisma generate
 
 COPY --from=build /app/dist ./dist
 # Assets estáticos consumidos en runtime (logo SJQA para PDF de facturas, etc.)
 COPY --from=build /app/assets ./assets
 
 EXPOSE 3001
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node dist/main"]
