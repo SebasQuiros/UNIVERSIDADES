@@ -11,7 +11,7 @@ jobs:
     needs: [] # CI jobs run in ci.yml on the same push; add cross-workflow dependency here if needed
     steps:
       - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
