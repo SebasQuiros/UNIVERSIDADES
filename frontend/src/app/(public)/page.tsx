@@ -288,10 +288,10 @@ export default function Home() {
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
       }}>
-        {/* Dark overlay — cubre la imagen clara para que el texto blanco sea legible */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(8,18,50,0.88) 0%, rgba(12,30,72,0.82) 45%, rgba(8,18,50,0.90) 100%)', pointerEvents: 'none' }} />
+        {/* Overlay semitransparente — deja ver la imagen pero mantiene el texto legible */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(8,18,50,0.62) 0%, rgba(12,30,72,0.55) 45%, rgba(8,18,50,0.65) 100%)', pointerEvents: 'none' }} />
         {/* Vignette lateral suave */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, rgba(30,58,138,0.10) 0%, rgba(8,18,50,0.35) 80%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 30%, rgba(8,18,50,0.25) 100%)', pointerEvents: 'none' }} />
 
         {/* Logos flotantes */}
         <div className="lp-in lp-in-d1" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(24px,5vw,56px)', marginBottom: 48, flexWrap: 'wrap', justifyContent: 'center' }}>
