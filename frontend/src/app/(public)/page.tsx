@@ -288,10 +288,8 @@ export default function Home() {
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
       }}>
-        {/* Overlay semitransparente — deja ver la imagen pero mantiene el texto legible */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(8,18,50,0.62) 0%, rgba(12,30,72,0.55) 45%, rgba(8,18,50,0.65) 100%)', pointerEvents: 'none' }} />
-        {/* Vignette lateral suave */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, transparent 30%, rgba(8,18,50,0.25) 100%)', pointerEvents: 'none' }} />
+        {/* Overlay muy sutil — solo para suavizar bordes, sin oscurecer */}
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(245,240,230,0.18)', pointerEvents: 'none' }} />
 
         {/* Logos flotantes */}
         <div className="lp-in lp-in-d1" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(24px,5vw,56px)', marginBottom: 48, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -300,22 +298,22 @@ export default function Home() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, animation: 'logo-float-a 5s ease-in-out infinite' }}>
             <div style={{
               width: 148, height: 148, borderRadius: 32, overflow: 'hidden',
-              background: 'rgba(255,255,255,0.95)',
-              border: '2px solid rgba(255,255,255,0.3)',
-              boxShadow: '0 12px 48px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+              background: 'rgba(255,255,255,0.92)',
+              border: '2px solid rgba(180,150,80,0.35)',
+              boxShadow: '0 12px 40px rgba(120,90,30,0.18), 0 2px 8px rgba(0,0,0,0.10)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: 12,
             }}>
               <img src="/utn-logo.png" alt="UTN" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Univ. Técnica Nacional</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5C3D0A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Univ. Técnica Nacional</span>
           </div>
 
           {/* Separador UTN → ContaSJ */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.3),transparent)' }} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)' }}>×</span>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.3),transparent)' }} />
+            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(160,120,40,0.4),transparent)' }} />
+            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(160,120,40,0.5)' }}>×</span>
+            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(160,120,40,0.4),transparent)' }} />
           </div>
 
           {/* ContaSJ — logo central */}
@@ -323,58 +321,58 @@ export default function Home() {
             <div style={{
               width: 172, height: 172, borderRadius: '50%', overflow: 'hidden',
               background: '#000000',
-              border: '3px solid rgba(96,165,250,0.55)',
-              boxShadow: '0 0 0 6px rgba(96,165,250,0.12), 0 16px 56px rgba(0,0,0,0.5), 0 2px 10px rgba(0,0,0,0.3)',
+              border: '3px solid rgba(180,140,40,0.7)',
+              boxShadow: '0 0 0 6px rgba(180,140,40,0.12), 0 16px 48px rgba(100,70,10,0.25)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: 0,
             }}>
               <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ContaSJ</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5C3D0A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ContaSJ</span>
           </div>
 
           {/* Separador ContaSJ → C&F */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.3),transparent)' }} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)' }}>×</span>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.3),transparent)' }} />
+            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(160,120,40,0.4),transparent)' }} />
+            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(160,120,40,0.5)' }}>×</span>
+            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(160,120,40,0.4),transparent)' }} />
           </div>
 
           {/* C&F */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, animation: 'logo-float-b 6s ease-in-out infinite' }}>
             <div style={{
               width: 148, height: 148, borderRadius: 32, overflow: 'hidden',
-              background: 'rgba(255,255,255,0.95)',
-              border: '2px solid rgba(255,255,255,0.3)',
-              boxShadow: '0 12px 48px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+              background: 'rgba(255,255,255,0.92)',
+              border: '2px solid rgba(180,150,80,0.35)',
+              boxShadow: '0 12px 40px rgba(120,90,30,0.18), 0 2px 8px rgba(0,0,0,0.10)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: 12,
             }}>
               <img src="/contabilidad-logo.png" alt="Contabilidad & Finanzas" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Contabilidad & Finanzas</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5C3D0A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Contabilidad & Finanzas</span>
           </div>
 
         </div>
 
         {/* Badge */}
-        <div className="lp-in lp-in-d2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 999, marginBottom: 22, backdropFilter: 'blur(8px)' }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#60A5FA', display: 'inline-block', boxShadow: '0 0 8px #60A5FA' }} />
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · Costa Rica 2026</span>
+        <div className="lp-in lp-in-d2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(180,140,40,0.4)', borderRadius: 999, marginBottom: 22, backdropFilter: 'blur(8px)' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#B8860B', display: 'inline-block', boxShadow: '0 0 8px rgba(184,134,11,0.6)' }} />
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5C3D0A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · Costa Rica 2026</span>
         </div>
 
         {/* Heading */}
-        <h1 className="lp-in lp-in-d3" style={{ fontSize: 'clamp(2rem,5.5vw,3.8rem)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, letterSpacing: '-0.03em', margin: '0 0 22px', maxWidth: 780 }}>
+        <h1 className="lp-in lp-in-d3" style={{ fontSize: 'clamp(2rem,5.5vw,3.8rem)', fontWeight: 900, color: '#1A1200', lineHeight: 1.1, letterSpacing: '-0.03em', margin: '0 0 22px', maxWidth: 780 }}>
           El sistema donde la{' '}
-          <span style={{ color: '#93C5FD' }}>contabilidad</span>{' '}
+          <span style={{ color: '#7C4A00' }}>contabilidad</span>{' '}
           se convierte en{' '}
-          <span style={{ background: 'linear-gradient(135deg,#60A5FA,#38BDF8,#34D399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg,#B8860B,#D4A017,#8B6914)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             aprendizaje real
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="lp-in lp-in-d4" style={{ fontSize: 'clamp(1rem,2vw,1.15rem)', color: 'rgba(255,255,255,0.75)', maxWidth: 580, lineHeight: 1.7, margin: '0 0 44px' }}>
+        <p className="lp-in lp-in-d4" style={{ fontSize: 'clamp(1rem,2vw,1.15rem)', color: '#4A3200', maxWidth: 580, lineHeight: 1.7, margin: '0 0 44px' }}>
           Ejercicios contables interactivos, facturación electrónica costarricense, evaluación automática y seguimiento de progreso — diseñado para colegios técnicos y universidades de Costa Rica.
         </p>
 
@@ -388,10 +386,10 @@ export default function Home() {
               background: '#1B2E6E', color: '#FFFFFF',
               border: 'none', fontSize: '1rem', fontWeight: 700,
               cursor: 'pointer', transition: 'all 0.25s cubic-bezier(.22,1,.36,1)',
-              boxShadow: '0 6px 28px rgba(27,46,110,0.32)',
+              boxShadow: '0 6px 28px rgba(27,46,110,0.35)',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#2563EB'; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(37,99,235,0.38)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#1B2E6E'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(27,46,110,0.32)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#B8860B'; e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 36px rgba(184,134,11,0.4)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1B2E6E'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(27,46,110,0.35)'; }}
           >
             <GraduationCap size={20} />
             Ingresar al sistema
@@ -402,8 +400,8 @@ export default function Home() {
         {/* Trust badges */}
         <div className="lp-in lp-in-d6" style={{ display: 'flex', gap: 'clamp(14px,3vw,28px)', flexWrap: 'wrap', justifyContent: 'center' }}>
           {['Hacienda v4.3','Doble entrada NIIF'].map(l => (
-            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>
-              <CheckCircle size={14} color="#34D399" strokeWidth={2.5} />
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: '#4A3200', fontWeight: 500 }}>
+              <CheckCircle size={14} color="#5C8A3C" strokeWidth={2.5} />
               {l}
             </div>
           ))}
@@ -411,8 +409,8 @@ export default function Home() {
 
         {/* Scroll hint */}
         <div className="lp-bounce" style={{ position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Descubrir</span>
-          <ChevronDown size={15} color="rgba(255,255,255,0.45)" />
+          <span style={{ fontSize: '0.62rem', color: 'rgba(92,61,10,0.55)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Descubrir</span>
+          <ChevronDown size={15} color="rgba(92,61,10,0.55)" />
         </div>
       </section>
 
