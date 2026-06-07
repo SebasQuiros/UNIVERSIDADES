@@ -323,7 +323,7 @@ export default function GradeAttemptPage() {
   ${entriesHtml}
 
   <div class="doc-footer">
-    <span>SJQA GROUP · ${dateStr}</span>
+    <span>ContaSJ · ${dateStr}</span>
     <span>${esc(exercise.title)} — ${esc(student?.name ?? '')}</span>
   </div>
   <script>window.onload = function() { window.print(); }<\/script>

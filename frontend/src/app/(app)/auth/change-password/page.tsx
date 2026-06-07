@@ -68,7 +68,7 @@ export default function ChangePasswordPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white text-2xl font-bold mb-4 shadow-lg">
             SJ
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">SJQA GROUP</h1>
+          <h1 className="text-2xl font-bold text-gray-900">ContaSJ</h1>
           <p className="text-sm text-gray-500 mt-1">Sistema Educativo Contable</p>
         </div>
 
@@ -195,7 +195,7 @@ export default function ChangePasswordPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          © {new Date().getFullYear()} SJQA GROUP · Sistema Educativo Contable
+          © {new Date().getFullYear()} ContaSJ · Sistema Educativo Contable
         </p>
       </div>
     </div>

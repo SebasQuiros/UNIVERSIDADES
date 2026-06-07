@@ -5,13 +5,13 @@ import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'SJQA GROUP — Plataforma Contable',
+  title: 'ContaSJ — Plataforma Contable',
   description: 'Plataforma educativa de contabilidad y facturación electrónica costarricense',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'SJQA GROUP',
+    title: 'ContaSJ',
   },
   icons: {
     icon: '/FOTO.png.png',

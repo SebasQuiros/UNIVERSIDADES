@@ -30,7 +30,7 @@ function SuperAdminSidebar() {
       <div className="p-6 border-b border-[#1a3a75]">
         <Link href="/superadmin" onClick={() => setOpen(false)}>
           <h1 className="text-xl font-bold text-white tracking-tight">
-            SJQA <span className="text-blue-300">GROUP</span>
+            ContaSJ <span className="text-blue-300">GROUP</span>
           </h1>
           <p className="text-xs text-blue-300 mt-0.5 flex items-center gap-1">
             <ShieldCheck className="w-3 h-3" /> Panel SuperAdmin
@@ -92,7 +92,7 @@ function SuperAdminSidebar() {
 
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-[#1a3a75] px-4 py-3 flex items-center justify-between" style={{ backgroundColor: '#0F2657' }}>
-        <h1 className="text-lg font-bold text-white">SJQA <span className="text-blue-300">GROUP</span></h1>
+        <h1 className="text-lg font-bold text-white">ContaSJ <span className="text-blue-300">GROUP</span></h1>
         <button
           onClick={() => setOpen(!open)}
           className="p-2 text-blue-200 hover:text-white hover:bg-[#1a3a75] rounded-lg transition-colors"

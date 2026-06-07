@@ -67,7 +67,7 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
     {
       id: 'welcome',
       role: 'assistant',
-      content: '¡Hola! Soy ContaBot, tu asistente de contabilidad de SJQA GROUP. ¿En qué puedo ayudarte hoy? Puedes preguntarme sobre asientos contables, el balance general, cuentas o cualquier duda del ejercicio. 📚',
+      content: '¡Hola! Soy ContaBot, tu asistente de contabilidad de ContaSJ. ¿En qué puedo ayudarte hoy? Puedes preguntarme sobre asientos contables, el balance general, cuentas o cualquier duda del ejercicio. 📚',
       timestamp: new Date(),
     },
   ]);
@@ -221,7 +221,7 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
               <Bot className="w-5 h-5" />
               <div>
                 <p className="text-sm font-semibold leading-tight">ContaBot</p>
-                <p className="text-xs text-blue-200 leading-tight">Asistente SJQA GROUP</p>
+                <p className="text-xs text-blue-200 leading-tight">Asistente ContaSJ</p>
               </div>
             </div>
             <div className="flex items-center gap-1">

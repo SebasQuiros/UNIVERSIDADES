@@ -121,7 +121,7 @@ export default function SuperAdminDashboard() {
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">Panel SuperAdmin</h2>
-        <p className="text-gray-500 text-sm mt-1">Vista global de la plataforma SJQA GROUP</p>
+        <p className="text-gray-500 text-sm mt-1">Vista global de la plataforma ContaSJ</p>
       </div>
 
       {/* Stats grid */}

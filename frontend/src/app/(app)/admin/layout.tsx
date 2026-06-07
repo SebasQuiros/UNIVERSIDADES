@@ -29,7 +29,7 @@ function AdminSidebar() {
       <div className="p-6 border-b border-blue-800">
         <Link href="/admin" onClick={() => setOpen(false)}>
           <h1 className="text-xl font-bold text-white tracking-tight">
-            <span className="text-blue-300">SJQA</span> GROUP
+            <span className="text-blue-300">ContaSJ</span>
           </h1>
           <p className="text-xs text-blue-300 mt-0.5">Panel Administrativo</p>
         </Link>
@@ -78,7 +78,7 @@ function AdminSidebar() {
         {content}
       </aside>
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-blue-900 border-b border-blue-800 px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-white"><span className="text-blue-300">SJQA</span> GROUP</h1>
+        <h1 className="text-lg font-bold text-white"><span className="text-blue-300">ContaSJ</span></h1>
         <button onClick={() => setOpen(!open)} className="p-2 text-blue-200 hover:text-white hover:bg-blue-800 rounded-lg transition-colors">
           {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>

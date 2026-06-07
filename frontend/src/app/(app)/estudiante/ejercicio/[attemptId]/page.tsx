@@ -920,7 +920,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
 
     win.document.write(`<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8">
-<title>Factura ${esc(inv.consecutiveNumber)} — SJQA GROUP</title>
+<title>Factura ${esc(inv.consecutiveNumber)} — ContaSJ</title>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html,body{background:#EEF2F7;color:#0F172A;font-family:'Inter','Segoe UI',system-ui,sans-serif;font-size:13px;line-height:1.45}
@@ -928,7 +928,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
     max-width:820px;margin:24px auto;background:#FFF;border-radius:14px;overflow:hidden;
     box-shadow:0 8px 28px rgba(15,23,42,0.10);position:relative;
   }
-  /* Watermark "SJQA" diagonal */
+  /* Watermark "ContaSJ" diagonal */
   .watermark{
     position:absolute;top:36%;left:-3%;font-weight:900;font-size:230px;color:#F1F5FB;
     transform:rotate(-22deg);letter-spacing:-12px;pointer-events:none;user-select:none;z-index:0;
@@ -1043,13 +1043,13 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
 </style></head>
 <body>
 <div class="page">
-  <div class="watermark">SJQA</div>
+  <div class="watermark">ContaSJ</div>
 
   <div class="header">
     <div class="brand">
-      <div class="logo-wrap"><img src="${logoUrl}" alt="SJQA" onerror="this.style.display='none'"></div>
+      <div class="logo-wrap"><img src="${logoUrl}" alt="ContaSJ" onerror="this.style.display='none'"></div>
       <div class="text">
-        <div class="name">SJQA GROUP</div>
+        <div class="name">ContaSJ</div>
         <div class="sub">Sistema Educativo Contable · Costa Rica</div>
         <div class="url">www.sjqa.cr  ·  hola@sjqa.cr</div>
       </div>
@@ -1066,7 +1066,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
     <div class="row">
       <div class="card">
         <span class="label">EMISOR</span>
-        <div class="name">SJQA GROUP — Empresa de Práctica</div>
+        <div class="name">ContaSJ — Empresa de Práctica</div>
         <div class="meta">
           Cédula jurídica: 3-101-000000<br>
           San José, Costa Rica<br>
@@ -1110,7 +1110,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
     <div class="stamp">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92400E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <div>
-        <strong>Documento educativo</strong> — Esta factura es generada por el sistema SJQA GROUP con fines académicos.
+        <strong>Documento educativo</strong> — Esta factura es generada por el sistema ContaSJ con fines académicos.
         No tiene validez fiscal ante el Ministerio de Hacienda de Costa Rica.
       </div>
     </div>
@@ -1120,7 +1120,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
     <div class="l">
       <div class="ico"><img src="${logoUrl}" alt="" onerror="this.style.display='none'"></div>
       <div>
-        <div style="color:#FFF;font-weight:700">SJQA GROUP</div>
+        <div style="color:#FFF;font-weight:700">ContaSJ</div>
         <div>Documento educativo · ${new Date().getFullYear()}</div>
       </div>
     </div>
@@ -1835,11 +1835,11 @@ function ReportsTab({ companyId, companyName }: { companyId: string; companyName
   <div class="doc-header">
     <div class="company">${esc(companyName ?? 'Mi Empresa')}</div>
     <div class="report-title">${esc(title)}</div>
-    <div class="meta">Al ${dateStr} · SJQA GROUP — Documento educativo</div>
+    <div class="meta">Al ${dateStr} · ContaSJ — Documento educativo</div>
   </div>
   ${body}
   <div class="doc-footer">
-    <span>Generado con SJQA GROUP · ${dateStr}</span>
+    <span>Generado con ContaSJ · ${dateStr}</span>
     <span>${esc(title)} — ${esc(companyName ?? '')}</span>
   </div>
   <script>window.onload = function() { window.print(); }<\/script>

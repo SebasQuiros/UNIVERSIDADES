@@ -217,11 +217,11 @@ export default function Home() {
         {/* Logo + brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <div style={{ width: 40, height: 40, borderRadius: 9, overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/sjqa-logo.png" alt="SJQA GROUP" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+            <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: 40, height: 40, objectFit: 'contain' }} />
           </div>
           <div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1 }}>SJQA GROUP</div>
-            <div style={{ fontSize: '0.58rem', color: 'rgba(147,197,253,0.75)', lineHeight: 1.3 }}>UTN · Contabilidad & Finanzas</div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1 }}>ContaSJ</div>
+            <div style={{ fontSize: '0.58rem', color: 'rgba(147,197,253,0.75)', lineHeight: 1.3 }}>Contabilidad · Costa Rica</div>
           </div>
         </div>
 
@@ -283,10 +283,7 @@ export default function Home() {
         paddingLeft: 'clamp(20px,5vw,80px)',
         paddingRight: 'clamp(20px,5vw,80px)',
         textAlign: 'center', position: 'relative', overflow: 'hidden',
-        backgroundImage: 'url(/utn-campus.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed',
+        background: 'linear-gradient(160deg, #0A163C 0%, #0F2657 40%, #1B2E6E 100%)',
       }}>
         {/* Dark overlay for readability */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(10,22,60,0.82) 0%, rgba(15,38,87,0.78) 50%, rgba(10,22,60,0.88) 100%)', pointerEvents: 'none' }} />
@@ -311,14 +308,14 @@ export default function Home() {
             <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Univ. Técnica Nacional</span>
           </div>
 
-          {/* Separador UTN → SJQA */}
+          {/* Separador UTN → ContaSJ */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.3),transparent)' }} />
             <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)' }}>×</span>
             <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.3),transparent)' }} />
           </div>
 
-          {/* SJQA GROUP — logo central */}
+          {/* ContaSJ — logo central */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, animation: 'logo-float-c 4.5s ease-in-out infinite' }}>
             <div style={{
               width: 172, height: 172, borderRadius: '50%', overflow: 'hidden',
@@ -328,12 +325,12 @@ export default function Home() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: 0,
             }}>
-              <img src="/sjqa-logo.png" alt="SJQA GROUP" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>SJQA GROUP</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.8)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ContaSJ</span>
           </div>
 
-          {/* Separador SJQA → C&F */}
+          {/* Separador ContaSJ → C&F */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.3),transparent)' }} />
             <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)' }}>×</span>
@@ -360,7 +357,7 @@ export default function Home() {
         {/* Badge */}
         <div className="lp-in lp-in-d2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 999, marginBottom: 22, backdropFilter: 'blur(8px)' }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#60A5FA', display: 'inline-block', boxShadow: '0 0 8px #60A5FA' }} />
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · UTN 2026</span>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · Costa Rica 2026</span>
         </div>
 
         {/* Heading */}
@@ -375,7 +372,7 @@ export default function Home() {
 
         {/* Subtitle */}
         <p className="lp-in lp-in-d4" style={{ fontSize: 'clamp(1rem,2vw,1.15rem)', color: 'rgba(255,255,255,0.75)', maxWidth: 580, lineHeight: 1.7, margin: '0 0 44px' }}>
-          Ejercicios contables interactivos, facturación electrónica costarricense, evaluación automática y seguimiento de progreso — diseñado para estudiantes de la UTN.
+          Ejercicios contables interactivos, facturación electrónica costarricense, evaluación automática y seguimiento de progreso — diseñado para colegios técnicos y universidades de Costa Rica.
         </p>
 
         {/* CTA */}
@@ -436,7 +433,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CONVENIO SJQA × UTN ─────────────────────────────────── */}
+      {/* ── CONVENIO ContaSJ × UTN ─────────────────────────────────── */}
       <section ref={convenioSection.ref} style={{
         padding: 'clamp(70px,9vw,110px) clamp(20px,5vw,60px)',
         background: '#FFFFFF',
@@ -472,7 +469,7 @@ export default function Home() {
             backgroundClip: 'text',
             animation: 'lp-gradient-flow 6s ease infinite',
           }}>
-            SJQA GROUP y la UTN,<br />
+            ContaSJ y las instituciones de Costa Rica,<br />
             juntos por la educación contable
           </h2>
 
@@ -481,9 +478,9 @@ export default function Home() {
             maxWidth: 700, margin: '0 auto 52px', lineHeight: 1.8,
             fontWeight: 500,
           }}>
-            SJQA GROUP alcanzó un acuerdo formal con la <strong>Carrera de Contabilidad y Finanzas
-            de la Universidad Técnica Nacional</strong> para poner este sistema a disposición
-            de sus estudiantes — sin costo, sin límites y con soporte directo del equipo de desarrollo.
+            <strong>ContaSJ</strong> está diseñado para colegios técnicos y universidades de Costa Rica
+            que quieran incorporar tecnología real en la enseñanza de contabilidad —
+            sin costo para el estudiante y con soporte directo del equipo de desarrollo.
           </p>
 
           {/* Cards */}
@@ -501,7 +498,7 @@ export default function Home() {
                 Acceso para todos los estudiantes
               </h3>
               <p style={{ fontSize: '0.88rem', color: '#64748B', lineHeight: 1.65, margin: 0 }}>
-                Cualquier estudiante activo de la Carrera puede ingresar a la plataforma con su cuenta institucional. La licencia es cubierta por la universidad, sin costo directo para el estudiante.
+                Cualquier estudiante activo de un colegio técnico o universidad puede ingresar con su cuenta institucional. La licencia es cubierta por la institución, sin costo directo para el estudiante.
               </p>
             </div>
 
@@ -514,10 +511,10 @@ export default function Home() {
             }}>
               <div className="lp-bounce" style={{ fontSize: 34, marginBottom: 14, display: 'inline-block', animationDelay: '0.4s' }}>🤝</div>
               <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#1B2E6E', margin: '0 0 10px' }}>
-                Aval académico de la Carrera
+                Alineado al currículo nacional
               </h3>
               <p style={{ fontSize: '0.88rem', color: '#64748B', lineHeight: 1.65, margin: 0 }}>
-                El sistema fue revisado y avalado por la coordinación de la Carrera de Contabilidad y Finanzas de la UTN, alineado con el plan de estudios vigente.
+                El sistema está alineado con el plan de estudios de contabilidad de colegios técnicos del MEP y carreras universitarias, con formularios y normativa fiscal costarricense vigente.
               </p>
             </div>
 
@@ -533,7 +530,7 @@ export default function Home() {
                 Evolución continua
               </h3>
               <p style={{ fontSize: '0.88rem', color: '#64748B', lineHeight: 1.65, margin: 0 }}>
-                SJQA GROUP se compromete a mantener y actualizar la plataforma conforme cambie la legislación fiscal costarricense y las necesidades académicas de la Carrera.
+                ContaSJ se compromete a mantener y actualizar la plataforma conforme cambie la legislación fiscal costarricense y las necesidades académicas de la Carrera.
               </p>
             </div>
 
@@ -554,9 +551,9 @@ export default function Home() {
                 boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <img src="/sjqa-logo.png" alt="SJQA GROUP" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
-              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1B2E6E' }}>SJQA GROUP</span>
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1B2E6E' }}>ContaSJ</span>
             </div>
 
             <div style={{ color: '#94A3B8', fontSize: '1.5rem', fontWeight: 300 }}>×</div>
@@ -593,7 +590,7 @@ export default function Home() {
               Todo lo que necesitas para aprender contabilidad
             </h2>
             <p style={{ fontSize: '1rem', color: '#64748B', maxWidth: 500, margin: '0 auto', lineHeight: 1.65 }}>
-              Herramientas profesionales adaptadas al plan de estudios de la UTN.
+              Herramientas profesionales para colegios técnicos y universidades de Costa Rica.
             </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 20 }}>
@@ -663,7 +660,7 @@ export default function Home() {
               Construido por estudiantes,<br />para estudiantes
             </h2>
             <p style={{ fontSize: '1rem', color: '#64748B', maxWidth: 480, margin: '0 auto 48px', lineHeight: 1.65 }}>
-              SJQA GROUP fue fundada como proyecto de graduación en la Universidad Técnica Nacional de Costa Rica.
+              ContaSJ fue fundada como proyecto de graduación en la Universidad Técnica Nacional de Costa Rica.
             </p>
             <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 24, padding: '40px 56px', background: '#FFFFFF', borderRadius: 28, border: '1px solid #E8EEF8', boxShadow: '0 12px 48px rgba(27,46,110,0.1)' }}>
 
@@ -690,7 +687,7 @@ export default function Home() {
                 {/* Texto */}
                 <div style={{ maxWidth: 320, textAlign: 'left' }}>
                   <div style={{ fontWeight: 900, fontSize: '1.3rem', color: '#0F172A', letterSpacing: '-0.02em', marginBottom: 6 }}>
-                    SJQA GROUP
+                    ContaSJ
                   </div>
                   <div style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16,
@@ -701,7 +698,7 @@ export default function Home() {
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1B2E6E' }}>CEO & AI-Powered Project Architect</span>
                   </div>
                   <p style={{ fontSize: '0.88rem', color: '#475569', lineHeight: 1.7, margin: 0 }}>
-                    SJQA GROUP fue fundada a los 19 años con la visión de crear sistemas inteligentes que conecten la educación con entornos reales de negocio.
+                    ContaSJ fue fundada a los 19 años con la visión de crear sistemas inteligentes que conecten la educación con entornos reales de negocio.
                   </p>
                   <p style={{ fontSize: '0.88rem', color: '#475569', lineHeight: 1.7, margin: '12px 0 0' }}>
                     Esta plataforma representa un nuevo estándar en tecnología académica: práctica, escalable y orientada al futuro.
@@ -723,7 +720,7 @@ export default function Home() {
             Listo para comenzar tu camino en la contabilidad
           </h2>
           <p style={{ fontSize: '1rem', color: 'rgba(147,197,253,0.8)', margin: '0 0 40px', lineHeight: 1.65 }}>
-            Únete a los estudiantes de la UTN que ya usan esta plataforma para aprender con casos reales.
+            Únete a los estudiantes de colegios técnicos y universidades de Costa Rica que ya usan esta plataforma para aprender con casos reales.
           </p>
           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
@@ -752,11 +749,11 @@ export default function Home() {
       <footer style={{ background: '#0F172A', padding: '28px clamp(20px,5vw,60px)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>
-            SJQA <span style={{ color: '#60A5FA' }}>GROUP</span>
-            <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginLeft: 12 }}>Universidad Técnica Nacional</span>
+            Conta<span style={{ color: '#60A5FA' }}>SJ</span>
+            <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginLeft: 12 }}>Costa Rica</span>
           </div>
           <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)' }}>
-            Desarrollado por <span style={{ color: 'rgba(96,165,250,0.6)', fontWeight: 600 }}>SJQA GROUP</span> · {new Date().getFullYear()}
+            Desarrollado por <span style={{ color: 'rgba(96,165,250,0.6)', fontWeight: 600 }}>ContaSJ</span> · {new Date().getFullYear()}
           </div>
         </div>
       </footer>

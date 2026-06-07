@@ -78,13 +78,13 @@ export default function LoginPage() {
         <div className="flex items-center gap-3 relative">
           <img
             src="/FOTO.png.png"
-            alt="SJQA GROUP"
+            alt="ContaSJ"
             className="w-10 h-10 rounded-xl"
             style={{ boxShadow: '0 0 20px rgba(59,130,246,0.5)' }}
           />
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight leading-none">
-              <span style={{ color: '#60A5FA' }}>SJQA GROUP</span>
+              <span style={{ color: '#60A5FA' }}>ContaSJ</span>
             </h1>
             <p style={{ color: '#60A5FA' }} className="text-xs mt-0.5">
               Plataforma SaaS Educativa · Costa Rica
@@ -132,9 +132,9 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <img src="/FOTO.png.png" alt="SJQA GROUP" className="w-9 h-9 rounded-xl" />
+              <img src="/FOTO.png.png" alt="ContaSJ" className="w-9 h-9 rounded-xl" />
               <h1 className="text-2xl font-bold">
-                <span style={{ color: '#3B82F6' }}>SJQA GROUP</span>
+                <span style={{ color: '#3B82F6' }}>ContaSJ</span>
               </h1>
             </div>
             <p className="text-gray-500 text-xs">Plataforma Educativa Contable</p>

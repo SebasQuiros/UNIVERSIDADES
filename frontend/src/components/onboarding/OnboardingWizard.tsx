@@ -70,7 +70,7 @@ export function OnboardingWizard({ userId, onComplete }: { userId: string; onCom
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-blue-200" />
-              <span className="text-sm font-medium text-blue-100">Bienvenido a SJQA GROUP</span>
+              <span className="text-sm font-medium text-blue-100">Bienvenido a ContaSJ</span>
             </div>
             <button onClick={dismiss} className="text-blue-200 hover:text-white transition-colors">
               <X className="w-5 h-5" />

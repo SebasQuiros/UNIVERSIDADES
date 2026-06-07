@@ -54,7 +54,7 @@ export function PwaInstallPrompt() {
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-2xl shrink-0" aria-hidden="true">📱</span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold leading-tight truncate">SJQA GROUP</p>
+          <p className="text-sm font-semibold leading-tight truncate">ContaSJ</p>
           <p className="text-xs text-blue-200 leading-tight">
             Instala la app para acceso rápido sin internet
           </p>

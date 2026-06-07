@@ -48,13 +48,13 @@ export function TeacherSidebar() {
       <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
         <Link href="/profesor" onClick={() => setOpen(false)} className="flex items-center gap-3 group">
           <div className="relative">
-            <img src="/FOTO.png.png" alt="SJQA GROUP" className="w-10 h-10 rounded-xl flex-shrink-0" />
+            <img src="/FOTO.png.png" alt="ContaSJ" className="w-10 h-10 rounded-xl flex-shrink-0" />
             <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ boxShadow: '0 0 16px rgba(59,130,246,0.6)' }} />
           </div>
           <div>
             <h1 className="text-lg font-black text-white tracking-tight leading-none">
-              <span style={{ color: '#60A5FA' }}>SJQA GROUP</span>
+              <span style={{ color: '#60A5FA' }}>ContaSJ</span>
             </h1>
             <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#60A5FA' }}>
               <GraduationCap className="w-3 h-3" />
@@ -170,9 +170,9 @@ export function TeacherSidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between"
         style={{ background: '#03080F', borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
         <div className="flex items-center gap-2.5">
-          <img src="/FOTO.png.png" alt="SJQA GROUP" className="w-8 h-8 rounded-lg" />
+          <img src="/FOTO.png.png" alt="ContaSJ" className="w-8 h-8 rounded-lg" />
           <div>
-            <h1 className="text-lg font-black text-white leading-none"><span style={{ color: '#60A5FA' }}>SJQA GROUP</span></h1>
+            <h1 className="text-lg font-black text-white leading-none"><span style={{ color: '#60A5FA' }}>ContaSJ</span></h1>
             {university && <p className="text-xs leading-none mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{university.shortName ?? university.name}</p>}
           </div>
         </div>

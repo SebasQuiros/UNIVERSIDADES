@@ -338,9 +338,9 @@ export default function RegistroPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 34, height: 34, borderRadius: 8, overflow: 'hidden', background: '#000' }}>
-            <img src="/sjqa-logo.png" alt="SJQA GROUP" style={{ width: 34, height: 34, objectFit: 'contain' }} />
+            <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: 34, height: 34, objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: C.white }}>SJQA GROUP</span>
+          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: C.white }}>ContaSJ</span>
         </div>
         <button
           onClick={() => router.push('/')}
@@ -373,7 +373,7 @@ export default function RegistroPage() {
             </span>
           </div>
           <h1 style={{ fontSize: 'clamp(1.4rem,3vw,2rem)', fontWeight: 900, color: C.text, margin: '0 0 8px', letterSpacing: '-0.02em' }}>
-            Registra tu universidad en SJQA GROUP
+            Registra tu universidad en ContaSJ
           </h1>
           <p style={{ color: C.muted, fontSize: '0.9rem', margin: 0, lineHeight: 1.6 }}>
             Completa los siguientes pasos para solicitar acceso a la plataforma.
@@ -563,7 +563,7 @@ export default function RegistroPage() {
                   style={{ width: 18, height: 18, flexShrink: 0, marginTop: 1, accentColor: C.primary }}
                 />
                 <span style={{ fontSize: '0.85rem', color: C.text, lineHeight: 1.5 }}>
-                  Acepto los <a href="/terminos" target="_blank" style={{ color: C.accent, fontWeight: 600 }}>términos y condiciones de uso</a> de SJQA GROUP y confirmo que la información proporcionada es correcta.
+                  Acepto los <a href="/terminos" target="_blank" style={{ color: C.accent, fontWeight: 600 }}>términos y condiciones de uso</a> de ContaSJ y confirmo que la información proporcionada es correcta.
                 </span>
               </label>
               {errors.acceptedTerms && (
