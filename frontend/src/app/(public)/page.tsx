@@ -283,19 +283,22 @@ export default function Home() {
         paddingLeft: 'clamp(20px,5vw,80px)',
         paddingRight: 'clamp(20px,5vw,80px)',
         textAlign: 'center', position: 'relative', overflow: 'hidden',
-        background: 'linear-gradient(135deg, #060D24 0%, #0B1A42 30%, #0F2255 55%, #081530 80%, #04091A 100%)',
+        background: '#0A1535',
       }}>
-        {/* Orbe azul superior izquierdo */}
-        <div style={{ position: 'absolute', top: '-10%', left: '-8%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.22) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        {/* Orbe dorado central */}
-        <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 800, height: 500, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(184,134,11,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
-        {/* Orbe azul inferior derecho */}
-        <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(30,58,138,0.28) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        {/* Grid de puntos sutil */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)', backgroundSize: '36px 36px', pointerEvents: 'none' }} />
-        {/* Línea diagonal de brillo */}
-        <div style={{ position: 'absolute', top: 0, left: '30%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent 0%, rgba(184,134,11,0.15) 40%, rgba(37,99,235,0.12) 70%, transparent 100%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: 0, right: '25%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent 0%, rgba(37,99,235,0.10) 50%, transparent 100%)', pointerEvents: 'none' }} />
+        {/* ── Fondo: blanco en bordes, azul marino profundo al centro ── */}
+        {/* Panel blanco izquierdo que se desvanece hacia el centro */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(255,255,255,0.92) 0%, rgba(220,230,255,0.45) 22%, transparent 48%)', pointerEvents: 'none' }} />
+        {/* Panel blanco derecho que se desvanece hacia el centro */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, rgba(255,255,255,0.92) 0%, rgba(220,230,255,0.45) 22%, transparent 48%)', pointerEvents: 'none' }} />
+        {/* Núcleo oscuro central con orbe dorado */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '55%', height: '130%', borderRadius: '50%', background: 'radial-gradient(ellipse, #071030 0%, #0B1A42 45%, transparent 75%)', pointerEvents: 'none' }} />
+        {/* Orbe dorado central brillante */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-55%)', width: 520, height: 320, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(251,191,36,0.13) 0%, rgba(184,134,11,0.06) 50%, transparent 75%)', pointerEvents: 'none' }} />
+        {/* Grid de puntos solo en la zona central oscura */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)', backgroundSize: '36px 36px', pointerEvents: 'none' }} />
+        {/* Líneas de luz verticales decorativas */}
+        <div style={{ position: 'absolute', top: 0, left: '38%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent, rgba(251,191,36,0.18) 45%, rgba(99,149,255,0.14) 70%, transparent)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, right: '38%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent, rgba(99,149,255,0.14) 50%, transparent)', pointerEvents: 'none' }} />
 
         {/* Logos flotantes */}
         <div className="lp-in lp-in-d1" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(24px,5vw,56px)', marginBottom: 48, flexWrap: 'wrap', justifyContent: 'center' }}>
