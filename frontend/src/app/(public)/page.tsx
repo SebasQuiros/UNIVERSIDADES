@@ -283,13 +283,19 @@ export default function Home() {
         paddingLeft: 'clamp(20px,5vw,80px)',
         paddingRight: 'clamp(20px,5vw,80px)',
         textAlign: 'center', position: 'relative', overflow: 'hidden',
-        backgroundImage: 'url(/esteesellogo.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
+        background: 'linear-gradient(135deg, #060D24 0%, #0B1A42 30%, #0F2255 55%, #081530 80%, #04091A 100%)',
       }}>
-        {/* Overlay muy sutil — solo para suavizar bordes, sin oscurecer */}
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(245,240,230,0.18)', pointerEvents: 'none' }} />
+        {/* Orbe azul superior izquierdo */}
+        <div style={{ position: 'absolute', top: '-10%', left: '-8%', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.22) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        {/* Orbe dorado central */}
+        <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 800, height: 500, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(184,134,11,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
+        {/* Orbe azul inferior derecho */}
+        <div style={{ position: 'absolute', bottom: '-15%', right: '-10%', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(30,58,138,0.28) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        {/* Grid de puntos sutil */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)', backgroundSize: '36px 36px', pointerEvents: 'none' }} />
+        {/* Línea diagonal de brillo */}
+        <div style={{ position: 'absolute', top: 0, left: '30%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent 0%, rgba(184,134,11,0.15) 40%, rgba(37,99,235,0.12) 70%, transparent 100%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, right: '25%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent 0%, rgba(37,99,235,0.10) 50%, transparent 100%)', pointerEvents: 'none' }} />
 
         {/* Logos flotantes */}
         <div className="lp-in lp-in-d1" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(24px,5vw,56px)', marginBottom: 48, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -306,14 +312,14 @@ export default function Home() {
             }}>
               <img src="/utn-logo.png" alt="UTN" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5C3D0A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Univ. Técnica Nacional</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Univ. Técnica Nacional</span>
           </div>
 
           {/* Separador UTN → ContaSJ */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(160,120,40,0.4),transparent)' }} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(160,120,40,0.5)' }}>×</span>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(160,120,40,0.4),transparent)' }} />
+            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent)' }} />
+            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)' }}>×</span>
+            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent)' }} />
           </div>
 
           {/* ContaSJ — logo central */}
@@ -328,14 +334,14 @@ export default function Home() {
             }}>
               <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5C3D0A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ContaSJ</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ContaSJ</span>
           </div>
 
           {/* Separador ContaSJ → C&F */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(160,120,40,0.4),transparent)' }} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(160,120,40,0.5)' }}>×</span>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(160,120,40,0.4),transparent)' }} />
+            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent)' }} />
+            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)' }}>×</span>
+            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent)' }} />
           </div>
 
           {/* C&F */}
@@ -350,29 +356,29 @@ export default function Home() {
             }}>
               <img src="/contabilidad-logo.png" alt="Contabilidad & Finanzas" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
             </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5C3D0A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Contabilidad & Finanzas</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Contabilidad & Finanzas</span>
           </div>
 
         </div>
 
         {/* Badge */}
-        <div className="lp-in lp-in-d2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(180,140,40,0.4)', borderRadius: 999, marginBottom: 22, backdropFilter: 'blur(8px)' }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#B8860B', display: 'inline-block', boxShadow: '0 0 8px rgba(184,134,11,0.6)' }} />
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#5C3D0A', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · Costa Rica 2026</span>
+        <div className="lp-in lp-in-d2" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 999, marginBottom: 22, backdropFilter: 'blur(8px)' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FBBF24', display: 'inline-block', boxShadow: '0 0 8px rgba(251,191,36,0.7)' }} />
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · Costa Rica 2026</span>
         </div>
 
         {/* Heading */}
-        <h1 className="lp-in lp-in-d3" style={{ fontSize: 'clamp(2rem,5.5vw,3.8rem)', fontWeight: 900, color: '#1A1200', lineHeight: 1.1, letterSpacing: '-0.03em', margin: '0 0 22px', maxWidth: 780 }}>
+        <h1 className="lp-in lp-in-d3" style={{ fontSize: 'clamp(2rem,5.5vw,3.8rem)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, letterSpacing: '-0.03em', margin: '0 0 22px', maxWidth: 780 }}>
           El sistema donde la{' '}
-          <span style={{ color: '#7C4A00' }}>contabilidad</span>{' '}
+          <span style={{ color: '#93C5FD' }}>contabilidad</span>{' '}
           se convierte en{' '}
-          <span style={{ background: 'linear-gradient(135deg,#B8860B,#D4A017,#8B6914)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ background: 'linear-gradient(135deg,#FBBF24,#F59E0B,#FDE68A)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             aprendizaje real
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="lp-in lp-in-d4" style={{ fontSize: 'clamp(1rem,2vw,1.15rem)', color: '#4A3200', maxWidth: 580, lineHeight: 1.7, margin: '0 0 44px' }}>
+        <p className="lp-in lp-in-d4" style={{ fontSize: 'clamp(1rem,2vw,1.15rem)', color: 'rgba(255,255,255,0.72)', maxWidth: 580, lineHeight: 1.7, margin: '0 0 44px' }}>
           Ejercicios contables interactivos, facturación electrónica costarricense, evaluación automática y seguimiento de progreso — diseñado para colegios técnicos y universidades de Costa Rica.
         </p>
 
@@ -400,8 +406,8 @@ export default function Home() {
         {/* Trust badges */}
         <div className="lp-in lp-in-d6" style={{ display: 'flex', gap: 'clamp(14px,3vw,28px)', flexWrap: 'wrap', justifyContent: 'center' }}>
           {['Hacienda v4.3','Doble entrada NIIF'].map(l => (
-            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: '#4A3200', fontWeight: 500 }}>
-              <CheckCircle size={14} color="#5C8A3C" strokeWidth={2.5} />
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
+              <CheckCircle size={14} color="#34D399" strokeWidth={2.5} />
               {l}
             </div>
           ))}
@@ -409,8 +415,8 @@ export default function Home() {
 
         {/* Scroll hint */}
         <div className="lp-bounce" style={{ position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.62rem', color: 'rgba(92,61,10,0.55)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Descubrir</span>
-          <ChevronDown size={15} color="rgba(92,61,10,0.55)" />
+          <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Descubrir</span>
+          <ChevronDown size={15} color="rgba(255,255,255,0.4)" />
         </div>
       </section>
 
