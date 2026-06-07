@@ -283,12 +283,15 @@ export default function Home() {
         paddingLeft: 'clamp(20px,5vw,80px)',
         paddingRight: 'clamp(20px,5vw,80px)',
         textAlign: 'center', position: 'relative', overflow: 'hidden',
-        background: 'linear-gradient(160deg, #0A163C 0%, #0F2657 40%, #1B2E6E 100%)',
+        backgroundImage: 'url(/esteesellogo.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
       }}>
-        {/* Dark overlay for readability */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(10,22,60,0.82) 0%, rgba(15,38,87,0.78) 50%, rgba(10,22,60,0.88) 100%)', pointerEvents: 'none' }} />
-        {/* Subtle blue vignette */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, rgba(37,99,235,0.08) 0%, rgba(10,22,60,0.3) 80%)', pointerEvents: 'none' }} />
+        {/* Dark overlay — cubre la imagen clara para que el texto blanco sea legible */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, rgba(8,18,50,0.88) 0%, rgba(12,30,72,0.82) 45%, rgba(8,18,50,0.90) 100%)', pointerEvents: 'none' }} />
+        {/* Vignette lateral suave */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, rgba(30,58,138,0.10) 0%, rgba(8,18,50,0.35) 80%)', pointerEvents: 'none' }} />
 
         {/* Logos flotantes */}
         <div className="lp-in lp-in-d1" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(24px,5vw,56px)', marginBottom: 48, flexWrap: 'wrap', justifyContent: 'center' }}>
