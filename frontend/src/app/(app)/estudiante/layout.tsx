@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { StudentSidebar } from '@/components/layout/StudentSidebar';
+import { TopBar } from '@/components/layout/TopBar';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { PageErrorBoundary } from '@/components/ui/ErrorBoundary';
 import AiAssistant from '@/components/ai/AiAssistant';
@@ -24,7 +25,10 @@ export default function EstudianteLayout({ children }: { children: React.ReactNo
     <div className="flex min-h-screen bg-gray-50">
       <StudentSidebar />
       <main className="flex-1 flex flex-col min-w-0 lg:pt-0 pt-14">
-        <PageErrorBoundary>{children}</PageErrorBoundary>
+        <TopBar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <PageErrorBoundary>{children}</PageErrorBoundary>
+        </div>
       </main>
       {/* Floating AI assistant — available on all student pages */}
       <AiAssistant />

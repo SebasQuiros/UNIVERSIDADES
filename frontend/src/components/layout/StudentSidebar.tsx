@@ -13,12 +13,32 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
-  { href: '/estudiante',                label: 'Mis Ejercicios',       icon: LayoutDashboard },
-  { href: '/estudiante/progreso',       label: 'Mi Progreso',          icon: TrendingUp },
-  { href: '/estudiante/empresas',       label: 'Mis Empresas',         icon: Building2 },
-  { href: '/estudiante/impuestos',      label: 'Tributación (TRIBU)',  icon: Receipt },
-  { href: '/estudiante/notificaciones', label: 'Notificaciones',       icon: Bell },
+const NAV_SECTIONS = [
+  {
+    label: 'Principal',
+    items: [
+      { href: '/estudiante',          label: 'Mis Ejercicios', icon: LayoutDashboard },
+      { href: '/estudiante/progreso', label: 'Mi Progreso',    icon: TrendingUp },
+    ],
+  },
+  {
+    label: 'Contabilidad',
+    items: [
+      { href: '/estudiante/empresas', label: 'Mis Empresas',   icon: Building2 },
+    ],
+  },
+  {
+    label: 'Tributación',
+    items: [
+      { href: '/estudiante/impuestos', label: 'Tributación (TRIBU)', icon: Receipt },
+    ],
+  },
+  {
+    label: 'General',
+    items: [
+      { href: '/estudiante/notificaciones', label: 'Notificaciones', icon: Bell },
+    ],
+  },
 ];
 
 export function StudentSidebar() {
@@ -86,44 +106,54 @@ export function StudentSidebar() {
         </div>
       )}
 
-      {/* Nav */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = href === '/estudiante'
-            ? pathname === href
-            : pathname.startsWith(href);
-          const isNotif = href.includes('notificaciones');
-          return (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group"
-              style={active ? {
-                background: 'linear-gradient(90deg,#1E3A8A,#0F2657)',
-                color: '#FFFFFF',
-                boxShadow: '0 2px 12px rgba(59,130,246,0.35)',
-              } : {
-                color: 'rgba(255,255,255,0.55)',
-              }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.cssText += 'background:#0B1A2E;color:rgba(255,255,255,0.9);'; }}
-              onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; } }}
-            >
-              <Icon
-                className="w-4 h-4 flex-shrink-0 transition-colors"
-                style={{ color: active ? '#60A5FA' : 'rgba(96,165,250,0.6)' }}
-              />
-              <span className="flex-1">{label}</span>
-              {isNotif && unread > 0 && (
-                <span className="text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none"
-                  style={{ background: '#3B82F6', color: '#fff', boxShadow: '0 0 8px rgba(59,130,246,0.6)' }}>
-                  {unread > 9 ? '9+' : unread}
-                </span>
-              )}
-              {active && <ChevronRight className="w-3 h-3" style={{ color: '#60A5FA' }} />}
-            </Link>
-          );
-        })}
+      {/* Nav agrupado por secciones (estilo ALEGRA/SAP) */}
+      <nav className="flex-1 p-3 overflow-y-auto">
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.label} className="mb-4 last:mb-0">
+            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider"
+              style={{ color: 'rgba(96,165,250,0.5)' }}>
+              {section.label}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map(({ href, label, icon: Icon }) => {
+                const active = href === '/estudiante'
+                  ? pathname === href
+                  : pathname.startsWith(href);
+                const isNotif = href.includes('notificaciones');
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group"
+                    style={active ? {
+                      background: 'linear-gradient(90deg,#1E3A8A,#0F2657)',
+                      color: '#FFFFFF',
+                      boxShadow: '0 2px 12px rgba(59,130,246,0.35)',
+                    } : {
+                      color: 'rgba(255,255,255,0.55)',
+                    }}
+                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.cssText += 'background:#0B1A2E;color:rgba(255,255,255,0.9);'; }}
+                    onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; } }}
+                  >
+                    <Icon
+                      className="w-4 h-4 flex-shrink-0 transition-colors"
+                      style={{ color: active ? '#60A5FA' : 'rgba(96,165,250,0.6)' }}
+                    />
+                    <span className="flex-1">{label}</span>
+                    {isNotif && unread > 0 && (
+                      <span className="text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none"
+                        style={{ background: '#3B82F6', color: '#fff', boxShadow: '0 0 8px rgba(59,130,246,0.6)' }}>
+                        {unread > 9 ? '9+' : unread}
+                      </span>
+                    )}
+                    {active && <ChevronRight className="w-3 h-3" style={{ color: '#60A5FA' }} />}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Divisor decorativo */}
