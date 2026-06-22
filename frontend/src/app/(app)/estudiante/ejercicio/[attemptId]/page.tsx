@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
 import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import { ExamModeWrapper } from '@/components/exam';
+import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import {
@@ -145,6 +146,10 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
 
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
+  // ── Panel ejecutivo (ALEGRA-style): KPIs, tendencia, IVA, AR/AP ──────────
+  // Se renderiza arriba; debajo queda la gamificación existente.
+  const executivePanel = <ExecutiveDashboard companyId={companyId} />;
+
   // ── Gamification ──────────────────────────────────────────────────────────
   const progressPct = Number(progress?.progress?.progressPct ?? attempt.studentProgress?.progressPct ?? 0);
   const LEVELS = [
@@ -171,6 +176,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
 
   return (
     <div className="space-y-6">
+      {executivePanel}
 
       {/* ── Gamification card ───────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100 rounded-2xl p-5">

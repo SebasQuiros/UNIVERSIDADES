@@ -166,29 +166,97 @@ export class CompaniesService {
 
   // ── Dashboard summary ─────────────────────────────────────────
   async getDashboard(companyId: string) {
-    const [invoices, clients, products, entries] = await Promise.all([
-      this.prisma.invoice.count({
-        where: { companyId, status: { not: 'DRAFT' as any } },
-      }),
+    const num = (v: any) => Number(v ?? 0);
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
+
+    const [
+      invoices, clients, products, entries,
+      salesAgg, purchasesAgg,
+      arAgg, apAgg,
+      ivaCobrado, ivaPagado,
+      recentInvoices, monthlyRows,
+    ] = await Promise.all([
+      // ── Conteos ──
+      this.prisma.invoice.count({ where: { companyId, status: { not: 'DRAFT' as any } } }),
       this.prisma.client.count({ where: { companyId, isActive: true } }),
       this.prisma.product.count({ where: { companyId, isActive: true } }),
       this.prisma.journalEntry.count({ where: { companyId, isReversed: false } }),
+
+      // ── Ventas (subtotal sin IVA + IVA) ──
+      this.prisma.invoice.aggregate({
+        where: { companyId, status: { not: 'DRAFT' as any } },
+        _sum:  { total: true, subtotal: true, tax: true },
+      }),
+      // ── Compras ──
+      this.prisma.purchaseInvoice.aggregate({
+        where: { companyId },
+        _sum:  { total: true, subtotal: true, taxAmount: true },
+      }).catch(() => ({ _sum: { total: 0, subtotal: 0, taxAmount: 0 } } as any)),
+
+      // ── Cuentas por cobrar pendientes ──
+      this.prisma.accountReceivable.aggregate({
+        where: { companyId, status: { in: ['PENDING', 'PARTIAL'] as any } },
+        _sum:  { balance: true }, _count: true,
+      }),
+      // ── Cuentas por pagar pendientes ──
+      this.prisma.accountPayable.aggregate({
+        where: { companyId, status: { in: ['PENDING', 'PARTIAL'] as any } },
+        _sum:  { balance: true }, _count: true,
+      }),
+
+      // ── IVA cobrado (débito fiscal) ──
+      this.prisma.invoice.aggregate({
+        where: { companyId, status: { not: 'DRAFT' as any } },
+        _sum:  { tax: true },
+      }),
+      // ── IVA pagado (crédito fiscal) ──
+      this.prisma.purchaseInvoice.aggregate({
+        where: { companyId },
+        _sum:  { taxAmount: true },
+      }).catch(() => ({ _sum: { taxAmount: 0 } } as any)),
+
+      // ── Facturas recientes ──
+      this.prisma.invoice.findMany({
+        where:   { companyId },
+        orderBy: { createdAt: 'desc' },
+        take:    6,
+        select: {
+          id: true, consecutiveNumber: true, clientName: true,
+          total: true, status: true, haciendaStatus: true, createdAt: true,
+        },
+      }),
+
+      // ── Tendencia de ventas (últimos 6 meses) ──
+      this.prisma.$queryRaw<Array<{ month: string; total: number }>>`
+        SELECT to_char(date_trunc('month', issue_date), 'YYYY-MM') AS month,
+               COALESCE(SUM(total), 0)::float8 AS total
+        FROM invoices
+        WHERE company_id = ${companyId}::uuid
+          AND status <> 'DRAFT'
+          AND issue_date >= ${sixMonthsAgo}
+        GROUP BY 1 ORDER BY 1
+      `.catch(() => [] as Array<{ month: string; total: number }>),
     ]);
 
-    const totalSales = await this.prisma.invoice.aggregate({
-      where: { companyId, status: { not: 'DRAFT' as any } },
-      _sum:  { total: true },
-    });
+    // ── Construir serie continua de 6 meses (rellena vacíos con 0) ──
+    const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+    const trendMap = new Map(monthlyRows.map(r => [r.month, num(r.total)]));
+    const salesTrend: Array<{ label: string; total: number }> = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      salesTrend.push({ label: `${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`, total: trendMap.get(key) ?? 0 });
+    }
 
-    const recentInvoices = await this.prisma.invoice.findMany({
-      where:   { companyId },
-      orderBy: { createdAt: 'desc' },
-      take:    5,
-      select: {
-        id: true, consecutiveNumber: true, clientName: true,
-        total: true, status: true, haciendaStatus: true, createdAt: true,
-      },
-    });
+    const totalSales     = num(salesAgg._sum.total);
+    const totalSalesBase = num(salesAgg._sum.subtotal);
+    const totalPurchases = num(purchasesAgg._sum.total);
+    const ivaPosition    = num(ivaCobrado._sum.tax) - num(ivaPagado._sum.taxAmount);
 
     return {
       totals: {
@@ -196,8 +264,19 @@ export class CompaniesService {
         clients,
         products,
         journalEntries: entries,
-        totalSales: totalSales._sum.total ?? 0,
+        totalSales,
+        totalSalesBase,
+        totalPurchases,
+        grossMargin: totalSalesBase - num(purchasesAgg._sum.subtotal),
       },
+      receivables: { outstanding: num(arAgg._sum.balance), count: arAgg._count },
+      payables:    { outstanding: num(apAgg._sum.balance), count: apAgg._count },
+      tax: {
+        ivaCobrado: num(ivaCobrado._sum.tax),
+        ivaPagado:  num(ivaPagado._sum.taxAmount),
+        ivaPosition,                         // > 0 a pagar, < 0 saldo a favor
+      },
+      salesTrend,
       recentInvoices,
     };
   }
