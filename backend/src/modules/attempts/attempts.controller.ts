@@ -17,6 +17,12 @@ export class AttemptsController {
     return this.svc.getStats(user.id);
   }
 
+  @Get('gamification')
+  getGamification(@CurrentUser() user: any) {
+    if (user.role !== 'STUDENT') throw new ForbiddenException('Solo los estudiantes tienen perfil de gamificación');
+    return this.svc.getGamification(user.id, user.universityId);
+  }
+
   @Get()
   findAll(@CurrentUser() user: any) {
     return this.svc.findAll(user.id, user.role);

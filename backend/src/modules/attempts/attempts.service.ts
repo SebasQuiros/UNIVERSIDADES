@@ -232,4 +232,110 @@ export class AttemptsService {
 
     return { total, graded: graded.length, submitted, inProgress, notStarted, avgPct, bestScore, totalTimeMin, scoreHistory, difficultyData };
   }
+
+  // ── Gamificación global (XP, niveles, ranking) ────────────────
+  // XP por ejercicio calificado = pct (0-100) × multiplicador de dificultad.
+  // El ranking se calcula entre estudiantes de la MISMA universidad.
+  async getGamification(studentId: string, universityId?: string | null) {
+    const DIFF_MULT: Record<string, number> = {
+      BASIC: 1, INTERMEDIATE: 1.5, ADVANCED: 2,
+    };
+
+    // Niveles temáticos contables (XP acumulado mínimo)
+    const LEVELS = [
+      { min: 0,    name: 'Auxiliar Contable',   icon: '📋' },
+      { min: 300,  name: 'Asistente Contable',  icon: '🧮' },
+      { min: 800,  name: 'Contador Jr.',        icon: '📊' },
+      { min: 1500, name: 'Contador',            icon: '💼' },
+      { min: 2500, name: 'Contador Senior',     icon: '🏆' },
+      { min: 4000, name: 'Gerente Financiero',  icon: '👔' },
+      { min: 6000, name: 'CFO',                 icon: '👑' },
+    ];
+
+    const xpForAttempt = (score: any, maxScore: any, difficulty?: string) => {
+      if (score == null || maxScore == null || Number(maxScore) <= 0) return 0;
+      const pct  = (Number(score) / Number(maxScore)) * 100;
+      const mult = DIFF_MULT[difficulty ?? 'BASIC'] ?? 1;
+      return Math.round(pct * mult);
+    };
+
+    // Cargar al estudiante (para su universidad si no llegó por token)
+    const me = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, name: true, avatarUrl: true, universityId: true },
+    });
+    const uniId = universityId ?? me?.universityId ?? null;
+
+    // Estudiantes de la misma universidad (pool de ranking)
+    const peers = uniId
+      ? await this.prisma.user.findMany({
+          where: { universityId: uniId, role: 'STUDENT' as any },
+          select: { id: true, name: true, avatarUrl: true },
+        })
+      : (me ? [{ id: me.id, name: me.name, avatarUrl: me.avatarUrl }] : []);
+
+    const peerIds = peers.map(p => p.id);
+
+    // Todos los intentos calificados del pool en una sola query
+    const gradedAttempts = peerIds.length
+      ? await this.prisma.exerciseAttempt.findMany({
+          where: { studentId: { in: peerIds }, status: 'GRADED' as any },
+          select: {
+            studentId: true, score: true, maxScore: true,
+            exercise: { select: { difficulty: true } },
+          },
+        })
+      : [];
+
+    // XP acumulado por estudiante
+    const xpMap = new Map<string, { xp: number; completed: number }>();
+    for (const p of peerIds) xpMap.set(p, { xp: 0, completed: 0 });
+    for (const a of gradedAttempts) {
+      const cur = xpMap.get(a.studentId) ?? { xp: 0, completed: 0 };
+      cur.xp += xpForAttempt(a.score, a.maxScore, a.exercise?.difficulty);
+      cur.completed += 1;
+      xpMap.set(a.studentId, cur);
+    }
+
+    // Leaderboard ordenado
+    const leaderboard = peers
+      .map(p => ({
+        id:        p.id,
+        name:      p.name,
+        avatarUrl: p.avatarUrl,
+        xp:        xpMap.get(p.id)?.xp ?? 0,
+        completed: xpMap.get(p.id)?.completed ?? 0,
+        isMe:      p.id === studentId,
+      }))
+      .sort((a, b) => b.xp - a.xp || b.completed - a.completed);
+
+    // Asignar rank (1-based)
+    leaderboard.forEach((r, i) => ((r as any).rank = i + 1));
+
+    const myXp   = xpMap.get(studentId)?.xp ?? 0;
+    const myRank = leaderboard.find(r => r.isMe)?.rank ?? null;
+
+    // Nivel actual + progreso al siguiente
+    const levelIdx  = [...LEVELS].reverse().findIndex(l => myXp >= l.min);
+    const idx       = levelIdx === -1 ? 0 : LEVELS.length - 1 - levelIdx;
+    const level     = LEVELS[idx];
+    const nextLevel = LEVELS[idx + 1] ?? null;
+    const xpIntoLevel = myXp - level.min;
+    const xpForNext   = nextLevel ? nextLevel.min - level.min : 0;
+    const levelPct    = nextLevel ? Math.min(100, Math.round((xpIntoLevel / xpForNext) * 100)) : 100;
+
+    return {
+      xp: myXp,
+      level: { index: idx, name: level.name, icon: level.icon, min: level.min },
+      nextLevel: nextLevel
+        ? { name: nextLevel.name, icon: nextLevel.icon, min: nextLevel.min, xpRemaining: nextLevel.min - myXp }
+        : null,
+      levelPct,
+      rank: myRank,
+      totalStudents: leaderboard.length,
+      completed: xpMap.get(studentId)?.completed ?? 0,
+      leaderboard: leaderboard.slice(0, 10),  // top 10 + (mi posición si está fuera abajo)
+      levels: LEVELS,
+    };
+  }
 }

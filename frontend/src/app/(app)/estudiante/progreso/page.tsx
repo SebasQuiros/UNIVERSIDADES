@@ -6,6 +6,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import toast from 'react-hot-toast';
 import {
   TrendingUp, Award, Clock, BookOpen, Target, Star,
+  Trophy, Zap, Medal, Crown,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis,
@@ -30,10 +31,31 @@ interface Stats {
   }>;
 }
 
+interface Gamification {
+  xp: number;
+  level: { index: number; name: string; icon: string; min: number };
+  nextLevel: { name: string; icon: string; min: number; xpRemaining: number } | null;
+  levelPct: number;
+  rank: number | null;
+  totalStudents: number;
+  completed: number;
+  leaderboard: Array<{
+    id: string; name: string; avatarUrl: string | null;
+    xp: number; completed: number; rank: number; isMe: boolean;
+  }>;
+}
+
 function diffColor(pct: number) {
   if (pct >= 80) return '#10b981';
   if (pct >= 60) return '#f59e0b';
   return '#ef4444';
+}
+
+function rankStyle(rank: number) {
+  if (rank === 1) return { bg: 'linear-gradient(135deg,#FBBF24,#F59E0B)', icon: Crown,  color: '#fff' };
+  if (rank === 2) return { bg: 'linear-gradient(135deg,#CBD5E1,#94A3B8)', icon: Medal,  color: '#fff' };
+  if (rank === 3) return { bg: 'linear-gradient(135deg,#D97706,#B45309)', icon: Medal,  color: '#fff' };
+  return { bg: '#F1F5F9', icon: Trophy, color: '#64748B' };
 }
 
 function StatCard({ label, value, sub, icon: Icon, color }: {
@@ -56,11 +78,14 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
 
 export default function ProgresoPage() {
   const [stats, setStats]   = useState<Stats | null>(null);
+  const [game, setGame]     = useState<Gamification | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Stats>('/api/v1/attempts/stats')
-      .then(({ data }) => setStats(data))
+    Promise.all([
+      api.get<Stats>('/api/v1/attempts/stats').then(({ data }) => setStats(data)),
+      api.get<Gamification>('/api/v1/attempts/gamification').then(({ data }) => setGame(data)).catch(() => {}),
+    ])
       .catch(() => toast.error('Error al cargar estadísticas'))
       .finally(() => setLoading(false));
   }, []);
@@ -97,6 +122,108 @@ export default function ProgresoPage() {
           Evolución académica y estadísticas de rendimiento
         </p>
       </div>
+
+      {/* ── Gamificación: nivel + ranking ── */}
+      {game && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+          {/* Tarjeta de nivel (XP) */}
+          <div className="lg:col-span-2 rounded-2xl p-6 text-white relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg,#0F2657 0%,#1E3A8A 55%,#3B82F6 100%)' }}>
+            <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20"
+              style={{ background: 'radial-gradient(circle,#FBBF24,transparent 70%)', transform: 'translate(30%,-30%)' }} />
+            <div className="relative flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                {game.level.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(251,191,36,0.2)', color: '#FDE68A' }}>
+                    Nivel {game.level.index + 1}
+                  </span>
+                  <h3 className="text-xl font-black">{game.level.name}</h3>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-sm" style={{ color: '#BFDBFE' }}>
+                  <Zap className="w-4 h-4" style={{ color: '#FBBF24' }} />
+                  <span className="font-bold text-white">{game.xp.toLocaleString('es-CR')}</span> XP acumulado
+                </div>
+              </div>
+            </div>
+
+            {/* Barra de progreso al siguiente nivel */}
+            <div className="relative mt-5">
+              <div className="flex justify-between text-xs mb-1.5" style={{ color: '#BFDBFE' }}>
+                <span>{game.nextLevel ? `Progreso a ${game.nextLevel.name}` : '¡Nivel máximo alcanzado! 👑'}</span>
+                {game.nextLevel && <span>Faltan {game.nextLevel.xpRemaining.toLocaleString('es-CR')} XP</span>}
+              </div>
+              <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.15)' }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${game.levelPct}%`, background: 'linear-gradient(90deg,#FBBF24,#FDE68A)' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Tarjeta de ranking */}
+          <div className="rounded-2xl p-6 bg-white border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3"
+              style={{ background: 'linear-gradient(135deg,#FBBF24,#F59E0B)' }}>
+              <Trophy className="w-7 h-7 text-white" />
+            </div>
+            <p className="text-4xl font-black text-gray-900 leading-none">
+              {game.rank ? `#${game.rank}` : '—'}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              de {game.totalStudents} estudiante{game.totalStudents !== 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-gray-400 mt-2">Ranking de tu universidad</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Leaderboard ── */}
+      {game && game.leaderboard.length > 1 && (
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-8">
+          <div className="p-5 border-b border-gray-200 flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-amber-500" />
+            <h3 className="font-semibold text-gray-900">Tabla de líderes</h3>
+            <span className="text-xs text-gray-400 ml-auto">Top {Math.min(10, game.leaderboard.length)}</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {game.leaderboard.map((r) => {
+              const rs = rankStyle(r.rank);
+              const RankIcon = rs.icon;
+              return (
+                <div key={r.id}
+                  className="flex items-center gap-3 px-5 py-3"
+                  style={r.isMe ? { background: 'linear-gradient(90deg,rgba(59,130,246,0.07),transparent)' } : undefined}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm"
+                    style={{ background: rs.bg, color: rs.color }}>
+                    {r.rank <= 3 ? <RankIcon className="w-4 h-4" /> : r.rank}
+                  </div>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)' }}>
+                    {r.avatarUrl
+                      ? <img src={r.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      : r.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {r.name}{r.isMe && <span className="text-blue-600 font-semibold"> (tú)</span>}
+                    </p>
+                    <p className="text-xs text-gray-400">{r.completed} ejercicio{r.completed !== 1 ? 's' : ''} calificado{r.completed !== 1 ? 's' : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-sm font-bold text-gray-900">{r.xp.toLocaleString('es-CR')}</span>
+                    <span className="text-xs text-gray-400">XP</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

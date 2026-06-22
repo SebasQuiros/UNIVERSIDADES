@@ -17,7 +17,7 @@ export class CompaniesService {
   // Fase 1: incluye companies INDIVIDUAL (dueño directo) + GROUP donde
   // el estudiante figura en CompanyMembership.
   async findByStudent(studentId: string) {
-    return this.prisma.company.findMany({
+    const companies = await this.prisma.company.findMany({
       where: {
         OR: [
           { studentId },
@@ -27,12 +27,34 @@ export class CompaniesService {
       include: {
         // attempt es null para GROUP — el frontend debe tolerarlo.
         attempt: {
-          select: { id: true, status: true, exercise: { select: { id: true, title: true } } },
+          select: { id: true, status: true, exercise: { select: { id: true, title: true, course: { select: { name: true } } } } },
         },
         // Para GROUP companies devolvemos el exercise directo y un flag de membership.
-        exercise: { select: { id: true, title: true } },
+        exercise: { select: { id: true, title: true, course: { select: { name: true } } } },
+        // Rol del estudiante en esta empresa (si es GROUP)
+        memberships: {
+          where:  { userId: studentId },
+          select: { role: true },
+          take:   1,
+        },
+        // Conteos rápidos para KPIs en la tarjeta
+        _count: { select: { memberships: true, invoices: true, journalEntries: true } },
       },
       orderBy: { createdAt: 'desc' },
+    });
+
+    // Normalizar: exponer mode, myRole, conteo de miembros y un exercise unificado.
+    return companies.map(c => {
+      const { memberships, _count, ...rest } = c;
+      return {
+        ...rest,
+        myRole:        memberships[0]?.role ?? (c.mode === 'INDIVIDUAL' ? 'OWNER' : 'MEMBER'),
+        memberCount:   c.mode === 'GROUP' ? _count.memberships : 1,
+        invoiceCount:  _count.invoices,
+        entryCount:    _count.journalEntries,
+        // exercise unificado: directo (GROUP) o vía attempt (INDIVIDUAL)
+        linkedExercise: c.exercise ?? c.attempt?.exercise ?? null,
+      };
     });
   }
 
