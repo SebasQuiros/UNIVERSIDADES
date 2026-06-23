@@ -15,6 +15,7 @@ import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import { ExamModeWrapper } from '@/components/exam';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
+import { MacroIndicatorsStrip } from '@/components/dashboard/MacroIndicatorsStrip';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import {
@@ -181,7 +182,10 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
   return (
     <div className="space-y-6">
       {executivePanel}
-      {stockCard}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {stockCard}
+        <MacroIndicatorsStrip />
+      </div>
 
       {/* ── Gamification card ───────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100 rounded-2xl p-5">

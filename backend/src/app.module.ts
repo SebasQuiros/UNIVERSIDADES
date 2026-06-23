@@ -41,6 +41,7 @@ import { BankReconciliationModule }  from './modules/bank-reconciliation/bank-re
 import { AccountsReceivableModule }  from './modules/accounts-receivable/accounts-receivable.module';
 import { AccountsPayableModule }     from './modules/accounts-payable/accounts-payable.module';
 import { SecurityModule }            from './modules/security/security.module';
+import { MacroModule }               from './modules/macro/macro.module';
 import { RedisModule }               from './redis/redis.module';
 import { LoggerMiddleware }     from './common/middleware/logger.middleware';
 
@@ -102,6 +103,8 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     AccountsPayableModule,
     // Security monitoring (CSP reports, etc.)
     SecurityModule,
+    // Indicadores macroeconómicos CR (tipo de cambio, TBP, inflación)
+    MacroModule,
   ],
   providers: [
     { provide: APP_GUARD,        useClass: ThrottlerGuard },
