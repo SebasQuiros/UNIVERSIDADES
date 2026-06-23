@@ -78,4 +78,11 @@ export class CompaniesController {
   advisor(@Param('companyId') companyId: string) {
     return this.svc.getFinancialAdvisor(companyId);
   }
+
+  // GET — eventos económicos aleatorios (simulador)
+  @Get('companies/:companyId/events')
+  @UseGuards(CompanyOwnerGuard)
+  events(@Param('companyId') companyId: string) {
+    return this.svc.getEconomicEvents(companyId);
+  }
 }

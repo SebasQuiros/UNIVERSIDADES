@@ -629,4 +629,156 @@ export class CompaniesService {
       generatedAt: new Date().toISOString(),
     };
   }
+
+  /**
+   * Eventos económicos aleatorios (simulador): genera escenarios que el
+   * estudiante debe "resolver" registrando el asiento correcto. Determinista
+   * a partir del id de la empresa + la semana actual (rotan cada semana), y
+   * escalados según el tamaño real de su operación. Sin tablas nuevas.
+   */
+  async getEconomicEvents(companyId: string) {
+    const num = (v: any) => Number(v ?? 0);
+
+    // Tamaño de la operación para escalar montos a algo verosímil
+    const accounts = await this.prisma.account.findMany({
+      where:  { companyId, isActive: true },
+      select: { id: true, type: true, normalBalance: true },
+    });
+    const ids = accounts.map(a => a.id);
+    const agg = ids.length === 0 ? [] : await this.prisma.journalLine.groupBy({
+      by:    ['accountId'],
+      where: { companyId, accountId: { in: ids }, entry: { isReversed: false, status: 'CONFIRMED' as any } },
+      _sum:  { debit: true, credit: true },
+    });
+    const aggMap = new Map(agg.map(r => [r.accountId, { d: num(r._sum.debit), c: num(r._sum.credit) }]));
+    let totalIncome = 0, totalAssets = 0;
+    for (const a of accounts) {
+      const m = aggMap.get(a.id) ?? { d: 0, c: 0 };
+      const bal = a.normalBalance === 'DEBIT' ? m.d - m.c : m.c - m.d;
+      if (a.type === 'INCOME') totalIncome += bal;
+      if (a.type === 'ASSET')  totalAssets += bal;
+    }
+    // Monto base: 5% de ingresos o de activos, con piso de ₡25.000
+    const base = Math.max(25_000, Math.round((totalIncome > 0 ? totalIncome * 0.05 : totalAssets * 0.05) / 1000) * 1000 || 25_000);
+
+    // PRNG determinista (mulberry32) sembrado con id+semana → eventos rotan c/semana
+    const week = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
+    let seed = week;
+    for (const ch of companyId) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+    const rand = () => {
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    const around = (factor: number) => Math.round((base * factor * (0.7 + rand() * 0.6)) / 1000) * 1000;
+    const fmt = (n: number) => '₡' + n.toLocaleString('es-CR');
+
+    type Event = {
+      id: string;
+      category: 'riesgo' | 'fiscal' | 'mercado' | 'operativo' | 'oportunidad';
+      severity: 'alta' | 'media' | 'baja';
+      icon: string;
+      title: string;
+      story: string;
+      amount: number;
+      impact: string;
+      suggestedEntry: { debit: string; credit: string; amount: number }[];
+      learn: string;
+    };
+
+    const CATALOG: ((a: number) => Event)[] = [
+      (a) => ({
+        id: 'moroso', category: 'riesgo', severity: 'alta', icon: '⚠️',
+        title: 'Cliente moroso',
+        story: `Un cliente que te debe ${fmt(a)} entró en mora y no pagará. Debes reconocer la incobrabilidad.`,
+        amount: a,
+        impact: `Pérdida de ${fmt(a)} en resultados; baja tu cuentas por cobrar.`,
+        suggestedEntry: [
+          { debit: 'Gasto por incobrables (cuentas malas)', credit: '', amount: a },
+          { debit: '', credit: 'Cuentas por cobrar — Clientes', amount: a },
+        ],
+        learn: 'Las cuentas incobrables se llevan a gasto cuando se confirma que no se recuperarán (principio de prudencia).',
+      }),
+      (a) => ({
+        id: 'inspeccion', category: 'fiscal', severity: 'media', icon: '🏛️',
+        title: 'Inspección de Hacienda',
+        story: `La Administración Tributaria revisó tus declaraciones y determinó una multa de ${fmt(a)} por una diferencia en el IVA.`,
+        amount: a,
+        impact: `Salida de efectivo de ${fmt(a)}; se registra como gasto no deducible.`,
+        suggestedEntry: [
+          { debit: 'Gastos por multas y sanciones', credit: '', amount: a },
+          { debit: '', credit: 'Banco / Efectivo', amount: a },
+        ],
+        learn: 'Las multas fiscales son gasto contable pero NO son deducibles del impuesto sobre la renta.',
+      }),
+      (a) => ({
+        id: 'inflacion', category: 'mercado', severity: 'media', icon: '📈',
+        title: 'Inflación en insumos',
+        story: `Tus proveedores subieron precios. La compra de inventario que esperabas pagar costó ${fmt(a)} más de lo presupuestado.`,
+        amount: a,
+        impact: `Mayor costo de inventario / mercadería por ${fmt(a)}.`,
+        suggestedEntry: [
+          { debit: 'Inventario / Mercadería', credit: '', amount: a },
+          { debit: '', credit: 'Cuentas por pagar — Proveedores', amount: a },
+        ],
+        learn: 'La inflación encarece el costo de ventas y comprime el margen; conviene revisar precios de venta.',
+      }),
+      (a) => ({
+        id: 'dano_activo', category: 'operativo', severity: 'alta', icon: '🔧',
+        title: 'Daño de un activo',
+        story: `Un equipo se dañó y debe darse de baja parcialmente por ${fmt(a)}.`,
+        amount: a,
+        impact: `Pérdida de ${fmt(a)}; reduce el valor en libros del activo.`,
+        suggestedEntry: [
+          { debit: 'Pérdida por deterioro de activos', credit: '', amount: a },
+          { debit: '', credit: 'Mobiliario y equipo', amount: a },
+        ],
+        learn: 'El deterioro de un activo se reconoce como pérdida cuando su valor recuperable cae por debajo del valor en libros (NIC 36).',
+      }),
+      (a) => ({
+        id: 'oportunidad', category: 'oportunidad', severity: 'baja', icon: '🚀',
+        title: 'Oportunidad de venta',
+        story: `Un cliente nuevo te hace un pedido grande de ${fmt(a)} de contado (más IVA 13%).`,
+        amount: a,
+        impact: `Ingreso de ${fmt(a)} + IVA; entra efectivo y genera utilidad.`,
+        suggestedEntry: [
+          { debit: 'Banco / Efectivo', credit: '', amount: Math.round(a * 1.13) },
+          { debit: '', credit: 'Ventas / Ingresos', amount: a },
+          { debit: '', credit: 'IVA por pagar (débito fiscal)', amount: Math.round(a * 0.13) },
+        ],
+        learn: 'En una venta de contado entra el total con IVA; el IVA cobrado es un pasivo que luego se declara en el D-104.',
+      }),
+      (a) => ({
+        id: 'prestamo', category: 'mercado', severity: 'media', icon: '🏦',
+        title: 'Aprobación de préstamo',
+        story: `El banco te aprobó un crédito de ${fmt(a)} para capital de trabajo, depositado en tu cuenta.`,
+        amount: a,
+        impact: `Entra efectivo ${fmt(a)}; aumenta tu pasivo y endeudamiento.`,
+        suggestedEntry: [
+          { debit: 'Banco / Efectivo', credit: '', amount: a },
+          { debit: '', credit: 'Préstamos por pagar (largo plazo)', amount: a },
+        ],
+        learn: 'Un préstamo no es ingreso: es un pasivo. Solo los intereses que pagues serán gasto.',
+      }),
+    ];
+
+    // Selección determinista de 3 eventos distintos para la semana
+    const factors = [0.6, 1.0, 1.4, 0.8, 1.2, 1.0];
+    const picks: Event[] = [];
+    const used = new Set<number>();
+    while (picks.length < 3 && used.size < CATALOG.length) {
+      const idx = Math.floor(rand() * CATALOG.length);
+      if (used.has(idx)) continue;
+      used.add(idx);
+      picks.push(CATALOG[idx](around(factors[idx] ?? 1)));
+    }
+
+    return {
+      periodLabel: `Semana ${week % 52 + 1}`,
+      intro: 'Tu empresa enfrenta estos eventos. Analiza cada uno y registra el asiento correcto en tu Diario.',
+      events: picks,
+      generatedAt: new Date().toISOString(),
+    };
+  }
 }
