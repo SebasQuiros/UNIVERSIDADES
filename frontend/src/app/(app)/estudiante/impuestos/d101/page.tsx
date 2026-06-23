@@ -14,6 +14,7 @@ import { AttachmentPanel, Attachment } from '../_components/AttachmentPanel';
 import { PerfilTributario, usePerfilTributario } from '../_components/PerfilTributario';
 import { PreSubmitModal } from '../_components/PreSubmitModal';
 import { WizardStepper } from '../_components/WizardStepper';
+import { TribuHeader } from '../_components/TribuHeader';
 import { downloadDeclarationPdf } from '../_components/downloadPdf';
 import { calcD101, type D101Result, type TramoDetalle } from '../_components/calc';
 
@@ -259,38 +260,16 @@ export default function D101Page() {
 
   return (
     <div className="min-h-screen bg-gray-100" ref={topRef}>
-      {/* Header TRIBU CR */}
-      <div className="bg-emerald-900 text-white">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/estudiante/impuestos" className="text-emerald-300 hover:text-white transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-300">Ministerio de Hacienda</span>
-                <span className="text-emerald-600">|</span>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-300">TRIBU CR</span>
-              </div>
-              <h1 className="text-lg font-black">D-101 — Declaración del Impuesto sobre la Renta</h1>
-              <p className="text-xs text-emerald-300">Personas Jurídicas — Régimen Tradicional</p>
-            </div>
-          </div>
-          {isSubmitted && (
-            <span className="flex items-center gap-1.5 text-xs font-bold bg-emerald-500 text-white px-3 py-1.5 rounded-full">
-              <CheckCircle2 className="w-3.5 h-3.5" /> PRESENTADA
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Educational banner */}
-      <div className="bg-amber-400 text-amber-900">
-        <div className="max-w-4xl mx-auto px-4 py-2 flex items-center gap-2 text-xs font-bold">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          SIMULACIÓN EDUCATIVA — Esta declaración NO se envía a Hacienda. Solo tiene fines de práctica académica. Tramos y tasas: período fiscal 2025-2026.
-        </div>
-      </div>
+      {/* Encabezado TRIBU-CR unificado */}
+      <TribuHeader
+        code="D-101"
+        title="Declaración del Impuesto sobre la Renta"
+        accent="emerald"
+        status={status}
+        refNo={refNo}
+        periodLabel={period}
+        perfil={perfil}
+      />
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
 
