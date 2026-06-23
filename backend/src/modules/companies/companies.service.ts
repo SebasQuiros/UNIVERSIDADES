@@ -302,4 +302,140 @@ export class CompaniesService {
       recentInvoices,
     };
   }
+
+  // ── Valoración bursátil simulada ──────────────────────────────
+  // Calcula un "precio de acción" y market cap a partir de la contabilidad
+  // REAL de la empresa del estudiante (no hay bolsa real: la empresa es ficticia).
+  // El precio sube cuando llevan bien los libros (patrimonio, utilidad, ratios)
+  // y baja con pérdidas/insolvencia. Fines 100% educativos.
+  async getValuation(companyId: string) {
+    const num = (v: any) => Number(v ?? 0);
+    const SHARES = 10_000;           // acciones en circulación (fijo)
+    const PE_MULTIPLE = 6;           // múltiplo precio/utilidad
+
+    // 1) Saldos por cuenta (una sola groupBy) ───────────────────
+    const accounts = await this.prisma.account.findMany({
+      where:  { companyId, isActive: true },
+      select: { id: true, code: true, type: true, normalBalance: true },
+    });
+    const ids = accounts.map(a => a.id);
+    const agg = ids.length === 0 ? [] : await this.prisma.journalLine.groupBy({
+      by:    ['accountId'],
+      where: { companyId, accountId: { in: ids }, entry: { isReversed: false, status: 'CONFIRMED' as any } },
+      _sum:  { debit: true, credit: true },
+    });
+    const aggMap = new Map(agg.map(r => [r.accountId, { d: num(r._sum.debit), c: num(r._sum.credit) }]));
+
+    let totalAssets = 0, currentAssets = 0, totalLiabilities = 0, currentLiabilities = 0;
+    let totalIncome = 0, totalExpenses = 0;
+    for (const a of accounts) {
+      const m = aggMap.get(a.id) ?? { d: 0, c: 0 };
+      const bal = a.normalBalance === 'DEBIT' ? m.d - m.c : m.c - m.d;
+      if (a.type === 'ASSET')      { totalAssets += bal; if (a.code.startsWith('1.1')) currentAssets += bal; }
+      else if (a.type === 'LIABILITY') { totalLiabilities += bal; if (a.code.startsWith('2.1')) currentLiabilities += bal; }
+      else if (a.type === 'INCOME')    totalIncome   += bal;
+      else if (a.type === 'EXPENSE')   totalExpenses += bal;
+    }
+
+    const equity    = totalAssets - totalLiabilities;       // patrimonio real (incl. resultado)
+    const netIncome = totalIncome - totalExpenses;
+
+    // 2) Ratios financieros ─────────────────────────────────────
+    const netMargin    = totalIncome > 0 ? netIncome / totalIncome : 0;
+    const currentRatio = currentLiabilities > 0 ? currentAssets / currentLiabilities : (currentAssets > 0 ? 3 : 0);
+    const debtRatio    = totalAssets > 0 ? totalLiabilities / totalAssets : 0;
+    const roe          = equity > 0 ? netIncome / equity : 0;
+
+    // 3) Health score 0-100 ─────────────────────────────────────
+    let score = 50;
+    score += Math.max(-20, Math.min(20, netMargin * 80));
+    score += currentRatio >= 1.5 ? 15 : currentRatio >= 1 ? 8 : -10;
+    score += debtRatio <= 0.4 ? 10 : debtRatio <= 0.6 ? 4 : debtRatio > 0.8 ? -12 : 0;
+    score += roe >= 0.15 ? 10 : roe > 0 ? 4 : roe < 0 ? -10 : 0;
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    const rating =
+      score >= 85 ? 'AAA' : score >= 72 ? 'AA' : score >= 60 ? 'A' :
+      score >= 45 ? 'BBB' : score >= 32 ? 'BB' : score >= 20 ? 'B' : 'CCC';
+
+    // 4) Market cap + precio de acción ──────────────────────────
+    const bookComp  = Math.max(equity, 0);
+    const earnComp  = Math.max(netIncome, 0) * PE_MULTIPLE;
+    const revComp   = totalIncome * 0.6;
+    let   marketCap = 0.5 * bookComp + 0.35 * earnComp + 0.15 * revComp;
+    const healthMult = 0.7 + (score / 100) * 0.6;            // 0.7 .. 1.3
+    marketCap *= healthMult;
+    if (equity <= 0) marketCap *= 0.3;                       // insolvencia castiga fuerte
+    marketCap = Math.max(0, Math.round(marketCap));
+    const sharePrice = marketCap / SHARES;
+
+    // 5) Histórico de precio (6 meses, derivado de la actividad real) ──
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1); sixMonthsAgo.setHours(0, 0, 0, 0);
+
+    const monthlyRows = await this.prisma.$queryRaw<Array<{ month: string; income: number; expense: number }>>`
+      SELECT to_char(date_trunc('month', je.entry_date), 'YYYY-MM') AS month,
+             COALESCE(SUM(CASE WHEN a.type::text = 'INCOME'  THEN jl.credit - jl.debit ELSE 0 END), 0)::float8 AS income,
+             COALESCE(SUM(CASE WHEN a.type::text = 'EXPENSE' THEN jl.debit - jl.credit ELSE 0 END), 0)::float8 AS expense
+      FROM journal_lines jl
+      JOIN accounts a          ON a.id  = jl.account_id
+      JOIN journal_entries je  ON je.id = jl.entry_id
+      WHERE jl.company_id = ${companyId}::uuid
+        AND je.is_reversed = false
+        AND je.status = 'CONFIRMED'
+        AND je.entry_date >= ${sixMonthsAgo}
+      GROUP BY 1 ORDER BY 1
+    `.catch(() => [] as Array<{ month: string; income: number; expense: number }>);
+
+    const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+    const mMap = new Map(monthlyRows.map(r => [r.month, { income: num(r.income), expense: num(r.expense) }]));
+
+    // Valoración cruda acumulada por mes; luego se escala para que el último
+    // punto coincida con el precio actual (consistencia visual).
+    let cumNet = 0, cumRev = 0;
+    const raw: Array<{ label: string; v: number }> = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(); d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const row = mMap.get(key) ?? { income: 0, expense: 0 };
+      cumNet += row.income - row.expense;
+      cumRev += row.income;
+      const v = 0.5 * Math.max(equity, 0) + 0.35 * Math.max(cumNet, 0) * PE_MULTIPLE + 0.15 * cumRev * 0.6;
+      raw.push({ label: `${MONTHS_ES[d.getMonth()]} ${d.getFullYear()}`, v });
+    }
+    const lastRaw = raw[raw.length - 1]?.v ?? 0;
+    const scale = lastRaw > 0 ? sharePrice / (lastRaw / SHARES) : 0;
+    const priceHistory = raw.map((p, i) => ({
+      label: p.label,
+      price: lastRaw > 0
+        ? Math.round((p.v / SHARES) * scale * 100) / 100
+        : Math.round((sharePrice * (i + 1) / raw.length) * 100) / 100,
+    }));
+
+    const prevPrice  = priceHistory.length >= 2 ? priceHistory[priceHistory.length - 2].price : sharePrice;
+    const changeAbs  = sharePrice - prevPrice;
+    const changePct  = prevPrice > 0 ? (changeAbs / prevPrice) * 100 : 0;
+
+    return {
+      ticker: 'Empresa',                  // el frontend puede derivar siglas del nombre
+      sharePrice,
+      marketCap,
+      sharesOutstanding: SHARES,
+      change: { abs: Math.round(changeAbs * 100) / 100, pct: Math.round(changePct * 100) / 100 },
+      rating,
+      healthScore: score,
+      financials: {
+        totalAssets, totalLiabilities, equity,
+        totalIncome, totalExpenses, netIncome,
+      },
+      ratios: {
+        netMargin:    Math.round(netMargin * 1000) / 10,     // %
+        currentRatio: Math.round(currentRatio * 100) / 100,
+        debtRatio:    Math.round(debtRatio * 1000) / 10,     // %
+        roe:          Math.round(roe * 1000) / 10,           // %
+      },
+      priceHistory,
+    };
+  }
 }

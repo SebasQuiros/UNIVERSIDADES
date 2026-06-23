@@ -14,6 +14,7 @@ import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
 import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import { ExamModeWrapper } from '@/components/exam';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
+import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import {
@@ -150,6 +151,9 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
   // Se renderiza arriba; debajo queda la gamificación existente.
   const executivePanel = <ExecutiveDashboard companyId={companyId} />;
 
+  // ── Precio de acción simulado (valoración bursátil de la empresa) ──────────
+  const stockCard = <CompanyStockCard companyId={companyId} companyName={attempt.company?.name} />;
+
   // ── Gamification ──────────────────────────────────────────────────────────
   const progressPct = Number(progress?.progress?.progressPct ?? attempt.studentProgress?.progressPct ?? 0);
   const LEVELS = [
@@ -177,6 +181,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
   return (
     <div className="space-y-6">
       {executivePanel}
+      {stockCard}
 
       {/* ── Gamification card ───────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100 rounded-2xl p-5">

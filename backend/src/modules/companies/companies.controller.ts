@@ -64,4 +64,11 @@ export class CompaniesController {
   dashboard(@Param('companyId') companyId: string) {
     return this.svc.getDashboard(companyId);
   }
+
+  // GET — valoración bursátil simulada (precio de acción)
+  @Get('companies/:companyId/valuation')
+  @UseGuards(CompanyOwnerGuard)
+  valuation(@Param('companyId') companyId: string) {
+    return this.svc.getValuation(companyId);
+  }
 }
