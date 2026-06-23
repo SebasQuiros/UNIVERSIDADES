@@ -71,4 +71,11 @@ export class CompaniesController {
   valuation(@Param('companyId') companyId: string) {
     return this.svc.getValuation(companyId);
   }
+
+  // GET — IA Gerente Financiero (alertas y consejos sobre los libros)
+  @Get('companies/:companyId/advisor')
+  @UseGuards(CompanyOwnerGuard)
+  advisor(@Param('companyId') companyId: string) {
+    return this.svc.getFinancialAdvisor(companyId);
+  }
 }

@@ -438,4 +438,195 @@ export class CompaniesService {
       priceHistory,
     };
   }
+
+  /**
+   * IA Gerente Financiero (determinista, sin LLM): analiza los libros de la
+   * empresa y devuelve alertas + consejos accionables. Funciona siempre,
+   * incluso sin ANTHROPIC_API_KEY, porque las reglas se derivan de la contabilidad.
+   */
+  async getFinancialAdvisor(companyId: string) {
+    const num = (v: any) => Number(v ?? 0);
+
+    const accounts = await this.prisma.account.findMany({
+      where:  { companyId, isActive: true },
+      select: { id: true, code: true, name: true, type: true, normalBalance: true },
+    });
+    const ids = accounts.map(a => a.id);
+    const agg = ids.length === 0 ? [] : await this.prisma.journalLine.groupBy({
+      by:    ['accountId'],
+      where: { companyId, accountId: { in: ids }, entry: { isReversed: false, status: 'CONFIRMED' as any } },
+      _sum:  { debit: true, credit: true },
+    });
+    const aggMap = new Map(agg.map(r => [r.accountId, { d: num(r._sum.debit), c: num(r._sum.credit) }]));
+
+    let totalAssets = 0, currentAssets = 0, totalLiabilities = 0, currentLiabilities = 0;
+    let totalIncome = 0, totalExpenses = 0;
+    let cash = 0, receivables = 0, payables = 0, ivaPorPagar = 0;
+    for (const a of accounts) {
+      const m = aggMap.get(a.id) ?? { d: 0, c: 0 };
+      const bal = a.normalBalance === 'DEBIT' ? m.d - m.c : m.c - m.d;
+      const name = (a.name || '').toLowerCase();
+      if (a.type === 'ASSET') {
+        totalAssets += bal;
+        if (a.code.startsWith('1.1')) currentAssets += bal;
+        if (a.code.startsWith('1.1.1') || name.includes('caja') || name.includes('banco') || name.includes('efectivo')) cash += bal;
+        if (name.includes('cobrar') || name.includes('clientes')) receivables += bal;
+      } else if (a.type === 'LIABILITY') {
+        totalLiabilities += bal;
+        if (a.code.startsWith('2.1')) currentLiabilities += bal;
+        if (name.includes('pagar') && (name.includes('proveedor') || name.includes('cuentas'))) payables += bal;
+        if (name.includes('iva') || name.includes('impuesto')) ivaPorPagar += bal;
+      } else if (a.type === 'INCOME')  totalIncome   += bal;
+      else if (a.type === 'EXPENSE')   totalExpenses += bal;
+    }
+
+    const equity       = totalAssets - totalLiabilities;
+    const netIncome    = totalIncome - totalExpenses;
+    const netMargin    = totalIncome > 0 ? netIncome / totalIncome : 0;
+    const currentRatio = currentLiabilities > 0 ? currentAssets / currentLiabilities : (currentAssets > 0 ? 3 : 0);
+    const debtRatio    = totalAssets > 0 ? totalLiabilities / totalAssets : 0;
+    const roe          = equity > 0 ? netIncome / equity : 0;
+    const fmt = (n: number) => '₡' + Math.round(n).toLocaleString('es-CR');
+
+    type Insight = {
+      level: 'critical' | 'warning' | 'good' | 'info';
+      title: string;
+      detail: string;
+      action?: string;
+    };
+    const insights: Insight[] = [];
+
+    // ── Liquidez ────────────────────────────────────────────────
+    if (currentLiabilities > 0 && currentRatio < 1) {
+      insights.push({
+        level: 'critical',
+        title: 'Riesgo de liquidez',
+        detail: `Tu razón corriente es ${currentRatio.toFixed(2)}x: el activo circulante (${fmt(currentAssets)}) no cubre el pasivo circulante (${fmt(currentLiabilities)}).`,
+        action: 'Acelera la cobranza de clientes o renegocia plazos con proveedores antes de asumir nuevas deudas.',
+      });
+    } else if (currentRatio >= 1.5) {
+      insights.push({
+        level: 'good',
+        title: 'Buena liquidez',
+        detail: `Razón corriente de ${currentRatio.toFixed(2)}x: puedes cubrir holgadamente tus obligaciones de corto plazo.`,
+      });
+    }
+
+    // ── Caja ────────────────────────────────────────────────────
+    if (cash <= 0 && totalAssets > 0) {
+      insights.push({
+        level: 'critical',
+        title: 'Sin efectivo disponible',
+        detail: 'El saldo de caja/bancos es cero o negativo. Una empresa sin liquidez no puede operar aunque sea rentable.',
+        action: 'Registra cobros pendientes o un aporte de capital para restablecer el flujo de caja.',
+      });
+    } else if (cash > 0 && currentLiabilities > 0 && cash < currentLiabilities * 0.2) {
+      insights.push({
+        level: 'warning',
+        title: 'Colchón de caja bajo',
+        detail: `Tu efectivo (${fmt(cash)}) es menor al 20% de tus deudas de corto plazo (${fmt(currentLiabilities)}).`,
+        action: 'Mantén una reserva de caja para imprevistos.',
+      });
+    }
+
+    // ── Cuentas por cobrar ──────────────────────────────────────
+    if (receivables > 0 && totalIncome > 0 && receivables > totalIncome * 0.4) {
+      insights.push({
+        level: 'warning',
+        title: 'Mucho dinero en cuentas por cobrar',
+        detail: `Tienes ${fmt(receivables)} por cobrar, equivalente a más del 40% de tus ingresos. La venta a crédito sin cobranza ahoga el flujo.`,
+        action: 'Da seguimiento a la morosidad y considera políticas de cobro más estrictas.',
+      });
+    }
+
+    // ── IVA por pagar ───────────────────────────────────────────
+    if (ivaPorPagar > 0) {
+      insights.push({
+        level: ivaPorPagar > cash && cash >= 0 ? 'warning' : 'info',
+        title: 'IVA pendiente de declarar',
+        detail: `Adeudas ${fmt(ivaPorPagar)} de impuestos (IVA u otros). Recuerda que el D-104 se presenta y paga dentro de los primeros 15 días naturales del mes siguiente.`,
+        action: ivaPorPagar > cash ? 'Aparta efectivo: el impuesto por pagar supera tu caja disponible.' : undefined,
+      });
+    }
+
+    // ── Endeudamiento ───────────────────────────────────────────
+    if (debtRatio > 0.7) {
+      insights.push({
+        level: debtRatio > 0.85 ? 'critical' : 'warning',
+        title: 'Endeudamiento elevado',
+        detail: `El ${(debtRatio * 100).toFixed(0)}% de tus activos está financiado con deuda. Un nivel alto reduce tu margen de maniobra.`,
+        action: 'Prioriza capitalizar utilidades antes de tomar más pasivos.',
+      });
+    }
+
+    // ── Rentabilidad ────────────────────────────────────────────
+    if (totalIncome > 0) {
+      if (netIncome < 0) {
+        insights.push({
+          level: 'critical',
+          title: 'Estás operando con pérdida',
+          detail: `Gastos (${fmt(totalExpenses)}) superan ingresos (${fmt(totalIncome)}): pérdida de ${fmt(Math.abs(netIncome))}.`,
+          action: 'Revisa tus costos y precios de venta; ningún negocio sobrevive con margen negativo sostenido.',
+        });
+      } else if (netMargin < 0.05) {
+        insights.push({
+          level: 'warning',
+          title: 'Margen neto muy ajustado',
+          detail: `Tu margen neto es ${(netMargin * 100).toFixed(1)}%. Un imprevisto pequeño podría volverte deficitario.`,
+          action: 'Busca reducir gastos operativos o mejorar precios.',
+        });
+      } else if (netMargin >= 0.15) {
+        insights.push({
+          level: 'good',
+          title: 'Rentabilidad saludable',
+          detail: `Margen neto de ${(netMargin * 100).toFixed(1)}% y ROE de ${(roe * 100).toFixed(1)}%. Tu operación genera valor.`,
+        });
+      }
+    }
+
+    // ── Patrimonio negativo ─────────────────────────────────────
+    if (equity < 0) {
+      insights.push({
+        level: 'critical',
+        title: 'Patrimonio negativo',
+        detail: `Tus pasivos (${fmt(totalLiabilities)}) superan tus activos (${fmt(totalAssets)}). Contablemente la empresa está en insolvencia técnica.`,
+        action: 'Se requiere un aporte de capital o reestructurar deuda con urgencia.',
+      });
+    }
+
+    // ── Sin actividad ───────────────────────────────────────────
+    if (totalIncome === 0 && totalExpenses === 0) {
+      insights.push({
+        level: 'info',
+        title: 'Aún sin movimientos',
+        detail: 'Todavía no hay ingresos ni gastos registrados. Empieza por emitir tu primera factura y registrar tus asientos.',
+      });
+    }
+
+    // Orden por severidad y resumen
+    const order = { critical: 0, warning: 1, good: 2, info: 3 } as const;
+    insights.sort((a, b) => order[a.level] - order[b.level]);
+
+    const critical = insights.filter(i => i.level === 'critical').length;
+    const warnings = insights.filter(i => i.level === 'warning').length;
+    const headline =
+      critical > 0 ? `Atención: ${critical} ${critical === 1 ? 'alerta crítica' : 'alertas críticas'} requieren tu acción.` :
+      warnings > 0 ? `Tu empresa va bien, pero hay ${warnings} ${warnings === 1 ? 'punto' : 'puntos'} por vigilar.` :
+      insights.length > 0 ? 'Tu empresa muestra una salud financiera sólida. ¡Buen trabajo!' :
+      'Registra movimientos para recibir recomendaciones personalizadas.';
+
+    return {
+      headline,
+      counts: { critical, warnings, total: insights.length },
+      insights,
+      snapshot: {
+        cash, receivables, payables, ivaPorPagar,
+        currentRatio: Math.round(currentRatio * 100) / 100,
+        debtRatio:    Math.round(debtRatio * 1000) / 10,
+        netMargin:    Math.round(netMargin * 1000) / 10,
+        netIncome,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+  }
 }

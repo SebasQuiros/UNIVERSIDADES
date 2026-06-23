@@ -16,6 +16,7 @@ import { ExamModeWrapper } from '@/components/exam';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
 import { MacroIndicatorsStrip } from '@/components/dashboard/MacroIndicatorsStrip';
+import { FinancialAdvisorCard } from '@/components/dashboard/FinancialAdvisorCard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import {
@@ -186,6 +187,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
         {stockCard}
         <MacroIndicatorsStrip />
       </div>
+      <FinancialAdvisorCard companyId={companyId} />
 
       {/* ── Gamification card ───────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100 rounded-2xl p-5">
