@@ -14,10 +14,6 @@ import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
 import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import { ExamModeWrapper } from '@/components/exam';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
-import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
-import { MacroIndicatorsStrip } from '@/components/dashboard/MacroIndicatorsStrip';
-import { FinancialAdvisorCard } from '@/components/dashboard/FinancialAdvisorCard';
-import { EconomicEventsCard } from '@/components/dashboard/EconomicEventsCard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import {
@@ -26,7 +22,7 @@ import {
   Clock, TrendingUp, X, RefreshCw, ChevronRight, AlertCircle, Truck,
   Printer, Landmark, Award, Star, Zap, Circle, History, Upload,
   Scale, ClipboardList, ClipboardCheck, Lock, Download, MessageCircle,
-  Lightbulb, ShoppingCart, Search,
+  Lightbulb, ShoppingCart, Search, LineChart,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -152,10 +148,9 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
 
   // ── Panel ejecutivo (ALEGRA-style): KPIs, tendencia, IVA, AR/AP ──────────
   // Se renderiza arriba; debajo queda la gamificación existente.
+  // El simulador (precio de acción, macro, IA, eventos) vive en su propia
+  // sección: /estudiante/simulador.
   const executivePanel = <ExecutiveDashboard companyId={companyId} />;
-
-  // ── Precio de acción simulado (valoración bursátil de la empresa) ──────────
-  const stockCard = <CompanyStockCard companyId={companyId} companyName={attempt.company?.name} />;
 
   // ── Gamification ──────────────────────────────────────────────────────────
   const progressPct = Number(progress?.progress?.progressPct ?? attempt.studentProgress?.progressPct ?? 0);
@@ -184,14 +179,23 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
   return (
     <div className="space-y-6">
       {executivePanel}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {stockCard}
-        <MacroIndicatorsStrip />
-      </div>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <FinancialAdvisorCard companyId={companyId} />
-        <EconomicEventsCard companyId={companyId} />
-      </div>
+
+      {/* Acceso al Simulador Financiero (sección propia) */}
+      <Link href="/estudiante/simulador"
+        className="flex items-center gap-4 rounded-2xl px-5 py-4 text-white transition-transform hover:scale-[1.01]"
+        style={{ background: 'linear-gradient(135deg,#03080F 0%,#0F2657 60%,#1E3A8A 100%)' }}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)', boxShadow: '0 0 16px rgba(59,130,246,0.5)' }}>
+          <LineChart className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-sm">Simulador Financiero</p>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            Precio de acción, indicadores macro, gerente financiero IA y eventos económicos de tu empresa.
+          </p>
+        </div>
+        <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: '#60A5FA' }} />
+      </Link>
 
       {/* ── Gamification card ───────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-100 rounded-2xl p-5">

@@ -10,7 +10,7 @@ import type { Notification } from '@/types';
 import {
   LayoutDashboard, Bell, Building2, LogOut,
   BookOpen, Menu, X, ChevronRight, Receipt, UserCircle,
-  TrendingUp,
+  TrendingUp, LineChart,
 } from 'lucide-react';
 
 const NAV_SECTIONS = [
@@ -25,6 +25,12 @@ const NAV_SECTIONS = [
     label: 'Contabilidad',
     items: [
       { href: '/estudiante/empresas', label: 'Mis Empresas',   icon: Building2 },
+    ],
+  },
+  {
+    label: 'Simulador',
+    items: [
+      { href: '/estudiante/simulador', label: 'Simulador Financiero', icon: LineChart },
     ],
   },
   {
