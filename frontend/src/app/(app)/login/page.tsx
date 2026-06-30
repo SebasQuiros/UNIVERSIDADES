@@ -22,9 +22,10 @@ const ROLE_REDIRECT: Record<string, string> = {
 };
 
 const DEMO_CREDENTIALS = [
-  { label: 'Admin',       email: 'admin@contafacil.cr',       password: 'Admin2026!',         color: '#7C3AED' },
-  { label: 'Profesor',    email: 'profesor@contafacil.cr',    password: 'Profesor2026!',      color: '#0369A1' },
-  { label: 'Estudiante',  email: 'estudiante1@contafacil.cr', password: 'Estudiante1-2026!',  color: '#065F46' },
+  { label: 'Admin',         email: 'admin@contafacil.cr',       password: 'Admin2026!',         color: '#7C3AED' },
+  { label: 'Profesor',      email: 'profesor@contafacil.cr',    password: 'Profesor2026!',      color: '#0369A1' },
+  { label: 'Estudiante 1',  email: 'estudiante1@contafacil.cr', password: 'Estudiante1-2026!',  color: '#065F46' },
+  { label: 'Estudiante 2',  email: 'estudiante2@contafacil.cr', password: 'Estudiante2-2026!',  color: '#065F46' },
 ];
 
 export default function LoginPage() {
@@ -177,31 +178,29 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* ── Demo credentials (development only) ── */}
-          {process.env.NODE_ENV !== 'production' && (
-            <div className="mt-6 p-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                Credenciales de prueba — clic para autocompletar
-              </p>
-              <div className="space-y-1.5">
-                {DEMO_CREDENTIALS.map(({ label, email: e, password: p, color }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => {
-                      setEmail(e);
-                      setPassword(p);
-                      setLoginError('');
-                    }}
-                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors group"
-                  >
-                    <span className="text-xs font-medium" style={{ color }}>{label}</span>
-                    <span className="text-xs text-gray-400 font-mono group-hover:text-gray-600 truncate ml-2">{e}</span>
-                  </button>
-                ))}
-              </div>
+          {/* ── Demo credentials — acceso rápido para revisión ── */}
+          <div className="mt-6 p-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              Usuarios de prueba — clic para autocompletar
+            </p>
+            <div className="space-y-1.5">
+              {DEMO_CREDENTIALS.map(({ label, email: e, password: p, color }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    setEmail(e);
+                    setPassword(p);
+                    setLoginError('');
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors group"
+                >
+                  <span className="text-xs font-medium" style={{ color }}>{label}</span>
+                  <span className="text-xs text-gray-400 font-mono group-hover:text-gray-600 truncate ml-2">{e}</span>
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           <p className="text-center text-xs text-gray-400 mt-4">
             ¿Olvidaste tu contraseña? Contacta a tu administrador institucional.
