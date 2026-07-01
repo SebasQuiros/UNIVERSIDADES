@@ -42,6 +42,7 @@ import { AccountsReceivableModule }  from './modules/accounts-receivable/account
 import { AccountsPayableModule }     from './modules/accounts-payable/accounts-payable.module';
 import { SecurityModule }            from './modules/security/security.module';
 import { MacroModule }               from './modules/macro/macro.module';
+import { CompetenciesModule }        from './modules/competencies/competencies.module';
 import { RedisModule }               from './redis/redis.module';
 import { LoggerMiddleware }     from './common/middleware/logger.middleware';
 
@@ -105,6 +106,8 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     SecurityModule,
     // Indicadores macroeconómicos CR (tipo de cambio, TBP, inflación)
     MacroModule,
+    // Competencias (evidencia para acreditación SINAES)
+    CompetenciesModule,
   ],
   providers: [
     { provide: APP_GUARD,        useClass: ThrottlerGuard },
