@@ -43,6 +43,7 @@ import { AccountsPayableModule }     from './modules/accounts-payable/accounts-p
 import { SecurityModule }            from './modules/security/security.module';
 import { MacroModule }               from './modules/macro/macro.module';
 import { CompetenciesModule }        from './modules/competencies/competencies.module';
+import { CourseTemplatesModule }     from './modules/course-templates/course-templates.module';
 import { RedisModule }               from './redis/redis.module';
 import { LoggerMiddleware }     from './common/middleware/logger.middleware';
 
@@ -108,6 +109,8 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     MacroModule,
     // Competencias (evidencia para acreditación SINAES)
     CompetenciesModule,
+    // Plantillas de curso UTN (contenido listo para usar)
+    CourseTemplatesModule,
   ],
   providers: [
     { provide: APP_GUARD,        useClass: ThrottlerGuard },

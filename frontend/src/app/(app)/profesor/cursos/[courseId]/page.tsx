@@ -631,6 +631,105 @@ function TemplateModal({ courseId, onClose, onCreated }: {
   );
 }
 
+// ── UTN Course Template Modal (contenido listo para usar) ──────────────────────
+interface UtnTemplate {
+  key: string; code: string; name: string; description: string;
+  exerciseCount: number; competencyCodes: string[];
+}
+function UtnTemplateModal({ courseId, onClose, onApplied }: {
+  courseId: string; onClose: () => void; onApplied: () => void;
+}) {
+  const [templates, setTemplates] = useState<UtnTemplate[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [applying, setApplying]   = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<UtnTemplate[]>('/api/v1/course-templates')
+      .then(({ data }) => setTemplates(data))
+      .catch(() => toast.error('Error al cargar plantillas UTN'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function apply(key: string) {
+    setApplying(key);
+    try {
+      const { data } = await api.post<{ createdCount: number; skippedCount: number }>(
+        `/api/v1/courses/${courseId}/apply-template`, { templateKey: key },
+      );
+      if (data.createdCount > 0) {
+        toast.success(`${data.createdCount} ejercicio(s) cargados${data.skippedCount ? ` (${data.skippedCount} ya existían)` : ''}`);
+      } else {
+        toast(`Todos los ejercicios ya estaban cargados`, { icon: 'ℹ️' });
+      }
+      onApplied();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setApplying(null);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white border border-gray-200 shadow-xl rounded-2xl w-full max-w-lg">
+        <div className="flex items-center justify-between p-5 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="w-4 h-4 text-blue-600" />
+            <h3 className="font-semibold text-gray-900">Cargar curso UTN</h3>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-4 max-h-96 overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center py-8"><Spinner /></div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <Layers className="w-10 h-10 mx-auto text-gray-200 mb-3" />
+              <p className="text-sm">No hay plantillas de curso disponibles.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {templates.map((t) => (
+                <div key={t.key} className="p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-all">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">{t.code}</span>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{t.name}</p>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1.5 leading-snug">{t.description}</p>
+                      <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
+                        <span className="flex items-center gap-1"><FileText className="w-3 h-3" />{t.exerciseCount} ejercicios</span>
+                        <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{t.competencyCodes.length} competencias</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => apply(t.key)}
+                      disabled={applying === t.key}
+                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
+                    >
+                      {applying === t.key ? 'Cargando…' : 'Cargar'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t border-gray-200">
+          <p className="text-[11px] text-gray-400 mb-3 text-center">
+            Se crean los ejercicios publicados con sus rúbricas y competencias. No se duplican los que ya existan.
+          </p>
+          <button onClick={onClose} className="w-full py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Students Tab ──────────────────────────────────────────────────────────────
 function StudentsTab({ courseId, universityId, onEnroll }: {
   courseId: string; universityId: string; onEnroll: () => void;
@@ -901,6 +1000,7 @@ export default function CourseDetailPage() {
   const [showEnroll, setShowEnroll]           = useState(false);
   const [showBulkEnroll, setShowBulkEnroll]   = useState(false);
   const [showTemplates, setShowTemplates]     = useState(false);
+  const [showUtn, setShowUtn]                 = useState(false);
   const [tab, setTab]                     = useState<'overview' | 'students' | 'analytics' | 'gradebook'>('overview');
   const [exporting, setExporting]         = useState(false);
 
@@ -957,6 +1057,13 @@ export default function CourseDetailPage() {
           onCreated={() => { load(); setShowTemplates(false); }}
         />
       )}
+      {showUtn && (
+        <UtnTemplateModal
+          courseId={id}
+          onClose={() => setShowUtn(false)}
+          onApplied={() => { load(); setShowUtn(false); }}
+        />
+      )}
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
@@ -998,6 +1105,9 @@ export default function CourseDetailPage() {
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setShowTemplates(true)}>
               <BookMarked className="w-4 h-4" /> Desde plantilla
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowUtn(true)}>
+              <GraduationCap className="w-4 h-4" /> Cargar curso UTN
             </Button>
             <Link href={`/profesor/cursos/${id}/analytics`}>
               <Button variant="secondary" size="sm">
