@@ -109,7 +109,7 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     MacroModule,
     // Competencias (evidencia para acreditación SINAES)
     CompetenciesModule,
-    // Plantillas de curso UTN (contenido listo para usar)
+    // Plantillas de curso base (contenido listo para usar, multi-universidad)
     CourseTemplatesModule,
   ],
   providers: [

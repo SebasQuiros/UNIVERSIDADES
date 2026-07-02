@@ -1,9 +1,13 @@
-# Curso semilla — Contabilidad I (UTN COFI-122)
+# Curso base — Contabilidad I
 
-> Propuesta para validación **antes** de sembrar el contenido. 6 créditos, curso
-> fundamental. Recorrido pedagógico alineado a **Constituir → Operar → Declarar →
-> Cerrar → Analizar**. Cada ejercicio mapea a competencias del catálogo base y usa
+> Currículo **estándar de contabilidad (Costa Rica)**, reutilizable y adaptable por
+> cualquier universidad — NO específico de una institución. Curso fundamental.
+> Recorrido pedagógico alineado a **Constituir → Operar → Declarar → Cerrar →
+> Analizar**. Cada ejercicio mapea a competencias del catálogo base y usa
 > **solo rúbricas auto-calificables** por el motor actual.
+>
+> *(La estructura de temas se validó tomando como una de varias referencias planes
+> de estudio reales de universidades costarricenses, pero el contenido es genérico.)*
 
 ## Criterios de rúbrica disponibles (auto-calificables)
 `has_company` · `has_issued_invoices` · `min_invoices:N` · `min_entries:N` ·

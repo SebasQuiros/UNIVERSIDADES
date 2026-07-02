@@ -1,4 +1,6 @@
-// Plantilla de curso: Contabilidad I (UTN COFI-122).
+// Plantilla de curso base: Contabilidad I.
+// Currículo estándar de contabilidad (Costa Rica), NO específico de una
+// universidad — es una base reutilizable y adaptable por cualquier institución.
 // Contenido "listo para usar" definido en código (versionable). Se instancia
 // en un Course real del profesor vía CourseTemplatesService.applyTemplate().
 // Rúbricas: solo criterios auto-calificables por auto-grading.service.ts.
@@ -31,7 +33,7 @@ export interface CourseTemplate {
 //   Caja/Bancos = 1.1.01 · IVA por Pagar = 2.1.02 · Inventario = 1.1.03
 export const CONTABILIDAD_I: CourseTemplate = {
   key: 'contabilidad-i',
-  code: 'COFI-122',
+  code: 'CONTA-I',
   name: 'Contabilidad I',
   description:
     'Curso fundamental: de la ecuación contable y la partida doble al ciclo contable ' +

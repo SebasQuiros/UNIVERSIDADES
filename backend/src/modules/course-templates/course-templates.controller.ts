@@ -15,7 +15,7 @@ class ApplyTemplateDto {
 export class CourseTemplatesController {
   constructor(private readonly svc: CourseTemplatesService) {}
 
-  /** GET /course-templates — catálogo de plantillas UTN disponibles */
+  /** GET /course-templates — catálogo de cursos base disponibles */
   @Get('course-templates')
   list() {
     return this.svc.listTemplates();

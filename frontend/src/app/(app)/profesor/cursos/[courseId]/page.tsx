@@ -631,22 +631,22 @@ function TemplateModal({ courseId, onClose, onCreated }: {
   );
 }
 
-// ── UTN Course Template Modal (contenido listo para usar) ──────────────────────
-interface UtnTemplate {
+// ── Course Template Modal (cursos base listos para usar) ───────────────────────
+interface CourseBaseTemplate {
   key: string; code: string; name: string; description: string;
   exerciseCount: number; competencyCodes: string[];
 }
 function UtnTemplateModal({ courseId, onClose, onApplied }: {
   courseId: string; onClose: () => void; onApplied: () => void;
 }) {
-  const [templates, setTemplates] = useState<UtnTemplate[]>([]);
+  const [templates, setTemplates] = useState<CourseBaseTemplate[]>([]);
   const [loading, setLoading]     = useState(true);
   const [applying, setApplying]   = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<UtnTemplate[]>('/api/v1/course-templates')
+    api.get<CourseBaseTemplate[]>('/api/v1/course-templates')
       .then(({ data }) => setTemplates(data))
-      .catch(() => toast.error('Error al cargar plantillas UTN'))
+      .catch(() => toast.error('Error al cargar cursos base'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -676,7 +676,7 @@ function UtnTemplateModal({ courseId, onClose, onApplied }: {
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <GraduationCap className="w-4 h-4 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">Cargar curso UTN</h3>
+            <h3 className="font-semibold text-gray-900">Cargar curso base</h3>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
         </div>
@@ -1107,7 +1107,7 @@ export default function CourseDetailPage() {
               <BookMarked className="w-4 h-4" /> Desde plantilla
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setShowUtn(true)}>
-              <GraduationCap className="w-4 h-4" /> Cargar curso UTN
+              <GraduationCap className="w-4 h-4" /> Cargar curso base
             </Button>
             <Link href={`/profesor/cursos/${id}/analytics`}>
               <Button variant="secondary" size="sm">

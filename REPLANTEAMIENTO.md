@@ -4,9 +4,14 @@
 > es ser **el mejor simulador contable y fiscal universitario de Costa Rica**, para
 > carreras de Contabilidad, Finanzas y Administración. El núcleo sigue siendo un ERP
 > completo, pero **toda decisión de producto responde primero a la experiencia
-> educativa**. Concretamente: cubrir la línea contable–financiera–tributaria de la
-> carrera de Contabilidad y Finanzas / Contaduría Pública de la UTN (planes B10-2025 y
-> L02-2024, acreditados SINAES). Comprador principal: **Coordinador / Decano de carrera**.
+> educativa**. El producto es **multi-universidad**: nada de cara al usuario debe
+> indicar que es "para" una institución específica. Comprador principal:
+> **Coordinador / Decano de carrera**.
+>
+> **Nota sobre la UTN.** Los planes de estudio de la UTN (COFI B10-2025, CP L02-2024,
+> acreditados SINAES) se usan **solo como una de varias referencias** para diseñar un
+> currículo contable estándar y sólido. NO son el alcance del producto ni deben
+> aparecer como marca en la interfaz.
 >
 > **Filtro de prioridad.** Una feature es prioritaria solo si: ¿mejora el aprendizaje?
 > ¿facilita el trabajo del profesor? ¿genera evidencia para SINAES? ¿hace la simulación
