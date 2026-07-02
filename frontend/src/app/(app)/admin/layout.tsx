@@ -9,14 +9,15 @@ import { Spinner } from '@/components/ui/Spinner';
 import { PageErrorBoundary } from '@/components/ui/ErrorBoundary';
 import {
   LayoutDashboard, Users, BookOpen, Building2,
-  LogOut, Menu, X, ChevronRight,
+  LogOut, Menu, X, ChevronRight, Award,
 } from 'lucide-react';
 import { useState } from 'react';
 
 const NAV_ITEMS = [
-  { href: '/admin',          label: 'Dashboard',  icon: LayoutDashboard, exact: true },
-  { href: '/admin/usuarios', label: 'Usuarios',   icon: Users },
-  { href: '/admin/cursos',   label: 'Cursos',     icon: BookOpen },
+  { href: '/admin',              label: 'Dashboard',    icon: LayoutDashboard, exact: true },
+  { href: '/admin/competencias', label: 'Competencias', icon: Award },
+  { href: '/admin/usuarios',     label: 'Usuarios',     icon: Users },
+  { href: '/admin/cursos',       label: 'Cursos',       icon: BookOpen },
 ];
 
 function AdminSidebar() {

@@ -15,7 +15,7 @@ import {
   ArrowLeft, Users, FileText, Plus, UserPlus,
   Calendar, X, ChevronRight, Globe, Lock, Search, UserX,
   BarChart2, Download, TrendingUp, Clock, CheckCircle, AlertCircle,
-  Table2, Layers, BookMarked, Mail, Trash2, GraduationCap, Upload, CheckCircle2,
+  Table2, Layers, BookMarked, Mail, Trash2, GraduationCap, Upload, CheckCircle2, Award,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -457,6 +457,134 @@ function AnalyticsTab({ courseId, universityId }: { courseId: string; university
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ── Competency Tab (dominio por competencia + alumnos en riesgo) ───────────────
+interface CourseEvidence {
+  course: { id: string; name: string };
+  summary: { totalStudents: number; totalExercises: number; avgMastery: number | null; atRiskCount: number; competenciesCovered: number };
+  competencies: Array<{ id: string; code: string; name: string; area: string; masteryPct: number | null; evidenceCount: number; studentsAssessed: number }>;
+  students: Array<{ id: string; name: string; email: string; overallPct: number | null; completedExercises: number; totalExercises: number; coveragePct: number; atRisk: boolean; byComp: Record<string, number> }>;
+}
+function evMasteryColor(pct: number | null) {
+  if (pct == null) return '#CBD5E1';
+  if (pct >= 80) return '#059669';
+  if (pct >= 60) return '#2563EB';
+  if (pct >= 40) return '#D97706';
+  return '#DC2626';
+}
+function CompetencyCourseTab({ courseId }: { courseId: string }) {
+  const [data, setData]       = useState<CourseEvidence | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<CourseEvidence>(`/api/v1/courses/${courseId}/competency-evidence`)
+      .then(({ data }) => setData(data))
+      .catch(() => toast.error('Error al cargar competencias'))
+      .finally(() => setLoading(false));
+  }, [courseId]);
+
+  if (loading) return <div className="flex justify-center py-16"><Spinner /></div>;
+  if (!data) return null;
+
+  return (
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-gray-200 rounded-2xl p-4">
+          <p className="text-xs text-gray-400 mb-1">Dominio promedio</p>
+          <p className="text-2xl font-black" style={{ color: evMasteryColor(data.summary.avgMastery) }}>
+            {data.summary.avgMastery != null ? `${data.summary.avgMastery}%` : '—'}
+          </p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-2xl p-4">
+          <p className="text-xs text-gray-400 mb-1">Competencias cubiertas</p>
+          <p className="text-2xl font-black text-blue-900">{data.summary.competenciesCovered}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-2xl p-4">
+          <p className="text-xs text-gray-400 mb-1">Estudiantes</p>
+          <p className="text-2xl font-black text-purple-700">{data.summary.totalStudents}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-2xl p-4">
+          <p className="text-xs text-gray-400 mb-1">En riesgo</p>
+          <p className="text-2xl font-black" style={{ color: data.summary.atRiskCount > 0 ? '#DC2626' : '#059669' }}>
+            {data.summary.atRiskCount}
+          </p>
+        </div>
+      </div>
+
+      {/* Dominio por competencia */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+          <Award className="w-4 h-4 text-blue-600" /> Dominio por competencia
+        </h3>
+        {data.competencies.length === 0 ? (
+          <div className="text-center py-8 text-gray-400 text-sm">
+            Este curso aún no tiene competencias vinculadas a sus ejercicios.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {data.competencies.map(c => (
+              <div key={c.id}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-medium text-gray-700"><span className="font-mono text-gray-400 mr-1.5">{c.code}</span>{c.name}</span>
+                  <span className="font-bold" style={{ color: evMasteryColor(c.masteryPct) }}>
+                    {c.masteryPct != null ? `${c.masteryPct}%` : 'Sin evidencia'}
+                  </span>
+                </div>
+                <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${c.masteryPct ?? 0}%`, background: evMasteryColor(c.masteryPct) }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Roster con riesgo */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+          <Users className="w-4 h-4 text-blue-600" /> Estudiantes
+        </h3>
+        {data.students.length === 0 ? (
+          <div className="text-center py-8 text-gray-400 text-sm">Sin estudiantes inscritos.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
+                  <th className="py-2 pr-3 font-medium">Estudiante</th>
+                  <th className="py-2 px-3 font-medium text-center">Progreso</th>
+                  <th className="py-2 px-3 font-medium text-right">Dominio</th>
+                  <th className="py-2 pl-3 font-medium text-center">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.students.map(s => (
+                  <tr key={s.id} className="border-b border-gray-50 last:border-0">
+                    <td className="py-2.5 pr-3">
+                      <p className="font-medium text-gray-800">{s.name}</p>
+                      <p className="text-xs text-gray-400">{s.email}</p>
+                    </td>
+                    <td className="py-2.5 px-3 text-center text-gray-600">{s.completedExercises}/{s.totalExercises}</td>
+                    <td className="py-2.5 px-3 text-right font-bold" style={{ color: evMasteryColor(s.overallPct) }}>
+                      {s.overallPct != null ? `${s.overallPct}%` : '—'}
+                    </td>
+                    <td className="py-2.5 pl-3 text-center">
+                      {s.atRisk
+                        ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full"><AlertCircle className="w-3 h-3" /> En riesgo</span>
+                        : <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full"><CheckCircle className="w-3 h-3" /> Al día</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1001,7 +1129,7 @@ export default function CourseDetailPage() {
   const [showBulkEnroll, setShowBulkEnroll]   = useState(false);
   const [showTemplates, setShowTemplates]     = useState(false);
   const [showUtn, setShowUtn]                 = useState(false);
-  const [tab, setTab]                     = useState<'overview' | 'students' | 'analytics' | 'gradebook'>('overview');
+  const [tab, setTab]                     = useState<'overview' | 'students' | 'competencias' | 'analytics' | 'gradebook'>('overview');
   const [exporting, setExporting]         = useState(false);
 
   const load = useCallback(async () => {
@@ -1124,10 +1252,11 @@ export default function CourseDetailPage() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit">
         {([
-          { key: 'overview',   label: 'Resumen',        icon: FileText      },
-          { key: 'students',   label: 'Estudiantes',    icon: GraduationCap },
-          { key: 'gradebook',  label: 'Calificaciones', icon: Table2        },
-          { key: 'analytics',  label: 'Analytics',      icon: BarChart2     },
+          { key: 'overview',     label: 'Resumen',        icon: FileText      },
+          { key: 'students',     label: 'Estudiantes',    icon: GraduationCap },
+          { key: 'competencias', label: 'Competencias',   icon: Award         },
+          { key: 'gradebook',    label: 'Calificaciones', icon: Table2        },
+          { key: 'analytics',    label: 'Analytics',      icon: BarChart2     },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -1141,6 +1270,8 @@ export default function CourseDetailPage() {
 
       {tab === 'analytics' ? (
         <AnalyticsTab courseId={id} universityId={course.universityId} />
+      ) : tab === 'competencias' ? (
+        <CompetencyCourseTab courseId={id} />
       ) : tab === 'gradebook' ? (
         <GradebookTab courseId={id} universityId={course.universityId} />
       ) : tab === 'students' ? (

@@ -79,4 +79,21 @@ export class CompetenciesController {
   setForExercise(@Param('exerciseId') exerciseId: string, @Body() dto: SetLinksDto) {
     return this.svc.setExerciseCompetencies(exerciseId, dto.competencies ?? []);
   }
+
+  // ── Evidencia de competencias (dashboards) ────────────────────
+  /** Dashboard del profesor: dominio por competencia + alumnos en riesgo. */
+  @Get('courses/:courseId/competency-evidence')
+  @UseGuards(RolesGuard)
+  @Roles('TEACHER', 'ADMIN', 'SUPERADMIN')
+  courseEvidence(@Param('courseId') courseId: string, @CurrentUser() user: any) {
+    return this.svc.getCourseEvidence(courseId, { id: user.id, role: user.role });
+  }
+
+  /** Dashboard institucional (acreditación): dominio por competencia y por cohorte. */
+  @Get('universities/:universityId/competency-evidence')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
+  universityEvidence(@Param('universityId') universityId: string, @CurrentUser() user: any) {
+    return this.svc.getUniversityEvidence(universityId, { role: user.role, universityId: user.universityId });
+  }
 }
