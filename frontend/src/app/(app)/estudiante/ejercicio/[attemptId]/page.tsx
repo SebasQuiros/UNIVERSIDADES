@@ -113,6 +113,88 @@ function HintButton({ hint, attemptId, tabId }: { hint: string; attemptId: strin
 }
 
 // ─── Dashboard tab ───────────────────────────────────────────────────────────
+// ── Recorrido del estudiante: Constituir → Operar → Declarar → Cerrar → Analizar ──
+function StudentJourney({ companyId, attemptId, prog, status }: {
+  companyId: string; attemptId: string; prog: any; status?: string;
+}) {
+  const [taxCount, setTaxCount] = useState<number | null>(null);
+  const [hasClosing, setHasClosing] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    api.get<any[]>('/api/v1/tax-declarations')
+      .then(({ data }) => setTaxCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => setTaxCount(0));
+    api.get<any[]>(`/api/v1/companies/${companyId}/journal`)
+      .then(({ data }) => {
+        const entries = Array.isArray(data) ? data : (data as any)?.entries ?? [];
+        const closing = entries.some((e: any) =>
+          (e.reference ?? '').toUpperCase().includes('CIER') ||
+          (e.description ?? '').toLowerCase().includes('cierre'));
+        setHasClosing(closing);
+      })
+      .catch(() => setHasClosing(false));
+  }, [companyId]);
+
+  const invoices = prog?.invoicesCount ?? 0;
+  const entries  = prog?.entriesCount ?? 0;
+
+  const steps = [
+    { key: 'constituir', label: 'Constituir', icon: Building2,   done: true,
+      href: null as string | null, hint: 'Empresa creada' },
+    { key: 'operar', label: 'Operar', icon: ShoppingCart, done: invoices > 0 && entries > 0,
+      href: `/estudiante/ejercicio/${attemptId}/diario`, hint: 'Factura y registra asientos' },
+    { key: 'declarar', label: 'Declarar', icon: Landmark, done: (taxCount ?? 0) > 0,
+      href: `/estudiante/ejercicio/${attemptId}/renta`, hint: 'Presenta tus declaraciones' },
+    { key: 'cerrar', label: 'Cerrar', icon: Scale, done: hasClosing === true,
+      href: `/estudiante/ejercicio/${attemptId}/diario`, hint: 'Registra los asientos de cierre' },
+    { key: 'analizar', label: 'Analizar', icon: TrendingUp, done: status === 'GRADED' || status === 'SUBMITTED',
+      href: `/estudiante/simulador`, hint: 'Analiza tu empresa en el simulador' },
+  ];
+  const currentIdx = steps.findIndex(s => !s.done);
+  const current = currentIdx === -1 ? null : steps[currentIdx];
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 lg:p-5">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <h3 className="text-sm font-bold text-gray-700">Tu recorrido</h3>
+        {current && current.href && (
+          <Link href={current.href}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg"
+            style={{ background: '#1E3A8A' }}>
+            Siguiente: {current.hint} <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
+      </div>
+      <div className="flex items-center">
+        {steps.map((s, i) => {
+          const Icon = s.icon;
+          const isCurrent = current?.key === s.key;
+          const color = s.done ? '#059669' : isCurrent ? '#1E3A8A' : '#CBD5E1';
+          const body = (
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0" style={{ minWidth: 64 }}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-all"
+                style={{ background: color, boxShadow: isCurrent ? '0 0 0 4px rgba(30,58,138,0.15)' : 'none' }}>
+                {s.done ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4.5 h-4.5" />}
+              </div>
+              <span className="text-[11px] font-medium text-center" style={{ color: s.done || isCurrent ? '#334155' : '#94A3B8' }}>
+                {s.label}
+              </span>
+            </div>
+          );
+          return (
+            <div key={s.key} className="flex items-center flex-1 last:flex-none">
+              {s.href ? <Link href={s.href}>{body}</Link> : body}
+              {i < steps.length - 1 && (
+                <div className="flex-1 h-0.5 mx-1 rounded" style={{ background: s.done ? '#059669' : '#E2E8F0', minWidth: 16 }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function DashboardTab({ companyId, attempt }: { companyId: string; attempt: ExerciseAttempt; }) {
   const [dash, setDash] = useState<any>(null);
   const [progress, setProgress] = useState<any>(null);
@@ -178,6 +260,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
 
   return (
     <div className="space-y-6">
+      <StudentJourney companyId={companyId} attemptId={attempt.id} prog={prog} status={attempt.status} />
       {executivePanel}
 
       {/* Acceso al Simulador Financiero (sección propia) */}
