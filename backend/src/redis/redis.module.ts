@@ -11,18 +11,42 @@ const redisLogger = new Logger('RedisModule');
   providers: [
     {
       provide: REDIS_CLIENT,
-      useFactory: async (config: ConfigService) => {
+      useFactory: (config: ConfigService) => {
         const url = config.get<string>('REDIS_URL') || 'redis://localhost:6379';
-        const client = createClient({ url });
-        client.on('error', (err: Error) => {
-          redisLogger.warn(`Redis connection error — rate limiting will use in-memory storage: ${err.message}`);
+        const client = createClient({
+          url,
+          socket: {
+            connectTimeout: 3000,
+            // Redis es OPCIONAL: si no está disponible, nos rendimos tras 5
+            // intentos en vez de reintentar para siempre (evita spam de logs y
+            // no bloquea nada). Cache/rate-limit caen a memoria.
+            reconnectStrategy: (retries) =>
+              retries >= 5 ? false : Math.min(retries * 300, 2000),
+          },
+          // Si el cliente está cerrado, los comandos fallan rápido (los
+          // consumidores ya hacen try/catch) en vez de encolarse indefinidamente.
+          disableOfflineQueue: true,
         });
-        try {
-          await client.connect();
-          redisLogger.log('✓ Conectado a Redis');
-        } catch (err: any) {
-          redisLogger.warn(`Redis no disponible (${err.message}) — el sistema continuará sin persistencia de sesión`);
-        }
+
+        let warned = false;
+        client.on('error', (err: Error) => {
+          if (!warned) {
+            redisLogger.warn(
+              `Redis no disponible — cache y rate-limit usarán memoria: ${err.message}`,
+            );
+            warned = true;
+          }
+        });
+
+        // CLAVE: NO usar `await`. Conectar en segundo plano para NO bloquear el
+        // arranque de la app cuando Redis no existe (modo Docker-free).
+        client
+          .connect()
+          .then(() => redisLogger.log('✓ Conectado a Redis'))
+          .catch(() => {
+            /* ya avisado por el handler de error; la app sigue sin Redis */
+          });
+
         return client;
       },
       inject: [ConfigService],

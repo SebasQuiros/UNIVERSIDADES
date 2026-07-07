@@ -294,9 +294,9 @@ export default function RegistroPage() {
                 <GraduationCap size={16} color={C.white} />
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#92400E', marginBottom: 3 }}>Primer ingreso</div>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#92400E', marginBottom: 3 }}>Activa tu acceso</div>
                 <div style={{ fontSize: '0.8rem', color: '#78350F', lineHeight: 1.5 }}>
-                  Al ingresar por primera vez, el sistema te pedirá cambiar tu contraseña temporal.
+                  Recibirás un correo para confirmar tu cuenta y definir tu contraseña de acceso.
                 </div>
               </div>
             </div>

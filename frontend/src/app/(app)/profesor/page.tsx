@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { StatusBadge, DifficultyBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 import type { Course, ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
@@ -56,6 +56,20 @@ function StatCard({ label, value, icon: Icon, gradient, glow, sub }: {
   );
 }
 
+// Placeholder de tarjeta de estadística — mantiene el layout mientras cargan los datos
+function StatCardSkeleton() {
+  return (
+    <div className="rounded-2xl p-5 bg-white border border-gray-200/80" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+      <div className="flex items-start justify-between mb-3">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="w-8 h-8 rounded-lg" />
+      </div>
+      <Skeleton className="h-8 w-16" />
+      <Skeleton className="h-3 w-24 mt-2" />
+    </div>
+  );
+}
+
 export default function ProfesorDashboard() {
   const { user } = useAuth();
   const [courses, setCourses]           = useState<Course[]>([]);
@@ -91,14 +105,8 @@ export default function ProfesorDashboard() {
 
   const firstName = user?.name?.split(' ')[0] ?? 'Profesor';
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
+  // En vez de esconder toda la pantalla con un spinner, renderizamos el shell
+  // siempre y mostramos placeholders donde van los datos (progressive skeletons).
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto" style={{ background: 'linear-gradient(180deg,#EFF6FF 0%,#F8FAFC 40%,#FFFFFF 100%)' }}>
 
@@ -122,10 +130,16 @@ export default function ProfesorDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Cursos activos"  value={stats.courses}   icon={BookOpen}       gradient="linear-gradient(135deg,#3B82F6,#1E40AF)" glow="rgba(59,130,246,0.25)" sub="Este período" />
-        <StatCard label="Ejercicios"      value={stats.exercises} icon={FileText}       gradient="linear-gradient(135deg,#8B5CF6,#7C3AED)" glow="rgba(139,92,246,0.25)" sub="Publicados y borradores" />
-        <StatCard label="Estudiantes"     value={stats.students}  icon={Users}          gradient="linear-gradient(135deg,#10B981,#059669)" glow="rgba(16,185,129,0.25)" sub="Inscritos en total" />
-        <StatCard label="Por calificar"   value={stats.pending}   icon={ClipboardCheck} gradient="linear-gradient(135deg,#F59E0B,#D97706)" glow="rgba(245,158,11,0.25)" sub="Requieren atención" />
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
+        ) : (
+          <>
+            <StatCard label="Cursos activos"  value={stats.courses}   icon={BookOpen}       gradient="linear-gradient(135deg,#3B82F6,#1E40AF)" glow="rgba(59,130,246,0.25)" sub="Este período" />
+            <StatCard label="Ejercicios"      value={stats.exercises} icon={FileText}       gradient="linear-gradient(135deg,#8B5CF6,#7C3AED)" glow="rgba(139,92,246,0.25)" sub="Publicados y borradores" />
+            <StatCard label="Estudiantes"     value={stats.students}  icon={Users}          gradient="linear-gradient(135deg,#10B981,#059669)" glow="rgba(16,185,129,0.25)" sub="Inscritos en total" />
+            <StatCard label="Por calificar"   value={stats.pending}   icon={ClipboardCheck} gradient="linear-gradient(135deg,#F59E0B,#D97706)" glow="rgba(245,158,11,0.25)" sub="Requieren atención" />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -144,7 +158,17 @@ export default function ProfesorDashboard() {
             </Link>
           </div>
           <div className="divide-y divide-gray-100">
-            {courses.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              ))
+            ) : courses.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-gray-500 text-sm">No tienes cursos creados</p>
                 <Link href="/profesor/cursos" className="mt-2 inline-block">
@@ -200,7 +224,20 @@ export default function ProfesorDashboard() {
             )}
           </div>
           <div className="divide-y divide-gray-100">
-            {pendingAttempts.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-start justify-between p-4">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-24" />
+                    <div className="flex gap-3 pt-0.5">
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-4 w-12" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : pendingAttempts.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-gray-500 text-sm">¡Todo al día! No hay intentos por calificar</p>
               </div>

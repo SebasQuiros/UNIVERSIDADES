@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase/client';
 import { formatDate, getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -59,13 +60,18 @@ type Tab = 'cursos' | 'usuarios' | 'actividad';
 
 function ResetPwdModal({ user, onClose }: { user: UserItem; onClose: () => void }) {
   const [loading, setLoading] = useState(false);
-  const [temp, setTemp]       = useState<string | null>(null);
 
   async function handleReset() {
     setLoading(true);
     try {
-      const { data } = await api.post<{ tempPassword: string }>(`/api/v1/superadmin/users/${user.id}/reset-password`);
-      setTemp(data.tempPassword);
+      // Supabase envía un email de recuperación; el usuario define su contraseña
+      // desde el enlace, que lo devuelve a /auth/change-password.
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth/change-password`,
+      });
+      if (error) throw error;
+      toast.success(`Se envió un email de recuperación a ${user.email}`);
+      onClose();
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -81,22 +87,13 @@ function ResetPwdModal({ user, onClose }: { user: UserItem; onClose: () => void 
         <KeyRound className="w-8 h-8 text-amber-500 mb-3" />
         <h3 className="font-semibold text-gray-900 mb-1">Resetear contraseña</h3>
         <p className="text-sm text-gray-500 mb-4">
-          {temp ? 'Contraseña temporal generada:' : `¿Resetear la contraseña de ${user.name}?`}
+          Se enviará un email de recuperación a <strong>{user.email}</strong> para que{' '}
+          {user.name} establezca una nueva contraseña.
         </p>
-        {temp ? (
-          <>
-            <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 font-mono text-lg font-bold text-gray-900 mb-3 tracking-widest text-center">
-              {temp}
-            </div>
-            <p className="text-xs text-amber-600 mb-4">El usuario deberá cambiar esta contraseña al ingresar.</p>
-            <Button onClick={onClose} className="w-full">Cerrar</Button>
-          </>
-        ) : (
-          <div className="flex gap-3">
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-            <Button loading={loading} onClick={handleReset} className="flex-1">Resetear</Button>
-          </div>
-        )}
+        <div className="flex gap-3">
+          <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
+          <Button loading={loading} onClick={handleReset} className="flex-1">Enviar email</Button>
+        </div>
       </div>
     </div>
   );

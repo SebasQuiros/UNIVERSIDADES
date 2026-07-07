@@ -1,12 +1,15 @@
 import {
   Injectable,
+  Inject,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SupabaseAdminService } from '../../common/supabase/supabase-admin.service';
 import { Role } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+import { REDIS_CLIENT } from '../../redis/redis.module';
+import { invalidateAuthUser } from '../../common/auth/auth-cache';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -38,7 +41,11 @@ export interface ActivityEntry {
 
 @Injectable()
 export class SuperadminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly supabaseAdmin: SupabaseAdminService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
 
   // ── Dashboard stats ─────────────────────────────────────────────────────────
 
@@ -230,18 +237,24 @@ export class SuperadminService {
     let tempPassword: string | null = null;
 
     if (dto.adminEmail && dto.adminName) {
+      const adminEmail = dto.adminEmail.toLowerCase().trim();
       tempPassword = generateTempPassword(10);
-      const passwordHash = await bcrypt.hash(tempPassword, 12);
+      // La identidad y la contraseña viven en Supabase Auth; guardamos solo el authId.
+      const authId = await this.supabaseAdmin.createUser({
+        email:    adminEmail,
+        password: tempPassword,
+        userMetadata: { name: dto.adminName, role: 'ADMIN' },
+      });
       adminUser = await this.prisma.user.create({
         data: {
+          authId,
           name:               dto.adminName,
-          email:              dto.adminEmail.toLowerCase().trim(),
-          passwordHash,
+          email:              adminEmail,
           role:               Role.ADMIN,
           universityId:       university.id,
           isActive:           true,
           emailVerified:      true,
-          mustChangePassword: true,
+          mustChangePassword: false,
         },
         select: { id: true, name: true, email: true, role: true },
       });
@@ -308,25 +321,6 @@ export class SuperadminService {
     });
   }
 
-  async resetUserPassword(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('Usuario no encontrado');
-
-    const tempPassword = generateTempPassword(8);
-    const passwordHash = await bcrypt.hash(tempPassword, 12);
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        passwordHash,
-        mustChangePassword: true,
-        updatedAt: new Date(),
-      },
-    });
-
-    return { tempPassword };
-  }
-
   async toggleUserStatus(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
@@ -339,6 +333,8 @@ export class SuperadminService {
         university: { select: { id: true, name: true, shortName: true } },
       },
     });
+    // Invalida el cache authId→User: activar/desactivar es inmediato (fail-open).
+    await invalidateAuthUser(this.redis, user.authId);
     return updated;
   }
 
@@ -346,6 +342,9 @@ export class SuperadminService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Usuario no encontrado');
     await this.prisma.user.delete({ where: { id: userId } });
+    // Sin esto, la entrada cacheada dejaría autenticar al usuario borrado hasta
+    // el TTL. Invalidamos para que el borrado sea inmediato (fail-open).
+    await invalidateAuthUser(this.redis, user.authId);
   }
 
   // ── Plans management ─────────────────────────────────────────────────────────

@@ -1,16 +1,21 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateFixedAssetDto } from './dto/fixed-assets.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
+import { REDIS_CLIENT } from '../../redis/redis.module';
 
 @Injectable()
 export class FixedAssetsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
 
   // Fase 1: helper centralizado, soporta INDIVIDUAL + GROUP.
+  // Pasamos `redis` para reusar el core cacheado por el guard (fail-open a DB).
   private async verifyOwner(companyId: string, userId: string) {
-    await assertCompanyAccess(this.prisma, companyId, userId);
+    await assertCompanyAccess(this.prisma, companyId, userId, { redis: this.redis });
   }
 
   async findAll(companyId: string, userId: string) {

@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { formatDate, getErrorMessage } from '@/lib/utils';
 import { StatusBadge, DifficultyBadge, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import {
@@ -90,6 +90,44 @@ function StatCard({ label, value, icon: Icon, gradient, glow }: {
         <p className="text-3xl font-black text-white leading-none">{animated}</p>
         <p className="text-xs text-white/80 mt-1 font-medium">{label}</p>
       </div>
+    </div>
+  );
+}
+
+// ── Skeletons ─────────────────────────────────────────────────────────────
+// Placeholders que conservan el layout mientras cargan los datos, para evitar
+// el "salto" de 0 → valor real y la pantalla vacía con spinner.
+function StatCardSkeleton() {
+  return (
+    <div className="rounded-2xl p-5 bg-white border border-gray-200/80 flex items-center gap-4" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+      <Skeleton className="w-11 h-11 rounded-xl" />
+      <div className="space-y-2">
+        <Skeleton className="h-7 w-12" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+    </div>
+  );
+}
+
+function AttemptCardSkeleton() {
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 space-y-2">
+          <div className="flex gap-2">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-full max-w-xs" />
+        </div>
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+      <div className="flex gap-4">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-3 w-20" />
+      </div>
+      <Skeleton className="h-9 w-full rounded-xl mt-auto" />
     </div>
   );
 }
@@ -302,14 +340,20 @@ export default function EstudianteDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <StatCard label="Ejercicios totales" value={stats.total}      icon={BookOpen}     gradient="linear-gradient(135deg,#3B82F6,#1E40AF)" glow="rgba(59,130,246,0.25)" />
-        <StatCard label="En progreso"        value={stats.inProgress} icon={TrendingUp}   gradient="linear-gradient(135deg,#F59E0B,#D97706)" glow="rgba(245,158,11,0.25)" />
-        <StatCard label="Calificados"        value={stats.graded}     icon={CheckCircle2} gradient="linear-gradient(135deg,#10B981,#059669)" glow="rgba(16,185,129,0.25)" />
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)
+        ) : (
+          <>
+            <StatCard label="Ejercicios totales" value={stats.total}      icon={BookOpen}     gradient="linear-gradient(135deg,#3B82F6,#1E40AF)" glow="rgba(59,130,246,0.25)" />
+            <StatCard label="En progreso"        value={stats.inProgress} icon={TrendingUp}   gradient="linear-gradient(135deg,#F59E0B,#D97706)" glow="rgba(245,158,11,0.25)" />
+            <StatCard label="Calificados"        value={stats.graded}     icon={CheckCircle2} gradient="linear-gradient(135deg,#10B981,#059669)" glow="rgba(16,185,129,0.25)" />
+          </>
+        )}
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Spinner size="lg" />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <AttemptCardSkeleton key={i} />)}
         </div>
       ) : attempts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">

@@ -1,8 +1,51 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
-const bcrypt = require("bcrypt");
 const prisma = new client_1.PrismaClient();
+async function ensureAuthUser(email, password, meta) {
+    const url = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    if (!url || !key) {
+        console.warn(`⚠ SUPABASE_URL/SERVICE_ROLE_KEY ausentes — ${email} se crea sin authId (se enlazará por email en el primer login).`);
+        return null;
+    }
+    const headers = {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+    };
+    const res = await fetch(`${url}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: meta,
+        }),
+    });
+    if (res.ok) {
+        const data = await res.json();
+        return data.id;
+    }
+    if (res.status === 422 || res.status === 409) {
+        const target = email.toLowerCase();
+        for (let page = 1; page <= 100; page++) {
+            const lookup = await fetch(`${url}/auth/v1/admin/users?page=${page}&per_page=200`, { headers });
+            if (!lookup.ok)
+                break;
+            const data = await lookup.json();
+            const users = data.users || (Array.isArray(data) ? data : []);
+            const match = users.find((u) => (u.email || '').toLowerCase() === target);
+            if (match)
+                return match.id;
+            if (users.length < 200)
+                break;
+        }
+    }
+    console.warn(`⚠ No se pudo crear ${email} en Supabase Auth (${res.status}).`);
+    return null;
+}
 async function main() {
     console.log('🌱 Iniciando seed de CONTAFÁCIL SQ...\n');
     const plan = await prisma.plan.upsert({
@@ -36,19 +79,18 @@ async function main() {
         },
     });
     console.log(`✓ Universidad creada: ${university.name}`);
-    const saltRounds = 10;
-    const adminHash = await bcrypt.hash('Admin2026!', saltRounds);
-    const teacherHash = await bcrypt.hash('Profesor2026!', saltRounds);
-    const student1Hash = await bcrypt.hash('Estudiante1-2026!', saltRounds);
-    const student2Hash = await bcrypt.hash('Estudiante2-2026!', saltRounds);
+    const adminAuthId = await ensureAuthUser('admin@contafacil.cr', 'Admin2026!', { name: 'Super Admin', role: 'SUPERADMIN' });
+    const teacherAuthId = await ensureAuthUser('profesor@contafacil.cr', 'Profesor2026!', { name: 'Prof. Ana Bermúdez Solano', role: 'TEACHER' });
+    const student1AuthId = await ensureAuthUser('estudiante1@contafacil.cr', 'Estudiante1-2026!', { name: 'María Alvarado Jiménez', role: 'STUDENT' });
+    const student2AuthId = await ensureAuthUser('estudiante2@contafacil.cr', 'Estudiante2-2026!', { name: 'Carlos Mora Rodríguez', role: 'STUDENT' });
     const admin = await prisma.user.upsert({
         where: { email: 'admin@contafacil.cr' },
-        update: {},
+        update: adminAuthId ? { authId: adminAuthId } : {},
         create: {
             id: 'c0000001-0000-4000-8000-000000000001',
             name: 'Super Admin',
             email: 'admin@contafacil.cr',
-            passwordHash: adminHash,
+            authId: adminAuthId,
             role: client_1.Role.SUPERADMIN,
             isActive: true,
             emailVerified: true,
@@ -57,12 +99,12 @@ async function main() {
     console.log(`✓ Admin creado: ${admin.email}`);
     const teacher = await prisma.user.upsert({
         where: { email: 'profesor@contafacil.cr' },
-        update: {},
+        update: teacherAuthId ? { authId: teacherAuthId } : {},
         create: {
             id: 'c0000001-0000-4000-8000-000000000002',
             name: 'Prof. Ana Bermúdez Solano',
             email: 'profesor@contafacil.cr',
-            passwordHash: teacherHash,
+            authId: teacherAuthId,
             role: client_1.Role.TEACHER,
             universityId: university.id,
             isActive: true,
@@ -72,12 +114,12 @@ async function main() {
     console.log(`✓ Profesor creado: ${teacher.email}`);
     const student1 = await prisma.user.upsert({
         where: { email: 'estudiante1@contafacil.cr' },
-        update: {},
+        update: student1AuthId ? { authId: student1AuthId } : {},
         create: {
             id: 'c0000001-0000-4000-8000-000000000003',
             name: 'María Alvarado Jiménez',
             email: 'estudiante1@contafacil.cr',
-            passwordHash: student1Hash,
+            authId: student1AuthId,
             role: client_1.Role.STUDENT,
             universityId: university.id,
             isActive: true,
@@ -87,12 +129,12 @@ async function main() {
     console.log(`✓ Estudiante 1 creado: ${student1.email}`);
     const student2 = await prisma.user.upsert({
         where: { email: 'estudiante2@contafacil.cr' },
-        update: {},
+        update: student2AuthId ? { authId: student2AuthId } : {},
         create: {
             id: 'c0000001-0000-4000-8000-000000000004',
             name: 'Carlos Mora Rodríguez',
             email: 'estudiante2@contafacil.cr',
-            passwordHash: student2Hash,
+            authId: student2AuthId,
             role: client_1.Role.STUDENT,
             universityId: university.id,
             isActive: true,

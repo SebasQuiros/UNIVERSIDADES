@@ -1,11 +1,12 @@
 import {
-  Injectable, NotFoundException, ForbiddenException, BadRequestException,
+  Injectable, Inject, NotFoundException, ForbiddenException, BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TaxDeclarationType, TaxDeclarationStatus } from '@prisma/client';
 import { CreateTaxDeclarationDto, SubmitTaxDeclarationDto } from './dto/tax-declarations.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
+import { REDIS_CLIENT } from '../../redis/redis.module';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB límite por archivo
 
@@ -23,7 +24,10 @@ const RENTA_PYME_THRESHOLD = 122_145_000; // ₡122.145.000 ingresos brutos
 
 @Injectable()
 export class TaxDeclarationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
 
   // ── Listar declaraciones del usuario ─────────────────────────────
   async findAll(userId: string) {
@@ -416,8 +420,9 @@ export class TaxDeclarationsService {
   // ── D-104 Cálculo automático desde datos de la empresa ───────────
   async calculateD104FromCompany(companyId: string, month: number, year: number, userId?: string) {
     // Verify ownership if userId provided (Fase 1: respeta GROUP via helper)
+    // Pasamos `redis` para reusar el core cacheado por el guard (fail-open a DB).
     if (userId) {
-      await assertCompanyAccess(this.prisma, companyId, userId);
+      await assertCompanyAccess(this.prisma, companyId, userId, { redis: this.redis });
     }
     const startDate = new Date(year, month - 1, 1);
     const endDate   = new Date(year, month, 0, 23, 59, 59);

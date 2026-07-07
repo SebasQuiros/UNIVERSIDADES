@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, BadRequestException, ForbiddenException,
+  Injectable, Inject, NotFoundException, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JournalService } from '../journal/journal.service';
@@ -12,6 +12,7 @@ import { BusinessEventsService } from '../business/business-events.service';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
 import { InventoryService } from '../inventory/inventory.service';
 import { AccountingModeResolver } from '../accounting/accounting-mode.resolver';
+import { REDIS_CLIENT } from '../../redis/redis.module';
 
 // ── IVA rate display labels ─────────────────────────────────────────
 const RATE_LABEL: Record<number, string> = {
@@ -32,11 +33,13 @@ export class PurchaseInvoicesService {
     // Fase 2: si autoInventory + dto.lines → crear lotes FIFO al aceptar.
     private readonly inventory:     InventoryService,
     private readonly modeResolver:  AccountingModeResolver,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
 
   // Fase 1: helper centralizado, soporta INDIVIDUAL + GROUP.
+  // Pasamos `redis` para reusar el core cacheado por el guard (fail-open a DB).
   private async verifyOwner(companyId: string, userId: string) {
-    await assertCompanyAccess(this.prisma, companyId, userId);
+    await assertCompanyAccess(this.prisma, companyId, userId, { redis: this.redis });
   }
 
   // ── Create purchase invoice + automatic journal entry ─────────────

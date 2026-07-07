@@ -1,22 +1,26 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Role, OAuthProvider } from '@prisma/client';
+import { SupabaseAdminService } from '../../common/supabase/supabase-admin.service';
+import { Role } from '@prisma/client';
+import { REDIS_CLIENT } from '../../redis/redis.module';
+import { invalidateAuthUser } from '../../common/auth/auth-cache';
 
 interface CreateUserData {
   name:          string;
   email:         string;
-  passwordHash:  string | null;
+  password:      string;
   role:          Role;
   universityId:  string | null;
-  oauthProvider?: OAuthProvider;
-  oauthId?:       string;
-  avatarUrl?:     string;
-  emailVerified?: boolean;
+  avatarUrl?:    string;
 }
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly supabaseAdmin: SupabaseAdminService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
 
   async findById(id: string) {
     const user = await this.prisma.user.findUnique({
@@ -26,8 +30,8 @@ export class UsersService {
       },
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
-    const { passwordHash, resetToken, resetTokenExpires, ...safe } = user;
-    return safe;
+    // Ya no hay campos sensibles que ocultar: el auth vive en Supabase.
+    return user;
   }
 
   async findByEmail(email: string) {
@@ -37,18 +41,25 @@ export class UsersService {
   }
 
   async create(data: CreateUserData) {
+    const email = data.email.toLowerCase().trim();
+    // Crea primero la identidad en Supabase Auth (idempotente por email) y
+    // guarda su id en `authId`. Ya no almacenamos hash de contraseña localmente.
+    const authId = await this.supabaseAdmin.createUser({
+      email,
+      password: data.password,
+      userMetadata: { name: data.name, role: data.role },
+    });
     return this.prisma.user.create({
       data: {
-        name:          data.name,
-        email:         data.email.toLowerCase().trim(),
-        passwordHash:  data.passwordHash,
-        role:          data.role,
-        universityId:  data.universityId,
-        oauthProvider: data.oauthProvider || OAuthProvider.LOCAL,
-        oauthId:       data.oauthId || null,
-        avatarUrl:     data.avatarUrl || null,
-        emailVerified: data.emailVerified || false,
-        isActive:      true,
+        authId,
+        name:               data.name,
+        email,
+        role:               data.role,
+        universityId:       data.universityId,
+        avatarUrl:          data.avatarUrl || null,
+        emailVerified:      true,
+        isActive:           true,
+        mustChangePassword: false,
       },
     });
   }
@@ -62,8 +73,7 @@ export class UsersService {
         updatedAt: new Date(),
       },
     });
-    const { passwordHash, resetToken, resetTokenExpires, ...safe } = user;
-    return safe;
+    return user;
   }
 
   async toggleActive(id: string, adminId: string) {
@@ -75,8 +85,10 @@ export class UsersService {
       data: { isActive: !user.isActive, updatedAt: new Date() },
     });
 
-    const { passwordHash, ...safe } = updated;
-    return safe;
+    // Invalida el cache authId→User para que el toggle sea inmediato (fail-open).
+    await invalidateAuthUser(this.redis, user.authId);
+
+    return updated;
   }
 
   async findAll(filters: { universityId?: string; role?: Role; search?: string }) {
@@ -94,7 +106,7 @@ export class UsersService {
       select: {
         id: true, name: true, email: true, role: true,
         isActive: true, emailVerified: true, lastLogin: true,
-        createdAt: true, oauthProvider: true,
+        createdAt: true,
         university: { select: { id: true, name: true, shortName: true } },
       },
       orderBy: { name: 'asc' },

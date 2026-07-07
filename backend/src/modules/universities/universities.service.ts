@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SupabaseAdminService } from '../../common/supabase/supabase-admin.service';
 import { CreateUniversityDto, UpdateUniversityDto } from './dto/universities.dto';
 import { EmailService } from '../notifications/email.service';
 import { Role } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+import { REDIS_CLIENT } from '../../redis/redis.module';
+import { invalidateAuthUser } from '../../common/auth/auth-cache';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,8 @@ export class UniversitiesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly supabaseAdmin: SupabaseAdminService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
 
   async findAll() {
@@ -90,22 +94,28 @@ export class UniversitiesService {
     name: string; email: string; password?: string; role: string;
   }) {
     await this.findOne(universityId);
-    const existing = await this.prisma.user.findUnique({ where: { email: data.email.toLowerCase().trim() } });
+    const email = data.email.toLowerCase().trim();
+    const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) throw new ConflictException('El correo electrónico ya está registrado');
 
     const tempPassword = data.password ?? generateTempPassword();
-    const passwordHash = await bcrypt.hash(tempPassword, 12);
+    // La identidad y la contraseña viven en Supabase Auth; guardamos solo el authId.
+    const authId = await this.supabaseAdmin.createUser({
+      email,
+      password: tempPassword,
+      userMetadata: { name: data.name, role: data.role },
+    });
 
     const user = await this.prisma.user.create({
       data: {
+        authId,
         name:               data.name,
-        email:              data.email.toLowerCase().trim(),
-        passwordHash,
+        email,
         role:               data.role as Role,
         universityId,
         isActive:           true,
         emailVerified:      true,
-        mustChangePassword: true,
+        mustChangePassword: false,
       },
       select: {
         id: true, name: true, email: true, role: true,
@@ -116,9 +126,9 @@ export class UniversitiesService {
 
     // Send welcome email (fire-and-forget — never throw)
     this.email.send(
-      data.email.toLowerCase().trim(),
+      email,
       'Bienvenido a SJQA GROUP — Credenciales de acceso',
-      this.email.newUserCredentialsHtml(data.name, data.email.toLowerCase().trim(), tempPassword),
+      this.email.newUserCredentialsHtml(data.name, email, tempPassword),
     ).catch(() => {});
 
     // Return the plaintext temp password only at creation time
@@ -147,6 +157,8 @@ export class UniversitiesService {
         mustChangePassword: true,
       },
     });
+    // Invalida el cache authId→User: el cambio de rol es inmediato (fail-open).
+    await invalidateAuthUser(this.redis, user.authId);
     return updated;
   }
 
@@ -169,6 +181,8 @@ export class UniversitiesService {
         mustChangePassword: true,
       },
     });
+    // Invalida el cache authId→User: activar/desactivar es inmediato (fail-open).
+    await invalidateAuthUser(this.redis, user.authId);
     return updated;
   }
 

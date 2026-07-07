@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase/client';
 import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -67,7 +68,9 @@ export function ProfilePage() {
     }
     setSavingPassword(true);
     try {
-      await api.post('/api/v1/auth/change-password', { currentPassword, newPassword });
+      // Supabase actualiza la contraseña del usuario logueado usando su sesión activa.
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
       toast.success('Contraseña actualizada correctamente');
       setCurrentPassword('');
       setNewPassword('');

@@ -78,11 +78,6 @@ export class SuperadminController {
     return this.superadminService.toggleUserStatus(id);
   }
 
-  @Post('users/:id/reset-password')
-  resetUserPassword(@Param('id', ParseUUIDPipe) id: string) {
-    return this.superadminService.resetUserPassword(id);
-  }
-
   @Delete('users/:id')
   deleteUser(@Param('id', ParseUUIDPipe) id: string) {
     return this.superadminService.deleteUser(id);

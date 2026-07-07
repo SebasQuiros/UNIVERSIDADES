@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Inject,
   NotFoundException,
   ConflictException,
   BadRequestException,
@@ -11,17 +12,20 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { PayrollCalculatorService } from './payroll-calculator.service';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
 import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
+import { REDIS_CLIENT } from '../../redis/redis.module';
 
 @Injectable()
 export class PayrollService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly calculator: PayrollCalculatorService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
 
   // ── Ownership guard (Fase 1: soporta INDIVIDUAL + GROUP) ────────────────
+  // Pasamos `redis` para reusar el core cacheado por el guard (fail-open a DB).
   private async verifyOwner(companyId: string, userId: string) {
-    await assertCompanyAccess(this.prisma, companyId, userId);
+    await assertCompanyAccess(this.prisma, companyId, userId, { redis: this.redis });
   }
 
   // ── Employees ─────────────────────────────────────────────────────────────

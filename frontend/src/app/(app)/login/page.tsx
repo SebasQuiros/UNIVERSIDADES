@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, FormEvent, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PageSpinner } from '@/components/ui/Spinner';
 import { getErrorMessage } from '@/lib/utils';
 import { Mail, Lock, BookOpen, TrendingUp, FileText, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const FEATURES = [
   { icon: BookOpen,   label: 'Ejercicios contables interactivos' },
-  { icon: FileText,   label: 'Facturación electrónica CR (Hacienda v4.3)' },
+  { icon: FileText,   label: 'Facturación electrónica CR (Hacienda v4.4)' },
   { icon: TrendingUp, label: 'Motor contable de doble entrada' },
   { icon: Award,      label: 'Calificación automática con rúbricas' },
 ];
@@ -49,11 +51,8 @@ export default function LoginPage() {
     setLoginLoading(true);
     try {
       const u = await login(email.trim().toLowerCase(), password);
-      // mustChangePassword redirect is handled inside AuthContext.login()
-      if (!(u as any).mustChangePassword) {
-        sessionStorage.setItem('welcomeName', u.name.split(' ')[0]);
-        router.push(ROLE_REDIRECT[u.role] ?? '/');
-      }
+      sessionStorage.setItem('welcomeName', u.name.split(' ')[0]);
+      router.push(ROLE_REDIRECT[u.role] ?? '/');
     } catch (err) {
       const msg = getErrorMessage(err);
       setLoginError(msg);
@@ -61,6 +60,9 @@ export default function LoginPage() {
       setLoginLoading(false);
     }
   }
+
+  // Evita el parpadeo del formulario mientras se resuelve la sesión existente
+  if (isLoading) return <PageSpinner />;
 
   return (
     <div className="min-h-screen flex" style={{ background: '#EFF6FF' }}>
@@ -77,9 +79,12 @@ export default function LoginPage() {
         />
 
         <div className="flex items-center gap-3 relative">
-          <img
-            src="/FOTO.png.png"
+          <Image
+            src="/logo.png"
             alt="ContaSJ"
+            width={40}
+            height={40}
+            priority
             className="w-10 h-10 rounded-xl"
             style={{ boxShadow: '0 0 20px rgba(59,130,246,0.5)' }}
           />
@@ -118,7 +123,7 @@ export default function LoginPage() {
             style={{ background: 'rgba(10,37,64,0.6)', borderColor: 'rgba(59,130,246,0.3)' }}
           >
             <p className="text-xs font-mono" style={{ color: '#93c5fd' }}>
-              Costa Rica · IVA 13% · Hacienda v4.3 · NestJS + Next.js 14
+              Costa Rica · IVA 13% · Hacienda v4.4 · NestJS + Next.js 14
             </p>
           </div>
         </div>
@@ -133,7 +138,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <img src="/FOTO.png.png" alt="ContaSJ" className="w-9 h-9 rounded-xl" />
+              <Image src="/logo.png" alt="ContaSJ" width={36} height={36} className="w-9 h-9 rounded-xl" />
               <h1 className="text-2xl font-bold">
                 <span style={{ color: '#3B82F6' }}>ContaSJ</span>
               </h1>

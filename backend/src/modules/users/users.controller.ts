@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { Roles } from '../auth/decorators/auth.decorators';
-import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 
@@ -62,14 +61,12 @@ export class UsersController {
   async create(@Body() body: CreateUserDto) {
     const existing = await this.svc.findByEmail(body.email);
     if (existing) throw new ConflictException('El correo electrónico ya está registrado');
-    const passwordHash = await bcrypt.hash(body.password, 10);
     return this.svc.create({
       name:         body.name,
       email:        body.email,
-      passwordHash,
+      password:     body.password,
       role:         body.role as Role,
       universityId: body.universityId ?? null,
-      emailVerified: true,
     });
   }
 

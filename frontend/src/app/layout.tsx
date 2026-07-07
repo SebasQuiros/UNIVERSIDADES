@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import NextTopLoader from 'nextjs-toploader';
 import './globals.css';
 import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt';
 
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
     title: 'ContaSJ',
   },
   icons: {
-    icon: '/FOTO.png.png',
+    icon: '/logo.png',
     apple: '/icon-192.png',
   },
 };
@@ -30,6 +31,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body>
+        {/* Indicador global de transición de ruta — feedback instantáneo en cada navegación */}
+        <NextTopLoader
+          color="#3B82F6"
+          height={3}
+          showSpinner={false}
+          shadow="0 0 10px #3B82F6, 0 0 6px #60A5FA"
+          easing="ease"
+          speed={400}
+          zIndex={1600}
+        />
         {children}
         <PwaInstallPrompt />
         <script

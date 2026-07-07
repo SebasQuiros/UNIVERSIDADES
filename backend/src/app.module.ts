@@ -4,6 +4,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { BulkReadInterceptor } from './common/interceptors/bulk-read.interceptor';
 import { CompanyEnabledGuard } from './common/guards/company-enabled.guard';
+import { SupabaseModule }       from './common/supabase/supabase.module';
 import { PrismaModule }         from './prisma/prisma.module';
 import { AuthModule }           from './modules/auth/auth.module';
 import { UsersModule }          from './modules/users/users.module';
@@ -56,6 +57,8 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
       { name: 'medium', ttl: 60000, limit: 500 }, // 500 req/min por IP
     ]),
     PrismaModule,
+    // Identidad en Supabase Auth (global) — SupabaseAdminService disponible en toda la app
+    SupabaseModule,
     // Phase 2 — Auth
     AuthModule,
     UsersModule,

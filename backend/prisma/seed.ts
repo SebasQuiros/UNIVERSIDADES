@@ -7,9 +7,68 @@
  */
 
 import { PrismaClient, Role, ExerciseDifficulty, ExerciseType } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
+
+/**
+ * Crea (o recupera) el usuario en Supabase Auth y devuelve su id (= `sub` del JWT),
+ * que se guarda en `User.authId`. La contraseña vive en Supabase; ya no se
+ * almacena hash localmente. Idempotente por email.
+ *
+ * Si faltan las envs de Supabase, se omite y se deja `authId = null`: la
+ * estrategia JWT enlaza por email en el primer login.
+ */
+async function ensureAuthUser(
+  email: string,
+  password: string,
+  meta: Record<string, unknown>,
+): Promise<string | null> {
+  const url = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!url || !key) {
+    console.warn(
+      `⚠ SUPABASE_URL/SERVICE_ROLE_KEY ausentes — ${email} se crea sin authId (se enlazará por email en el primer login).`,
+    );
+    return null;
+  }
+  const headers = {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    'Content-Type': 'application/json',
+  };
+  const res = await fetch(`${url}/auth/v1/admin/users`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: meta,
+    }),
+  });
+  if (res.ok) {
+    const data: any = await res.json();
+    return data.id;
+  }
+  // Email ya registrado → recuperar el id existente (idempotencia), paginando.
+  if (res.status === 422 || res.status === 409) {
+    const target = email.toLowerCase();
+    for (let page = 1; page <= 100; page++) {
+      const lookup = await fetch(
+        `${url}/auth/v1/admin/users?page=${page}&per_page=200`,
+        { headers },
+      );
+      if (!lookup.ok) break;
+      const data: any = await lookup.json();
+      const users: any[] = data.users || (Array.isArray(data) ? data : []);
+      const match = users.find((u) => (u.email || '').toLowerCase() === target);
+      if (match) return match.id;
+      if (users.length < 200) break;
+    }
+  }
+  console.warn(`⚠ No se pudo crear ${email} en Supabase Auth (${res.status}).`);
+  return null;
+}
 
 async function main() {
   console.log('🌱 Iniciando seed de CONTAFÁCIL SQ...\n');
@@ -50,22 +109,21 @@ async function main() {
   console.log(`✓ Universidad creada: ${university.name}`);
 
   // ── 3. Usuarios ──────────────────────────────────────────────
-  const saltRounds = 10;
-
-  const adminHash    = await bcrypt.hash('Admin2026!', saltRounds);
-  const teacherHash  = await bcrypt.hash('Profesor2026!', saltRounds);
-  const student1Hash = await bcrypt.hash('Estudiante1-2026!', saltRounds);
-  const student2Hash = await bcrypt.hash('Estudiante2-2026!', saltRounds);
+  // La identidad y la contraseña viven en Supabase Auth; guardamos solo el authId.
+  const adminAuthId    = await ensureAuthUser('admin@contafacil.cr',       'Admin2026!',        { name: 'Super Admin',                role: 'SUPERADMIN' });
+  const teacherAuthId  = await ensureAuthUser('profesor@contafacil.cr',    'Profesor2026!',     { name: 'Prof. Ana Bermúdez Solano',  role: 'TEACHER' });
+  const student1AuthId = await ensureAuthUser('estudiante1@contafacil.cr', 'Estudiante1-2026!', { name: 'María Alvarado Jiménez',     role: 'STUDENT' });
+  const student2AuthId = await ensureAuthUser('estudiante2@contafacil.cr', 'Estudiante2-2026!', { name: 'Carlos Mora Rodríguez',      role: 'STUDENT' });
 
   // Super Admin
   const admin = await prisma.user.upsert({
     where: { email: 'admin@contafacil.cr' },
-    update: {},
+    update: adminAuthId ? { authId: adminAuthId } : {},
     create: {
       id:           'c0000001-0000-4000-8000-000000000001',
       name:         'Super Admin',
       email:        'admin@contafacil.cr',
-      passwordHash: adminHash,
+      authId:       adminAuthId,
       role:         Role.SUPERADMIN,
       isActive:     true,
       emailVerified: true,
@@ -76,12 +134,12 @@ async function main() {
   // Profesor
   const teacher = await prisma.user.upsert({
     where: { email: 'profesor@contafacil.cr' },
-    update: {},
+    update: teacherAuthId ? { authId: teacherAuthId } : {},
     create: {
       id:           'c0000001-0000-4000-8000-000000000002',
       name:         'Prof. Ana Bermúdez Solano',
       email:        'profesor@contafacil.cr',
-      passwordHash: teacherHash,
+      authId:       teacherAuthId,
       role:         Role.TEACHER,
       universityId: university.id,
       isActive:     true,
@@ -93,12 +151,12 @@ async function main() {
   // Estudiante 1
   const student1 = await prisma.user.upsert({
     where: { email: 'estudiante1@contafacil.cr' },
-    update: {},
+    update: student1AuthId ? { authId: student1AuthId } : {},
     create: {
       id:           'c0000001-0000-4000-8000-000000000003',
       name:         'María Alvarado Jiménez',
       email:        'estudiante1@contafacil.cr',
-      passwordHash: student1Hash,
+      authId:       student1AuthId,
       role:         Role.STUDENT,
       universityId: university.id,
       isActive:     true,
@@ -110,12 +168,12 @@ async function main() {
   // Estudiante 2
   const student2 = await prisma.user.upsert({
     where: { email: 'estudiante2@contafacil.cr' },
-    update: {},
+    update: student2AuthId ? { authId: student2AuthId } : {},
     create: {
       id:           'c0000001-0000-4000-8000-000000000004',
       name:         'Carlos Mora Rodríguez',
       email:        'estudiante2@contafacil.cr',
-      passwordHash: student2Hash,
+      authId:       student2AuthId,
       role:         Role.STUDENT,
       universityId: university.id,
       isActive:     true,

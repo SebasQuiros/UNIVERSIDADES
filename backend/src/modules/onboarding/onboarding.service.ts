@@ -5,10 +5,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SupabaseAdminService } from '../../common/supabase/supabase-admin.service';
 import { EmailService } from '../notifications/email.service';
 import { ConfigService } from '@nestjs/config';
 import { CreateUniversityOnboardingDto } from './dto/onboarding.dto';
-import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -19,6 +19,7 @@ export class OnboardingService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly config: ConfigService,
+    private readonly supabaseAdmin: SupabaseAdminService,
   ) {}
 
   // ── GET /onboarding/plans ─────────────────────────────────────
@@ -66,7 +67,15 @@ export class OnboardingService {
 
     // 4. Generate secure temporary password (12 chars, mixed)
     const tempPassword = this.generateTempPassword(12);
-    const passwordHash = await bcrypt.hash(tempPassword, 12);
+    const adminEmail = dto.adminEmail.toLowerCase().trim();
+
+    // Crear la identidad en Supabase Auth (idempotente por email) ANTES de la
+    // transacción de BD. La contraseña vive en Supabase; localmente solo el authId.
+    const authId = await this.supabaseAdmin.createUser({
+      email:    adminEmail,
+      password: tempPassword,
+      userMetadata: { name: dto.adminName.trim(), role: 'ADMIN' },
+    });
 
     // 5. Create University + Admin in a transaction
     const { university, admin } = await this.prisma.$transaction(async (tx) => {
@@ -85,9 +94,9 @@ export class OnboardingService {
 
       const admin = await tx.user.create({
         data: {
+          authId,
           name:               dto.adminName.trim(),
-          email:              dto.adminEmail.toLowerCase().trim(),
-          passwordHash,
+          email:              adminEmail,
           role:               'ADMIN',
           universityId:       university.id,
           isActive:           true,
@@ -96,8 +105,7 @@ export class OnboardingService {
           // queda implícitamente verificado. Mismo criterio que en
           // superadmin.service.ts y universities.service.ts.
           emailVerified:      true,
-          mustChangePassword: true,
-          oauthProvider:      'LOCAL',
+          mustChangePassword: false,
         },
       });
 

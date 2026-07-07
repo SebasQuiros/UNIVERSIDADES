@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
 import toast from 'react-hot-toast';
 import {
   Users, BookOpen, Building2, TrendingUp, ArrowRight, Globe,
@@ -43,6 +43,19 @@ function StatCard({ label, value, icon: Icon, color, sub }: {
   );
 }
 
+// Placeholder de tarjeta de estadística — conserva el layout mientras cargan los datos
+function StatSkeleton() {
+  return (
+    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
+      <Skeleton className="w-10 h-10 rounded-xl" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-6 w-14" />
+        <Skeleton className="h-3 w-20" />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [university, setUniversity] = useState<UniversityDetail | null>(null);
@@ -65,14 +78,16 @@ export default function AdminDashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div className="flex-1 flex items-center justify-center"><Spinner size="lg" /></div>;
-
+  // Renderizamos el shell siempre y usamos skeletons donde van los datos,
+  // en lugar de tapar toda la pantalla con un spinner centrado.
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">Panel de Administración</h2>
-        {university && (
+        {loading ? (
+          <Skeleton className="h-4 w-56 mt-2" />
+        ) : university && (
           <p className="text-gray-500 text-sm mt-1 flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5" /> {university.name}
             {university.shortName && <span className="text-gray-400">· {university.shortName}</span>}
@@ -85,53 +100,65 @@ export default function AdminDashboard() {
 
       {/* Primary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          label="Estudiantes"
-          value={stats?.totalStudents ?? 0}
-          icon={GraduationCap}
-          color="bg-blue-50 text-blue-600"
-        />
-        <StatCard
-          label="Profesores"
-          value={stats?.totalTeachers ?? 0}
-          icon={Users}
-          color="bg-purple-50 text-purple-600"
-        />
-        <StatCard
-          label="Cursos activos"
-          value={stats?.totalCourses ?? 0}
-          icon={BookOpen}
-          color="bg-emerald-50 text-emerald-600"
-        />
-        <StatCard
-          label="Ejercicios"
-          value={stats?.totalExercises ?? 0}
-          icon={FileText}
-          color="bg-amber-50 text-amber-600"
-        />
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => <StatSkeleton key={i} />)
+        ) : (
+          <>
+            <StatCard
+              label="Estudiantes"
+              value={stats?.totalStudents ?? 0}
+              icon={GraduationCap}
+              color="bg-blue-50 text-blue-600"
+            />
+            <StatCard
+              label="Profesores"
+              value={stats?.totalTeachers ?? 0}
+              icon={Users}
+              color="bg-purple-50 text-purple-600"
+            />
+            <StatCard
+              label="Cursos activos"
+              value={stats?.totalCourses ?? 0}
+              icon={BookOpen}
+              color="bg-emerald-50 text-emerald-600"
+            />
+            <StatCard
+              label="Ejercicios"
+              value={stats?.totalExercises ?? 0}
+              icon={FileText}
+              color="bg-amber-50 text-amber-600"
+            />
+          </>
+        )}
       </div>
 
       {/* Secondary stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <StatCard
-          label="Intentos calificados"
-          value={stats?.totalGraded ?? 0}
-          icon={CheckCircle2}
-          color="bg-teal-50 text-teal-600"
-        />
-        <StatCard
-          label="Nota promedio"
-          value={stats?.avgScore !== null && stats?.avgScore !== undefined ? `${stats.avgScore}%` : '—'}
-          sub={stats?.avgScore ? (stats.avgScore >= 70 ? 'Aprobado promedio' : 'Por mejorar') : undefined}
-          icon={Award}
-          color="bg-rose-50 text-rose-600"
-        />
-        <StatCard
-          label="Estado"
-          value={university?.isActive ? 'Activo' : 'Inactivo'}
-          icon={TrendingUp}
-          color="bg-gray-50 text-gray-600"
-        />
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => <StatSkeleton key={i} />)
+        ) : (
+          <>
+            <StatCard
+              label="Intentos calificados"
+              value={stats?.totalGraded ?? 0}
+              icon={CheckCircle2}
+              color="bg-teal-50 text-teal-600"
+            />
+            <StatCard
+              label="Nota promedio"
+              value={stats?.avgScore !== null && stats?.avgScore !== undefined ? `${stats.avgScore}%` : '—'}
+              sub={stats?.avgScore ? (stats.avgScore >= 70 ? 'Aprobado promedio' : 'Por mejorar') : undefined}
+              icon={Award}
+              color="bg-rose-50 text-rose-600"
+            />
+            <StatCard
+              label="Estado"
+              value={university?.isActive ? 'Activo' : 'Inactivo'}
+              icon={TrendingUp}
+              color="bg-gray-50 text-gray-600"
+            />
+          </>
+        )}
       </div>
 
       {/* Quick links */}

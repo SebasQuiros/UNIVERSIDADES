@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Spinner } from '@/components/ui/Spinner';
 import toast from 'react-hot-toast';
 import {
   Building2, Users, BookOpen, FileText, DollarSign,
@@ -80,6 +79,29 @@ function formatRelative(dateStr: string) {
   return date.toLocaleDateString('es', { day: '2-digit', month: 'short' });
 }
 
+// ── Skeleton del dashboard ──────────────────────────────────────────────────
+// Reproduce la estructura (6 KPIs + 4 paneles) con placeholders animados, para
+// que el shell aparezca de inmediato y solo se rellenen los huecos con los datos.
+function SuperAdminSkeleton() {
+  return (
+    <>
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-24 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="h-72 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="h-72 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
+      </div>
+    </>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SuperAdminDashboard() {
@@ -100,30 +122,24 @@ export default function SuperAdminDashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
-  if (!stats) return null;
-
-  // Annual license price per student (confidential — SUPERADMIN only)
+  // Precio de licencia anual por estudiante (confidencial — solo SUPERADMIN)
   const PRICE_PER_STUDENT_CRC = 5000;
-  const annualRevenue = stats.totalStudents * PRICE_PER_STUDENT_CRC;
+  const annualRevenue = (stats?.totalStudents ?? 0) * PRICE_PER_STUDENT_CRC;
   const fmtCrc = (n: number) =>
     new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC', maximumFractionDigits: 0 }).format(n);
 
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      {/* Header */}
+      {/* Header — visible siempre, incluso mientras cargan los datos */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900">Panel SuperAdmin</h2>
         <p className="text-gray-500 text-sm mt-1">Vista global de la plataforma ContaSJ</p>
       </div>
 
+      {loading || !stats ? (
+        <SuperAdminSkeleton />
+      ) : (
+      <>
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
         <StatCard
@@ -311,6 +327,8 @@ export default function SuperAdminDashboard() {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

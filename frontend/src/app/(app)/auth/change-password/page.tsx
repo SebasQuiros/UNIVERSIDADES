@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/context/AuthContext';
+import { getErrorMessage } from '@/lib/utils';
+import toast from 'react-hot-toast';
 import { Eye, EyeOff, Lock, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function ChangePasswordPage() {
@@ -11,11 +13,9 @@ export default function ChangePasswordPage() {
   const { logout } = useAuth();
 
   const [form, setForm] = useState({
-    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
-  const [showCurrent, setShowCurrent]   = useState(false);
   const [showNew, setShowNew]           = useState(false);
   const [showConfirm, setShowConfirm]   = useState(false);
   const [isLoading, setIsLoading]       = useState(false);
@@ -42,19 +42,23 @@ export default function ChangePasswordPage() {
 
     setIsLoading(true);
     try {
-      await api.post('/api/v1/auth/change-password', {
-        currentPassword: form.currentPassword,
-        newPassword:     form.newPassword,
+      // El usuario logueado (o con sesión de recuperación de Supabase) cambia su
+      // propia contraseña. updateUser usa la sesión activa, no la contraseña actual.
+      const { error: sbError } = await supabase.auth.updateUser({
+        password: form.newPassword,
       });
+      if (sbError) throw sbError;
       setSuccess(true);
-      // Give the user 2 seconds to see the success message, then logout → login
+      toast.success('Contraseña actualizada');
+      // Damos 2 segundos para ver el mensaje de éxito, luego logout → login
       setTimeout(async () => {
         await logout();
         router.replace('/login');
       }, 2000);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg.join(' ') : (msg || 'Error al cambiar la contraseña.'));
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
@@ -79,8 +83,8 @@ export default function ChangePasswordPage() {
             <div>
               <p className="text-sm font-semibold text-amber-800">Cambio de contraseña requerido</p>
               <p className="text-sm text-amber-700 mt-0.5">
-                Tu cuenta es nueva. Debes establecer una contraseña personal antes de continuar.
-                Usa la contraseña temporal que te enviaron.
+                Establece una contraseña personal para continuar. Ingresa tu nueva
+                contraseña dos veces para confirmarla.
               </p>
             </div>
           </div>
@@ -103,32 +107,6 @@ export default function ChangePasswordPage() {
                   {error}
                 </div>
               )}
-
-              {/* Current password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contraseña temporal (actual)
-                </label>
-                <div className="relative">
-                  <input
-                    type={showCurrent ? 'text' : 'password'}
-                    name="currentPassword"
-                    value={form.currentPassword}
-                    onChange={handleChange}
-                    required
-                    placeholder="Ingresa tu contraseña temporal"
-                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrent((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    tabIndex={-1}
-                  >
-                    {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
 
               {/* New password */}
               <div>

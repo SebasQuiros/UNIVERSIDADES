@@ -1,15 +1,20 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBankTransactionDto, UpdateBankTransactionDto, BulkImportDto } from './dto/bank.dto';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
+import { REDIS_CLIENT } from '../../redis/redis.module';
 
 @Injectable()
 export class BankService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
 
   // Fase 1: delegamos al helper que soporta INDIVIDUAL + GROUP.
+  // Pasamos `redis` para reusar el core cacheado por el guard (fail-open a DB).
   private async _verifyCompany(companyId: string, userId: string) {
-    return assertCompanyAccess(this.prisma, companyId, userId);
+    return assertCompanyAccess(this.prisma, companyId, userId, { redis: this.redis });
   }
 
   async findAll(companyId: string, userId: string) {

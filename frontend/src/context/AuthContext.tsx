@@ -1,12 +1,12 @@
 'use client';
 
 import React, {
-  createContext, useContext, useState, useEffect, useRef, useCallback,
+  createContext, useContext, useState, useEffect, useCallback,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, setApiToken, setApiCallbacks, performRefresh } from '@/lib/api';
-import { getTokenExpiry } from '@/lib/utils';
-import type { User, AuthResponse } from '@/types';
+import { api, setApiToken, setApiCallbacks } from '@/lib/api';
+import { supabase } from '@/lib/supabase/client';
+import type { User } from '@/types';
 
 // ── Context types ──────────────────────────────────────────────────────────
 interface AuthState {
@@ -24,6 +24,9 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 // ── Provider ───────────────────────────────────────────────────────────────
+// Auth = Supabase. El access token vive en memoria (inyectado como Bearer por
+// lib/api). Supabase persiste la sesión y auto-refresca el token; el perfil de
+// la app (rol, universityId) se trae del backend con GET /api/v1/auth/me.
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [state, setState] = useState<AuthState>({
@@ -31,40 +34,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     accessToken: null,
     isLoading: true,
   });
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── Schedule auto-refresh 60s before token expires ──────────────────────
-  const scheduleRefresh = useCallback((token: string) => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    const expiry = getTokenExpiry(token);
-    const delay  = expiry - Date.now() - 60_000; // 60s before expiry
-    if (delay <= 0) {
-      doRefresh();
-      return;
-    }
-    refreshTimerRef.current = setTimeout(doRefresh, delay);
+  // ── Perfil de la app (rol real) desde el backend ────────────────────────
+  const fetchProfile = useCallback(async (): Promise<User> => {
+    const { data } = await api.get<User>('/api/v1/auth/me');
+    return data;
   }, []);
 
-  // ── Token refresh ────────────────────────────────────────────────────────
-  // Uses shared `performRefresh` from lib/api so concurrent refreshes
-  // (timer + interceptor + StrictMode double-mount) dedupe to ONE network call.
-  const doRefresh = useCallback(async () => {
-    try {
-      const data = await performRefresh();
-      applyAuth(data as AuthResponse);
-    } catch {
-      setState({ user: null, accessToken: null, isLoading: false });
-    }
-  }, []);
-
-  // ── Apply auth data (access token + user state) ──────────────────────────
-  // refresh_token is now an httpOnly cookie set by the server — never touches JS
-  const applyAuth = useCallback((data: AuthResponse) => {
-    setApiToken(data.access_token);
-    setState({ user: data.user, accessToken: data.access_token, isLoading: false });
-    scheduleRefresh(data.access_token);
-  }, [scheduleRefresh]);
-
+  // ── setToken: actualiza token en memoria + (opcional) el usuario ─────────
+  // Lo usa ProfilePage tras editar el perfil. Supabase ya gestiona el refresh,
+  // así que aquí no reprogramamos nada.
   const setToken = useCallback((token: string, user?: User) => {
     setApiToken(token);
     setState((prev) => ({
@@ -73,66 +52,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: user ?? prev.user,
       isLoading: false,
     }));
-    scheduleRefresh(token);
-  }, [scheduleRefresh]);
-
-  // ── Register callbacks for axios interceptor ─────────────────────────────
-  useEffect(() => {
-    setApiCallbacks(
-      (newToken) => setToken(newToken),
-      () => {
-        // Reset auth state only. Do NOT call router.push here.
-        //
-        // Route protection is handled by each layout:
-        //   /estudiante/layout.tsx  → redirects if !user
-        //   /profesor/layout.tsx    → redirects if !user
-        //   /admin/layout.tsx       → redirects if !user
-        //   /superadmin/layout.tsx  → redirects if !user
-        //
-        // The root "/" and "/login" have no auth layout, so they are
-        // naturally never redirected — this is exactly what we want.
-        setState({ user: null, accessToken: null, isLoading: false });
-      },
-    );
-  }, [setToken]);
-
-  // ── Bootstrap: attempt silent refresh on mount ───────────────────────────
-  // The httpOnly cookie (if present) will be sent automatically.
-  // If no valid session → 401 → catch → isLoading = false.
-  //
-  // Exception: on "/" (the public landing page) we skip the refresh call
-  // entirely. The intro screen has zero auth dependency and we must never
-  // trigger an API call or state changes that could cause a redirect there.
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/') {
-      setState((prev) => ({ ...prev, isLoading: false }));
-      return;
-    }
-    doRefresh();
-    return () => {
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    };
   }, []);
+
+  // ── Callback para el interceptor axios: reset de estado (sin navegar) ────
+  // La protección de rutas la resuelve cada layout (redirect si !user).
+  useEffect(() => {
+    setApiCallbacks(() => {
+      setApiToken(null);
+      setState({ user: null, accessToken: null, isLoading: false });
+    });
+  }, []);
+
+  // ── Bootstrap: leer sesión de Supabase + suscribirse a cambios de auth ───
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!active) return;
+
+      if (session?.access_token) {
+        setApiToken(session.access_token);
+        try {
+          const profile = await fetchProfile();
+          if (!active) return;
+          setState({ user: profile, accessToken: session.access_token, isLoading: false });
+        } catch {
+          if (!active) return;
+          setState({ user: null, accessToken: null, isLoading: false });
+        }
+      } else {
+        setState({ user: null, accessToken: null, isLoading: false });
+      }
+    })();
+
+    // Supabase auto-refresca el token: aquí solo sincronizamos el estado.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!active) return;
+
+      if (event === 'SIGNED_OUT' || !session) {
+        setApiToken(null);
+        setState({ user: null, accessToken: null, isLoading: false });
+        return;
+      }
+
+      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+        setApiToken(session.access_token);
+        setState((prev) => ({ ...prev, accessToken: session.access_token }));
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]);
 
   // ── Login ────────────────────────────────────────────────────────────────
   const login = useCallback(async (email: string, password: string): Promise<User> => {
-    const { data } = await api.post<AuthResponse>('/api/v1/auth/login', {
-      email, password,
-    });
-    applyAuth(data);
-    // If the account requires a password change, redirect immediately
-    if (data.mustChangePassword) {
-      router.replace('/auth/change-password');
-    }
-    return data.user;
-  }, [applyAuth, router]);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error; // el form muestra el mensaje
+
+    const session = data.session;
+    if (!session?.access_token) throw new Error('No se pudo iniciar sesión');
+
+    setApiToken(session.access_token);
+    const profile = await fetchProfile();
+    setState({ user: profile, accessToken: session.access_token, isLoading: false });
+    return profile;
+  }, [fetchProfile]);
 
   // ── Logout ───────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     try {
-      await api.post('/api/v1/auth/logout');
+      await supabase.auth.signOut();
     } catch { /* ignore */ }
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     setApiToken(null);
     setState({ user: null, accessToken: null, isLoading: false });
     router.push('/login');

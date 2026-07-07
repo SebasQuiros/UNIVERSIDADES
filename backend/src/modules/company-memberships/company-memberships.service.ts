@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, ForbiddenException,
+  Injectable, Inject, NotFoundException, ForbiddenException,
   BadRequestException, ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -9,6 +9,8 @@ import {
   AddCompanyMemberDto,
   SetCompanyEnabledDto,
 } from './dto/company-memberships.dto';
+import { REDIS_CLIENT } from '../../redis/redis.module';
+import { invalidateCompanyCore } from '../../common/company/company-core';
 
 /**
  * Service para companies en modo GROUP y manejo de miembros (Fase 1).
@@ -28,7 +30,10 @@ import {
  */
 @Injectable()
 export class CompanyMembershipsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
 
   // ────────────────────────────────────────────────────────────
   //  GROUP COMPANIES
@@ -326,11 +331,15 @@ export class CompanyMembershipsService {
     if (user.role === 'TEACHER') {
       await this._assertExerciseTeacher(company.exerciseId ?? null, user.id);
     }
-    return this.prisma.company.update({
+    const updated = await this.prisma.company.update({
       where: { id: company.id },
       data:  { isCompanyEnabled: dto.enabled },
       select: { id: true, name: true, isCompanyEnabled: true },
     });
+    // Invalidamos el core cacheado para que el toggle se vea sin esperar el TTL
+    // (fail-open: si Redis falla, el TTL corto igual acota la staleness).
+    await invalidateCompanyCore(this.redis, company.id);
+    return updated;
   }
 
   // ────────────────────────────────────────────────────────────

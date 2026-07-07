@@ -12,8 +12,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")   // pooler transaction (:6543) para el runtime
+  directUrl = env("DIRECT_URL")     // pooler session (:5432) para migraciones/seed
 }
 
 // ================================================================
@@ -25,12 +26,6 @@ enum Role {
   ADMIN
   TEACHER
   STUDENT
-}
-
-enum OAuthProvider {
-  LOCAL
-  GOOGLE
-  MICROSOFT
 }
 
 enum AccountType {
@@ -219,35 +214,25 @@ model University {
 }
 
 // ================================================================
-//  BLOQUE 2 — USUARIOS Y SESIONES
+//  BLOQUE 2 — USUARIOS
 // ================================================================
 
 model User {
   id                 String        @id @default(uuid()) @db.Uuid
+  authId             String?       @unique @map("auth_id")   // Supabase Auth user id (JWT sub)
   name               String
   email              String        @unique
-  passwordHash       String?       @map("password_hash")
   role               Role          @default(STUDENT)
   universityId       String?       @map("university_id") @db.Uuid
   avatarUrl          String?       @map("avatar_url")
-  oauthProvider      OAuthProvider @default(LOCAL) @map("oauth_provider")
-  oauthId            String?       @map("oauth_id")
   isActive           Boolean       @default(true) @map("is_active")
   emailVerified      Boolean       @default(false) @map("email_verified")
-  emailVerifyToken        String?  @map("email_verify_token")
-  emailVerifyTokenExpires DateTime? @map("email_verify_token_expires")
   mustChangePassword Boolean       @default(false) @map("must_change_password")
-  // ── 2FA TOTP (RFC 6238) ──────────────────────────────────
-  totpSecret         String?       @map("totp_secret")     // base32 secret
-  totpEnabled        Boolean       @default(false) @map("totp_enabled")
-  resetToken         String?       @map("reset_token")
-  resetTokenExpires  DateTime?     @map("reset_token_expires")
   lastLogin          DateTime?     @map("last_login")
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt      @map("updated_at")
 
   university         University?        @relation(fields: [universityId], references: [id])
-  sessions           Session[]
   teacherCourses     Course[]           @relation("TeacherCourses")
   enrollments        Enrollment[]
   exercises          Exercise[]         @relation("TeacherExercises")
@@ -262,34 +247,10 @@ model User {
   sessionTrackings   SessionTracking[]
   taxDeclarations    TaxDeclaration[]
 
-  @@unique([oauthProvider, oauthId])
   @@index([email])
   @@index([universityId])
   @@index([role])
   @@map("users")
-}
-
-model Session {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  token        String    @unique           // JWT ID (jti)
-  refreshToken String    @unique           @map("refresh_token")
-  ipAddress    String?   @map("ip_address")
-  userAgent    String?   @map("user_agent")
-  deviceInfo   String?   @map("device_info")
-  isActive     Boolean   @default(true)   @map("is_active")
-  expiresAt    DateTime  @map("expires_at")
-  lastUsedAt   DateTime  @default(now())  @map("last_used_at")
-  revokedAt    DateTime? @map("revoked_at")
-  revokedBy    String?   @map("revoked_by") @db.Uuid
-  createdAt    DateTime  @default(now())  @map("created_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([token])
-  @@index([refreshToken])
-  @@map("sessions")
 }
 
 // ================================================================
