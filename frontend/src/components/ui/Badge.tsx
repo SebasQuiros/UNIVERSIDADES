@@ -3,7 +3,7 @@ import type { ExerciseStatus, ExerciseDifficulty } from '@/types';
 
 interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'blue' | 'green' | 'amber' | 'red' | 'slate' | 'purple' | 'emerald';
+  variant?: 'blue' | 'green' | 'amber' | 'red' | 'slate' | 'purple' | 'emerald' | 'gold';
   size?: 'sm' | 'md';
   className?: string;
 }
@@ -22,6 +22,7 @@ export function Badge({ children, variant = 'slate', size = 'sm', className }: B
           'bg-red-50 text-red-700 border border-red-200':         variant === 'red',
           'bg-gray-100 text-gray-600 border border-gray-200':     variant === 'slate',
           'bg-purple-50 text-purple-700 border border-purple-200': variant === 'purple',
+          'bg-gold-50 text-gold-900 border border-gold-100':      variant === 'gold',
         },
         className,
       )}

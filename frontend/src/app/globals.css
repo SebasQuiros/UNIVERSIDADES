@@ -17,6 +17,20 @@
   --csq-accent-dim:   #93c5fd;
   --csq-white:        #FFFFFF;
   --csq-light:        #EFF6FF;
+
+  /* Acento dorado de marca (espejo de la escala `gold` de Tailwind) */
+  --gold-50:  #FDF6E3;
+  --gold-100: #FDE68A;
+  --gold-500: #FBBF24;
+  --gold-600: #D4A017;
+  --gold-700: #B8860B;
+  --gold-900: #8A6608;
+
+  /* Radios y sombras compartidas (lenguaje del landing) */
+  --radius-card:      1.5rem;
+  --shadow-soft:      0 10px 30px rgba(15, 38, 87, 0.25);
+  --shadow-card:      0 4px 16px rgba(27, 46, 110, 0.06);
+  --shadow-card-hover:0 24px 48px rgba(27, 46, 110, 0.12);
 }
 
 html, body {

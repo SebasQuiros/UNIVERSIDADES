@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import type { Notification } from '@/types';
 import {
   LayoutDashboard, Bell, Building2, LogOut,
-  BookOpen, Menu, X, ChevronRight, Receipt, UserCircle,
+  Menu, X, ChevronRight, Receipt, UserCircle,
   TrendingUp, LineChart,
 } from 'lucide-react';
 
@@ -79,16 +79,21 @@ export function StudentSidebar() {
       {/* Logo */}
       <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
         <Link href="/estudiante" onClick={() => setOpen(false)} className="flex items-center gap-3 group">
-          <div className="relative">
-            <img src="/logo.png" alt="ContaSJ" className="w-10 h-10 rounded-xl flex-shrink-0" />
-            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+          <div className="relative flex-shrink-0">
+            <div className="w-10 h-10 rounded-[11px] overflow-hidden flex items-center justify-center"
+              style={{ background: '#000' }}>
+              <img src="/sjqa-logo.png" alt="ContaSJ" className="w-10 h-10 object-contain" />
+            </div>
+            <div className="absolute inset-0 rounded-[11px] opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ boxShadow: '0 0 16px rgba(59,130,246,0.6)' }} />
           </div>
           <div>
-            <h1 className="text-lg font-black text-white tracking-tight leading-none">
-              <span style={{ color: '#60A5FA' }}>ContaSJ</span>
+            <h1 className="text-lg font-black tracking-tight leading-none" style={{ color: '#60A5FA' }}>
+              ContaSJ
             </h1>
-            <p className="text-xs mt-0.5" style={{ color: '#60A5FA' }}>Portal Estudiante</p>
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] mt-1" style={{ color: '#FBBF24' }}>
+              Portal Estudiante
+            </p>
           </div>
         </Link>
       </div>
@@ -112,7 +117,7 @@ export function StudentSidebar() {
         </div>
       )}
 
-      {/* Nav agrupado por secciones (estilo ALEGRA/SAP) */}
+      {/* Nav agrupado por secciones */}
       <nav className="flex-1 p-3 overflow-y-auto">
         {NAV_SECTIONS.map((section) => (
           <div key={section.label} className="mb-4 last:mb-0">
@@ -131,20 +136,23 @@ export function StudentSidebar() {
                     key={href}
                     href={href}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group"
+                    className={cn(
+                      'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                      active ? 'text-white' : 'text-white/55 hover:bg-csq-dark-hover hover:text-white/90',
+                    )}
                     style={active ? {
                       background: 'linear-gradient(90deg,#1E3A8A,#0F2657)',
-                      color: '#FFFFFF',
-                      boxShadow: '0 2px 12px rgba(59,130,246,0.35)',
-                    } : {
-                      color: 'rgba(255,255,255,0.55)',
-                    }}
-                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.cssText += 'background:#0B1A2E;color:rgba(255,255,255,0.9);'; }}
-                    onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; } }}
+                      boxShadow: '0 4px 16px rgba(37,99,235,0.28), inset 0 0 0 1px rgba(251,191,36,0.12)',
+                    } : undefined}
                   >
+                    {/* Barra/acento dorado del item activo */}
+                    {active && (
+                      <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full"
+                        style={{ background: 'linear-gradient(180deg,#FDE68A,#D4A017)', boxShadow: '0 0 8px rgba(251,191,36,0.55)' }} />
+                    )}
                     <Icon
                       className="w-4 h-4 flex-shrink-0 transition-colors"
-                      style={{ color: active ? '#60A5FA' : 'rgba(96,165,250,0.6)' }}
+                      style={{ color: active ? '#93C5FD' : 'rgba(96,165,250,0.6)' }}
                     />
                     <span className="flex-1">{label}</span>
                     {isNotif && unread > 0 && (
@@ -153,7 +161,7 @@ export function StudentSidebar() {
                         {unread > 9 ? '9+' : unread}
                       </span>
                     )}
-                    {active && <ChevronRight className="w-3 h-3" style={{ color: '#60A5FA' }} />}
+                    {active && <ChevronRight className="w-3 h-3" style={{ color: '#FBBF24' }} />}
                   </Link>
                 );
               })}
@@ -163,17 +171,17 @@ export function StudentSidebar() {
       </nav>
 
       {/* Divisor decorativo */}
-      <div className="mx-4 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(59,130,246,0.3),transparent)' }} />
+      <div className="mx-4 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(184,134,11,0.35),transparent)' }} />
 
       {/* User + Logout */}
       <div className="p-3 pb-4">
         <Link
           href="/estudiante/perfil"
           onClick={() => setOpen(false)}
-          className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl transition-colors group"
+          className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl transition-colors hover:bg-csq-dark-hover"
           style={{ background: 'rgba(15,38,87,0.5)', border: '1px solid rgba(59,130,246,0.12)' }}
         >
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 overflow-hidden"
             style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)' }}>
             {user?.avatarUrl
               ? <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover"
@@ -186,16 +194,13 @@ export function StudentSidebar() {
           </div>
           <UserCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#60A5FA' }} />
         </Link>
-        <div className="flex gap-2">
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 flex-1 px-3 py-2 text-sm rounded-xl transition-all"
-            style={{ color: 'rgba(255,255,255,0.5)' }}
-          >
-            <LogOut className="w-4 h-4" />
-            Cerrar sesión
-          </button>
-        </div>
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-xl transition-all text-white/50 hover:bg-csq-dark-hover hover:text-white/90"
+        >
+          <LogOut className="w-4 h-4" />
+          Cerrar sesión
+        </button>
       </div>
     </div>
   );
@@ -212,9 +217,11 @@ export function StudentSidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between"
         style={{ background: '#03080F', borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
         <div className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="ContaSJ" className="w-8 h-8 rounded-lg" />
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: '#000' }}>
+            <img src="/sjqa-logo.png" alt="ContaSJ" className="w-8 h-8 object-contain" />
+          </div>
           <div>
-            <h1 className="text-lg font-black text-white leading-none"><span style={{ color: '#60A5FA' }}>ContaSJ</span></h1>
+            <h1 className="text-lg font-black leading-none" style={{ color: '#60A5FA' }}>ContaSJ</h1>
             {university && <p className="text-xs leading-none mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{university.shortName ?? university.name}</p>}
           </div>
         </div>

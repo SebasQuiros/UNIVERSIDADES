@@ -57,7 +57,7 @@ export function TopBar() {
   return (
     <header
       className="hidden lg:flex items-center gap-4 h-14 px-6 sticky top-0 z-20 flex-shrink-0"
-      style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #E5E9F0' }}
+      style={{ background: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: '1px solid rgba(15,38,87,0.08)' }}
     >
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 min-w-0 flex-shrink">
@@ -65,7 +65,11 @@ export function TopBar() {
           <span key={c.href} className="flex items-center gap-1.5 min-w-0">
             {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />}
             {i === crumbs.length - 1 ? (
-              <span className="text-sm font-semibold text-gray-800 truncate">{c.label}</span>
+              <span className="flex items-center gap-2 min-w-0">
+                <span aria-hidden className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg,#FBBF24,#B8860B)' }} />
+                <span className="text-sm font-semibold text-gray-900 truncate tracking-tight">{c.label}</span>
+              </span>
             ) : (
               <Link href={c.href} className="text-sm text-gray-400 hover:text-gray-600 transition-colors truncate">
                 {c.label}
@@ -76,14 +80,14 @@ export function TopBar() {
       </nav>
 
       {/* Buscador global (estético, atajo visual) */}
-      <div className="ml-auto hidden xl:flex items-center gap-2 px-3 h-9 rounded-xl w-72"
+      <div className="ml-auto hidden xl:flex items-center gap-2 px-3 h-9 rounded-xl w-72 transition-all focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-300"
         style={{ background: '#F1F5F9', border: '1px solid #E5E9F0' }}>
         <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
         <input
           placeholder="Buscar empresas, ejercicios…"
           className="bg-transparent outline-none text-sm text-gray-600 w-full placeholder:text-gray-400"
         />
-        <kbd className="text-[10px] font-semibold text-gray-400 px-1.5 py-0.5 rounded border border-gray-200 bg-white">⌘K</kbd>
+        <kbd className="text-[10px] font-semibold text-gray-500 px-1.5 py-0.5 rounded-md border border-gray-200 bg-white">⌘K</kbd>
       </div>
 
       {/* Acciones derecha */}

@@ -7,9 +7,9 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PageSpinner } from '@/components/ui/Spinner';
+import { SceneWelcome } from '@/components/illustrations';
 import { getErrorMessage } from '@/lib/utils';
-import { Mail, Lock, BookOpen, TrendingUp, FileText, Award } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Mail, Lock, BookOpen, TrendingUp, FileText, Award, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const FEATURES = [
   { icon: BookOpen,   label: 'Ejercicios contables interactivos' },
@@ -67,88 +67,95 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex" style={{ background: '#EFF6FF' }}>
 
-      {/* ── Left panel: branding (desktop only) ── */}
+      {/* ── Panel izquierdo: branding (solo desktop) ── */}
       <div
         className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden"
         style={{ background: 'linear-gradient(160deg, #03080F 0%, #0F2657 60%, #1E3A8A 100%)' }}
       >
-        {/* Glow decorativo */}
-        <div
-          className="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 pointer-events-none"
-          style={{ background: 'radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%)', filter: 'blur(60px)' }}
-        />
+        {/* Textura de blobs sutiles */}
+        <div className="lp-blob-bg" aria-hidden />
+        {/* Retícula de puntos */}
+        <div aria-hidden className="absolute inset-0 pointer-events-none"
+          style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)', backgroundSize: '26px 26px' }} />
 
-        <div className="flex items-center gap-3 relative">
-          <Image
-            src="/logo.png"
-            alt="ContaSJ"
-            width={40}
-            height={40}
-            priority
-            className="w-10 h-10 rounded-xl"
-            style={{ boxShadow: '0 0 20px rgba(59,130,246,0.5)' }}
-          />
+        {/* Logo + marca */}
+        <div className="flex items-center gap-3 relative z-10">
+          <div className="w-10 h-10 rounded-[11px] overflow-hidden flex items-center justify-center flex-shrink-0"
+            style={{ background: '#000', boxShadow: '0 0 20px rgba(59,130,246,0.4)' }}>
+            <Image src="/sjqa-logo.png" alt="ContaSJ" width={40} height={40} priority className="w-10 h-10 object-contain" />
+          </div>
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight leading-none">
-              <span style={{ color: '#60A5FA' }}>ContaSJ</span>
+            <h1 className="text-2xl font-black tracking-tight leading-none" style={{ color: '#60A5FA' }}>
+              ContaSJ
             </h1>
-            <p style={{ color: '#60A5FA' }} className="text-xs mt-0.5">
-              Plataforma SaaS Educativa · Costa Rica
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] mt-1" style={{ color: '#FBBF24' }}>
+              Plataforma educativa · Costa Rica
             </p>
           </div>
         </div>
 
-        <div className="space-y-6">
+        {/* Contenido central */}
+        <div className="relative z-10 space-y-8 lp-in lp-in-d2">
           <div>
-            <p className="text-white font-medium text-lg mb-6">
-              Aprende contabilidad haciendo,<br />
-              <span style={{ color: '#93c5fd' }}>no solo leyendo.</span>
+            <p className="text-[0.7rem] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: '#FBBF24' }}>
+              Aprende contabilidad
             </p>
-            <div className="space-y-4">
-              {FEATURES.map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(59,130,246,0.25)' }}
-                  >
-                    <Icon className="w-4 h-4" style={{ color: '#93c5fd' }} />
-                  </div>
-                  <span className="text-white/80 text-sm">{label}</span>
-                </div>
-              ))}
-            </div>
+            <p className="text-white font-extrabold leading-tight" style={{ fontSize: 'clamp(1.4rem,2.4vw,1.9rem)', letterSpacing: '-0.02em' }}>
+              Aprende contabilidad haciendo,{' '}
+              <span style={{ color: '#93C5FD' }}>no solo leyendo.</span>
+            </p>
           </div>
-          <div
-            className="p-4 rounded-2xl border"
-            style={{ background: 'rgba(10,37,64,0.6)', borderColor: 'rgba(59,130,246,0.3)' }}
-          >
-            <p className="text-xs font-mono" style={{ color: '#93c5fd' }}>
-              Costa Rica · IVA 13% · Hacienda v4.4 · NestJS + Next.js 14
-            </p>
+
+          {/* Escena de personaje */}
+          <div className="flex justify-center lp-drift" aria-hidden>
+            <SceneWelcome size={260} />
+          </div>
+
+          <div className="space-y-3">
+            {FEATURES.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(59,130,246,0.22)', border: '1px solid rgba(96,165,250,0.2)' }}>
+                  <Icon className="w-4 h-4" style={{ color: '#93C5FD' }} strokeWidth={1.9} />
+                </div>
+                <span className="text-white/80 text-sm">{label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <p className="text-xs" style={{ color: '#3B82F6' }}>Sebastián Quirós Arroyo © 2026</p>
+        <div className="relative z-10 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[0.68rem] font-medium px-2.5 py-1 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(184,134,11,0.28)', color: 'rgba(253,230,138,0.9)' }}>
+            IVA 13% · Hacienda v4.4 · NIIF PYMES
+          </span>
+          <span className="text-xs ml-auto" style={{ color: 'rgba(96,165,250,0.6)' }}>© 2026</span>
+        </div>
       </div>
 
-      {/* ── Right panel ── */}
+      {/* ── Panel derecho: formulario ── */}
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white">
         <div className="w-full max-w-sm">
 
-          {/* Mobile logo */}
+          {/* Cabecera móvil: logo + ilustración reducida */}
           <div className="lg:hidden text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Image src="/logo.png" alt="ContaSJ" width={36} height={36} className="w-9 h-9 rounded-xl" />
-              <h1 className="text-2xl font-bold">
-                <span style={{ color: '#3B82F6' }}>ContaSJ</span>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-[10px] overflow-hidden flex items-center justify-center" style={{ background: '#000' }}>
+                <Image src="/sjqa-logo.png" alt="ContaSJ" width={36} height={36} className="w-9 h-9 object-contain" />
+              </div>
+              <h1 className="text-2xl font-black tracking-tight">
+                <span style={{ color: '#2563EB' }}>ContaSJ</span>
               </h1>
             </div>
-            <p className="text-gray-500 text-xs">Plataforma Educativa Contable</p>
+            <div className="flex justify-center">
+              <SceneWelcome size={180} />
+            </div>
           </div>
 
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Bienvenido</h2>
-            <p className="text-gray-500 text-sm mt-1">Acceso institucional</p>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-700 mb-1">Acceso institucional</p>
+            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">Bienvenido</h2>
+            <p className="text-gray-500 text-sm mt-1.5">Ingresa con tu correo institucional para continuar.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
@@ -173,8 +180,9 @@ export default function LoginPage() {
             />
 
             {loginError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-                <p className="text-sm text-red-600">{loginError}</p>
+              <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl" role="alert">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700">{loginError}</p>
               </div>
             )}
 
@@ -183,9 +191,10 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* ── Demo credentials — acceso rápido para revisión ── */}
+          {/* ── Credenciales de prueba — acceso rápido para revisión ── */}
           <div className="mt-6 p-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              <CheckCircle2 className="w-3.5 h-3.5" />
               Usuarios de prueba — clic para autocompletar
             </p>
             <div className="space-y-1.5">

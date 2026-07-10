@@ -7,13 +7,18 @@ import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 interface CardProps {
   children: ReactNode;
   className?: string;
+  /** `onDark` → superficie con degradado azul noche y texto claro. */
+  variant?: 'default' | 'onDark';
 }
 
-export function Card({ children, className }: CardProps) {
+export function Card({ children, className, variant = 'default' }: CardProps) {
   return (
     <div
       className={cn(
-        'bg-white border border-gray-200/70 rounded-2xl shadow-sm overflow-hidden',
+        'rounded-card overflow-hidden',
+        variant === 'onDark'
+          ? 'bg-gradient-to-br from-csq-mid to-csq-active border border-white/10 text-white shadow-soft'
+          : 'bg-white border border-gray-200/70 shadow-card',
         className,
       )}
     >
@@ -81,7 +86,7 @@ export function KPICard({
     trendDirection === 'down' ? ArrowDownRight : null;
 
   return (
-    <div className="relative bg-white border border-gray-200/70 rounded-2xl shadow-sm p-6 transition-all hover:shadow-md hover:border-gray-300/70">
+    <div className="relative bg-white border border-gray-200/70 rounded-card shadow-card p-6 transition-all hover:shadow-card-hover hover:border-gray-300/70">
       {/* Left accent bar */}
       <span className={cn('absolute left-0 top-6 bottom-6 w-1 rounded-r-full', t.bar)} aria-hidden />
 
