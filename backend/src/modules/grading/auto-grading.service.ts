@@ -27,7 +27,7 @@ export class AutoGradingService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ── Main entry point ────────────────────────────────────────────────────────
-  async preview(attemptId: string, teacherId: string): Promise<AutoGradePreview> {
+  async preview(attemptId: string, teacherId: string | null): Promise<AutoGradePreview> {
     const attempt = await this.prisma.exerciseAttempt.findUnique({
       where:   { id: attemptId },
       include: {
@@ -44,7 +44,7 @@ export class AutoGradingService {
     });
 
     if (!attempt) throw new NotFoundException('Intento no encontrado');
-    if (attempt.exercise.course.teacherId !== teacherId) {
+    if (teacherId && attempt.exercise.course.teacherId !== teacherId) {
       throw new ForbiddenException('Solo el profesor del curso puede auto-calificar');
     }
     if (attempt.status === 'NOT_STARTED') {
@@ -152,6 +152,24 @@ export class AutoGradingService {
       passedCount, totalCount: results.length,
       results, feedbackText, rubricComments,
     };
+  }
+
+  // ── Auto-califica y GUARDA (status GRADED). Se invoca al ENTREGAR. ───────────
+  // Sin chequeo de profe (contexto del estudiante). Devuelve null si el ejercicio
+  // no tiene rúbricas → el intento queda SUBMITTED para calificación manual.
+  async gradeAndSave(attemptId: string): Promise<AutoGradePreview | null> {
+    const result = await this.preview(attemptId, null).catch(() => null);
+    if (!result) return null;
+    await this.prisma.exerciseAttempt.update({
+      where: { id: attemptId },
+      data:  {
+        score:    result.score,
+        feedback: result.feedbackText,
+        status:   'GRADED' as any,
+        gradedAt: new Date(),
+      },
+    });
+    return result;
   }
 
   // ── Criterion evaluator ─────────────────────────────────────────────────────

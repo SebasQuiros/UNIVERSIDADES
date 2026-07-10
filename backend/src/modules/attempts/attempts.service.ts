@@ -2,10 +2,14 @@ import {
   Injectable, NotFoundException, ForbiddenException, BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AutoGradingService } from '../grading/auto-grading.service';
 
 @Injectable()
 export class AttemptsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly autoGrading: AutoGradingService,
+  ) {}
 
   // ── List attempts: student sees own, teacher sees attempts for their courses ──
   async findAll(userId: string, userRole: string) {
@@ -153,7 +157,50 @@ export class AttemptsService {
       data:  { status: 'SUBMITTED', submittedAt: new Date() },
     });
 
-    return { message: 'Ejercicio enviado para calificación', attempt: updated };
+    // ── Auto-calificar al entregar ──────────────────────────────
+    // Si el ejercicio tiene rúbricas, se califica solo (queda GRADED).
+    // Si no, queda SUBMITTED para que el profe lo revise a mano.
+    const graded = await this.autoGrading.gradeAndSave(attemptId).catch(() => null);
+    const finalAttempt = graded
+      ? await this.prisma.exerciseAttempt.findUnique({ where: { id: attemptId } })
+      : updated;
+
+    return {
+      message: graded
+        ? `¡Ejercicio entregado y calificado! Puntaje: ${graded.score}/${graded.maxScore}.`
+        : 'Ejercicio enviado para calificación.',
+      attempt: finalAttempt,
+      autoGraded: !!graded,
+    };
+  }
+
+  // ── Reopen a submitted/graded attempt (teacher of the course or admin) ──
+  async reopen(attemptId: string, userId: string, userRole: string) {
+    const attempt = await this.prisma.exerciseAttempt.findUnique({
+      where:   { id: attemptId },
+      include: { exercise: { include: { course: { select: { teacherId: true } } } } },
+    });
+    if (!attempt) throw new NotFoundException('Intento no encontrado');
+
+    const isStaff = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+    if (!isStaff && attempt.exercise.course.teacherId !== userId) {
+      throw new ForbiddenException('Solo el profesor del curso puede reabrir el intento');
+    }
+    if (attempt.status !== 'SUBMITTED' && attempt.status !== 'GRADED') {
+      throw new BadRequestException('Solo se pueden reabrir intentos entregados o calificados');
+    }
+
+    const updated = await this.prisma.exerciseAttempt.update({
+      where: { id: attemptId },
+      data:  {
+        status:      'IN_PROGRESS',
+        submittedAt: null,
+        gradedAt:    null,
+        score:       null,
+        feedback:    null,
+      },
+    });
+    return { message: 'Intento reabierto. El estudiante puede corregir y volver a entregar.', attempt: updated };
   }
 
   // ── Internal helper: validate access ──

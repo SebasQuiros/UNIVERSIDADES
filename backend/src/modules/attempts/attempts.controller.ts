@@ -44,4 +44,11 @@ export class AttemptsController {
   submit(@Param('id') id: string, @CurrentUser() user: any) {
     return this.svc.submit(id, user.id);
   }
+
+  // Reabrir un intento entregado/calificado (solo profe del curso o admin).
+  @Post(':id/reopen')
+  @HttpCode(HttpStatus.OK)
+  reopen(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.svc.reopen(id, user.id, user.role);
+  }
 }

@@ -14,7 +14,7 @@ import {
   ArrowLeft, FileText, BookOpen,
   CheckCircle2, Clock, Send, TrendingUp,
   Zap, ChevronDown, ChevronUp, X, Check,
-  AlertTriangle, BarChart2, Printer, Eye,
+  AlertTriangle, BarChart2, Printer, Eye, RotateCcw,
 } from 'lucide-react';
 import { ExamActivityLog } from '@/components/exam';
 
@@ -69,6 +69,7 @@ export default function GradeAttemptPage() {
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(false);
   const [autoing,     setAutoing]     = useState(false);
+  const [reopening,   setReopening]   = useState(false);
   const [score,       setScore]       = useState('');
   const [feedback,    setFeedback]    = useState('');
   const [rubricCmts,  setRubricCmts]  = useState<Record<string, string>>({});
@@ -148,6 +149,21 @@ export default function GradeAttemptPage() {
       toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleReopen() {
+    if (!attempt) return;
+    if (!confirm('¿Reabrir este intento? El estudiante podrá corregir y volver a entregar. Se borrará la calificación actual.')) return;
+    setReopening(true);
+    try {
+      await api.post(`/api/v1/attempts/${attemptId}/reopen`);
+      toast.success('Intento reabierto. El estudiante puede corregir.');
+      router.push(courseId ? `/profesor/ejercicios/${id}?cursoId=${courseId}` : '/profesor/pendientes');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setReopening(false);
     }
   }
 
@@ -653,10 +669,15 @@ export default function GradeAttemptPage() {
               />
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-2 flex-wrap">
               <Button type="button" variant="secondary" onClick={() => router.back()}>
                 <ArrowLeft className="w-4 h-4" /> Volver
               </Button>
+              {(attempt.status === 'SUBMITTED' || attempt.status === 'GRADED') && (
+                <Button type="button" variant="secondary" loading={reopening} onClick={handleReopen}>
+                  <RotateCcw className="w-4 h-4" /> Reabrir intento
+                </Button>
+              )}
               {!isAlreadyGraded && (
                 <Button type="submit" loading={saving} disabled={!score}>
                   <Send className="w-4 h-4" />
