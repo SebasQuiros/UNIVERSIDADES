@@ -34,7 +34,7 @@ const fmtCrc = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-const BAR_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+const BAR_COLORS = ['#0D9488', '#10b981', '#f59e0b', '#ef4444', '#475569', '#ec4899'];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -98,42 +98,42 @@ export default function IngresosPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <Users className="w-5 h-5 text-blue-600" />
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+            <Users className="w-5 h-5 text-teal-600" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900">{totalStudents}</p>
+            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{totalStudents}</p>
             <p className="text-xs text-gray-500 mt-0.5">Estudiantes activos</p>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-5 h-5 text-purple-600" />
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+            <Building2 className="w-5 h-5 text-slate-600" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900">{activeUnis.length}</p>
+            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{activeUnis.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">Universidades activas</p>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
             <DollarSign className="w-5 h-5 text-emerald-600" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900">{fmtCrc(annualRevenue)}</p>
+            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{fmtCrc(annualRevenue)}</p>
             <p className="text-xs text-gray-500 mt-0.5">Ingresos anuales estimados</p>
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
             <TrendingUp className="w-5 h-5 text-teal-600" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-900">{fmtCrc(monthlyRevenue)}</p>
+            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{fmtCrc(monthlyRevenue)}</p>
             <p className="text-xs text-gray-500 mt-0.5">Promedio mensual</p>
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function IngresosPage() {
       {/* Chart + breakdown layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bar chart */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+        <div className="lg:col-span-2 bg-white border border-gray-200 shadow-sm rounded-xl p-6">
           <h3 className="font-semibold text-gray-800 text-sm mb-4">Estudiantes por universidad</h3>
           {chartData.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-gray-400">
@@ -177,7 +177,7 @@ export default function IngresosPage() {
         </div>
 
         {/* Breakdown table */}
-        <div className="lg:col-span-1 bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+        <div className="lg:col-span-1 bg-white border border-gray-200 shadow-sm rounded-xl p-6">
           <h3 className="font-semibold text-gray-800 text-sm mb-4">Desglose por universidad</h3>
           {activeUnis.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-gray-400">
@@ -195,7 +195,7 @@ export default function IngresosPage() {
                       <p className="text-gray-800 font-medium truncate">{u.shortName || u.name}</p>
                       <p className="text-xs text-gray-400">{u.studentsCount} estudiantes</p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-700 flex-shrink-0 ml-2">
+                    <p className="text-sm font-semibold text-gray-700 flex-shrink-0 ml-2 font-mono tabular-nums">
                       {fmtCrc(u.studentsCount * PRICE_PER_STUDENT_CRC)}
                     </p>
                   </div>

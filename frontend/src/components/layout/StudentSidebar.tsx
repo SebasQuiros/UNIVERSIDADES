@@ -2,242 +2,315 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import type { Notification } from '@/types';
 import {
-  LayoutDashboard, Bell, Building2, LogOut,
-  BookOpen, Menu, X, ChevronRight, Receipt, UserCircle,
-  TrendingUp, LineChart,
+  Home, ArrowDownCircle, ArrowUpCircle, Package, Landmark, BookOpen,
+  Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
+  LogOut, Menu, X, ChevronRight, ChevronDown, UserCircle,
 } from 'lucide-react';
 
-const NAV_SECTIONS = [
-  {
-    label: 'Principal',
-    items: [
-      { href: '/estudiante',          label: 'Mis Ejercicios', icon: LayoutDashboard },
-      { href: '/estudiante/progreso', label: 'Mi Progreso',    icon: TrendingUp },
-    ],
-  },
-  {
-    label: 'Contabilidad',
-    items: [
-      { href: '/estudiante/empresas', label: 'Mis Empresas',   icon: Building2 },
-    ],
-  },
-  {
-    label: 'Simulador',
-    items: [
-      { href: '/estudiante/simulador', label: 'Simulador Financiero', icon: LineChart },
-    ],
-  },
-  {
-    label: 'Tributación',
-    items: [
-      { href: '/estudiante/impuestos', label: 'Tributación (TRIBU)', icon: Receipt },
-    ],
-  },
-  {
-    label: 'General',
-    items: [
-      { href: '/estudiante/notificaciones', label: 'Notificaciones', icon: Bell },
-    ],
-  },
-];
+// ── Paleta v2 (plana, "libro mayor") ───────────────────────────
+const TEAL = '#0D9488';
+const SIDE_BG = '#0E141B';
+const SIDE_LINE = 'rgba(255,255,255,0.10)';
+const TXT = 'rgba(255,255,255,0.85)';
+const TXT_FAINT = 'rgba(255,255,255,0.55)';
+
+interface Sub {
+  label: string;
+  tab?: string;        // pestaña del ejercicio (?tab=)
+  endsWith?: string;   // subruta del ejercicio (/compras)
+  path?: string;       // ruta global
+  soon?: boolean;      // aún no construido
+}
+interface Group {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+  href?: string;       // grupo-enlace directo (sin hijos)
+  exact?: boolean;
+  path?: string;
+  isNotif?: boolean;
+  children?: Sub[];
+  needsExercise?: boolean;
+}
 
 export function StudentSidebar() {
-  const pathname               = usePathname();
-  const { user, logout }       = useAuth();
+  const pathname     = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab   = searchParams.get('tab');
+  const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const [unread, setUnread]    = useState(0);
+  const [unread, setUnread] = useState(0);
   const [university, setUniversity] = useState<{ name: string; shortName: string | null; logoUrl: string | null } | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user?.universityId) return;
-    api.get('/api/v1/universities/mine')
-      .then(({ data }) => setUniversity(data))
-      .catch(() => {});
+    api.get('/api/v1/universities/mine').then(({ data }) => setUniversity(data)).catch(() => {});
   }, [user?.universityId]);
 
   useEffect(() => {
-    api.get<Notification[]>('/api/v1/notifications')
-      .then(({ data }) => setUnread(data.filter((n) => !n.isRead).length))
-      .catch(() => {});
-    const id = setInterval(() => {
-      api.get<Notification[]>('/api/v1/notifications')
-        .then(({ data }) => setUnread(data.filter((n) => !n.isRead).length))
-        .catch(() => {});
-    }, 10_000);
+    api.get<any[]>('/api/v1/attempts').then(({ data }) => {
+      const list = Array.isArray(data) ? data : [];
+      const a = list.find((x) => x.status === 'IN_PROGRESS')
+        ?? list.find((x) => x.company)
+        ?? list.find((x) => x.status === 'NOT_STARTED')
+        ?? list[0];
+      setActiveId(a?.id ?? null);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const fetchUnread = () => api.get<Notification[]>('/api/v1/notifications')
+      .then(({ data }) => setUnread(data.filter((n) => !n.isRead).length)).catch(() => {});
+    fetchUnread();
+    const id = setInterval(fetchUnread, 15_000);
     return () => clearInterval(id);
   }, [pathname]);
 
+  const base = activeId ? `/estudiante/ejercicio/${activeId}` : null;
+  const subHref = (s: Sub) => {
+    if (s.path) return s.path;
+    if (s.soon) return null;
+    if (!base) return '/estudiante';
+    if (s.endsWith) return `${base}${s.endsWith}`;
+    if (s.tab) return `${base}?tab=${s.tab}`;
+    return base;
+  };
+
+  const GROUPS: Group[] = [
+    { key: 'inicio', label: 'Inicio', icon: Home, href: '/estudiante', exact: true },
+    {
+      key: 'ingresos', label: 'Ingresos', icon: ArrowDownCircle, needsExercise: true,
+      children: [
+        { label: 'Clientes',          tab: 'clients' },
+        { label: 'Facturas de venta', tab: 'invoices' },
+        { label: 'Pagos recibidos',   tab: 'invoices' },
+      ],
+    },
+    {
+      key: 'gastos', label: 'Gastos', icon: ArrowUpCircle, needsExercise: true,
+      children: [
+        { label: 'Proveedores',        tab: 'suppliers' },
+        { label: 'Facturas de compra', endsWith: '/compras' },
+      ],
+    },
+    {
+      key: 'inventario', label: 'Inventario', icon: Package, needsExercise: true,
+      children: [
+        { label: 'Ítems y productos', tab: 'products' },
+      ],
+    },
+    {
+      key: 'bancos', label: 'Bancos', icon: Landmark, needsExercise: true,
+      children: [
+        { label: 'Bancos y cajas', tab: 'bank' },
+      ],
+    },
+    {
+      key: 'contabilidad', label: 'Contabilidad', icon: BookOpen, needsExercise: true,
+      children: [
+        { label: 'Asiento contable',    tab: 'journal' },
+        { label: 'Libro diario',        tab: 'ledger' },
+        { label: 'Libro mayor',         tab: 'mayorizacion' },
+        { label: 'Ajustes',             tab: 'ajustes' },
+        { label: 'Asientos de cierre',  tab: 'asientos-cierre' },
+        { label: 'Activos fijos',       tab: 'fixed-assets' },
+      ],
+    },
+    { key: 'reportes', label: 'Reportes', icon: BarChart2, needsExercise: true, children: [
+        { label: 'Balance de comprobación', tab: 'balance-comprobacion' },
+        { label: 'Estados financieros',     tab: 'reports' },
+    ]},
+    { key: 'tribu', label: 'Tributación · TRIBU', icon: Receipt, href: '/estudiante/impuestos', path: '/estudiante/impuestos' },
+  ];
+
+  const LEARN: Group[] = [
+    { key: 'sim',  label: 'Simulador financiero', icon: LineChart,  href: '/estudiante/simulador', path: '/estudiante/simulador' },
+    { key: 'prog', label: 'Mi progreso',          icon: TrendingUp, href: '/estudiante/progreso',  path: '/estudiante/progreso' },
+    { key: 'emp',  label: 'Mis empresas',         icon: Building2,  href: '/estudiante/empresas',  path: '/estudiante/empresas' },
+    { key: 'notif',label: 'Notificaciones',       icon: Bell,       href: '/estudiante/notificaciones', path: '/estudiante/notificaciones', isNotif: true },
+  ];
+
+  const inExercise = pathname.includes('/ejercicio/');
+  const subActive = (s: Sub) => {
+    if (s.path) return pathname.startsWith(s.path);
+    if (s.endsWith) return pathname.endsWith(s.endsWith);
+    if (s.tab) return inExercise && !pathname.endsWith('/compras') && (currentTab ?? 'dashboard') === s.tab;
+    return false;
+  };
+  const groupActive = (g: Group) => {
+    if (g.exact) return pathname === '/estudiante';
+    if (g.href && g.path) return pathname.startsWith(g.path);
+    return !!g.children?.some(subActive);
+  };
+  const isExpanded = (g: Group) => expanded[g.key] ?? groupActive(g);
+  const toggle = (k: string) => setExpanded((e) => ({ ...e, [k]: !(e[k] ?? false) }));
+
+  function renderGroup(g: Group) {
+    const Icon = g.icon;
+    const muted = g.needsExercise && !activeId;
+
+    // Grupo-enlace directo (sin hijos)
+    if (!g.children) {
+      const active = groupActive(g);
+      return (
+        <Link key={g.key} href={g.href!} onClick={() => setOpen(false)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors duration-100"
+          style={active ? { background: TEAL, color: '#fff' } : { color: muted ? TXT_FAINT : TXT }}
+          onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#fff'; } }}
+          onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = muted ? TXT_FAINT : TXT; } }}>
+          <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: active ? '#fff' : 'rgba(255,255,255,0.7)' }} />
+          <span className="flex-1">{g.label}</span>
+          {g.isNotif && unread > 0 && (
+            <span className="text-[11px] font-mono font-bold rounded px-1.5 py-0.5 min-w-[18px] text-center leading-none"
+              style={{ background: active ? 'rgba(255,255,255,0.25)' : TEAL, color: '#fff' }}>{unread > 9 ? '9+' : unread}</span>
+          )}
+        </Link>
+      );
+    }
+
+    // Grupo con submenú desplegable
+    const exp = isExpanded(g);
+    const gActive = groupActive(g);
+    return (
+      <div key={g.key}>
+        <button onClick={() => toggle(g.key)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors duration-100"
+          style={{ color: gActive ? '#fff' : (muted ? TXT_FAINT : TXT) }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; }}>
+          <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: gActive ? TEAL : 'rgba(255,255,255,0.7)' }} />
+          <span className="flex-1 text-left">{g.label}</span>
+          <ChevronDown className="w-4 h-4 flex-shrink-0 transition-transform" style={{ color: TXT_FAINT, transform: exp ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
+        </button>
+        {exp && (
+          <div className="mt-0.5 mb-1 ml-4 pl-3 space-y-0.5" style={{ borderLeft: `1px solid ${SIDE_LINE}` }}>
+            {g.children.map((s) => {
+              const href = subHref(s);
+              const active = subActive(s);
+              const content = (
+                <span className="flex-1 flex items-center gap-2">
+                  {s.label}
+                  {s.soon && <span className="text-[9px] font-bold uppercase tracking-wide px-1 py-px rounded" style={{ background: 'rgba(255,255,255,0.08)', color: TXT_FAINT }}>Pronto</span>}
+                </span>
+              );
+              if (s.soon || !href) {
+                return (
+                  <div key={s.label} title="Próximamente" className="flex items-center px-3 py-1.5 rounded-md text-[13px] cursor-default select-none" style={{ color: 'rgba(255,255,255,0.32)' }}>
+                    {content}
+                  </div>
+                );
+              }
+              return (
+                <Link key={s.label} href={href} onClick={() => setOpen(false)}
+                  className="flex items-center px-3 py-1.5 rounded-md text-[13px] transition-colors"
+                  style={active ? { background: TEAL, color: '#fff' } : { color: muted ? TXT_FAINT : TXT }}
+                  onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#fff'; } }}
+                  onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = muted ? TXT_FAINT : TXT; } }}>
+                  {content}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const sidebarContent = (
     <div className="flex flex-col h-full">
-
       {/* Logo */}
-      <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
-        <Link href="/estudiante" onClick={() => setOpen(false)} className="flex items-center gap-3 group">
-          <div className="relative">
-            <img src="/logo.png" alt="ContaSJ" className="w-10 h-10 rounded-xl flex-shrink-0" />
-            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ boxShadow: '0 0 16px rgba(59,130,246,0.6)' }} />
-          </div>
+      <div className="px-4 py-4" style={{ borderBottom: `1px solid ${SIDE_LINE}` }}>
+        <Link href="/estudiante" onClick={() => setOpen(false)} className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 font-mono font-extrabold text-white text-base" style={{ background: TEAL }}>C</div>
           <div>
-            <h1 className="text-lg font-black text-white tracking-tight leading-none">
-              <span style={{ color: '#60A5FA' }}>ContaSJ</span>
-            </h1>
-            <p className="text-xs mt-0.5" style={{ color: '#60A5FA' }}>Portal Estudiante</p>
+            <h1 className="text-[15px] font-bold text-white tracking-wide leading-none">ContaSJ</h1>
+            <p className="text-[10.5px] mt-1 leading-none" style={{ color: TXT_FAINT }}>Portal Estudiante</p>
           </div>
         </Link>
       </div>
 
-      {/* University badge */}
       {university && (
-        <div className="px-5 py-2.5 flex items-center gap-2.5"
-          style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(59,130,246,0.08)' }}>
+        <div className="mx-3 mt-3 mb-1 px-2.5 py-2 rounded-md flex items-center gap-2.5" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${SIDE_LINE}` }}>
           {university.logoUrl ? (
-            <img src={university.logoUrl} alt={university.name} className="w-5 h-5 rounded object-contain flex-shrink-0"
-              style={{ opacity: 0.85 }} />
+            <img src={university.logoUrl} alt={university.name} className="w-5 h-5 rounded object-contain flex-shrink-0" style={{ opacity: 0.85 }} />
           ) : (
-            <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-xs font-bold"
-              style={{ background: 'rgba(59,130,246,0.2)', color: '#93C5FD' }}>
+            <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[11px] font-bold font-mono" style={{ background: 'rgba(13,148,136,0.28)', color: '#5EEAD4' }}>
               {(university.shortName ?? university.name).charAt(0)}
             </div>
           )}
-          <p className="text-xs truncate leading-tight" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            {university.shortName ?? university.name}
-          </p>
+          <p className="text-[11px] truncate leading-tight" style={{ color: TXT_FAINT }}>{university.shortName ?? university.name}</p>
         </div>
       )}
 
-      {/* Nav agrupado por secciones (estilo ALEGRA/SAP) */}
-      <nav className="flex-1 p-3 overflow-y-auto">
-        {NAV_SECTIONS.map((section) => (
-          <div key={section.label} className="mb-4 last:mb-0">
-            <p className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: 'rgba(96,165,250,0.5)' }}>
-              {section.label}
-            </p>
-            <div className="space-y-0.5">
-              {section.items.map(({ href, label, icon: Icon }) => {
-                const active = href === '/estudiante'
-                  ? pathname === href
-                  : pathname.startsWith(href);
-                const isNotif = href.includes('notificaciones');
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group"
-                    style={active ? {
-                      background: 'linear-gradient(90deg,#1E3A8A,#0F2657)',
-                      color: '#FFFFFF',
-                      boxShadow: '0 2px 12px rgba(59,130,246,0.35)',
-                    } : {
-                      color: 'rgba(255,255,255,0.55)',
-                    }}
-                    onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.cssText += 'background:#0B1A2E;color:rgba(255,255,255,0.9);'; }}
-                    onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; } }}
-                  >
-                    <Icon
-                      className="w-4 h-4 flex-shrink-0 transition-colors"
-                      style={{ color: active ? '#60A5FA' : 'rgba(96,165,250,0.6)' }}
-                    />
-                    <span className="flex-1">{label}</span>
-                    {isNotif && unread > 0 && (
-                      <span className="text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none"
-                        style={{ background: '#3B82F6', color: '#fff', boxShadow: '0 0 8px rgba(59,130,246,0.6)' }}>
-                        {unread > 9 ? '9+' : unread}
-                      </span>
-                    )}
-                    {active && <ChevronRight className="w-3 h-3" style={{ color: '#60A5FA' }} />}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      {!activeId && (
+        <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(13,148,136,0.12)', border: '1px solid rgba(13,148,136,0.3)', color: '#7FE3CE' }}>
+          Inicia un ejercicio para operar tu empresa.
+        </div>
+      )}
+
+      <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
+        <div className="space-y-0.5 mb-4">{GROUPS.map(renderGroup)}</div>
+        <p className="px-2.5 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: TXT_FAINT }}>Aprendizaje</p>
+        <div className="space-y-0.5">{LEARN.map(renderGroup)}</div>
       </nav>
 
-      {/* Divisor decorativo */}
-      <div className="mx-4 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(59,130,246,0.3),transparent)' }} />
-
       {/* User + Logout */}
-      <div className="p-3 pb-4">
-        <Link
-          href="/estudiante/perfil"
-          onClick={() => setOpen(false)}
-          className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl transition-colors group"
-          style={{ background: 'rgba(15,38,87,0.5)', border: '1px solid rgba(59,130,246,0.12)' }}
-        >
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)' }}>
-            {user?.avatarUrl
-              ? <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              : user?.name?.charAt(0)?.toUpperCase() ?? 'E'}
+      <div className="p-2.5" style={{ borderTop: `1px solid ${SIDE_LINE}` }}>
+        <Link href="/estudiante/perfil" onClick={() => setOpen(false)}
+          className="flex items-center gap-3 px-2.5 py-2 mb-1 rounded-md transition-colors" style={{ border: `1px solid ${SIDE_LINE}` }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; }}>
+          <div className="w-7 h-7 rounded flex items-center justify-center text-white font-bold text-[12px] font-mono flex-shrink-0" style={{ background: '#242A31' }}>
+            {user?.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-7 h-7 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : user?.name?.charAt(0)?.toUpperCase() ?? 'E'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-            <p className="text-xs truncate" style={{ color: '#60A5FA' }}>Mi perfil</p>
+            <p className="text-[12.5px] font-semibold text-white truncate">{user?.name}</p>
+            <p className="text-[10.5px] truncate" style={{ color: TXT_FAINT }}>Mi perfil</p>
           </div>
-          <UserCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#60A5FA' }} />
+          <UserCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: TXT_FAINT }} />
         </Link>
-        <div className="flex gap-2">
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 flex-1 px-3 py-2 text-sm rounded-xl transition-all"
-            style={{ color: 'rgba(255,255,255,0.5)' }}
-          >
-            <LogOut className="w-4 h-4" />
-            Cerrar sesión
-          </button>
-        </div>
+        <button onClick={logout} className="flex items-center gap-2 w-full px-2.5 py-2 text-[13px] rounded-md transition-colors" style={{ color: TXT_FAINT }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#F8B4B4'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = TXT_FAINT; }}>
+          <LogOut className="w-4 h-4" /> Cerrar sesión
+        </button>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 flex-shrink-0"
-        style={{ background: 'linear-gradient(180deg,#03080F 0%,#060F1C 100%)', borderRight: '1px solid rgba(59,130,246,0.1)' }}>
+      <aside className="hidden lg:flex flex-col w-64 h-full flex-shrink-0" style={{ background: SIDE_BG, borderRight: '1px solid #000' }}>
         {sidebarContent}
       </aside>
 
-      {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between"
-        style={{ background: '#03080F', borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between" style={{ background: SIDE_BG, borderBottom: `1px solid ${SIDE_LINE}` }}>
         <div className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="ContaSJ" className="w-8 h-8 rounded-lg" />
+          <div className="w-7 h-7 rounded-md flex items-center justify-center font-mono font-extrabold text-white text-sm" style={{ background: TEAL }}>C</div>
           <div>
-            <h1 className="text-lg font-black text-white leading-none"><span style={{ color: '#60A5FA' }}>ContaSJ</span></h1>
-            {university && <p className="text-xs leading-none mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{university.shortName ?? university.name}</p>}
+            <h1 className="text-[15px] font-bold text-white leading-none tracking-wide">ContaSJ</h1>
+            {university && <p className="text-[10.5px] leading-none mt-1" style={{ color: TXT_FAINT }}>{university.shortName ?? university.name}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {unread > 0 && (
-            <span className="text-xs font-bold rounded-full px-1.5 py-0.5"
-              style={{ background: '#3B82F6', color: '#fff', boxShadow: '0 0 8px rgba(59,130,246,0.6)' }}>
-              {unread}
-            </span>
-          )}
-          <button onClick={() => setOpen(!open)} className="p-2 rounded-lg transition-colors"
-            style={{ color: 'rgba(255,255,255,0.7)' }}>
+          {unread > 0 && <span className="text-[11px] font-mono font-bold rounded px-1.5 py-0.5" style={{ background: TEAL, color: '#fff' }}>{unread}</span>}
+          <button onClick={() => setOpen(!open)} className="p-2 rounded-md transition-colors" style={{ color: TXT }}>
             {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="lg:hidden fixed inset-0 z-30 flex">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <aside className="relative w-72 h-full overflow-y-auto"
-            style={{ background: 'linear-gradient(180deg,#03080F 0%,#060F1C 100%)', borderRight: '1px solid rgba(59,130,246,0.15)' }}>
+          <aside className="relative w-72 h-full overflow-y-auto" style={{ background: SIDE_BG, borderRight: `1px solid ${SIDE_LINE}` }}>
             <div className="pt-16">{sidebarContent}</div>
           </aside>
         </div>

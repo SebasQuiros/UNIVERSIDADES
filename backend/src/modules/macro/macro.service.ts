@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-interface RatePoint { compra: number; venta: number; fecha: string | null; }
-interface MacroIndicators {
+export interface RatePoint { compra: number; venta: number; fecha: string | null; }
+export interface MacroIndicators {
   dolar:      RatePoint;
   euro:       RatePoint;
   tbp:        { valor: number | null; fecha: string | null };   // tasa básica pasiva (%)

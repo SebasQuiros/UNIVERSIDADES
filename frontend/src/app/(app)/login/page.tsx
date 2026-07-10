@@ -24,7 +24,7 @@ const ROLE_REDIRECT: Record<string, string> = {
 };
 
 const DEMO_CREDENTIALS = [
-  { label: 'Admin',         email: 'admin@contafacil.cr',       password: 'Admin2026!',         color: '#7C3AED' },
+  { label: 'Admin',         email: 'admin@contafacil.cr',       password: 'Admin2026!',         color: '#475569' },
   { label: 'Profesor',      email: 'profesor@contafacil.cr',    password: 'Profesor2026!',      color: '#0369A1' },
   { label: 'Estudiante 1',  email: 'estudiante1@contafacil.cr', password: 'Estudiante1-2026!',  color: '#065F46' },
   { label: 'Estudiante 2',  email: 'estudiante2@contafacil.cr', password: 'Estudiante2-2026!',  color: '#065F46' },
@@ -65,17 +65,17 @@ export default function LoginPage() {
   if (isLoading) return <PageSpinner />;
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#EFF6FF' }}>
+    <div className="min-h-screen flex" style={{ background: '#F4F6F8' }}>
 
       {/* ── Left panel: branding (desktop only) ── */}
       <div
         className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #03080F 0%, #0F2657 60%, #1E3A8A 100%)' }}
+        style={{ background: '#0E141B' }}
       >
         {/* Glow decorativo */}
         <div
           className="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 pointer-events-none"
-          style={{ background: 'radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%)', filter: 'blur(60px)' }}
+          style={{ background: 'radial-gradient(circle,rgba(13,148,136,0.15) 0%,transparent 70%)', filter: 'blur(60px)' }}
         />
 
         <div className="flex items-center gap-3 relative">
@@ -86,13 +86,13 @@ export default function LoginPage() {
             height={40}
             priority
             className="w-10 h-10 rounded-xl"
-            style={{ boxShadow: '0 0 20px rgba(59,130,246,0.5)' }}
+            style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}
           />
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight leading-none">
-              <span style={{ color: '#60A5FA' }}>ContaSJ</span>
+              <span style={{ color: '#14B8A6' }}>ContaSJ</span>
             </h1>
-            <p style={{ color: '#60A5FA' }} className="text-xs mt-0.5">
+            <p style={{ color: '#14B8A6' }} className="text-xs mt-0.5">
               Plataforma SaaS Educativa · Costa Rica
             </p>
           </div>
@@ -102,16 +102,16 @@ export default function LoginPage() {
           <div>
             <p className="text-white font-medium text-lg mb-6">
               Aprende contabilidad haciendo,<br />
-              <span style={{ color: '#93c5fd' }}>no solo leyendo.</span>
+              <span style={{ color: '#14B8A6' }}>no solo leyendo.</span>
             </p>
             <div className="space-y-4">
               {FEATURES.map(({ icon: Icon, label }) => (
                 <div key={label} className="flex items-center gap-3">
                   <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(59,130,246,0.25)' }}
+                    style={{ background: 'rgba(13,148,136,0.25)' }}
                   >
-                    <Icon className="w-4 h-4" style={{ color: '#93c5fd' }} />
+                    <Icon className="w-4 h-4" style={{ color: '#14B8A6' }} />
                   </div>
                   <span className="text-white/80 text-sm">{label}</span>
                 </div>
@@ -120,15 +120,15 @@ export default function LoginPage() {
           </div>
           <div
             className="p-4 rounded-2xl border"
-            style={{ background: 'rgba(10,37,64,0.6)', borderColor: 'rgba(59,130,246,0.3)' }}
+            style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(13,148,136,0.3)' }}
           >
-            <p className="text-xs font-mono" style={{ color: '#93c5fd' }}>
+            <p className="text-xs font-mono" style={{ color: '#14B8A6' }}>
               Costa Rica · IVA 13% · Hacienda v4.4 · NestJS + Next.js 14
             </p>
           </div>
         </div>
 
-        <p className="text-xs" style={{ color: '#3B82F6' }}>Sebastián Quirós Arroyo © 2026</p>
+        <p className="text-xs" style={{ color: '#0D9488' }}>Sebastián Quirós Arroyo © 2026</p>
       </div>
 
       {/* ── Right panel ── */}
@@ -140,7 +140,7 @@ export default function LoginPage() {
             <div className="flex items-center justify-center gap-2 mb-1">
               <Image src="/logo.png" alt="ContaSJ" width={36} height={36} className="w-9 h-9 rounded-xl" />
               <h1 className="text-2xl font-bold">
-                <span style={{ color: '#3B82F6' }}>ContaSJ</span>
+                <span style={{ color: '#0D9488' }}>ContaSJ</span>
               </h1>
             </div>
             <p className="text-gray-500 text-xs">Plataforma Educativa Contable</p>
@@ -198,7 +198,7 @@ export default function LoginPage() {
                     setPassword(p);
                     setLoginError('');
                   }}
-                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors group"
+                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-teal-300 hover:bg-teal-50 transition-colors group"
                 >
                   <span className="text-xs font-medium" style={{ color }}>{label}</span>
                   <span className="text-xs text-gray-400 font-mono group-hover:text-gray-600 truncate ml-2">{e}</span>

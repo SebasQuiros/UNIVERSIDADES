@@ -63,7 +63,7 @@ function Casilla({
         {hint && <span className="ml-1 text-xs text-gray-400 font-normal">({hint})</span>}
       </span>
       {readOnly ? (
-        <span className={`w-40 text-right text-sm font-mono px-3 py-1 rounded-lg ${bold ? 'bg-purple-50 text-purple-700 font-bold' : 'bg-gray-50 text-gray-700'}`}>
+        <span className={`w-40 text-right text-sm font-mono px-3 py-1 rounded-lg ${bold ? 'bg-slate-100 text-slate-600 font-bold' : 'bg-gray-50 text-gray-700'}`}>
           ₡ {displayVal}
         </span>
       ) : (
@@ -73,7 +73,7 @@ function Casilla({
             type="number" min="0" step="0.01"
             value={value as string}
             onChange={e => onChange?.(e.target.value)}
-            className="w-full pl-7 pr-3 py-1.5 text-sm font-mono text-right border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+            className="w-full pl-7 pr-3 py-1.5 text-sm font-mono text-right border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300 bg-white"
             placeholder="0.00"
           />
         </div>
@@ -85,7 +85,7 @@ function Casilla({
 
 function SectionHeader({ title, color = 'purple' }: { title: string; color?: string }) {
   const colors: Record<string, string> = {
-    purple: 'bg-purple-700 text-white',
+    purple: 'bg-slate-600 text-white',
     gray:   'bg-gray-700 text-white',
   };
   return (
@@ -239,19 +239,19 @@ export default function D115Page() {
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-purple-600" /> Datos del período fiscal
+                <FileText className="w-4 h-4 text-slate-600" /> Datos del período fiscal
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Período fiscal</label>
                   <select value={period} onChange={e => setPeriod(e.target.value)} disabled={isSubmitted}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300">
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-300">
                     {FISCAL_PERIODS.map(p => <option key={p} value={p}>{p} (1 oct – 30 set)</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Formulario</label>
-                  <div className="border border-purple-200 bg-purple-50 rounded-lg px-3 py-2 text-sm font-semibold text-purple-700">
+                  <div className="border border-slate-200 bg-slate-100 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600">
                     D-115 — Dividendos y Participaciones
                   </div>
                 </div>
@@ -272,8 +272,8 @@ export default function D115Page() {
               )}
             </div>
 
-            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
-              <p className="text-xs font-bold text-purple-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-4">
+              <p className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                 <Info className="w-3.5 h-3.5" /> ¿Qué declara el D-115?
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -284,10 +284,10 @@ export default function D115Page() {
                   { step: '4', title: 'Tasa única 15%', desc: 'Todos los conceptos tributan al 15% sobre el monto bruto distribuido (Art. 18 bis LISR).' },
                 ].map(({ step, title, desc }) => (
                   <div key={step} className="flex items-start gap-2">
-                    <div className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">{step}</div>
+                    <div className="w-6 h-6 rounded-full bg-slate-600 text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">{step}</div>
                     <div>
-                      <p className="text-xs font-bold text-purple-800">{title}</p>
-                      <p className="text-xs text-purple-600 leading-relaxed">{desc}</p>
+                      <p className="text-xs font-bold text-slate-700">{title}</p>
+                      <p className="text-xs text-slate-600 leading-relaxed">{desc}</p>
                     </div>
                   </div>
                 ))}
@@ -335,20 +335,20 @@ export default function D115Page() {
               </Casilla>
 
               {result && (
-                <div className="mt-3 pt-3 border-t border-purple-100 bg-purple-50 rounded-xl px-3 py-3 space-y-1.5">
-                  <p className="text-xs font-bold text-purple-700 mb-2">CÁLCULO AUTOMÁTICO AL 15%</p>
+                <div className="mt-3 pt-3 border-t border-slate-200 bg-slate-100 rounded-xl px-3 py-3 space-y-1.5">
+                  <p className="text-xs font-bold text-slate-600 mb-2">CÁLCULO AUTOMÁTICO AL 15%</p>
                   {[
                     { label: 'Imp. dividendos residentes', val: result.impDivRes },
                     { label: 'Imp. dividendos no residentes', val: result.impDivNoRes },
                     { label: 'Imp. participaciones', val: result.impPart },
                     { label: 'Imp. rentas de capital', val: result.impCap },
                   ].filter(x => x.val > 0).map(({ label, val }) => (
-                    <div key={label} className="flex justify-between text-sm text-purple-700">
+                    <div key={label} className="flex justify-between text-sm text-slate-600">
                       <span>{label}</span>
                       <span className="font-mono font-semibold">₡ {fmtNum(val)}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between text-sm font-bold text-purple-800 pt-1 border-t border-purple-200">
+                  <div className="flex justify-between text-sm font-bold text-slate-700 pt-1 border-t border-slate-200">
                     <span>Casilla 302 — Total impuesto</span>
                     <span className="font-mono">₡ {fmtNum(result.cas302_totalImpuesto)}</span>
                   </div>
@@ -422,9 +422,9 @@ export default function D115Page() {
               </div>
             </div>
 
-            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-xs text-purple-700 space-y-1">
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 text-xs text-slate-600 space-y-1">
               <p className="font-bold flex items-center gap-1.5"><HelpCircle className="w-4 h-4" /> Notas — Dividendos y Participaciones CR</p>
-              <ul className="list-disc list-inside space-y-0.5 text-purple-600 mt-1">
+              <ul className="list-disc list-inside space-y-0.5 text-slate-600 mt-1">
                 <li>La tasa del <strong>15%</strong> aplica a dividendos de acciones y participaciones en sociedades costarricenses.</li>
                 <li>Las utilidades generadas antes del 1 de julio de 2019 tributan al <strong>5%</strong> (régimen transitorio).</li>
                 <li>Los dividendos de empresas bajo el régimen de zona franca pueden estar <strong>exentos</strong>.</li>
@@ -454,13 +454,13 @@ export default function D115Page() {
             )}
             {step < WIZARD_STEPS.length - 1 && !isSubmitted && (
               <button onClick={goNext}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl transition-colors">
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-slate-600 hover:bg-slate-700 rounded-xl transition-colors">
                 Siguiente <ChevronRight className="w-4 h-4" />
               </button>
             )}
             {step === WIZARD_STEPS.length - 1 && !isSubmitted && (
               <button onClick={() => setShowConfirm(true)}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-purple-700 hover:bg-purple-800 rounded-xl transition-colors">
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-slate-600 hover:bg-slate-700 rounded-xl transition-colors">
                 <Send className="w-4 h-4" /> Presentar declaración
               </button>
             )}
@@ -494,7 +494,7 @@ export default function D115Page() {
               <div className="text-center font-bold text-gray-700 mb-3 text-sm">MINISTERIO DE HACIENDA — TRIBU CR</div>
               <div className="flex justify-between"><span>Formulario:</span><span className="font-bold">D-115</span></div>
               <div className="flex justify-between"><span>Período:</span><span>{period}</span></div>
-              <div className="flex justify-between"><span>Número de referencia:</span><span className="font-bold text-purple-700">{refNo}</span></div>
+              <div className="flex justify-between"><span>Número de referencia:</span><span className="font-bold text-slate-600">{refNo}</span></div>
               <div className="border-t border-gray-300 mt-2 pt-2">
                 <div className="flex justify-between"><span>Base total distribuida:</span><span>₡ {fmtNum(result?.cas301_totalBase ?? 0)}</span></div>
                 <div className="flex justify-between"><span>Impuesto calculado (15%):</span><span>₡ {fmtNum(result?.cas302_totalImpuesto ?? 0)}</span></div>
@@ -514,7 +514,7 @@ export default function D115Page() {
                   } catch { toast.error('No se pudo descargar el PDF'); }
                 }}
                 disabled={!declId}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-xl transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-teal-700 hover:bg-teal-700 rounded-xl transition-colors disabled:opacity-50"
               >
                 <Download className="w-4 h-4" /> Descargar comprobante PDF
               </button>

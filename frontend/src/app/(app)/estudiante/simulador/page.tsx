@@ -48,11 +48,11 @@ export default function SimuladorPage() {
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-6xl mx-auto">
       {/* ── Header ── */}
-      <div className="rounded-2xl overflow-hidden text-white"
-        style={{ background: 'linear-gradient(135deg,#03080F 0%,#0F2657 60%,#1E3A8A 100%)' }}>
+      <div className="rounded-xl overflow-hidden text-white"
+        style={{ background: '#0E141B' }}>
         <div className="px-6 py-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)', boxShadow: '0 0 20px rgba(59,130,246,0.5)' }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: '#0D9488' }}>
             <LineChart className="w-6 h-6" />
           </div>
           <div className="min-w-0">
@@ -63,7 +63,7 @@ export default function SimuladorPage() {
           </div>
         </div>
         {/* mini-leyenda de capas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px" style={{ background: 'rgba(59,130,246,0.15)' }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px" style={{ background: 'rgba(13,148,136,0.15)' }}>
           <Layer icon={<TrendingUp className="w-4 h-4" />} label="Precio de acción" />
           <Layer icon={<Globe className="w-4 h-4" />} label="Indicadores macro" />
           <Layer icon={<Sparkles className="w-4 h-4" />} label="Gerente IA" />
@@ -73,14 +73,14 @@ export default function SimuladorPage() {
 
       {/* ── Empty / error ── */}
       {(error || companies.length === 0) && (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
           <Building2 className="w-10 h-10 mx-auto text-gray-300 mb-3" />
           <p className="text-gray-600 font-semibold">Aún no tienes empresas</p>
           <p className="text-gray-400 text-sm mt-1 mb-4">
             Crea tu empresa dentro de un ejercicio para ver su simulación financiera.
           </p>
           <Link href="/estudiante" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white"
-            style={{ background: '#1E3A8A' }}>
+            style={{ background: '#0D9488' }}>
             Ir a mis ejercicios
           </Link>
         </div>
@@ -99,7 +99,7 @@ export default function SimuladorPage() {
                     <button key={c.id} onClick={() => setSelectedId(c.id)}
                       className="px-3.5 py-2 rounded-xl text-sm font-medium border transition-colors flex items-center gap-2"
                       style={active
-                        ? { background: '#1E3A8A', color: '#fff', borderColor: '#1E3A8A' }
+                        ? { background: '#0D9488', color: '#fff', borderColor: '#0D9488' }
                         : { background: '#fff', color: '#334155', borderColor: '#E2E8F0' }}>
                       <Building2 className="w-3.5 h-3.5" />
                       {c.name}
@@ -140,8 +140,8 @@ export default function SimuladorPage() {
 
 function Layer({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="px-3 py-2.5 flex items-center gap-2" style={{ background: '#03080F' }}>
-      <span style={{ color: '#60A5FA' }}>{icon}</span>
+    <div className="px-3 py-2.5 flex items-center gap-2" style={{ background: '#0E141B' }}>
+      <span style={{ color: '#14B8A6' }}>{icon}</span>
       <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>{label}</span>
     </div>
   );

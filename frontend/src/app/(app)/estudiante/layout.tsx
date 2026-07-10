@@ -22,11 +22,11 @@ export default function EstudianteLayout({ children }: { children: React.ReactNo
   if (!user || user.role !== 'STUDENT') return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       <StudentSidebar />
-      <main className="flex-1 flex flex-col min-w-0 lg:pt-0 pt-14">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 lg:pt-0 pt-14">
         <TopBar />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           <PageErrorBoundary>{children}</PageErrorBoundary>
         </div>
       </main>

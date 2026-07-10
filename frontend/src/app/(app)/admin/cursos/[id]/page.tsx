@@ -62,7 +62,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 shadow-xl rounded-2xl w-full max-w-md">
+      <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900">Inscribir estudiante</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
@@ -74,7 +74,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
               value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Buscar por nombre o correo..."
               autoFocus
-              className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-300"
             />
           </div>
           <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 rounded-xl border border-gray-200">
@@ -86,7 +86,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
               const isEnrolled = enrolled.includes(s.id);
               return (
                 <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm flex-shrink-0">
                     {s.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -99,7 +99,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
                     <button
                       onClick={() => enroll(s.id)}
                       disabled={saving === s.id}
-                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
+                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50 transition-colors"
                     >
                       {saving === s.id ? '...' : 'Inscribir'}
                     </button>
@@ -174,11 +174,11 @@ export default function AdminCourseDetailPage() {
       </div>
 
       {/* Course header */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 mb-6">
+      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             {course.code && (
-              <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+              <span className="text-xs font-mono text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
                 {course.code}
               </span>
             )}
@@ -201,17 +201,17 @@ export default function AdminCourseDetailPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Students */}
-        <section className="bg-white border border-gray-200 shadow-sm rounded-2xl">
+        <section className="bg-white border border-gray-200 shadow-sm rounded-xl">
           <div className="flex items-center justify-between p-5 border-b border-gray-200">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-600" />
+              <Users className="w-4 h-4 text-teal-600" />
               Estudiantes inscritos
               <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs px-1.5 py-0.5 rounded-full">
                 {course.enrollments.length}
               </span>
             </h3>
             <button onClick={() => setShowEnroll(true)}
-              className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">
+              className="flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-800 transition-colors">
               <UserPlus className="w-3.5 h-3.5" /> Agregar
             </button>
           </div>
@@ -221,7 +221,7 @@ export default function AdminCourseDetailPage() {
                 <UserX className="w-8 h-8 text-gray-200 mx-auto mb-2" />
                 <p className="text-gray-500 text-sm">No hay estudiantes inscritos</p>
                 <button onClick={() => setShowEnroll(true)}
-                  className="mt-3 text-xs text-blue-600 hover:underline">Inscribir ahora</button>
+                  className="mt-3 text-xs text-teal-700 hover:underline">Inscribir ahora</button>
               </div>
             ) : (
               course.enrollments.map((enroll) => (
@@ -241,10 +241,10 @@ export default function AdminCourseDetailPage() {
         </section>
 
         {/* Exercises */}
-        <section className="bg-white border border-gray-200 shadow-sm rounded-2xl">
+        <section className="bg-white border border-gray-200 shadow-sm rounded-xl">
           <div className="flex items-center justify-between p-5 border-b border-gray-200">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-blue-600" />
+              <FileText className="w-4 h-4 text-teal-600" />
               Ejercicios
               <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs px-1.5 py-0.5 rounded-full">
                 {exercises.length}

@@ -52,7 +52,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
 
       return (
-        <div className="flex flex-col items-center justify-center p-8 rounded-2xl border border-red-200 bg-red-50 text-center gap-3">
+        <div className="flex flex-col items-center justify-center p-8 rounded-xl border border-red-200 bg-red-50 text-center gap-3">
           <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
             <AlertTriangle className="w-5 h-5 text-red-500" />
           </div>
@@ -109,7 +109,7 @@ export class PageErrorBoundary extends React.Component<
       return (
         <div className="flex-1 flex items-center justify-center p-12">
           <div className="text-center max-w-2xl">
-            <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <div className="w-14 h-14 rounded-xl bg-red-100 flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-7 h-7 text-red-500" />
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Algo salió mal</h3>
@@ -128,7 +128,7 @@ export class PageErrorBoundary extends React.Component<
             )}
             <button
               onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors"
             >
               <RefreshCw className="w-4 h-4" /> Recargar página
             </button>

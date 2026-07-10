@@ -288,7 +288,7 @@ export default function CxCPage() {
             href={`/estudiante/ejercicio/${attemptId}/cxc/analisis`}
             className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
           >
-            <Sparkles className="w-4 h-4 text-purple-600" />
+            <Sparkles className="w-4 h-4 text-slate-600" />
             Análisis de cartera
           </Link>
         </div>

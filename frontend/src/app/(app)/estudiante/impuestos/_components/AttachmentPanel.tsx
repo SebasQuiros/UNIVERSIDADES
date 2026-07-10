@@ -104,7 +104,7 @@ export function AttachmentPanel({
         title={!declarationId ? 'Guarda el borrador primero para adjuntar comprobantes' : 'Adjuntar comprobante'}
         className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors ${
           lineAtts.length > 0
-            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+            ? 'bg-teal-100 text-teal-700 hover:bg-teal-200'
             : 'bg-gray-100 text-gray-500 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed'
         }`}
       >
@@ -117,7 +117,7 @@ export function AttachmentPanel({
         <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-50 w-80">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-              <Paperclip className="w-3.5 h-3.5 text-blue-500" />
+              <Paperclip className="w-3.5 h-3.5 text-teal-600" />
               Comprobantes — {lineLabel}
             </p>
             <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
@@ -136,7 +136,7 @@ export function AttachmentPanel({
                 <div key={att.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5">
                   {att.mimeType === 'application/pdf'
                     ? <FileText className="w-4 h-4 text-red-500 flex-shrink-0" />
-                    : <ImageIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    : <ImageIcon className="w-4 h-4 text-teal-600 flex-shrink-0" />
                   }
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-gray-800 truncate">{att.fileName}</p>
@@ -144,7 +144,7 @@ export function AttachmentPanel({
                   </div>
                   <button
                     onClick={() => handleDownload(att.id, att.fileName)}
-                    className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                    className="p-1 text-gray-400 hover:text-teal-700 transition-colors"
                     title="Ver / descargar"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -166,7 +166,7 @@ export function AttachmentPanel({
           {/* Botón subir */}
           {!disabled && (
             <label className={`flex items-center justify-center gap-2 w-full py-2 text-xs font-medium border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
-              uploading ? 'border-gray-200 text-gray-400' : 'border-blue-300 text-blue-600 hover:border-blue-500 hover:bg-blue-50'
+              uploading ? 'border-gray-200 text-gray-400' : 'border-teal-300 text-teal-700 hover:border-teal-500 hover:bg-teal-50'
             }`}>
               {uploading
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Subiendo...</>

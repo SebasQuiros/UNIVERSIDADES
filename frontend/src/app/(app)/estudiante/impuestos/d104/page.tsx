@@ -68,7 +68,7 @@ function Casilla({
       </span>
       {readOnly ? (
         <span className={`w-40 text-right text-sm font-mono px-3 py-1 rounded-lg ${
-          bold ? 'bg-blue-50 text-blue-700 font-bold' : 'bg-gray-50 text-gray-700'
+          bold ? 'bg-teal-50 text-teal-700 font-bold' : 'bg-gray-50 text-gray-700'
         }`}>
           ₡ {displayVal}
         </span>
@@ -79,7 +79,7 @@ function Casilla({
             type="number" min="0" step="0.01"
             value={value as string}
             onChange={e => onChange?.(e.target.value)}
-            className="w-full pl-7 pr-3 py-1.5 text-sm font-mono text-right border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+            className="w-full pl-7 pr-3 py-1.5 text-sm font-mono text-right border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
             placeholder="0.00"
           />
         </div>
@@ -91,7 +91,7 @@ function Casilla({
 
 function SectionHeader({ number, title, color = 'blue' }: { number: string; title: string; color?: string }) {
   const colors: Record<string, string> = {
-    blue:   'bg-blue-700 text-white',
+    blue:   'bg-teal-700 text-white',
     green:  'bg-emerald-700 text-white',
     orange: 'bg-orange-600 text-white',
     gray:   'bg-gray-700 text-white',
@@ -292,7 +292,7 @@ export default function D104Page() {
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-600" /> Datos del período fiscal
+                <FileText className="w-4 h-4 text-teal-700" /> Datos del período fiscal
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -301,7 +301,7 @@ export default function D104Page() {
                     value={period}
                     onChange={e => setPeriod(e.target.value)}
                     disabled={isSubmitted}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
                   >
                     {Array.from({ length: 24 }, (_, i) => {
                       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -336,8 +336,8 @@ export default function D104Page() {
             </div>
 
             {/* Info TRIBU flow */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
+              <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                 <Info className="w-3.5 h-3.5" /> Proceso D-104 en Hacienda
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -348,12 +348,12 @@ export default function D104Page() {
                   { step: '4', title: 'Presentar', desc: 'Paga el impuesto neto antes del día 15 del mes siguiente.' },
                 ].map(({ step, title, desc }) => (
                   <div key={step} className="flex items-start gap-2">
-                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
                       {step}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-blue-800">{title}</p>
-                      <p className="text-xs text-blue-600 leading-relaxed">{desc}</p>
+                      <p className="text-xs font-bold text-teal-800">{title}</p>
+                      <p className="text-xs text-teal-700 leading-relaxed">{desc}</p>
                     </div>
                   </div>
                 ))}
@@ -409,8 +409,8 @@ export default function D104Page() {
                   onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
               </Casilla>
 
-              <div className="mt-3 pt-3 border-t border-blue-100 bg-blue-50 rounded-xl px-3 py-2 space-y-1">
-                <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold mb-2">
+              <div className="mt-3 pt-3 border-t border-teal-100 bg-teal-50 rounded-xl px-3 py-2 space-y-1">
+                <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold mb-2">
                   <CheckCircle2 className="w-3.5 h-3.5" /> DÉBITO FISCAL (IVA cobrado en ventas)
                 </div>
                 {result?.ivaVentas && [
@@ -418,12 +418,12 @@ export default function D104Page() {
                   { t: '4%', v: result.ivaVentas.t4 },   { t: '2%', v: result.ivaVentas.t2 },
                   { t: '1%', v: result.ivaVentas.t1 },
                 ].filter(x => x.v > 0).map(({ t, v }) => (
-                  <div key={t} className="flex justify-between text-xs text-blue-700">
+                  <div key={t} className="flex justify-between text-xs text-teal-700">
                     <span>IVA {t}</span>
                     <span className="font-mono">₡ {fmtNum(v)}</span>
                   </div>
                 ))}
-                <div className="flex justify-between text-sm font-bold text-blue-800 pt-1 border-t border-blue-200">
+                <div className="flex justify-between text-sm font-bold text-teal-800 pt-1 border-t border-teal-200">
                   <span>Casilla 301 — Total débito fiscal</span>
                   <span className="font-mono">₡ {fmtNum(result?.cas301_debitoFiscal ?? 0)}</span>
                 </div>
@@ -554,8 +554,8 @@ export default function D104Page() {
                     { label: 'Débito fiscal total', val: result?.cas301_debitoFiscal ?? 0, blue: true },
                   ].map(({ label, val, blue }) => (
                     <div key={label} className="flex justify-between text-sm">
-                      <span className={blue ? 'font-semibold text-blue-700' : 'text-gray-600'}>{label}</span>
-                      <span className={`font-mono ${blue ? 'text-blue-700 font-bold' : 'text-gray-800'}`}>₡ {fmtNum(val)}</span>
+                      <span className={blue ? 'font-semibold text-teal-700' : 'text-gray-600'}>{label}</span>
+                      <span className={`font-mono ${blue ? 'text-teal-700 font-bold' : 'text-gray-800'}`}>₡ {fmtNum(val)}</span>
                     </div>
                   ))}
                 </div>
@@ -626,7 +626,7 @@ export default function D104Page() {
                             <tr>
                               <td className="px-3 py-2 font-mono text-amber-900 font-semibold">2.1.02.01</td>
                               <td className="px-3 py-2 text-gray-700">IVA por Pagar</td>
-                              <td className="px-3 py-2 text-right font-mono text-blue-700 font-semibold">
+                              <td className="px-3 py-2 text-right font-mono text-teal-700 font-semibold">
                                 ₡ {fmtNum(result.cas301_debitoFiscal)}
                               </td>
                               <td className="px-3 py-2 text-right text-gray-300">—</td>
@@ -665,7 +665,7 @@ export default function D104Page() {
                           {/* Totals row */}
                           <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
                             <td colSpan={2} className="px-3 py-2 text-gray-700 text-right">Totales</td>
-                            <td className="px-3 py-2 text-right font-mono text-blue-800">
+                            <td className="px-3 py-2 text-right font-mono text-teal-800">
                               ₡ {fmtNum(
                                 result.cas301_debitoFiscal +
                                 (result.cas305_saldoFavor > 0 ? result.cas305_saldoFavor : 0)
@@ -694,9 +694,9 @@ export default function D104Page() {
             )}
 
             {/* Legal note */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700 space-y-1">
+            <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 text-xs text-teal-700 space-y-1">
               <p className="font-bold flex items-center gap-1.5"><HelpCircle className="w-4 h-4" /> Notas sobre el IVA en Costa Rica</p>
-              <ul className="list-disc list-inside space-y-0.5 text-blue-600 mt-1">
+              <ul className="list-disc list-inside space-y-0.5 text-teal-700 mt-1">
                 <li>La declaración D-104 se presenta mensualmente, a más tardar el día 15 del mes siguiente.</li>
                 <li>Las tasas vigentes son: 13% (general), 8% (medicina privada y seguros), 4% (boletos y espectáculos), 2% (canasta básica tributaria) y 1% (medicamentos e insumos agropecuarios).</li>
                 <li>Las exportaciones y algunos servicios educativos están exentos (0%).</li>
@@ -737,7 +737,7 @@ export default function D104Page() {
             {step < WIZARD_STEPS.length - 1 && !isSubmitted && (
               <button
                 onClick={goNext}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-xl transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-teal-700 hover:bg-teal-700 rounded-xl transition-colors"
               >
                 Siguiente <ChevronRight className="w-4 h-4" />
               </button>
@@ -747,7 +747,7 @@ export default function D104Page() {
               <button
                 onClick={() => setShowConfirm(true)}
                 disabled={stepErrors.length > 0}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-teal-700 hover:bg-teal-700 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" /> Presentar declaración
               </button>
@@ -797,7 +797,7 @@ export default function D104Page() {
               <div className="text-center font-bold text-gray-700 mb-3 text-sm">MINISTERIO DE HACIENDA — TRIBU CR</div>
               <div className="flex justify-between"><span>Formulario:</span><span className="font-bold">D-104</span></div>
               <div className="flex justify-between"><span>Período:</span><span>{monthName} {year}</span></div>
-              <div className="flex justify-between"><span>Número de referencia:</span><span className="font-bold text-blue-700">{refNo}</span></div>
+              <div className="flex justify-between"><span>Número de referencia:</span><span className="font-bold text-teal-700">{refNo}</span></div>
               <div className="flex justify-between border-t border-gray-300 pt-2 mt-2">
                 <span className="font-bold">Débito fiscal:</span><span>₡ {fmtNum(result?.cas301_debitoFiscal ?? 0)}</span>
               </div>
@@ -828,7 +828,7 @@ export default function D104Page() {
                   } catch { toast.error('No se pudo descargar el PDF'); }
                 }}
                 disabled={!declId}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-xl transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-teal-700 hover:bg-teal-700 rounded-xl transition-colors disabled:opacity-50"
               >
                 <Download className="w-4 h-4" /> Descargar comprobante PDF
               </button>

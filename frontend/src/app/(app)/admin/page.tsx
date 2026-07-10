@@ -30,12 +30,12 @@ function StatCard({ label, value, icon: Icon, color, sub }: {
   label: string; value: number | string; icon: React.ElementType; color: string; sub?: string;
 }) {
   return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
+    <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
         <Icon className="w-5 h-5" />
       </div>
       <div>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{value}</p>
         <p className="text-xs text-gray-500 mt-0.5">{label}</p>
         {sub && <p className="text-xs text-gray-400">{sub}</p>}
       </div>
@@ -46,7 +46,7 @@ function StatCard({ label, value, icon: Icon, color, sub }: {
 // Placeholder de tarjeta de estadística — conserva el layout mientras cargan los datos
 function StatSkeleton() {
   return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
+    <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
       <Skeleton className="w-10 h-10 rounded-xl" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-6 w-14" />
@@ -108,13 +108,13 @@ export default function AdminDashboard() {
               label="Estudiantes"
               value={stats?.totalStudents ?? 0}
               icon={GraduationCap}
-              color="bg-blue-50 text-blue-600"
+              color="bg-teal-50 text-teal-600"
             />
             <StatCard
               label="Profesores"
               value={stats?.totalTeachers ?? 0}
               icon={Users}
-              color="bg-purple-50 text-purple-600"
+              color="bg-slate-100 text-slate-600"
             />
             <StatCard
               label="Cursos activos"
@@ -170,20 +170,20 @@ export default function AdminDashboard() {
             title: 'Gestión de Usuarios',
             desc: 'Ver, crear y administrar profesores y estudiantes',
             icon: Users,
-            color: 'text-purple-600',
-            bg: 'bg-purple-50',
+            color: 'text-slate-600',
+            bg: 'bg-slate-100',
           },
           {
             href: '/admin/cursos',
             title: 'Gestión de Cursos',
             desc: 'Ver todos los cursos activos de la universidad',
             icon: BookOpen,
-            color: 'text-blue-600',
-            bg: 'bg-blue-50',
+            color: 'text-teal-600',
+            bg: 'bg-teal-50',
           },
         ].map((item) => (
           <Link key={item.href} href={item.href}
-            className="group bg-white border border-gray-200 shadow-sm hover:shadow-md rounded-2xl p-6 flex items-center gap-4 transition-all">
+            className="group bg-white border border-gray-200 shadow-sm hover:shadow-md rounded-xl p-6 flex items-center gap-4 transition-all">
             <div className={`w-12 h-12 rounded-xl ${item.bg} flex items-center justify-center flex-shrink-0`}>
               <item.icon className={`w-6 h-6 ${item.color}`} />
             </div>

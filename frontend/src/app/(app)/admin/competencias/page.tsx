@@ -34,8 +34,8 @@ const AREA_LABEL: Record<string, string> = {
 
 function masteryColor(pct: number | null) {
   if (pct == null) return '#CBD5E1';
-  if (pct >= 80) return '#059669';
-  if (pct >= 60) return '#2563EB';
+  if (pct >= 80) return '#0F766E';
+  if (pct >= 60) return '#0D9488';
   if (pct >= 40) return '#D97706';
   return '#DC2626';
 }
@@ -75,8 +75,8 @@ export default function CompetenciasInstitucionalPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white"
-            style={{ background: 'linear-gradient(135deg,#1E3A8A,#0F2657)' }}>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white"
+            style={{ background: '#0E141B' }}>
             <Award className="w-5 h-5" />
           </div>
           <div>
@@ -104,7 +104,7 @@ export default function CompetenciasInstitucionalPage() {
               value={data.summary.overallMastery != null ? `${data.summary.overallMastery}%` : '—'}
               color={masteryColor(data.summary.overallMastery)} />
             <Kpi icon={<Award className="w-4 h-4" />} label="Competencias con evidencia"
-              value={`${data.summary.competenciesEvidenced}/${data.summary.totalCompetencies}`} color="#1E3A8A" />
+              value={`${data.summary.competenciesEvidenced}/${data.summary.totalCompetencies}`} color="#0D9488" />
             <Kpi icon={<BookOpen className="w-4 h-4" />} label="Cursos"
               value={`${data.summary.totalCourses}`} color="#7C3AED" />
             <Kpi icon={<AlertTriangle className="w-4 h-4" />} label="Estudiantes en riesgo"
@@ -114,7 +114,7 @@ export default function CompetenciasInstitucionalPage() {
           {/* Dominio por competencia */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
             <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-              <Award className="w-4 h-4 text-blue-600" /> Dominio por competencia
+              <Award className="w-4 h-4 text-teal-700" /> Dominio por competencia
             </h2>
             {data.competencies.length === 0 ? (
               <EmptyHint />
@@ -145,7 +145,7 @@ export default function CompetenciasInstitucionalPage() {
           {/* Cohortes / cursos */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5">
             <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-blue-600" /> Cohortes (cursos)
+              <GraduationCap className="w-4 h-4 text-teal-700" /> Cohortes (cursos)
             </h2>
             {data.courses.length === 0 ? (
               <EmptyHint />

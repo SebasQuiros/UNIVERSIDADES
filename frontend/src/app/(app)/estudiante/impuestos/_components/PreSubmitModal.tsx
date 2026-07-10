@@ -208,8 +208,8 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-teal-700" />
             </div>
             <div>
               <h3 className="text-base font-bold text-gray-900">Verificación antes de presentar</h3>
@@ -242,9 +242,9 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
 
         {/* Info sobre facturas */}
         {warnings > 0 && (
-          <div className="mx-6 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
-            <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-700">
+          <div className="mx-6 flex items-start gap-2 bg-teal-50 border border-teal-200 rounded-xl px-3 py-2.5">
+            <Info className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-teal-700">
               <strong>¿Por qué se necesitan facturas?</strong> En el sistema TRIBU CR real, cada transacción debe
               respaldarse con una <strong>factura electrónica</strong> emitida o recibida y registrada en ATV
               (Administración Tributaria Virtual). Sin respaldo, Hacienda puede objetar la declaración.
@@ -293,7 +293,7 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
           <button
             onClick={onConfirm}
             disabled={submitting || errors > 0}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-xl transition-colors disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-teal-700 hover:bg-teal-700 rounded-xl transition-colors disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
             {submitting ? 'Presentando...' : warnings > 0 ? 'Presentar con advertencias' : 'Presentar declaración'}

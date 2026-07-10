@@ -93,7 +93,7 @@ export default function PendientesPage() {
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : pending.length === 0 ? (
         <div className="flex flex-col items-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-xl bg-emerald-50 flex items-center justify-center mb-4">
             <CheckCircle2 className="w-8 h-8 text-emerald-600" />
           </div>
           <h3 className="text-gray-700 font-semibold">¡Todo al día!</h3>
@@ -108,7 +108,7 @@ export default function PendientesPage() {
               <h3 className="text-sm font-semibold text-amber-600 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" /> Por calificar ({submitted.length})
               </h3>
-              <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -165,10 +165,10 @@ export default function PendientesPage() {
           {/* In progress */}
           {inProgress.length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-teal-700 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4" /> En progreso ({inProgress.length})
               </h3>
-              <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>

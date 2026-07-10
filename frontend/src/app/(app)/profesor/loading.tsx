@@ -5,7 +5,7 @@ export default function ProfesorLoading() {
       <div className="h-4 w-36 bg-gray-100 rounded-lg mb-6" />
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-20 bg-gray-100 rounded-2xl border border-gray-200" />
+          <div key={i} className="h-20 bg-gray-100 rounded-xl border border-gray-200" />
         ))}
       </div>
     </div>

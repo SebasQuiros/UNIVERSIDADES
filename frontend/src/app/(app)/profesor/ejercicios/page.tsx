@@ -31,7 +31,7 @@ function DeleteModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
           <X className="w-5 h-5" />
         </button>
@@ -165,7 +165,7 @@ export default function EjerciciosPage() {
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : exercises.length === 0 ? (
         <div className="flex flex-col items-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
             <FileText className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-gray-700 font-semibold">Sin ejercicios aún</h3>
@@ -181,7 +181,7 @@ export default function EjerciciosPage() {
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <Globe className="w-4 h-4 text-emerald-600" /> Publicados ({published.length})
               </h3>
-              <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 {published.map((ex) => <ExerciseRow key={ex.id} ex={ex} />)}
               </div>
             </section>
@@ -191,7 +191,7 @@ export default function EjerciciosPage() {
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <Lock className="w-4 h-4 text-gray-400" /> Borradores ({drafts.length})
               </h3>
-              <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
                 {drafts.map((ex) => <ExerciseRow key={ex.id} ex={ex} />)}
               </div>
             </section>

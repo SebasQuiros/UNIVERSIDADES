@@ -46,9 +46,9 @@ const STEPS = [
 // ─── Colors & helpers ─────────────────────────────────────────────────────────
 
 const C = {
-  primary:   '#1B2E6E',
-  accent:    '#2563EB',
-  light:     '#EFF6FF',
+  primary:   '#0E141B',
+  accent:    '#0D9488',
+  light:     '#F0FDFA',
   border:    '#E2E8F0',
   text:      '#0F172A',
   muted:     '#64748B',
@@ -135,7 +135,7 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
         <div style={{
           height: '100%',
           width: `${(current / (total - 1)) * 100}%`,
-          background: `linear-gradient(90deg, ${C.primary}, ${C.accent})`,
+          background: C.accent,
           borderRadius: 2, transition: 'width 0.4s cubic-bezier(.22,1,.36,1)',
         }} />
       </div>
@@ -251,9 +251,9 @@ export default function RegistroPage() {
         padding: '24px 16px',
       }}>
         <div style={{
-          background: C.white, borderRadius: 24, padding: 'clamp(32px,6vw,56px)',
+          background: C.white, borderRadius: 16, padding: 'clamp(32px,6vw,56px)',
           maxWidth: 560, width: '100%',
-          boxShadow: '0 20px 60px rgba(27,46,110,0.12)',
+          boxShadow: '0 1px 2px rgba(16,24,40,0.04)',
           border: `1px solid ${C.border}`,
           textAlign: 'center',
         }}>
@@ -310,7 +310,7 @@ export default function RegistroPage() {
               background: C.primary, color: C.white,
               border: 'none', fontSize: '0.95rem', fontWeight: 700,
               cursor: 'pointer', transition: 'all 0.2s',
-              boxShadow: `0 6px 20px rgba(27,46,110,0.28)`,
+              boxShadow: '0 1px 2px rgba(16,24,40,0.04)',
             }}
             onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'translateY(-2px)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = C.primary; e.currentTarget.style.transform = 'none'; }}
@@ -332,7 +332,7 @@ export default function RegistroPage() {
     }}>
       {/* Header bar */}
       <nav style={{
-        background: `linear-gradient(90deg, #0F2657, #1B2E6E)`,
+        background: '#0E141B',
         padding: '0 clamp(16px,4vw,48px)', height: 60,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
@@ -364,8 +364,8 @@ export default function RegistroPage() {
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '5px 16px', background: 'rgba(27,46,110,0.07)',
-            border: '1px solid rgba(27,46,110,0.12)', borderRadius: 999, marginBottom: 12,
+            padding: '5px 16px', background: 'rgba(13,148,136,0.07)',
+            border: '1px solid rgba(13,148,136,0.12)', borderRadius: 999, marginBottom: 12,
           }}>
             <Building2 size={12} color={C.primary} />
             <span style={{ fontSize: '0.68rem', fontWeight: 700, color: C.primary, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
@@ -382,9 +382,9 @@ export default function RegistroPage() {
 
         {/* Card */}
         <div style={{
-          background: C.white, borderRadius: 20,
+          background: C.white, borderRadius: 16,
           padding: 'clamp(24px,4vw,40px)',
-          boxShadow: '0 4px 24px rgba(27,46,110,0.08)',
+          boxShadow: '0 1px 2px rgba(16,24,40,0.04)',
           border: `1px solid ${C.border}`,
         }}>
           <ProgressBar current={step} total={STEPS.length} />
@@ -615,7 +615,7 @@ export default function RegistroPage() {
                   background: C.primary, color: C.white,
                   border: 'none', fontSize: '0.88rem', fontWeight: 700,
                   cursor: 'pointer', transition: 'all 0.2s',
-                  boxShadow: `0 4px 16px rgba(27,46,110,0.25)`,
+                  boxShadow: '0 1px 2px rgba(16,24,40,0.04)',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { e.currentTarget.style.background = C.primary; e.currentTarget.style.transform = 'none'; }}
@@ -634,7 +634,7 @@ export default function RegistroPage() {
                   border: 'none', fontSize: '0.88rem', fontWeight: 700,
                   cursor: submitting ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s',
-                  boxShadow: submitting ? 'none' : `0 4px 16px rgba(27,46,110,0.25)`,
+                  boxShadow: submitting ? 'none' : '0 1px 2px rgba(16,24,40,0.04)',
                 }}
                 onMouseEnter={e => { if (!submitting) { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
                 onMouseLeave={e => { e.currentTarget.style.background = submitting ? '#94A3B8' : C.primary; e.currentTarget.style.transform = 'none'; }}

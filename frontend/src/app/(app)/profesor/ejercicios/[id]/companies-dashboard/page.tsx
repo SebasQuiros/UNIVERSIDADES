@@ -190,7 +190,7 @@ export default function ProfesorCompaniesDashboard() {
                   } border-b border-gray-100 flex items-center justify-between gap-2`}>
                     <div className="flex items-center gap-2 min-w-0">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        c.mode === 'GROUP' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
+                        c.mode === 'GROUP' ? 'bg-teal-100 text-teal-700' : 'bg-gray-200 text-gray-600'
                       }`}>
                         <Building2 className="w-4 h-4" />
                       </div>
@@ -249,7 +249,7 @@ export default function ProfesorCompaniesDashboard() {
                           <li key={m.id} className="text-xs text-gray-700 truncate">
                             {m.name}
                             {m.role === 'OWNER' && (
-                              <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-bold uppercase bg-blue-100 text-blue-800">
+                              <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-bold uppercase bg-teal-100 text-teal-800">
                                 owner
                               </span>
                             )}
@@ -276,7 +276,7 @@ function SummaryStat({
   color: 'blue' | 'emerald' | 'amber' | 'red'; isMoney?: boolean;
 }) {
   const cls: Record<string, string> = {
-    blue:    'from-blue-500 to-blue-700',
+    blue:    'from-teal-500 to-teal-700',
     emerald: 'from-emerald-500 to-emerald-700',
     amber:   'from-amber-500 to-amber-700',
     red:     'from-red-500 to-red-700',

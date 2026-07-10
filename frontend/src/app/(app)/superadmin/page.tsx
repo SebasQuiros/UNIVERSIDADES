@@ -48,12 +48,12 @@ function StatCard({
   color: string; sub?: string;
 }) {
   return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
+    <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
         <Icon className="w-5 h-5" />
       </div>
       <div className="min-w-0">
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{value}</p>
         <p className="text-xs text-gray-500 mt-0.5">{label}</p>
         {sub && <p className="text-xs text-gray-400">{sub}</p>}
       </div>
@@ -64,9 +64,9 @@ function StatCard({
 // ── Activity badge ────────────────────────────────────────────────────────────
 
 const ROLE_COLORS: Record<string, string> = {
-  STUDENT:    'bg-blue-50 text-blue-700 border-blue-200',
+  STUDENT:    'bg-teal-50 text-teal-700 border-teal-200',
   TEACHER:    'bg-emerald-50 text-emerald-700 border-emerald-200',
-  ADMIN:      'bg-purple-50 text-purple-700 border-purple-200',
+  ADMIN:      'bg-slate-100 text-slate-700 border-slate-200',
   SUPERADMIN: 'bg-red-50 text-red-700 border-red-200',
 };
 
@@ -87,16 +87,16 @@ function SuperAdminSkeleton() {
     <>
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-24 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
+          <div key={i} className="h-24 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="h-72 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
-        <div className="h-72 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="h-72 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
-        <div className="h-72 bg-gray-100 rounded-2xl border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
       </div>
     </>
   );
@@ -146,7 +146,7 @@ export default function SuperAdminDashboard() {
           label="Universidades"
           value={stats.totalUniversities}
           icon={Building2}
-          color="bg-blue-50 text-blue-600"
+          color="bg-teal-50 text-teal-600"
           sub={`${stats.activeUniversities} activas`}
         />
         <StatCard
@@ -159,7 +159,7 @@ export default function SuperAdminDashboard() {
           label="Profesores"
           value={stats.totalTeachers}
           icon={Users}
-          color="bg-purple-50 text-purple-600"
+          color="bg-slate-100 text-slate-600"
         />
         <StatCard
           label="Cursos"
@@ -185,9 +185,9 @@ export default function SuperAdminDashboard() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Growth line chart */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
+            <TrendingUp className="w-4 h-4 text-teal-600" />
             <h3 className="font-semibold text-gray-800 text-sm">Crecimiento de universidades</h3>
             <span className="text-xs text-gray-400 ml-auto">últimos 6 meses</span>
           </div>
@@ -203,9 +203,9 @@ export default function SuperAdminDashboard() {
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="#2563eb"
+                stroke="#0D9488"
                 strokeWidth={2}
-                dot={{ r: 4, fill: '#2563eb' }}
+                dot={{ r: 4, fill: '#0D9488' }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>
@@ -213,7 +213,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Top universities bar chart */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <Building2 className="w-4 h-4 text-emerald-600" />
             <h3 className="font-semibold text-gray-800 text-sm">Top universidades por estudiantes</h3>
@@ -244,10 +244,10 @@ export default function SuperAdminDashboard() {
       {/* Bottom row: top universities table + activity feed */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top 5 universities table */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-800 text-sm">Top universidades por actividad</h3>
-            <Link href="/superadmin/universidades" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <Link href="/superadmin/universidades" className="text-xs text-teal-700 hover:text-teal-800 flex items-center gap-1">
               Ver todas <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -286,13 +286,13 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Recent activity feed */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-purple-600" />
+              <Activity className="w-4 h-4 text-slate-600" />
               <h3 className="font-semibold text-gray-800 text-sm">Actividad reciente</h3>
             </div>
-            <Link href="/superadmin/actividad" className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <Link href="/superadmin/actividad" className="text-xs text-teal-700 hover:text-teal-800 flex items-center gap-1">
               Ver todo <ArrowRight className="w-3 h-3" />
             </Link>
           </div>

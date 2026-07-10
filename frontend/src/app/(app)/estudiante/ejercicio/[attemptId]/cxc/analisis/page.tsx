@@ -153,7 +153,7 @@ export default function CxCAnalisisPage() {
         {/* ── Customer ledger ──────────────────────────────── */}
         <Card>
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Users className="w-4 h-4 text-blue-700" />
+            <Users className="w-4 h-4 text-teal-700" />
             <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
               Saldo por cliente
             </h2>
@@ -186,7 +186,7 @@ export default function CxCAnalisisPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {consolidated.clients.map(c => (
-                    <tr key={c.clientId} className="hover:bg-blue-50/40">
+                    <tr key={c.clientId} className="hover:bg-teal-50/40">
                       <td className="px-4 py-2 font-medium text-gray-900">{c.clientName}</td>
                       <td className="px-4 py-2 text-gray-500 text-xs">{c.identification ?? '—'}</td>
                       <td className="px-4 py-2 text-right font-mono text-gray-700">{fmtMoney(c.totalBilled)}</td>
@@ -216,7 +216,7 @@ export default function CxCAnalisisPage() {
         {/* ── Estimación de incobrables ──────────────────── */}
         <Card>
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Calculator className="w-4 h-4 text-purple-700" />
+            <Calculator className="w-4 h-4 text-slate-700" />
             <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
               Estimación de cuentas incobrables
             </h2>
@@ -234,7 +234,7 @@ export default function CxCAnalisisPage() {
                     onClick={() => { setMethod(m); setEstResult(null); }}
                     className={`text-left p-3 rounded-xl border-2 transition ${
                       active
-                        ? 'border-purple-500 bg-purple-50'
+                        ? 'border-slate-500 bg-slate-50'
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
@@ -289,43 +289,43 @@ export default function CxCAnalisisPage() {
 
             {/* Resultado */}
             {estResult && (
-              <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200">
+              <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs uppercase tracking-wide text-purple-800 font-semibold">
+                    <div className="text-xs uppercase tracking-wide text-slate-800 font-semibold">
                       Estimación de incobrables
                     </div>
-                    <div className="text-3xl font-bold text-gray-900 font-mono mt-1">
+                    <div className="text-3xl font-bold text-gray-900 font-mono tabular-nums mt-1">
                       {fmtMoney(estResult.estimated)}
                     </div>
                   </div>
-                  <TrendingDown className="w-12 h-12 text-purple-300" />
+                  <TrendingDown className="w-12 h-12 text-slate-300" />
                 </div>
 
                 {estResult.method === 'PERCENTAGE_OF_AGING' ? (
                   <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                     {(['b0_30','b31_60','b61_90','b91_plus'] as const).map(k => (
-                      <div key={k} className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                      <div key={k} className="bg-white/60 rounded-lg p-2 border border-slate-100">
                         <div className="text-gray-500">
                           {k === 'b0_30' ? '0-30' : k === 'b31_60' ? '31-60' : k === 'b61_90' ? '61-90' : '90+'}
                           {' · '}{estResult.pcts[k]}%
                         </div>
                         <div className="font-mono text-gray-800">{fmtMoney(estResult.buckets[k])}</div>
-                        <div className="font-mono font-semibold text-purple-700">→ {fmtMoney(estResult.breakdown[k])}</div>
+                        <div className="font-mono font-semibold text-slate-700">→ {fmtMoney(estResult.breakdown[k])}</div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
-                    <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                    <div className="bg-white/60 rounded-lg p-2 border border-slate-100">
                       <div className="text-gray-500">Ventas del período</div>
                       <div className="font-mono text-gray-800">{fmtMoney(estResult.sales)}</div>
                     </div>
-                    <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                    <div className="bg-white/60 rounded-lg p-2 border border-slate-100">
                       <div className="text-gray-500">N° facturas</div>
                       <div className="font-mono text-gray-800">{estResult.invoiceCount}</div>
                     </div>
-                    <div className="bg-white/60 rounded-lg p-2 border border-purple-100">
+                    <div className="bg-white/60 rounded-lg p-2 border border-slate-100">
                       <div className="text-gray-500">% aplicado</div>
                       <div className="font-mono text-gray-800">{estResult.salesPct}%</div>
                     </div>
@@ -334,12 +334,12 @@ export default function CxCAnalisisPage() {
 
                 {/* Asiento sugerido */}
                 {estResult.suggestedJournal.lines.length > 0 && (
-                  <div className="mt-5 pt-4 border-t border-purple-200">
+                  <div className="mt-5 pt-4 border-t border-slate-200">
                     <div className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5" /> Asiento sugerido (registralo a mano en el diario)
                     </div>
-                    <table className="w-full text-xs bg-white rounded-lg overflow-hidden border border-purple-100">
-                      <thead className="bg-purple-50">
+                    <table className="w-full text-xs bg-white rounded-lg overflow-hidden border border-slate-100">
+                      <thead className="bg-slate-50">
                         <tr>
                           <th className="text-left px-3 py-1.5 text-gray-700">Cuenta</th>
                           <th className="text-left px-3 py-1.5 text-gray-700">Descripción</th>
@@ -347,7 +347,7 @@ export default function CxCAnalisisPage() {
                           <th className="text-right px-3 py-1.5 text-gray-700">Crédito</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-purple-50">
+                      <tbody className="divide-y divide-slate-50">
                         {estResult.suggestedJournal.lines.map((l, i) => (
                           <tr key={i}>
                             <td className="px-3 py-1.5 font-mono text-gray-800">{l.accountCode}</td>

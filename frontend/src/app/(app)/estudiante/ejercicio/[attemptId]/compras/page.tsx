@@ -276,11 +276,11 @@ export default function ComprasPage() {
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
         {/* ── Educational banner ────────────────────────────────────────── */}
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 flex items-start gap-3">
+          <Info className="w-5 h-5 text-teal-700 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-bold text-blue-800">¿Qué es el Crédito Fiscal IVA?</p>
-            <p className="text-xs text-blue-700 mt-1 leading-relaxed">
+            <p className="text-sm font-bold text-teal-800">¿Qué es el Crédito Fiscal IVA?</p>
+            <p className="text-xs text-teal-700 mt-1 leading-relaxed">
               Cuando tu empresa compra bienes o servicios gravados con IVA, el monto pagado se convierte en un
               <strong> crédito fiscal</strong> que se deduce del IVA cobrado a tus clientes en la declaración D-104.
               Solo se puede acreditar el IVA de facturas <em>electrónicas aceptadas</em> por Hacienda.
@@ -455,7 +455,7 @@ export default function ComprasPage() {
               <select
                 value={selectedMonth}
                 onChange={e => setSelectedMonth(Number(e.target.value))}
-                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-teal-300"
               >
                 {MONTHS.map((m, i) => (
                   <option key={i + 1} value={i + 1}>{m}</option>
@@ -464,7 +464,7 @@ export default function ComprasPage() {
               <select
                 value={selectedYear}
                 onChange={e => setSelectedYear(Number(e.target.value))}
-                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-teal-300"
               >
                 {Array.from({ length: 5 }, (_, i) => now.getFullYear() - i).map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -485,15 +485,15 @@ export default function ComprasPage() {
               {/* Row: Debitos / Creditos / Resultado */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* IVA en ventas */}
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                <div className="rounded-xl border border-teal-100 bg-teal-50 p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-blue-600" />
-                    <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">IVA en Ventas (Casilla 301)</p>
+                    <TrendingUp className="w-4 h-4 text-teal-700" />
+                    <p className="text-xs font-bold text-teal-700 uppercase tracking-wide">IVA en Ventas (Casilla 301)</p>
                   </div>
-                  <p className="text-2xl font-black text-blue-800 font-mono">
+                  <p className="text-2xl font-black text-teal-800 font-mono tabular-nums">
                     ₡ {fmtMoney(debitoTotal)}
                   </p>
-                  <p className="text-xs text-blue-600 mt-1">Débito fiscal del período</p>
+                  <p className="text-xs text-teal-700 mt-1">Débito fiscal del período</p>
                 </div>
 
                 {/* IVA acreditable */}
@@ -568,12 +568,12 @@ export default function ComprasPage() {
                             <td className="px-2 py-1.5 font-mono text-gray-400">{r.cas}</td>
                             <td className="px-2 py-1.5 text-gray-700">{r.tasa}%</td>
                             <td className="px-2 py-1.5 text-right font-mono text-gray-800">₡ {fmtMoney(r.base)}</td>
-                            <td className="px-2 py-1.5 text-right font-mono text-blue-700 font-semibold">₡ {fmtMoney(r.iva)}</td>
+                            <td className="px-2 py-1.5 text-right font-mono text-teal-700 font-semibold">₡ {fmtMoney(r.iva)}</td>
                           </tr>
                         ))}
-                        <tr className="bg-blue-50 font-bold">
-                          <td colSpan={3} className="px-2 py-1.5 text-blue-700">Cas. 301 — Total débito fiscal</td>
-                          <td className="px-2 py-1.5 text-right font-mono text-blue-800">₡ {fmtMoney(debitoTotal)}</td>
+                        <tr className="bg-teal-50 font-bold">
+                          <td colSpan={3} className="px-2 py-1.5 text-teal-700">Cas. 301 — Total débito fiscal</td>
+                          <td className="px-2 py-1.5 text-right font-mono text-teal-800">₡ {fmtMoney(debitoTotal)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -639,7 +639,7 @@ export default function ComprasPage() {
                           <td className="px-2 py-1.5 font-mono text-amber-900">{l.cuenta}</td>
                           <td className="px-2 py-1.5 text-amber-800">{l.descripcion}</td>
                           <td className="px-2 py-1.5 text-right font-mono">
-                            {l.tipo === 'debito' ? <span className="text-blue-700 font-semibold">₡ {fmtMoney(l.monto)}</span> : <span className="text-gray-300">—</span>}
+                            {l.tipo === 'debito' ? <span className="text-teal-700 font-semibold">₡ {fmtMoney(l.monto)}</span> : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="px-2 py-1.5 text-right font-mono">
                             {l.tipo === 'credito' ? <span className="text-emerald-700 font-semibold">₡ {fmtMoney(l.monto)}</span> : <span className="text-gray-300">—</span>}

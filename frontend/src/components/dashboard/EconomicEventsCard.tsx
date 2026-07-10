@@ -26,9 +26,9 @@ interface EventsResponse {
 
 const CAT_COLOR: Record<EconomicEvent['category'], { bg: string; fg: string; label: string }> = {
   riesgo:     { bg: '#FEF2F2', fg: '#B91C1C', label: 'Riesgo' },
-  fiscal:     { bg: '#EFF6FF', fg: '#1D4ED8', label: 'Fiscal' },
+  fiscal:     { bg: '#F0FDFA', fg: '#0D9488', label: 'Fiscal' },
   mercado:    { bg: '#FFFBEB', fg: '#B45309', label: 'Mercado' },
-  operativo:  { bg: '#F5F3FF', fg: '#6D28D9', label: 'Operativo' },
+  operativo:  { bg: '#F1F5F9', fg: '#475569', label: 'Operativo' },
   oportunidad:{ bg: '#ECFDF5', fg: '#047857', label: 'Oportunidad' },
 };
 
@@ -51,11 +51,11 @@ export function EconomicEventsCard({ companyId }: { companyId: string }) {
     return () => { alive = false; };
   }, [companyId]);
 
-  if (loading) return <div className="rounded-2xl h-56 bg-slate-100 animate-pulse" />;
+  if (loading) return <div className="rounded-xl h-56 bg-slate-100 animate-pulse" />;
   if (error || !data) return null;
 
   return (
-    <div className="rounded-2xl border bg-white overflow-hidden" style={{ borderColor: '#E2E8F0' }}>
+    <div className="rounded-xl border bg-white overflow-hidden" style={{ borderColor: '#E2E8F0' }}>
       {/* Header */}
       <div className="px-5 pt-5 pb-4" style={{ background: 'linear-gradient(135deg,#7C2D12,#9A3412)' }}>
         <div className="flex items-center justify-between">

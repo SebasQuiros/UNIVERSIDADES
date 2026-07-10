@@ -67,7 +67,7 @@ function CreateCourseModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 shadow-xl rounded-2xl w-full max-w-md">
+      <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-md">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900">Nuevo Curso</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors">
@@ -85,7 +85,7 @@ function CreateCourseModal({
               <select
                 value={form.universityId}
                 onChange={(e) => setForm({ ...form, universityId: e.target.value })}
-                className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               >
                 {universities.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -155,7 +155,7 @@ function DeleteCourseModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
           <X className="w-5 h-5" />
         </button>
@@ -193,12 +193,12 @@ function CourseCard({
   onDelete: (c: CourseWithUniversity) => void;
 }) {
   return (
-    <div className="group bg-white border border-gray-200 hover:border-gray-300 shadow-sm rounded-2xl p-5 flex flex-col gap-4 transition-all duration-200 hover:shadow-md relative">
+    <div className="group bg-white border border-gray-200 hover:border-gray-300 shadow-sm rounded-xl p-5 flex flex-col gap-4 transition-all duration-200 hover:shadow-md relative">
       <Link href={`/profesor/cursos/${course.id}`} className="flex flex-col gap-4 flex-1">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             {course.code && (
-              <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+              <span className="text-xs font-mono text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
                 {course.code}
               </span>
             )}
@@ -228,7 +228,7 @@ function CourseCard({
         )}
         <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-auto">
           <span className="text-xs text-gray-400">{formatDate(course.createdAt)}</span>
-          <span className="flex items-center gap-1 text-xs text-blue-600 group-hover:text-blue-700">
+          <span className="flex items-center gap-1 text-xs text-teal-700 group-hover:text-teal-700">
             Ver detalles <ArrowRight className="w-3.5 h-3.5" />
           </span>
         </div>
@@ -262,11 +262,11 @@ function UniversitySection({
         onClick={() => setCollapsed((v) => !v)}
         className="flex items-center gap-3 mb-4 group w-full text-left"
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 border border-blue-200">
-          <Building2 className="w-4 h-4 text-blue-600" />
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-50 border border-teal-200">
+          <Building2 className="w-4 h-4 text-teal-700" />
         </div>
         <div className="flex-1">
-          <span className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+          <span className="font-semibold text-gray-900 group-hover:text-teal-700 transition-colors">
             {label}
           </span>
           {university.shortName && (
@@ -407,7 +407,7 @@ export default function CursosPage() {
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : courses.length === 0 ? (
         <div className="flex flex-col items-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
             <BookOpen className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-gray-700 font-semibold">No tienes cursos aún</h3>

@@ -201,7 +201,7 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 group"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 group"
           aria-label="Abrir asistente IA"
         >
           <Sparkles className="w-5 h-5" />
@@ -212,22 +212,22 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
       {/* Chat panel */}
       {isOpen && (
         <div
-          className="fixed bottom-6 right-6 z-50 flex flex-col bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden transition-all duration-200"
+          className="fixed bottom-6 right-6 z-50 flex flex-col bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden transition-all duration-200"
           style={{ width: 380, height: isMinimized ? 56 : 520 }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 text-white flex-shrink-0" style={{ background: '#0D9488' }}>
             <div className="flex items-center gap-2">
               <Bot className="w-5 h-5" />
               <div>
                 <p className="text-sm font-semibold leading-tight">ContaBot</p>
-                <p className="text-xs text-blue-200 leading-tight">Asistente ContaSJ</p>
+                <p className="text-xs text-teal-200 leading-tight">Asistente ContaSJ</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsMinimized((v) => !v)}
-                className="p-1 rounded hover:bg-blue-500 transition-colors"
+                className="p-1 rounded hover:bg-teal-700 transition-colors"
                 aria-label={isMinimized ? 'Expandir' : 'Minimizar'}
               >
                 <ChevronDown
@@ -236,7 +236,7 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
               </button>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 rounded hover:bg-blue-500 transition-colors"
+                className="p-1 rounded hover:bg-teal-700 transition-colors"
                 aria-label="Cerrar asistente"
               >
                 <X className="w-4 h-4" />
@@ -254,14 +254,14 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {msg.role === 'assistant' && (
-                      <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
-                        <Bot className="w-3.5 h-3.5 text-blue-600" />
+                      <div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center mr-2 flex-shrink-0 mt-1">
+                        <Bot className="w-3.5 h-3.5 text-teal-700" />
                       </div>
                     )}
                     <div
-                      className={`max-w-[82%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                      className={`max-w-[82%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
                         msg.role === 'user'
-                          ? 'bg-blue-600 text-white rounded-br-sm'
+                          ? 'bg-teal-600 text-white rounded-br-sm'
                           : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm shadow-sm'
                       }`}
                     >
@@ -273,14 +273,14 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
                 {/* Typing indicator */}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2 flex-shrink-0">
-                      <Bot className="w-3.5 h-3.5 text-blue-600" />
+                    <div className="w-6 h-6 rounded-full bg-teal-100 flex items-center justify-center mr-2 flex-shrink-0">
+                      <Bot className="w-3.5 h-3.5 text-teal-700" />
                     </div>
-                    <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm shadow-sm px-4 py-3">
+                    <div className="bg-white border border-gray-200 rounded-xl rounded-bl-sm shadow-sm px-4 py-3">
                       <div className="flex gap-1 items-center">
-                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <div className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       </div>
                     </div>
                   </div>
@@ -296,7 +296,7 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
                     key={action.label}
                     onClick={() => handleQuickAction(action)}
                     disabled={isLoading}
-                    className="flex-shrink-0 text-xs px-2.5 py-1.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    className="flex-shrink-0 text-xs px-2.5 py-1.5 rounded-full bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                   >
                     {action.label}
                   </button>
@@ -313,7 +313,7 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
                   placeholder="Escribe tu pregunta..."
                   disabled={isLoading}
                   rows={1}
-                  className="flex-1 resize-none text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 min-h-[38px] max-h-[96px]"
+                  className="flex-1 resize-none text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50 min-h-[38px] max-h-[96px]"
                   style={{ overflow: 'hidden' }}
                   onInput={(e) => {
                     const el = e.currentTarget;
@@ -325,7 +325,7 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
                 <button
                   onClick={() => sendMessage(input)}
                   disabled={isLoading || !input.trim()}
-                  className="flex-shrink-0 w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-shrink-0 w-9 h-9 bg-teal-600 hover:bg-teal-700 text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Enviar mensaje"
                 >
                   {isLoading ? (

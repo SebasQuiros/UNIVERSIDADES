@@ -100,7 +100,7 @@ export function GroupsPanel({
     <Card className="p-5">
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-blue-700" />
+          <Users className="w-4 h-4 text-teal-700" />
           <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
             Empresas del ejercicio
           </h2>
@@ -224,7 +224,7 @@ function CompanyRow({
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 min-w-0">
           <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-            company.isCompanyEnabled ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+            company.isCompanyEnabled ? 'bg-teal-100 text-teal-700' : 'bg-amber-100 text-amber-700'
           }`}>
             <Building2 className="w-4 h-4" />
           </div>
@@ -253,7 +253,7 @@ function CompanyRow({
             <button
               onClick={() => setShowAdd(s => !s)}
               title="Agregar miembro"
-              className="p-1.5 text-gray-500 hover:text-blue-600 rounded-lg hover:bg-gray-100"
+              className="p-1.5 text-gray-500 hover:text-teal-600 rounded-lg hover:bg-gray-100"
             >
               <UserPlus className="w-4 h-4" />
             </button>
@@ -270,7 +270,7 @@ function CompanyRow({
                 <span className="font-medium">{m.user.name}</span>
                 <span className="text-gray-400"> · {m.user.email}</span>
                 {m.role === 'OWNER' && (
-                  <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold text-blue-800 bg-blue-100">
+                  <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold text-teal-800 bg-teal-100">
                     owner
                   </span>
                 )}

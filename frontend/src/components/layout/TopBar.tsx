@@ -76,8 +76,8 @@ export function TopBar() {
       </nav>
 
       {/* Buscador global (estético, atajo visual) */}
-      <div className="ml-auto hidden xl:flex items-center gap-2 px-3 h-9 rounded-xl w-72"
-        style={{ background: '#F1F5F9', border: '1px solid #E5E9F0' }}>
+      <div className="ml-auto hidden xl:flex items-center gap-2 px-3 h-9 rounded-lg w-72"
+        style={{ background: '#EEF2F4', border: '1px solid #E1E7EA' }}>
         <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
         <input
           placeholder="Buscar empresas, ejercicios…"
@@ -112,11 +112,11 @@ export function TopBar() {
 
         <div className="w-px h-6 bg-gray-200 mx-1" />
 
-        <Link href="/estudiante/perfil" className="flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-xl hover:bg-gray-100 transition-colors">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)' }}>
+        <Link href="/estudiante/perfil" className="flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
+          <div className="w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-sm flex-shrink-0 font-mono"
+            style={{ background: '#0D9488' }}>
             {user?.avatarUrl
-              ? <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover"
+              ? <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-md object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
               : user?.name?.charAt(0)?.toUpperCase() ?? 'E'}
           </div>

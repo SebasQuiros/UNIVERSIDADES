@@ -48,8 +48,8 @@ const fmtDate = (d: string | Date) =>
   new Date(d).toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' });
 
 const SOURCE_META: Record<string, { label: string; icon: any; cls: string }> = {
-  sale:       { label: 'Venta',     icon: ShoppingCart,    cls: 'bg-blue-50 text-blue-700' },
-  purchase:   { label: 'Compra',    icon: ShoppingBag,     cls: 'bg-violet-50 text-violet-700' },
+  sale:       { label: 'Venta',     icon: ShoppingCart,    cls: 'bg-teal-50 text-teal-700' },
+  purchase:   { label: 'Compra',    icon: ShoppingBag,     cls: 'bg-slate-50 text-slate-700' },
   collection: { label: 'Cobro',     icon: ArrowDownToLine, cls: 'bg-emerald-50 text-emerald-700' },
   payment:    { label: 'Pago',      icon: ArrowUpFromLine, cls: 'bg-amber-50 text-amber-700' },
   payroll:    { label: 'Planilla',  icon: Wallet,          cls: 'bg-fuchsia-50 text-fuchsia-700' },

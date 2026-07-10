@@ -71,7 +71,7 @@ function Casilla({
       </div>
       {readOnly ? (
         <span className={`w-44 text-right text-sm font-mono px-3 py-1 rounded-lg flex-shrink-0 ${
-          bold ? 'bg-blue-50 text-blue-700 font-bold' : 'bg-gray-50 text-gray-700'
+          bold ? 'bg-teal-50 text-teal-700 font-bold' : 'bg-gray-50 text-gray-700'
         }`}>
           ₡ {displayVal}
         </span>
@@ -95,11 +95,11 @@ function Casilla({
 function SectionHeader({ number, title, color = 'emerald' }: { number: string; title: string; color?: string }) {
   const colors: Record<string, string> = {
     emerald: 'bg-emerald-700 text-white',
-    blue:    'bg-blue-700 text-white',
+    blue:    'bg-teal-700 text-white',
     orange:  'bg-orange-600 text-white',
     red:     'bg-red-700 text-white',
     gray:    'bg-gray-700 text-white',
-    purple:  'bg-purple-700 text-white',
+    purple:  'bg-slate-600 text-white',
   };
   return (
     <div className={`flex items-center gap-3 px-4 py-2.5 rounded-t-xl ${colors[color] ?? colors.emerald}`}>
@@ -305,9 +305,9 @@ export default function D101Page() {
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Tipo de contribuyente</label>
                   <div className={`border rounded-lg px-3 py-2 text-sm font-semibold flex items-center gap-2 ${
                     result?.tipoEmpresa === 'PYME'
-                      ? 'border-blue-300 bg-blue-50 text-blue-700'
+                      ? 'border-teal-300 bg-teal-50 text-teal-700'
                       : result?.tipoEmpresa === 'GRANDE'
-                      ? 'border-purple-300 bg-purple-50 text-purple-700'
+                      ? 'border-slate-200 bg-slate-100 text-slate-600'
                       : 'border-gray-200 bg-gray-50 text-gray-400'
                   }`}>
                     <Building2 className="w-4 h-4" />
@@ -395,8 +395,8 @@ export default function D101Page() {
               {result?.tipoEmpresa && (
                 <div className={`mt-3 flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${
                   result.tipoEmpresa === 'PYME'
-                    ? 'text-blue-700 bg-blue-50'
-                    : 'text-purple-700 bg-purple-50'
+                    ? 'text-teal-700 bg-teal-50'
+                    : 'text-slate-600 bg-slate-100'
                 }`}>
                   <Building2 className="w-4 h-4 flex-shrink-0" />
                   {result.tipoEmpresa === 'PYME'
@@ -562,7 +562,7 @@ export default function D101Page() {
                           <tr key={i} className="border-b border-gray-100 last:border-0">
                             <td className="px-4 py-2 text-gray-600">{t.tramo}</td>
                             <td className="px-4 py-2 font-mono text-right">₡ {fmtNum(t.base)}</td>
-                            <td className="px-4 py-2 text-right font-semibold text-purple-700">{t.tasa}%</td>
+                            <td className="px-4 py-2 text-right font-semibold text-slate-600">{t.tasa}%</td>
                             <td className="px-4 py-2 font-mono text-right font-semibold">₡ {fmtNum(t.impuesto)}</td>
                           </tr>
                         ))}
@@ -570,7 +570,7 @@ export default function D101Page() {
                       <tfoot>
                         <tr className="bg-gray-100 font-bold">
                           <td className="px-4 py-2 text-gray-700" colSpan={3}>Total impuesto calculado</td>
-                          <td className="px-4 py-2 font-mono text-right text-purple-800">₡ {fmtNum(result.cas402_impuestoCalculado)}</td>
+                          <td className="px-4 py-2 font-mono text-right text-slate-700">₡ {fmtNum(result.cas402_impuestoCalculado)}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -583,7 +583,7 @@ export default function D101Page() {
                 </div>
                 {result && (
                   <div className={`mt-2 flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${
-                    result.tipoEmpresa === 'PYME' ? 'text-purple-700 bg-purple-50' : 'text-purple-700 bg-purple-50'
+                    result.tipoEmpresa === 'PYME' ? 'text-slate-600 bg-slate-100' : 'text-slate-600 bg-slate-100'
                   }`}>
                     <TrendingUp className="w-4 h-4 flex-shrink-0" />
                     {result.tipoEmpresa === 'PYME'
@@ -788,7 +788,7 @@ export default function D101Page() {
                   } catch { toast.error('No se pudo descargar el PDF'); }
                 }}
                 disabled={!declId}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-xl transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-teal-700 hover:bg-teal-700 rounded-xl transition-colors disabled:opacity-50"
               >
                 <Download className="w-4 h-4" /> Descargar comprobante PDF
               </button>

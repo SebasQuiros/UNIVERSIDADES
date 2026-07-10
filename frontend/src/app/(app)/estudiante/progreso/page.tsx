@@ -63,12 +63,12 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
   icon: React.ElementType; color: string;
 }) {
   return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
+    <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
         <Icon className="w-5 h-5" />
       </div>
       <div>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{value}</p>
         <p className="text-xs text-gray-500 mt-0.5">{label}</p>
         {sub && <p className="text-xs text-gray-400">{sub}</p>}
       </div>
@@ -115,7 +115,7 @@ export default function ProgresoPage() {
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <TrendingUp className="w-6 h-6 text-blue-600" />
+          <TrendingUp className="w-6 h-6 text-teal-700" />
           Mi Progreso
         </h2>
         <p className="text-gray-500 text-sm mt-1">
@@ -128,7 +128,7 @@ export default function ProgresoPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
           {/* Tarjeta de nivel (XP) */}
           <div className="lg:col-span-2 rounded-2xl p-6 text-white relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg,#0F2657 0%,#1E3A8A 55%,#3B82F6 100%)' }}>
+            style={{ background: '#0E141B' }}>
             <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20"
               style={{ background: 'radial-gradient(circle,#FBBF24,transparent 70%)', transform: 'translate(30%,-30%)' }} />
             <div className="relative flex items-center gap-4">
@@ -144,16 +144,16 @@ export default function ProgresoPage() {
                   </span>
                   <h3 className="text-xl font-black">{game.level.name}</h3>
                 </div>
-                <div className="flex items-center gap-1.5 mt-1 text-sm" style={{ color: '#BFDBFE' }}>
+                <div className="flex items-center gap-1.5 mt-1 text-sm" style={{ color: '#14B8A6' }}>
                   <Zap className="w-4 h-4" style={{ color: '#FBBF24' }} />
-                  <span className="font-bold text-white">{game.xp.toLocaleString('es-CR')}</span> XP acumulado
+                  <span className="font-bold text-white font-mono tabular-nums">{game.xp.toLocaleString('es-CR')}</span> XP acumulado
                 </div>
               </div>
             </div>
 
             {/* Barra de progreso al siguiente nivel */}
             <div className="relative mt-5">
-              <div className="flex justify-between text-xs mb-1.5" style={{ color: '#BFDBFE' }}>
+              <div className="flex justify-between text-xs mb-1.5" style={{ color: '#14B8A6' }}>
                 <span>{game.nextLevel ? `Progreso a ${game.nextLevel.name}` : '¡Nivel máximo alcanzado! 👑'}</span>
                 {game.nextLevel && <span>Faltan {game.nextLevel.xpRemaining.toLocaleString('es-CR')} XP</span>}
               </div>
@@ -170,7 +170,7 @@ export default function ProgresoPage() {
               style={{ background: 'linear-gradient(135deg,#FBBF24,#F59E0B)' }}>
               <Trophy className="w-7 h-7 text-white" />
             </div>
-            <p className="text-4xl font-black text-gray-900 leading-none">
+            <p className="text-4xl font-black text-gray-900 leading-none font-mono tabular-nums">
               {game.rank ? `#${game.rank}` : '—'}
             </p>
             <p className="text-sm text-gray-500 mt-1">
@@ -196,26 +196,26 @@ export default function ProgresoPage() {
               return (
                 <div key={r.id}
                   className="flex items-center gap-3 px-5 py-3"
-                  style={r.isMe ? { background: 'linear-gradient(90deg,rgba(59,130,246,0.07),transparent)' } : undefined}>
+                  style={r.isMe ? { background: 'rgba(13,148,136,0.07)' } : undefined}>
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm"
                     style={{ background: rs.bg, color: rs.color }}>
                     {r.rank <= 3 ? <RankIcon className="w-4 h-4" /> : r.rank}
                   </div>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                    style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)' }}>
+                    style={{ background: '#0D9488' }}>
                     {r.avatarUrl
                       ? <img src={r.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
                       : r.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
-                      {r.name}{r.isMe && <span className="text-blue-600 font-semibold"> (tú)</span>}
+                      {r.name}{r.isMe && <span className="text-teal-700 font-semibold"> (tú)</span>}
                     </p>
                     <p className="text-xs text-gray-400">{r.completed} ejercicio{r.completed !== 1 ? 's' : ''} calificado{r.completed !== 1 ? 's' : ''}</p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <Zap className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="text-sm font-bold text-gray-900">{r.xp.toLocaleString('es-CR')}</span>
+                    <span className="text-sm font-bold text-gray-900 font-mono tabular-nums">{r.xp.toLocaleString('es-CR')}</span>
                     <span className="text-xs text-gray-400">XP</span>
                   </div>
                 </div>
@@ -232,7 +232,7 @@ export default function ProgresoPage() {
           value={stats.avgPct > 0 ? `${stats.avgPct}%` : '—'}
           sub={stats.avgPct > 0 ? `Letra: ${letterGrade(stats.avgPct)}` : undefined}
           icon={Target}
-          color="bg-blue-50 text-blue-600"
+          color="bg-teal-50 text-teal-700"
         />
         <StatCard
           label="Mejor nota"
@@ -250,7 +250,7 @@ export default function ProgresoPage() {
           label="Tiempo total"
           value={stats.totalTimeMin > 0 ? timeStr : '—'}
           icon={Clock}
-          color="bg-purple-50 text-purple-600"
+          color="bg-slate-100 text-slate-600"
         />
       </div>
 
@@ -258,12 +258,12 @@ export default function ProgresoPage() {
       <div className="grid grid-cols-4 gap-3 mb-8">
         {[
           { label: 'Sin iniciar', value: stats.notStarted, color: 'bg-gray-100 text-gray-600 border-gray-200' },
-          { label: 'En progreso', value: stats.inProgress, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+          { label: 'En progreso', value: stats.inProgress, color: 'bg-teal-50 text-teal-700 border-teal-200' },
           { label: 'Entregados',  value: stats.submitted,  color: 'bg-amber-50 text-amber-700 border-amber-200' },
           { label: 'Calificados', value: stats.graded,     color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
         ].map(({ label, value, color }) => (
           <div key={label} className={`border rounded-xl p-3 text-center ${color}`}>
-            <p className="text-xl font-bold">{value}</p>
+            <p className="text-xl font-bold font-mono tabular-nums">{value}</p>
             <p className="text-xs mt-0.5">{label}</p>
           </div>
         ))}
@@ -282,7 +282,7 @@ export default function ProgresoPage() {
           {/* Score history line chart */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
             <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-blue-600" />
+              <TrendingUp className="w-4 h-4 text-teal-700" />
               Evolución de notas
             </h3>
             <ResponsiveContainer width="100%" height={220}>
@@ -297,9 +297,9 @@ export default function ProgresoPage() {
                 <Line
                   type="monotone"
                   dataKey="pct"
-                  stroke="#3b82f6"
+                  stroke="#0D9488"
                   strokeWidth={2.5}
-                  dot={{ r: 5, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                  dot={{ r: 5, fill: '#0D9488', strokeWidth: 2, stroke: '#fff' }}
                   activeDot={{ r: 7 }}
                 />
               </LineChart>
@@ -310,7 +310,7 @@ export default function ProgresoPage() {
           {stats.difficultyData.length > 0 && (
             <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Target className="w-4 h-4 text-purple-600" />
+                <Target className="w-4 h-4 text-slate-600" />
                 Rendimiento por dificultad
               </h3>
               <ResponsiveContainer width="100%" height={200}>

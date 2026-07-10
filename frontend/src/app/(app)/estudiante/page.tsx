@@ -8,6 +8,7 @@ import { formatDate, getErrorMessage } from '@/lib/utils';
 import { StatusBadge, DifficultyBadge, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import {
@@ -59,13 +60,12 @@ function ProgressBar({ pct }: { pct: number }) {
     return () => clearTimeout(t);
   }, [pct]);
   return (
-    <div className="w-full rounded-full h-2" style={{ background: 'rgba(59,130,246,0.12)' }}>
+    <div className="w-full rounded-full h-2" style={{ background: 'rgba(13,148,136,0.12)' }}>
       <div
         className="h-2 rounded-full transition-all duration-700 ease-out"
         style={{
           width: `${width}%`,
-          background: 'linear-gradient(90deg,#3B82F6,#60A5FA)',
-          boxShadow: width > 0 ? '0 0 8px rgba(59,130,246,0.5)' : 'none',
+          background: '#0D9488',
         }}
       />
     </div>
@@ -73,22 +73,20 @@ function ProgressBar({ pct }: { pct: number }) {
 }
 
 // ── Stats Card ────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon: Icon, gradient, glow }: {
-  label: string; value: number; icon: React.ElementType;
-  gradient: string; glow: string;
+function StatCard({ label, value, icon: Icon, accent }: {
+  label: string; value: number; icon: React.ElementType; accent: string;
 }) {
   const animated = useCountUp(value);
   return (
-    <div className="relative rounded-2xl p-5 overflow-hidden flex items-center gap-4 transition-transform duration-200 hover:-translate-y-0.5"
-      style={{ background: gradient, boxShadow: `0 4px 20px ${glow}` }}>
-      <div className="absolute inset-0 opacity-10"
-        style={{ background: 'radial-gradient(circle at top right, white 0%, transparent 60%)' }} />
-      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/20 backdrop-blur-sm">
-        <Icon className="w-5 h-5 text-white" />
+    <div className="rounded-xl p-4 bg-white border border-gray-200 flex items-center gap-4 transition-colors hover:border-gray-300"
+      style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
+      <div className="w-11 h-11 rounded-md flex items-center justify-center flex-shrink-0"
+        style={{ background: `${accent}18` }}>
+        <Icon className="w-5 h-5" style={{ color: accent }} />
       </div>
-      <div className="relative">
-        <p className="text-3xl font-black text-white leading-none">{animated}</p>
-        <p className="text-xs text-white/80 mt-1 font-medium">{label}</p>
+      <div>
+        <p className="text-3xl font-bold text-gray-900 leading-none font-mono tabular-nums">{animated}</p>
+        <p className="text-[11px] text-gray-500 mt-1.5 font-semibold uppercase tracking-wide font-mono">{label}</p>
       </div>
     </div>
   );
@@ -99,7 +97,7 @@ function StatCard({ label, value, icon: Icon, gradient, glow }: {
 // el "salto" de 0 → valor real y la pantalla vacía con spinner.
 function StatCardSkeleton() {
   return (
-    <div className="rounded-2xl p-5 bg-white border border-gray-200/80 flex items-center gap-4" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+    <div className="rounded-xl p-5 bg-white border border-gray-200/80 flex items-center gap-4" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
       <Skeleton className="w-11 h-11 rounded-xl" />
       <div className="space-y-2">
         <Skeleton className="h-7 w-12" />
@@ -111,7 +109,7 @@ function StatCardSkeleton() {
 
 function AttemptCardSkeleton() {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+    <div className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col gap-4" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 space-y-2">
           <div className="flex gap-2">
@@ -152,8 +150,8 @@ function AttemptCard({ attempt, onStart }: { attempt: ExerciseAttempt; onStart: 
   }
 
   return (
-    <div className="group bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-blue-200"
-      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+    <div className="group bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4 transition-colors duration-150 hover:border-teal-300"
+      style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
 
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -319,18 +317,22 @@ export default function EstudianteDashboard() {
   const done    = attempts.filter((a) => a.status === 'SUBMITTED' || a.status === 'GRADED');
 
   const firstName = user?.name?.split(' ')[0] ?? 'Estudiante';
+  // Empresa activa del estudiante (si existe); si no hay, el dashboard se
+  // muestra en ceros — igual que Alegra con una cuenta nueva.
+  const activeCompanyId =
+    companies.find((c) => c.isCompanyEnabled)?.id ?? companies[0]?.id ?? null;
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto" style={{ background: 'linear-gradient(180deg,#EFF6FF 0%,#F8FAFC 40%,#FFFFFF 100%)' }}>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto" style={{ background: '#F4F6F8' }}>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
             Buenos días, {firstName} 👋
           </h2>
           <p className="text-gray-500 text-sm mt-1">
-            Aquí están tus ejercicios asignados
+            El pulso de tu empresa simulada
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
@@ -338,15 +340,35 @@ export default function EstudianteDashboard() {
         </Button>
       </div>
 
+      {/* ── Resumen del negocio (siempre visible, estilo Alegra) ── */}
+      <section className="mb-10">
+        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide font-mono mb-4">
+          Resumen del negocio
+        </h3>
+        {loading
+          ? <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}
+            </div>
+          : <ExecutiveDashboard companyId={activeCompanyId} compact />}
+        {!loading && !activeCompanyId && (
+          <p className="text-xs text-gray-400 mt-3">
+            Aún no tienes una empresa. Al iniciar un ejercicio y constituir tu empresa, este panel cobra vida con tus datos reales.
+          </p>
+        )}
+      </section>
+
+      {/* Tus ejercicios */}
+      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide font-mono mb-4">Tus ejercicios</h3>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           <>
-            <StatCard label="Ejercicios totales" value={stats.total}      icon={BookOpen}     gradient="linear-gradient(135deg,#3B82F6,#1E40AF)" glow="rgba(59,130,246,0.25)" />
-            <StatCard label="En progreso"        value={stats.inProgress} icon={TrendingUp}   gradient="linear-gradient(135deg,#F59E0B,#D97706)" glow="rgba(245,158,11,0.25)" />
-            <StatCard label="Calificados"        value={stats.graded}     icon={CheckCircle2} gradient="linear-gradient(135deg,#10B981,#059669)" glow="rgba(16,185,129,0.25)" />
+            <StatCard label="Ejercicios totales" value={stats.total}      icon={BookOpen}     accent="#0D9488" />
+            <StatCard label="En progreso"        value={stats.inProgress} icon={TrendingUp}   accent="#B45309" />
+            <StatCard label="Calificados"        value={stats.graded}     icon={CheckCircle2} accent="#0F766E" />
           </>
         )}
       </div>
@@ -357,7 +379,7 @@ export default function EstudianteDashboard() {
         </div>
       ) : attempts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
             <BookOpen className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-gray-700 font-semibold">Sin ejercicios asignados</h3>
@@ -371,11 +393,11 @@ export default function EstudianteDashboard() {
           {companies.filter(c => c.mode === 'GROUP').length > 0 && (
             <section className="mb-8">
               <div className="flex items-center gap-2 mb-4">
-                <Users className="w-4 h-4 text-blue-600" />
+                <Users className="w-4 h-4 text-teal-600" />
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
                   Mis empresas grupales
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white bg-blue-600">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white bg-teal-600">
                   {companies.filter(c => c.mode === 'GROUP').length}
                 </span>
               </div>
@@ -385,11 +407,11 @@ export default function EstudianteDashboard() {
                     key={c.id}
                     className={`flex items-center gap-3 p-4 rounded-xl border ${
                       c.isCompanyEnabled
-                        ? 'border-gray-200 bg-white hover:border-blue-300'
+                        ? 'border-gray-200 bg-white hover:border-teal-300'
                         : 'border-amber-300 bg-amber-50'
                     } transition-colors`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center flex-shrink-0">
                       <Building2 className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -420,8 +442,8 @@ export default function EstudianteDashboard() {
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
                   Pendientes
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
-                  style={{ background: 'linear-gradient(90deg,#3B82F6,#6366F1)', boxShadow: '0 2px 8px rgba(59,130,246,0.4)' }}>
+                <span className="text-xs font-bold px-2 py-0.5 rounded text-white font-mono"
+                  style={{ background: '#0D9488' }}>
                   {active.length}
                 </span>
               </div>

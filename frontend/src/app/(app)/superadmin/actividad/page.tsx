@@ -24,9 +24,9 @@ interface ActivityEntry {
 // ── Role colors ───────────────────────────────────────────────────────────────
 
 const ROLE_COLORS: Record<string, string> = {
-  STUDENT:    'bg-blue-50 text-blue-700 border-blue-200',
+  STUDENT:    'bg-teal-50 text-teal-700 border-teal-200',
   TEACHER:    'bg-emerald-50 text-emerald-700 border-emerald-200',
-  ADMIN:      'bg-purple-50 text-purple-700 border-purple-200',
+  ADMIN:      'bg-slate-100 text-slate-700 border-slate-200',
   SUPERADMIN: 'bg-red-50 text-red-700 border-red-200',
 };
 
@@ -145,7 +145,7 @@ export default function ActividadPage() {
         <button
           onClick={() => load()}
           disabled={loading}
-          className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50"
+          className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:text-teal-700 hover:border-teal-200 hover:bg-teal-50 transition-colors disabled:opacity-50"
           title="Recargar"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -160,13 +160,13 @@ export default function ActividadPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por usuario, acción..."
-            className="w-full rounded-xl bg-white border border-gray-300 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-xl bg-white border border-gray-300 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
         </div>
         <select
           value={uniFilter}
           onChange={(e) => { setUniFilter(e.target.value); }}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
         >
           <option value="">Todas las universidades</option>
           {universities.map((u) => (
@@ -176,7 +176,7 @@ export default function ActividadPage() {
         <select
           value={String(limit)}
           onChange={(e) => setLimit(Number(e.target.value))}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
         >
           <option value="20">Últimas 20</option>
           <option value="50">Últimas 50</option>
@@ -200,7 +200,7 @@ export default function ActividadPage() {
           )}
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
           {/* Header row */}
           <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -234,7 +234,7 @@ export default function ActividadPage() {
             <div className="px-5 py-4 border-t border-gray-100 text-center">
               <button
                 onClick={() => setLimit((l) => l + 50)}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="text-sm text-teal-700 hover:text-teal-800 font-medium"
               >
                 Cargar más
               </button>

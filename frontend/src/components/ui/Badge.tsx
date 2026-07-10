@@ -15,7 +15,7 @@ export function Badge({ children, variant = 'slate', size = 'sm', className }: B
         'inline-flex items-center gap-1 font-medium rounded-full',
         size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm',
         {
-          'bg-blue-50 text-blue-700 border border-blue-200':      variant === 'blue',
+          'bg-teal-50 text-teal-700 border border-teal-200':      variant === 'blue',
           'bg-emerald-50 text-emerald-700 border border-emerald-200': variant === 'emerald',
           'bg-green-50 text-green-700 border border-green-200':   variant === 'green',
           'bg-amber-50 text-amber-700 border border-amber-200':   variant === 'amber',
@@ -34,7 +34,7 @@ export function Badge({ children, variant = 'slate', size = 'sm', className }: B
 // ── Convenience: status badge ──────────────────────────────────────────────
 const STATUS_CONFIG: Record<ExerciseStatus, { label: string; variant: BadgeProps['variant']; dot: string }> = {
   NOT_STARTED: { label: 'Sin iniciar',   variant: 'slate',   dot: 'bg-gray-400' },
-  IN_PROGRESS: { label: 'En progreso',   variant: 'blue',    dot: 'bg-blue-500 animate-pulse' },
+  IN_PROGRESS: { label: 'En progreso',   variant: 'blue',    dot: 'bg-teal-600 animate-pulse' },
   SUBMITTED:   { label: 'Entregado',     variant: 'amber',   dot: 'bg-amber-500' },
   GRADED:      { label: 'Calificado',    variant: 'emerald', dot: 'bg-emerald-500' },
 };

@@ -7,9 +7,8 @@ import {
   CartesianGrid, BarChart, Bar, Cell,
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, Receipt, ShoppingCart, Wallet,
-  ArrowDownCircle, ArrowUpCircle, Landmark, FileText, Users,
-  Package, BookOpen, Percent, AlertCircle,
+  Coins, CreditCard, Receipt, TrendingUp, Landmark,
+  FileText, Users, Package, BookOpen, AlertCircle,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -28,52 +27,100 @@ interface DashboardData {
   }>;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// paleta v2
+const TEAL = '#0D9488';
+const TEAL_D = '#0F766E';
+const TEAL_L = '#14B8A6';
+const RED = '#DC2626';
+const INK = '#0E141B';
+
 const fmtCRC = (n: number) =>
   '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmtCRCfull = (n: number) =>
   '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// ─── KPI Card ────────────────────────────────────────────────────────────────
-function KpiCard({
-  label, value, sub, icon: Icon, accent, trend,
+const CARD = 'bg-white rounded-xl border border-gray-200';
+const CARD_SH = { boxShadow: '0 1px 2px rgba(16,24,40,0.04)' };
+
+const ZERO_DATA: DashboardData = {
+  totals: { invoices: 0, clients: 0, products: 0, journalEntries: 0, totalSales: 0, totalSalesBase: 0, totalPurchases: 0, grossMargin: 0 },
+  receivables: { outstanding: 0, count: 0 },
+  payables:    { outstanding: 0, count: 0 },
+  tax: { ivaCobrado: 0, ivaPagado: 0, ivaPosition: 0 },
+  salesTrend: [],
+  recentInvoices: [],
+};
+
+const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
+
+// ─── KPI "split" card (estilo Alegra: total + Vigentes/Vencidas) ───────────────
+function SplitKpi({
+  label, icon: Icon, total, a, b,
 }: {
-  label: string; value: string; sub?: string;
-  icon: React.ElementType; accent: string; trend?: { dir: 'up' | 'down'; text: string };
+  label: string; icon: React.ElementType; total: number;
+  a: { label: string; value: number; docs?: number; color: string };
+  b: { label: string; value: number; docs?: number; color: string };
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 flex flex-col gap-3 transition-shadow hover:shadow-lg"
-      style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: `${accent}14` }}>
-          <Icon className="w-4.5 h-4.5" style={{ color: accent, width: 18, height: 18 }} />
-        </div>
+    <div className={CARD + ' p-4'} style={CARD_SH}>
+      <div className="flex items-center gap-2">
+        <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${TEAL}18` }}>
+          <Icon style={{ color: TEAL, width: 14, height: 14 }} />
+        </span>
+        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">{label}</span>
       </div>
-      <div>
-        <div className="text-2xl font-black text-gray-900 leading-none tracking-tight">{value}</div>
-        {sub && <div className="text-xs text-gray-400 mt-1.5">{sub}</div>}
+      <div className="mt-3 text-2xl font-bold text-gray-900 font-mono tabular-nums leading-none tracking-tight">{fmtCRCfull(total)}</div>
+      <div className="mt-3 grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+        {[a, b].map((r, i) => (
+          <div key={i}>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-mono flex items-center gap-1.5">
+              <i className="w-1.5 h-1.5 rounded-[1px] inline-block" style={{ background: r.color }} />{r.label}
+            </p>
+            <p className="text-[13px] font-bold text-gray-800 font-mono tabular-nums mt-1">{fmtCRCfull(r.value)}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{r.docs ?? 0} documentos</p>
+          </div>
+        ))}
       </div>
-      {trend && (
-        <div className="flex items-center gap-1 text-xs font-semibold"
-          style={{ color: trend.dir === 'up' ? '#10B981' : '#EF4444' }}>
-          {trend.dir === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-          {trend.text}
-        </div>
-      )}
+    </div>
+  );
+}
+
+// ─── KPI simple (total + 2 sub-datos) ──────────────────────────────────────────
+function DualKpi({
+  label, icon: Icon, total, totalColor, a, b,
+}: {
+  label: string; icon: React.ElementType; total: number; totalColor?: string;
+  a: { label: string; value: string }; b: { label: string; value: string };
+}) {
+  return (
+    <div className={CARD + ' p-4'} style={CARD_SH}>
+      <div className="flex items-center gap-2">
+        <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${TEAL}18` }}>
+          <Icon style={{ color: TEAL, width: 14, height: 14 }} />
+        </span>
+        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">{label}</span>
+      </div>
+      <div className="mt-3 text-2xl font-bold font-mono tabular-nums leading-none tracking-tight" style={{ color: totalColor ?? '#111827' }}>{fmtCRCfull(total)}</div>
+      <div className="mt-3 grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+        {[a, b].map((r, i) => (
+          <div key={i}>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-mono">{r.label}</p>
+            <p className="text-[13px] font-bold text-gray-800 font-mono tabular-nums mt-1">{r.value}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 function MiniStat({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ElementType }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-100">
-      <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
-        <Icon className="w-4 h-4 text-gray-500" />
+    <div className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-gray-200" style={CARD_SH}>
+      <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-slate-500" />
       </div>
       <div className="min-w-0">
-        <div className="text-sm font-bold text-gray-900 leading-none">{value}</div>
+        <div className="text-sm font-bold text-gray-900 leading-none font-mono tabular-nums">{value}</div>
         <div className="text-xs text-gray-400 mt-0.5 truncate">{label}</div>
       </div>
     </div>
@@ -81,13 +128,17 @@ function MiniStat({ label, value, icon: Icon }: { label: string; value: string |
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
-export function ExecutiveDashboard({ companyId }: { companyId: string }) {
+export function ExecutiveDashboard({ companyId, compact }: { companyId?: string | null; compact?: boolean }) {
   const [data, setData]       = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(false);
 
   useEffect(() => {
     let active = true;
+    if (!companyId) {
+      setData(ZERO_DATA); setError(false); setLoading(false);
+      return;
+    }
     setLoading(true);
     api.get<DashboardData>(`/api/v1/companies/${companyId}/dashboard`)
       .then(({ data }) => { if (active) { setData(data); setError(false); } })
@@ -99,8 +150,8 @@ export function ExecutiveDashboard({ companyId }: { companyId: string }) {
   if (loading) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
         ))}
       </div>
     );
@@ -108,103 +159,85 @@ export function ExecutiveDashboard({ companyId }: { companyId: string }) {
 
   if (error || !data) {
     return (
-      <div className="flex items-center gap-3 p-5 bg-red-50 border border-red-100 rounded-2xl text-red-600 text-sm">
-        <AlertCircle className="w-5 h-5" /> No se pudo cargar el panel ejecutivo.
+      <div className="flex items-center gap-3 p-5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
+        <AlertCircle className="w-5 h-5" /> No se pudo cargar el resumen.
       </div>
     );
   }
 
   const { totals, receivables, payables, tax, salesTrend, recentInvoices } = data;
   const ivaToPay = tax.ivaPosition >= 0;
+  const marginPct = totals.totalSalesBase > 0 ? (totals.grossMargin / totals.totalSalesBase) * 100 : 0;
 
-  // Margin %
-  const marginPct = totals.totalSalesBase > 0
-    ? (totals.grossMargin / totals.totalSalesBase) * 100 : 0;
+  // Serie para la gráfica: si no hay datos, generamos 6 meses en 0 para que
+  // los EJES se dibujen igual (como Alegra muestra ₡0–₡5 con fechas).
+  const now = new Date();
+  const trendData = salesTrend.length > 0
+    ? salesTrend
+    : Array.from({ length: 6 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+        return { label: `${MONTHS_ES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`, total: 0 };
+      });
+  const hasSales = salesTrend.some((p) => p.total > 0);
 
   return (
     <div className="space-y-6">
 
-      {/* ── KPI row ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Ventas del período" value={fmtCRC(totals.totalSales)}
-          sub={`${totals.invoices} facturas emitidas`} icon={Receipt} accent="#2563EB" />
-        <KpiCard label="Compras" value={fmtCRC(totals.totalPurchases)}
-          sub="Crédito fiscal incluido" icon={ShoppingCart} accent="#7C3AED" />
-        <KpiCard label="Margen bruto" value={fmtCRC(totals.grossMargin)}
-          sub={`${marginPct.toFixed(1)}% sobre ventas`} icon={Percent} accent="#10B981"
-          trend={{ dir: totals.grossMargin >= 0 ? 'up' : 'down', text: `${marginPct.toFixed(1)}%` }} />
-        <KpiCard label={ivaToPay ? 'IVA por pagar' : 'IVA saldo a favor'}
-          value={fmtCRC(Math.abs(tax.ivaPosition))}
-          sub={`Débito ${fmtCRC(tax.ivaCobrado)} − Crédito ${fmtCRC(tax.ivaPagado)}`}
-          icon={Landmark} accent={ivaToPay ? '#EF4444' : '#10B981'} />
+      {/* ── KPI row (estilo Alegra) ───────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SplitKpi label="Cuentas por cobrar" icon={Coins} total={receivables.outstanding}
+          a={{ label: 'Vigentes', value: receivables.outstanding, docs: receivables.count, color: TEAL }}
+          b={{ label: 'Vencidas', value: 0, docs: 0, color: RED }} />
+        <SplitKpi label="Cuentas por pagar" icon={CreditCard} total={payables.outstanding}
+          a={{ label: 'Vigentes', value: payables.outstanding, docs: payables.count, color: TEAL }}
+          b={{ label: 'Vencidas', value: 0, docs: 0, color: RED }} />
+        <DualKpi label={ivaToPay ? 'IVA por pagar · D-104' : 'IVA a favor · D-104'} icon={Landmark}
+          total={Math.abs(tax.ivaPosition)}
+          a={{ label: 'Débito fiscal', value: fmtCRCfull(tax.ivaCobrado) }}
+          b={{ label: 'Crédito fiscal', value: fmtCRCfull(tax.ivaPagado) }} />
+        <DualKpi label="Utilidad del período" icon={TrendingUp}
+          total={totals.grossMargin} totalColor={totals.grossMargin >= 0 ? TEAL_D : RED}
+          a={{ label: 'Ingresos', value: fmtCRCfull(totals.totalSales) }}
+          b={{ label: 'Margen neto', value: `${marginPct.toFixed(1)}%` }} />
       </div>
 
-      {/* ── Charts + AR/AP ──────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Sales trend */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-5"
-          style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-gray-900">Tendencia de ventas</h3>
-              <p className="text-xs text-gray-400">Últimos 6 meses</p>
-            </div>
-            <TrendingUp className="w-5 h-5 text-blue-500" />
+      {/* ── Total de ventas (gráfica full-width, con ejes aunque esté vacía) ── */}
+      <div className={CARD} style={CARD_SH}>
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900">Total de ventas</h3>
+            <p className="text-xs text-gray-400">Últimos 6 meses · impuestos incluidos</p>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={salesTrend} margin={{ top: 6, right: 6, left: 6, bottom: 0 }}>
+          <div className="text-right">
+            <div className="text-lg font-bold text-gray-900 font-mono tabular-nums">{fmtCRCfull(totals.totalSales)}</div>
+          </div>
+        </div>
+        <div className="px-2 pb-3">
+          <ResponsiveContainer width="100%" height={230}>
+            <AreaChart data={trendData} margin={{ top: 8, right: 12, left: 6, bottom: 0 }}>
               <defs>
                 <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2563EB" stopOpacity={0.28} />
-                  <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
+                  <stop offset="0%" stopColor={TEAL} stopOpacity={0.22} />
+                  <stop offset="100%" stopColor={TEAL} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F0" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false}
-                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} width={42} />
-              <Tooltip formatter={(v: any) => [fmtCRCfull(v), 'Ventas']}
-                contentStyle={{ borderRadius: 12, border: '1px solid #E2E8F0', fontSize: 12 }} />
-              <Area type="monotone" dataKey="total" stroke="#2563EB" strokeWidth={2.5}
-                fill="url(#salesGrad)" />
+                width={44}
+                domain={[0, (dataMax: number) => (dataMax > 0 ? Math.ceil(dataMax) : 5)]}
+                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `₡${v}`} />
+              {hasSales && (
+                <Tooltip formatter={(v: any) => [fmtCRCfull(v), 'Ventas']}
+                  contentStyle={{ borderRadius: 8, border: '1px solid #E2E8F0', fontSize: 12 }} />
+              )}
+              <Area type="monotone" dataKey="total" stroke={TEAL} strokeWidth={2.5} fill="url(#salesGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-
-        {/* AR / AP */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5"
-            style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <ArrowDownCircle className="w-4 h-4 text-emerald-500" />
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Por cobrar</span>
-            </div>
-            <div className="text-2xl font-black text-gray-900">{fmtCRC(receivables.outstanding)}</div>
-            <div className="text-xs text-gray-400 mt-1">{receivables.count} documentos pendientes</div>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-100 p-5"
-            style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <ArrowUpCircle className="w-4 h-4 text-rose-500" />
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Por pagar</span>
-            </div>
-            <div className="text-2xl font-black text-gray-900">{fmtCRC(payables.outstanding)}</div>
-            <div className="text-xs text-gray-400 mt-1">{payables.count} documentos pendientes</div>
-          </div>
-          {/* Posición neta */}
-          <div className="rounded-2xl p-5 text-white"
-            style={{ background: 'linear-gradient(135deg,#0F2657,#1E3A8A)' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <Wallet className="w-4 h-4 opacity-80" />
-              <span className="text-xs font-semibold opacity-70 uppercase tracking-wide">Posición neta</span>
-            </div>
-            <div className="text-2xl font-black">{fmtCRC(receivables.outstanding - payables.outstanding)}</div>
-            <div className="text-xs opacity-60 mt-1">Cobrar − Pagar</div>
-          </div>
-        </div>
       </div>
 
+      {!compact && (<>
       {/* ── Mini stats ──────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MiniStat label="Facturas" value={totals.invoices} icon={FileText} />
@@ -215,51 +248,44 @@ export function ExecutiveDashboard({ companyId }: { companyId: string }) {
 
       {/* ── IVA position + recent invoices ─────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* IVA bar */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-5"
-          style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+        <div className={CARD + ' p-4'} style={CARD_SH}>
           <h3 className="text-sm font-bold text-gray-900 mb-1">Posición de IVA (D-104)</h3>
           <p className="text-xs text-gray-400 mb-3">Débito vs crédito fiscal</p>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={[
-              { name: 'Débito', value: tax.ivaCobrado, color: '#2563EB' },
-              { name: 'Crédito', value: tax.ivaPagado, color: '#10B981' },
-            ]} margin={{ top: 6, right: 6, left: 6, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={[{ name: 'Débito', value: tax.ivaCobrado }, { name: 'Crédito', value: tax.ivaPagado }]}
+              margin={{ top: 6, right: 6, left: 6, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F0" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false}
-                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} width={42} />
-              <Tooltip formatter={(v: any) => fmtCRCfull(v)}
-                contentStyle={{ borderRadius: 12, border: '1px solid #E2E8F0', fontSize: 12 }} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {[{ color: '#2563EB' }, { color: '#10B981' }].map((e, i) => <Cell key={i} fill={e.color} />)}
+              <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} width={42}
+                domain={[0, (dataMax: number) => (dataMax > 0 ? Math.ceil(dataMax) : 5)]}
+                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+              <Bar dataKey="value" radius={[5, 5, 0, 0]}>
+                {[TEAL_D, TEAL_L].map((c, i) => <Cell key={i} fill={c} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-          <div className={`mt-3 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between ${
-            ivaToPay ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+          <div className={`mt-3 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between ${
+            ivaToPay ? 'bg-red-50 text-red-600' : 'bg-teal-50 text-teal-700'
           }`}>
             <span>{ivaToPay ? 'Impuesto a pagar' : 'Saldo a favor'}</span>
-            <span className="font-black">{fmtCRCfull(Math.abs(tax.ivaPosition))}</span>
+            <span className="font-bold font-mono tabular-nums">{fmtCRCfull(Math.abs(tax.ivaPosition))}</span>
           </div>
         </div>
 
-        {/* Recent invoices */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 overflow-hidden"
-          style={{ boxShadow: '0 1px 3px rgba(15,23,42,0.04)' }}>
+        <div className={'lg:col-span-2 ' + CARD + ' overflow-hidden'} style={CARD_SH}>
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-bold text-gray-900">Facturas recientes</h3>
             <Receipt className="w-4 h-4 text-gray-300" />
           </div>
           {recentInvoices.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-gray-400">Aún no hay facturas registradas.</div>
+            <div className="px-5 py-10 text-center text-sm text-gray-400">Aún no hay facturas registradas.</div>
           ) : (
             <div className="divide-y divide-gray-50">
               {recentInvoices.map((inv) => (
                 <div key={inv.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/60 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-4 h-4 text-blue-600" />
+                    <div className="w-9 h-9 rounded-md bg-teal-50 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-4 h-4 text-teal-700" />
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-gray-900 truncate">{inv.clientName}</div>
@@ -267,7 +293,7 @@ export function ExecutiveDashboard({ companyId }: { companyId: string }) {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <div className="text-sm font-bold text-gray-900">{fmtCRC(Number(inv.total))}</div>
+                    <div className="text-sm font-bold text-gray-900 font-mono tabular-nums">{fmtCRC(Number(inv.total))}</div>
                     <StatusPill status={inv.status} />
                   </div>
                 </div>
@@ -276,20 +302,21 @@ export function ExecutiveDashboard({ companyId }: { companyId: string }) {
           )}
         </div>
       </div>
+      </>)}
     </div>
   );
 }
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    ISSUED:   { label: 'Emitida',  cls: 'bg-emerald-50 text-emerald-600' },
-    ACCEPTED: { label: 'Aceptada', cls: 'bg-emerald-50 text-emerald-600' },
+    ISSUED:   { label: 'Emitida',  cls: 'bg-teal-50 text-teal-700' },
+    ACCEPTED: { label: 'Aceptada', cls: 'bg-teal-50 text-teal-700' },
     DRAFT:    { label: 'Borrador', cls: 'bg-gray-100 text-gray-500' },
     REJECTED: { label: 'Rechazada',cls: 'bg-red-50 text-red-600' },
     PENDING:  { label: 'Pendiente',cls: 'bg-amber-50 text-amber-600' },
   };
   const s = map[status] ?? { label: status, cls: 'bg-gray-100 text-gray-500' };
-  return <span className={`inline-block mt-0.5 text-xs font-medium px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>;
+  return <span className={`inline-block mt-0.5 text-xs font-medium px-2 py-0.5 rounded ${s.cls}`}>{s.label}</span>;
 }
 
 export default ExecutiveDashboard;

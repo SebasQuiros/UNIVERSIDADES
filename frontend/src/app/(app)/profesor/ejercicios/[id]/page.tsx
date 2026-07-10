@@ -23,7 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
 function ProgressBar({ pct }: { pct: number }) {
   return (
     <div className="w-full bg-gray-200 rounded-full h-1.5">
-      <div className="h-1.5 rounded-full bg-blue-600 transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
+      <div className="h-1.5 rounded-full bg-teal-600 transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
     </div>
   );
 }
@@ -122,7 +122,7 @@ export default function ExerciseDetailPage() {
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md">
+          <div className="relative bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-md">
             <div className="flex items-center justify-between p-5 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
@@ -186,7 +186,7 @@ export default function ExerciseDetailPage() {
       </div>
 
       {/* Exercise header */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 mb-6">
+      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -219,7 +219,7 @@ export default function ExerciseDetailPage() {
               </Button>
             </Link>
             <Link href={`/profesor/ejercicios/${id}/companies-dashboard?cursoId=${courseId}`}>
-              <Button variant="secondary" className="text-blue-700 border-blue-200 hover:bg-blue-50">
+              <Button variant="secondary" className="text-teal-700 border-teal-200 hover:bg-teal-50">
                 <BarChart2 className="w-4 h-4" />
                 Panel de empresas
               </Button>
@@ -265,12 +265,12 @@ export default function ExerciseDetailPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {[
             { label: 'Sin iniciar',   value: stats.notStarted, color: 'text-gray-500' },
-            { label: 'En progreso',   value: stats.inProgress, color: 'text-blue-600' },
+            { label: 'En progreso',   value: stats.inProgress, color: 'text-teal-700' },
             { label: 'Pendientes',    value: stats.submitted,  color: 'text-amber-600' },
             { label: 'Calificados',   value: stats.graded,     color: 'text-emerald-600' },
           ].map((s) => (
             <div key={s.label} className="bg-white border border-gray-200 shadow-sm rounded-xl p-4 text-center">
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+              <p className={`text-2xl font-bold font-mono tabular-nums ${s.color}`}>{s.value}</p>
               <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
             </div>
           ))}
@@ -290,8 +290,8 @@ export default function ExerciseDetailPage() {
         const buckets = [
           { label: '0–24%',   color: 'bg-gray-400',    min: 0,  max: 24  },
           { label: '25–49%',  color: 'bg-amber-400',   min: 25, max: 49  },
-          { label: '50–74%',  color: 'bg-blue-500',    min: 50, max: 74  },
-          { label: '75–99%',  color: 'bg-purple-500',  min: 75, max: 99  },
+          { label: '50–74%',  color: 'bg-teal-600',    min: 50, max: 74  },
+          { label: '75–99%',  color: 'bg-slate-500',  min: 75, max: 99  },
           { label: '100%',    color: 'bg-emerald-500', min: 100, max: 100 },
         ].map((b) => ({
           ...b,
@@ -308,9 +308,9 @@ export default function ExerciseDetailPage() {
           .slice(0, 5);
 
         return (
-          <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 mb-6">
+          <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-5">
-              <BarChart2 className="w-4 h-4 text-blue-600" />
+              <BarChart2 className="w-4 h-4 text-teal-700" />
               Estadísticas del grupo
             </h3>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -374,7 +374,7 @@ export default function ExerciseDetailPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-gray-700 truncate">{(a as any).student?.name ?? '—'}</p>
                         </div>
-                        <span className={`text-xs font-bold ${pct >= 75 ? 'text-emerald-600' : pct >= 50 ? 'text-blue-600' : 'text-gray-500'}`}>{pct}%</span>
+                        <span className={`text-xs font-bold ${pct >= 75 ? 'text-emerald-600' : pct >= 50 ? 'text-teal-700' : 'text-gray-500'}`}>{pct}%</span>
                       </div>
                     );
                   })}
@@ -407,7 +407,7 @@ export default function ExerciseDetailPage() {
         }).sort((a, b) => b.failPct - a.failPct);
 
         return (
-          <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 mb-6">
+          <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
               <span className="text-red-500">⚠</span>
               Errores frecuentes
@@ -436,10 +436,10 @@ export default function ExerciseDetailPage() {
 
       {/* Attempts table */}
       {exercise.isPublished && (
-        <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
           <div className="p-5 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-600" />
+              <Users className="w-4 h-4 text-teal-700" />
               Intentos de estudiantes
               <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs px-1.5 py-0.5 rounded-full">{attempts.length}</span>
             </h3>

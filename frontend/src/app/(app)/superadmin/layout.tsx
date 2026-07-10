@@ -27,12 +27,12 @@ function SuperAdminSidebar() {
   const content = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-6 border-b border-[#1a3a75]">
+      <div className="p-6 border-b border-white/10">
         <Link href="/superadmin" onClick={() => setOpen(false)}>
           <h1 className="text-xl font-bold text-white tracking-tight">
-            ContaSJ <span className="text-blue-300">GROUP</span>
+            ContaSJ <span className="text-white/70">GROUP</span>
           </h1>
-          <p className="text-xs text-blue-300 mt-0.5 flex items-center gap-1">
+          <p className="text-xs text-white/50 mt-0.5 flex items-center gap-1">
             <ShieldCheck className="w-3 h-3" /> Panel SuperAdmin
           </p>
         </Link>
@@ -50,11 +50,14 @@ function SuperAdminSidebar() {
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group',
                 active
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-blue-100 hover:text-white hover:bg-[#1a3a75]',
+                  ? 'text-white'
+                  : 'text-white/70 hover:text-white',
               )}
+              style={active ? { background: '#0D9488' } : undefined}
+              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = ''; }}
             >
-              <Icon className={cn('w-4 h-4 flex-shrink-0', active ? 'text-white' : 'text-blue-300 group-hover:text-white')} />
+              <Icon className={cn('w-4 h-4 flex-shrink-0', active ? 'text-white' : 'text-white/50 group-hover:text-white')} />
               <span className="flex-1">{label}</span>
               {active && <ChevronRight className="w-3 h-3 text-white" />}
             </Link>
@@ -63,19 +66,19 @@ function SuperAdminSidebar() {
       </nav>
 
       {/* User + Logout */}
-      <div className="p-4 border-t border-[#1a3a75]">
-        <div className="flex items-center gap-3 px-3 py-2 mb-2 rounded-xl bg-[#1a3a75]/60">
-          <div className="w-8 h-8 rounded-full bg-blue-500/30 flex items-center justify-center text-blue-100 font-semibold text-sm flex-shrink-0">
+      <div className="p-4 border-t border-white/10">
+        <div className="flex items-center gap-3 px-3 py-2 mb-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)' }}>
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/80 font-semibold text-sm flex-shrink-0">
             {user?.name?.charAt(0)?.toUpperCase() ?? 'S'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">{user?.name}</p>
-            <p className="text-xs text-blue-300 truncate">SUPERADMIN</p>
+            <p className="text-xs text-white/50 truncate">SUPERADMIN</p>
           </div>
         </div>
         <button
           onClick={logout}
-          className="flex items-center gap-3 w-full px-3 py-2 text-sm text-blue-200 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2 text-sm text-white/70 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors"
         >
           <LogOut className="w-4 h-4" /> Cerrar sesión
         </button>
@@ -86,16 +89,16 @@ function SuperAdminSidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 flex-shrink-0" style={{ backgroundColor: '#0F2657' }}>
+      <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 flex-shrink-0" style={{ background: '#0E141B' }}>
         {content}
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-[#1a3a75] px-4 py-3 flex items-center justify-between" style={{ backgroundColor: '#0F2657' }}>
-        <h1 className="text-lg font-bold text-white">ContaSJ <span className="text-blue-300">GROUP</span></h1>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/10 px-4 py-3 flex items-center justify-between" style={{ background: '#0E141B' }}>
+        <h1 className="text-lg font-bold text-white">ContaSJ <span className="text-white/70">GROUP</span></h1>
         <button
           onClick={() => setOpen(!open)}
-          className="p-2 text-blue-200 hover:text-white hover:bg-[#1a3a75] rounded-lg transition-colors"
+          className="p-2 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
         >
           {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -105,7 +108,7 @@ function SuperAdminSidebar() {
       {open && (
         <div className="lg:hidden fixed inset-0 z-30 flex">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <aside className="relative w-72 h-full overflow-y-auto" style={{ backgroundColor: '#0F2657' }}>
+          <aside className="relative w-72 h-full overflow-y-auto" style={{ background: '#0E141B' }}>
             <div className="pt-16">{content}</div>
           </aside>
         </div>

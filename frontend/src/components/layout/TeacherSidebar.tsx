@@ -45,18 +45,16 @@ export function TeacherSidebar() {
     <div className="flex flex-col h-full">
 
       {/* Logo */}
-      <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
+      <div className="p-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Link href="/profesor" onClick={() => setOpen(false)} className="flex items-center gap-3 group">
           <div className="relative">
             <img src="/logo.png" alt="ContaSJ" className="w-10 h-10 rounded-xl flex-shrink-0" />
-            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ boxShadow: '0 0 16px rgba(59,130,246,0.6)' }} />
           </div>
           <div>
             <h1 className="text-lg font-black text-white tracking-tight leading-none">
-              <span style={{ color: '#60A5FA' }}>ContaSJ</span>
+              <span style={{ color: '#14B8A6' }}>ContaSJ</span>
             </h1>
-            <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#60A5FA' }}>
+            <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: '#14B8A6' }}>
               <GraduationCap className="w-3 h-3" />
               Portal Profesor
             </p>
@@ -67,13 +65,13 @@ export function TeacherSidebar() {
       {/* University badge */}
       {university && (
         <div className="px-5 py-2.5 flex items-center gap-2.5"
-          style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(59,130,246,0.08)' }}>
+          style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           {university.logoUrl ? (
             <img src={university.logoUrl} alt={university.name} className="w-5 h-5 rounded object-contain flex-shrink-0"
               style={{ opacity: 0.85 }} />
           ) : (
             <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-xs font-bold"
-              style={{ background: 'rgba(59,130,246,0.2)', color: '#93C5FD' }}>
+              style={{ background: 'rgba(13,148,136,0.2)', color: '#14B8A6' }}>
               {(university.shortName ?? university.name).charAt(0)}
             </div>
           )}
@@ -94,18 +92,17 @@ export function TeacherSidebar() {
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
               style={active ? {
-                background: 'linear-gradient(90deg,#1E3A8A,#0F2657)',
+                background: '#0D9488',
                 color: '#FFFFFF',
-                boxShadow: '0 2px 12px rgba(59,130,246,0.35)',
               } : {
                 color: 'rgba(255,255,255,0.55)',
               }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.cssText += 'background:#0B1A2E;color:rgba(255,255,255,0.9);'; }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.cssText += 'background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.9);'; }}
               onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; } }}
             >
               <Icon
                 className="w-4 h-4 flex-shrink-0"
-                style={{ color: active ? '#60A5FA' : 'rgba(96,165,250,0.6)' }}
+                style={{ color: active ? '#FFFFFF' : 'rgba(255,255,255,0.5)' }}
               />
               <span className="flex-1">{label}</span>
               {!!badge && (
@@ -114,14 +111,14 @@ export function TeacherSidebar() {
                   {badge > 9 ? '9+' : badge}
                 </span>
               )}
-              {active && <ChevronRight className="w-3 h-3" style={{ color: '#60A5FA' }} />}
+              {active && <ChevronRight className="w-3 h-3" style={{ color: '#FFFFFF' }} />}
             </Link>
           );
         })}
       </nav>
 
       {/* Divisor decorativo */}
-      <div className="mx-4 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(59,130,246,0.3),transparent)' }} />
+      <div className="mx-4 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
 
       {/* User */}
       <div className="p-3 pb-4">
@@ -129,10 +126,10 @@ export function TeacherSidebar() {
           href="/profesor/perfil"
           onClick={() => setOpen(false)}
           className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl transition-colors"
-          style={{ background: 'rgba(15,38,87,0.5)', border: '1px solid rgba(59,130,246,0.12)' }}
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)' }}>
+            style={{ background: '#0D9488' }}>
             {user?.avatarUrl
               ? <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -140,9 +137,9 @@ export function TeacherSidebar() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-            <p className="text-xs truncate" style={{ color: '#60A5FA' }}>Mi perfil</p>
+            <p className="text-xs truncate" style={{ color: '#14B8A6' }}>Mi perfil</p>
           </div>
-          <UserCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#60A5FA' }} />
+          <UserCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#14B8A6' }} />
         </Link>
         <div className="flex gap-2">
           <button
@@ -162,17 +159,17 @@ export function TeacherSidebar() {
     <>
       {/* Desktop */}
       <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 flex-shrink-0"
-        style={{ background: 'linear-gradient(180deg,#03080F 0%,#060F1C 100%)', borderRight: '1px solid rgba(59,130,246,0.1)' }}>
+        style={{ background: '#0E141B', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
         {content}
       </aside>
 
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between"
-        style={{ background: '#03080F', borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
+        style={{ background: '#0E141B', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-2.5">
           <img src="/logo.png" alt="ContaSJ" className="w-8 h-8 rounded-lg" />
           <div>
-            <h1 className="text-lg font-black text-white leading-none"><span style={{ color: '#60A5FA' }}>ContaSJ</span></h1>
+            <h1 className="text-lg font-black text-white leading-none"><span style={{ color: '#14B8A6' }}>ContaSJ</span></h1>
             {university && <p className="text-xs leading-none mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{university.shortName ?? university.name}</p>}
           </div>
         </div>
@@ -187,7 +184,7 @@ export function TeacherSidebar() {
         <div className="lg:hidden fixed inset-0 z-30 flex">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <aside className="relative w-72 h-full overflow-y-auto"
-            style={{ background: 'linear-gradient(180deg,#03080F 0%,#060F1C 100%)', borderRight: '1px solid rgba(59,130,246,0.15)' }}>
+            style={{ background: '#0E141B', borderRight: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="pt-16">{content}</div>
           </aside>
         </div>

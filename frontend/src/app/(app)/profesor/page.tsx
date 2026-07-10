@@ -40,8 +40,8 @@ function StatCard({ label, value, icon: Icon, gradient, glow, sub }: {
   const numVal = typeof value === 'number' ? value : 0;
   const animated = useCountUp(numVal);
   return (
-    <div className="relative rounded-2xl p-5 overflow-hidden transition-transform duration-200 hover:-translate-y-0.5"
-      style={{ background: gradient, boxShadow: `0 4px 20px ${glow}` }}>
+    <div className="relative rounded-xl p-5 overflow-hidden transition-transform duration-200 hover:-translate-y-0.5"
+      style={{ background: gradient, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
       <div className="absolute inset-0 opacity-10"
         style={{ background: 'radial-gradient(circle at top right, white 0%, transparent 60%)' }} />
       <div className="relative flex items-start justify-between mb-3">
@@ -50,7 +50,7 @@ function StatCard({ label, value, icon: Icon, gradient, glow, sub }: {
           <Icon className="w-4 h-4 text-white" />
         </div>
       </div>
-      <p className="relative text-3xl font-black text-white leading-none">{typeof value === 'number' ? animated : value}</p>
+      <p className="relative text-3xl font-black text-white leading-none font-mono tabular-nums">{typeof value === 'number' ? animated : value}</p>
       {sub && <p className="relative text-xs text-white/60 mt-1">{sub}</p>}
     </div>
   );
@@ -59,7 +59,7 @@ function StatCard({ label, value, icon: Icon, gradient, glow, sub }: {
 // Placeholder de tarjeta de estadística — mantiene el layout mientras cargan los datos
 function StatCardSkeleton() {
   return (
-    <div className="rounded-2xl p-5 bg-white border border-gray-200/80" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+    <div className="rounded-xl p-5 bg-white border border-gray-200/80" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
       <div className="flex items-start justify-between mb-3">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="w-8 h-8 rounded-lg" />
@@ -108,7 +108,7 @@ export default function ProfesorDashboard() {
   // En vez de esconder toda la pantalla con un spinner, renderizamos el shell
   // siempre y mostramos placeholders donde van los datos (progressive skeletons).
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto" style={{ background: 'linear-gradient(180deg,#EFF6FF 0%,#F8FAFC 40%,#FFFFFF 100%)' }}>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto" style={{ background: '#F4F6F8' }}>
 
       {showOnboarding && user?.id && (
         <OnboardingWizard userId={user.id} onComplete={() => setShowOnboarding(false)} />
@@ -134,8 +134,8 @@ export default function ProfesorDashboard() {
           Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           <>
-            <StatCard label="Cursos activos"  value={stats.courses}   icon={BookOpen}       gradient="linear-gradient(135deg,#3B82F6,#1E40AF)" glow="rgba(59,130,246,0.25)" sub="Este período" />
-            <StatCard label="Ejercicios"      value={stats.exercises} icon={FileText}       gradient="linear-gradient(135deg,#8B5CF6,#7C3AED)" glow="rgba(139,92,246,0.25)" sub="Publicados y borradores" />
+            <StatCard label="Cursos activos"  value={stats.courses}   icon={BookOpen}       gradient="#0D9488" glow="rgba(16,24,40,0.04)" sub="Este período" />
+            <StatCard label="Ejercicios"      value={stats.exercises} icon={FileText}       gradient="#475569" glow="rgba(16,24,40,0.04)" sub="Publicados y borradores" />
             <StatCard label="Estudiantes"     value={stats.students}  icon={Users}          gradient="linear-gradient(135deg,#10B981,#059669)" glow="rgba(16,185,129,0.25)" sub="Inscritos en total" />
             <StatCard label="Por calificar"   value={stats.pending}   icon={ClipboardCheck} gradient="linear-gradient(135deg,#F59E0B,#D97706)" glow="rgba(245,158,11,0.25)" sub="Requieren atención" />
           </>
@@ -145,10 +145,10 @@ export default function ProfesorDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
         {/* Courses */}
-        <section className="bg-white rounded-2xl transition-shadow duration-200 hover:shadow-lg" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid rgba(226,232,240,0.8)' }}>
+        <section className="bg-white rounded-xl transition-shadow duration-200 hover:shadow-lg" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)', border: '1px solid rgba(226,232,240,0.8)' }}>
           <div className="flex items-center justify-between p-5 border-b border-gray-200">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-blue-600" />
+              <BookOpen className="w-4 h-4 text-teal-700" />
               Mis Cursos
             </h3>
             <Link href="/profesor/cursos">
@@ -180,7 +180,7 @@ export default function ProfesorDashboard() {
                 <Link
                   key={course.id}
                   href={`/profesor/cursos/${course.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-blue-50/50 transition-all duration-150 group"
+                  className="flex items-center justify-between p-4 hover:bg-teal-50/50 transition-all duration-150 group"
                 >
                   <div>
                     <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{course.name}</p>
@@ -204,7 +204,7 @@ export default function ProfesorDashboard() {
         </section>
 
         {/* Pending grading */}
-        <section className="bg-white rounded-2xl transition-shadow duration-200 hover:shadow-lg" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1px solid rgba(226,232,240,0.8)' }}>
+        <section className="bg-white rounded-xl transition-shadow duration-200 hover:shadow-lg" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)', border: '1px solid rgba(226,232,240,0.8)' }}>
           <div className="flex items-center justify-between p-5 border-b border-gray-200">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <ClipboardCheck className="w-4 h-4 text-amber-500" />

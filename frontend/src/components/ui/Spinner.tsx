@@ -5,7 +5,7 @@ export function Spinner({ className, size = 'md' }: { className?: string; size?:
   return (
     <Loader2
       className={cn(
-        'animate-spin text-blue-600',
+        'animate-spin text-teal-700',
         { 'w-4 h-4': size === 'sm', 'w-6 h-6': size === 'md', 'w-8 h-8': size === 'lg' },
         className,
       )}

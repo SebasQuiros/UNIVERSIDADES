@@ -32,7 +32,7 @@ function ivaBadgeClass(rate: number): string {
   if (rate === 4)  return 'bg-yellow-100 text-yellow-700';
   if (rate === 8)  return 'bg-orange-100 text-orange-700';
   if (rate === 13) return 'bg-green-100 text-green-700';
-  return 'bg-blue-100 text-blue-700';
+  return 'bg-teal-100 text-teal-700';
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -162,10 +162,10 @@ export function CabysSearch({
               onChange={handleQueryChange}
               disabled={disabled}
               placeholder="Buscar producto o servicio..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:opacity-50"
             />
             {loading && (
-              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-600 animate-spin" />
             )}
           </div>
 
@@ -178,7 +178,7 @@ export function CabysSearch({
                     <button
                       type="button"
                       onClick={() => handleSelect(item)}
-                      className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors flex items-start gap-3"
+                      className="w-full text-left px-4 py-2.5 hover:bg-teal-50 transition-colors flex items-start gap-3"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-mono font-bold text-gray-800">{item.codigo}</p>
