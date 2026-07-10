@@ -17,8 +17,8 @@ interface DashboardData {
     invoices: number; clients: number; products: number; journalEntries: number;
     totalSales: number; totalSalesBase: number; totalPurchases: number; grossMargin: number;
   };
-  receivables: { outstanding: number; count: number };
-  payables:    { outstanding: number; count: number };
+  receivables: { outstanding: number; count: number; overdue?: number; overdueCount?: number };
+  payables:    { outstanding: number; count: number; overdue?: number; overdueCount?: number };
   tax: { ivaCobrado: number; ivaPagado: number; ivaPosition: number };
   salesTrend: Array<{ label: string; total: number }>;
   recentInvoices: Array<{
@@ -186,11 +186,11 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
       {/* ── KPI row (estilo Alegra) ───────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SplitKpi label="Cuentas por cobrar" icon={Coins} total={receivables.outstanding}
-          a={{ label: 'Vigentes', value: receivables.outstanding, docs: receivables.count, color: TEAL }}
-          b={{ label: 'Vencidas', value: 0, docs: 0, color: RED }} />
+          a={{ label: 'Vigentes', value: receivables.outstanding - (receivables.overdue ?? 0), docs: receivables.count - (receivables.overdueCount ?? 0), color: TEAL }}
+          b={{ label: 'Vencidas', value: receivables.overdue ?? 0, docs: receivables.overdueCount ?? 0, color: RED }} />
         <SplitKpi label="Cuentas por pagar" icon={CreditCard} total={payables.outstanding}
-          a={{ label: 'Vigentes', value: payables.outstanding, docs: payables.count, color: TEAL }}
-          b={{ label: 'Vencidas', value: 0, docs: 0, color: RED }} />
+          a={{ label: 'Vigentes', value: payables.outstanding - (payables.overdue ?? 0), docs: payables.count - (payables.overdueCount ?? 0), color: TEAL }}
+          b={{ label: 'Vencidas', value: payables.overdue ?? 0, docs: payables.overdueCount ?? 0, color: RED }} />
         <DualKpi label={ivaToPay ? 'IVA por pagar · D-104' : 'IVA a favor · D-104'} icon={Landmark}
           total={Math.abs(tax.ivaPosition)}
           a={{ label: 'Débito fiscal', value: fmtCRCfull(tax.ivaCobrado) }}

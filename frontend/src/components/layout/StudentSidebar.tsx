@@ -23,8 +23,9 @@ interface Sub {
   label: string;
   tab?: string;        // pestaña del ejercicio (?tab=)
   endsWith?: string;   // subruta del ejercicio (/compras)
-  path?: string;       // ruta global
-  soon?: boolean;      // aún no construido
+  path?: string;       // ruta global directa
+  slug?: string;       // página base (/estudiante/modulo/<slug>) usada si no hay ejercicio
+  soon?: boolean;
 }
 interface Group {
   key: string;
@@ -74,58 +75,75 @@ export function StudentSidebar() {
   }, [pathname]);
 
   const base = activeId ? `/estudiante/ejercicio/${activeId}` : null;
-  const subHref = (s: Sub) => {
+  const subHref = (s: Sub): string => {
+    // Con ejercicio activo → pestaña/subruta real del ejercicio.
+    if (base && s.endsWith) return `${base}${s.endsWith}`;
+    if (base && s.tab)      return `${base}?tab=${s.tab}`;
+    // Sin ejercicio (o ítem sólo-base) → su página base.
     if (s.path) return s.path;
-    if (s.soon) return null;
-    if (!base) return '/estudiante';
-    if (s.endsWith) return `${base}${s.endsWith}`;
-    if (s.tab) return `${base}?tab=${s.tab}`;
-    return base;
+    if (s.slug) return `/estudiante/modulo/${s.slug}`;
+    return '/estudiante';
   };
 
   const GROUPS: Group[] = [
     { key: 'inicio', label: 'Inicio', icon: Home, href: '/estudiante', exact: true },
     {
-      key: 'ingresos', label: 'Ingresos', icon: ArrowDownCircle, needsExercise: true,
+      key: 'ingresos', label: 'Ingresos', icon: ArrowDownCircle,
       children: [
-        { label: 'Clientes',          tab: 'clients' },
-        { label: 'Facturas de venta', tab: 'invoices' },
-        { label: 'Pagos recibidos',   tab: 'invoices' },
+        { label: 'Clientes',            tab: 'clients',  slug: 'clientes' },
+        { label: 'Facturas de venta',   tab: 'invoices', slug: 'facturas-venta' },
+        { label: 'Pagos recibidos',     tab: 'invoices', slug: 'pagos-recibidos' },
+        { label: 'Facturas recurrentes', slug: 'facturas-recurrentes' },
+        { label: 'Notas de crédito',    slug: 'notas-credito' },
+        { label: 'Notas de débito',     slug: 'notas-debito' },
+        { label: 'Cotizaciones',        slug: 'cotizaciones' },
+        { label: 'Remisiones',          slug: 'remisiones' },
       ],
     },
     {
-      key: 'gastos', label: 'Gastos', icon: ArrowUpCircle, needsExercise: true,
+      key: 'gastos', label: 'Gastos', icon: ArrowUpCircle,
       children: [
-        { label: 'Proveedores',        tab: 'suppliers' },
-        { label: 'Facturas de compra', endsWith: '/compras' },
+        { label: 'Proveedores',         tab: 'suppliers', slug: 'proveedores' },
+        { label: 'Facturas de compra',  endsWith: '/compras', slug: 'facturas-compra' },
+        { label: 'Órdenes de compra',   slug: 'ordenes-compra' },
+        { label: 'Pagos recurrentes',   slug: 'pagos-recurrentes' },
+        { label: 'Recepción de comprobantes', slug: 'recepcion-comprobantes' },
       ],
     },
     {
-      key: 'inventario', label: 'Inventario', icon: Package, needsExercise: true,
+      key: 'inventario', label: 'Inventario', icon: Package,
       children: [
-        { label: 'Ítems y productos', tab: 'products' },
+        { label: 'Ítems y productos',   tab: 'products', slug: 'productos' },
+        { label: 'Valor de inventario', slug: 'valor-inventario' },
+        { label: 'Ajustes de inventario', slug: 'ajustes-inventario' },
+        { label: 'Listas de precios',   slug: 'listas-precios' },
+        { label: 'Bodegas',             slug: 'bodegas' },
+        { label: 'Categorías',          slug: 'categorias' },
+        { label: 'Atributos',           slug: 'atributos' },
       ],
     },
     {
-      key: 'bancos', label: 'Bancos', icon: Landmark, needsExercise: true,
+      key: 'bancos', label: 'Bancos', icon: Landmark,
       children: [
-        { label: 'Bancos y cajas', tab: 'bank' },
+        { label: 'Bancos y cajas',           tab: 'bank', slug: 'bancos' },
+        { label: 'Conciliaciones bancarias', tab: 'bank', slug: 'conciliaciones' },
       ],
     },
     {
-      key: 'contabilidad', label: 'Contabilidad', icon: BookOpen, needsExercise: true,
+      key: 'contabilidad', label: 'Contabilidad', icon: BookOpen,
       children: [
-        { label: 'Asiento contable',    tab: 'journal' },
-        { label: 'Libro diario',        tab: 'ledger' },
-        { label: 'Libro mayor',         tab: 'mayorizacion' },
-        { label: 'Ajustes',             tab: 'ajustes' },
-        { label: 'Asientos de cierre',  tab: 'asientos-cierre' },
-        { label: 'Activos fijos',       tab: 'fixed-assets' },
+        { label: 'Catálogo de cuentas', slug: 'catalogo-cuentas' },
+        { label: 'Asiento contable',    tab: 'journal',       slug: 'asiento-contable' },
+        { label: 'Libro diario',        tab: 'ledger',        slug: 'libro-diario' },
+        { label: 'Libro mayor',         tab: 'mayorizacion',  slug: 'libro-mayor' },
+        { label: 'Ajustes',             tab: 'ajustes',       slug: 'ajustes' },
+        { label: 'Asientos de cierre',  tab: 'asientos-cierre', slug: 'asientos-cierre' },
+        { label: 'Activos fijos',       tab: 'fixed-assets',  slug: 'activos' },
       ],
     },
-    { key: 'reportes', label: 'Reportes', icon: BarChart2, needsExercise: true, children: [
-        { label: 'Balance de comprobación', tab: 'balance-comprobacion' },
-        { label: 'Estados financieros',     tab: 'reports' },
+    { key: 'reportes', label: 'Reportes', icon: BarChart2, children: [
+        { label: 'Balance de comprobación', tab: 'balance-comprobacion', slug: 'balance-comprobacion' },
+        { label: 'Estados financieros',     tab: 'reports',              slug: 'estados-financieros' },
     ]},
     { key: 'tribu', label: 'Tributación · TRIBU', icon: Receipt, href: '/estudiante/impuestos', path: '/estudiante/impuestos' },
   ];
@@ -139,9 +157,10 @@ export function StudentSidebar() {
 
   const inExercise = pathname.includes('/ejercicio/');
   const subActive = (s: Sub) => {
-    if (s.path) return pathname.startsWith(s.path);
-    if (s.endsWith) return pathname.endsWith(s.endsWith);
-    if (s.tab) return inExercise && !pathname.endsWith('/compras') && (currentTab ?? 'dashboard') === s.tab;
+    if (s.path && pathname.startsWith(s.path)) return true;
+    if (s.slug && pathname.startsWith(`/estudiante/modulo/${s.slug}`)) return true;
+    if (base && s.endsWith) return pathname.endsWith(s.endsWith);
+    if (base && s.tab) return inExercise && !pathname.endsWith('/compras') && (currentTab ?? 'dashboard') === s.tab;
     return false;
   };
   const groupActive = (g: Group) => {
@@ -194,26 +213,13 @@ export function StudentSidebar() {
             {g.children.map((s) => {
               const href = subHref(s);
               const active = subActive(s);
-              const content = (
-                <span className="flex-1 flex items-center gap-2">
-                  {s.label}
-                  {s.soon && <span className="text-[9px] font-bold uppercase tracking-wide px-1 py-px rounded" style={{ background: 'rgba(255,255,255,0.08)', color: TXT_FAINT }}>Pronto</span>}
-                </span>
-              );
-              if (s.soon || !href) {
-                return (
-                  <div key={s.label} title="Próximamente" className="flex items-center px-3 py-1.5 rounded-md text-[13px] cursor-default select-none" style={{ color: 'rgba(255,255,255,0.32)' }}>
-                    {content}
-                  </div>
-                );
-              }
               return (
                 <Link key={s.label} href={href} onClick={() => setOpen(false)}
                   className="flex items-center px-3 py-1.5 rounded-md text-[13px] transition-colors"
-                  style={active ? { background: TEAL, color: '#fff' } : { color: muted ? TXT_FAINT : TXT }}
+                  style={active ? { background: TEAL, color: '#fff' } : { color: TXT }}
                   onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#fff'; } }}
-                  onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = muted ? TXT_FAINT : TXT; } }}>
-                  {content}
+                  onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = TXT; } }}>
+                  <span className="flex-1">{s.label}</span>
                 </Link>
               );
             })}

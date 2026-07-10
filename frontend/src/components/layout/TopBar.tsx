@@ -75,16 +75,17 @@ export function TopBar() {
         ))}
       </nav>
 
-      {/* Buscador global (estético, atajo visual) */}
-      <div className="ml-auto hidden xl:flex items-center gap-2 px-3 h-9 rounded-lg w-72"
-        style={{ background: '#EEF2F4', border: '1px solid #E1E7EA' }}>
+      {/* Buscador global inteligente (abre el ⌘K) */}
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new Event('contasj:cmdk'))}
+        className="ml-auto hidden xl:flex items-center gap-2 px-3 h-9 rounded-lg w-72 transition-colors hover:border-teal-300"
+        style={{ background: '#EEF2F4', border: '1px solid #E1E7EA' }}
+      >
         <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
-        <input
-          placeholder="Buscar empresas, ejercicios…"
-          className="bg-transparent outline-none text-sm text-gray-600 w-full placeholder:text-gray-400"
-        />
-        <kbd className="text-[10px] font-semibold text-gray-400 px-1.5 py-0.5 rounded border border-gray-200 bg-white">⌘K</kbd>
-      </div>
+        <span className="flex-1 text-left text-sm text-gray-400">Buscar todo…</span>
+        <kbd className="text-[10px] font-semibold text-gray-500 px-1.5 py-0.5 rounded border border-gray-200 bg-white font-mono">⌘K</kbd>
+      </button>
 
       {/* Acciones derecha */}
       <div className="flex items-center gap-1.5 ml-auto xl:ml-0">

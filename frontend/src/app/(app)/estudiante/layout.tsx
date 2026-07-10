@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { StudentSidebar } from '@/components/layout/StudentSidebar';
 import { TopBar } from '@/components/layout/TopBar';
+import { CommandPalette } from '@/components/layout/CommandPalette';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { PageErrorBoundary } from '@/components/ui/ErrorBoundary';
 import AiAssistant from '@/components/ai/AiAssistant';
@@ -32,6 +33,8 @@ export default function EstudianteLayout({ children }: { children: React.ReactNo
       </main>
       {/* Floating AI assistant — available on all student pages */}
       <AiAssistant />
+      {/* Buscador inteligente ⌘K */}
+      <CommandPalette />
     </div>
   );
 }

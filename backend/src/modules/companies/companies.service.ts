@@ -194,11 +194,13 @@ export class CompaniesService {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
     sixMonthsAgo.setDate(1);
     sixMonthsAgo.setHours(0, 0, 0, 0);
+    const now = new Date();
 
     const [
       invoices, clients, products, entries,
       salesAgg, purchasesAgg,
       arAgg, apAgg,
+      arOverdue, apOverdue,
       ivaCobrado, ivaPagado,
       recentInvoices, monthlyRows,
     ] = await Promise.all([
@@ -229,6 +231,16 @@ export class CompaniesService {
         where: { companyId, status: { in: ['PENDING', 'PARTIAL'] as any } },
         _sum:  { balance: true }, _count: true,
       }),
+
+      // ── Vencidas (dueDate < hoy) — para el desglose Vigentes/Vencidas ──
+      this.prisma.accountReceivable.aggregate({
+        where: { companyId, status: { in: ['PENDING', 'PARTIAL'] as any }, dueDate: { lt: now } },
+        _sum:  { balance: true }, _count: true,
+      }).catch(() => ({ _sum: { balance: 0 }, _count: 0 } as any)),
+      this.prisma.accountPayable.aggregate({
+        where: { companyId, status: { in: ['PENDING', 'PARTIAL'] as any }, dueDate: { lt: now } },
+        _sum:  { balance: true }, _count: true,
+      }).catch(() => ({ _sum: { balance: 0 }, _count: 0 } as any)),
 
       // ── IVA cobrado (débito fiscal) ──
       this.prisma.invoice.aggregate({
@@ -291,8 +303,14 @@ export class CompaniesService {
         totalPurchases,
         grossMargin: totalSalesBase - num(purchasesAgg._sum.subtotal),
       },
-      receivables: { outstanding: num(arAgg._sum.balance), count: arAgg._count },
-      payables:    { outstanding: num(apAgg._sum.balance), count: apAgg._count },
+      receivables: {
+        outstanding: num(arAgg._sum.balance), count: arAgg._count,
+        overdue: num(arOverdue._sum.balance), overdueCount: num(arOverdue._count),
+      },
+      payables: {
+        outstanding: num(apAgg._sum.balance), count: apAgg._count,
+        overdue: num(apOverdue._sum.balance), overdueCount: num(apOverdue._count),
+      },
       tax: {
         ivaCobrado: num(ivaCobrado._sum.tax),
         ivaPagado:  num(ivaPagado._sum.taxAmount),
