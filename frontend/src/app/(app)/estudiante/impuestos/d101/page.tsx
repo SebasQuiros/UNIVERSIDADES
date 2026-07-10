@@ -71,7 +71,7 @@ function Casilla({
       </div>
       {readOnly ? (
         <span className={`w-44 text-right text-sm font-mono px-3 py-1 rounded-lg flex-shrink-0 ${
-          bold ? 'bg-teal-50 text-teal-700 font-bold' : 'bg-gray-50 text-gray-700'
+          bold ? 'bg-blue-50 text-blue-700 font-bold' : 'bg-gray-50 text-gray-700'
         }`}>
           ₡ {displayVal}
         </span>
@@ -95,7 +95,7 @@ function Casilla({
 function SectionHeader({ number, title, color = 'emerald' }: { number: string; title: string; color?: string }) {
   const colors: Record<string, string> = {
     emerald: 'bg-emerald-700 text-white',
-    blue:    'bg-teal-700 text-white',
+    blue:    'bg-blue-700 text-white',
     orange:  'bg-orange-600 text-white',
     red:     'bg-red-700 text-white',
     gray:    'bg-gray-700 text-white',
@@ -305,7 +305,7 @@ export default function D101Page() {
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Tipo de contribuyente</label>
                   <div className={`border rounded-lg px-3 py-2 text-sm font-semibold flex items-center gap-2 ${
                     result?.tipoEmpresa === 'PYME'
-                      ? 'border-teal-300 bg-teal-50 text-teal-700'
+                      ? 'border-blue-300 bg-blue-50 text-blue-700'
                       : result?.tipoEmpresa === 'GRANDE'
                       ? 'border-slate-200 bg-slate-100 text-slate-600'
                       : 'border-gray-200 bg-gray-50 text-gray-400'
@@ -395,7 +395,7 @@ export default function D101Page() {
               {result?.tipoEmpresa && (
                 <div className={`mt-3 flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${
                   result.tipoEmpresa === 'PYME'
-                    ? 'text-teal-700 bg-teal-50'
+                    ? 'text-blue-700 bg-blue-50'
                     : 'text-slate-600 bg-slate-100'
                 }`}>
                   <Building2 className="w-4 h-4 flex-shrink-0" />
@@ -788,7 +788,7 @@ export default function D101Page() {
                   } catch { toast.error('No se pudo descargar el PDF'); }
                 }}
                 disabled={!declId}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-teal-700 hover:bg-teal-700 rounded-xl transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50"
               >
                 <Download className="w-4 h-4" /> Descargar comprobante PDF
               </button>

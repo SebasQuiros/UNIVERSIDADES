@@ -28,11 +28,11 @@ interface DashboardData {
 }
 
 // paleta v2
-const TEAL = '#0D9488';
-const TEAL_D = '#0F766E';
-const TEAL_L = '#14B8A6';
+const TEAL = '#2563EB';
+const TEAL_D = '#1D4ED8';
+const TEAL_L = '#60A5FA';
 const RED = '#DC2626';
-const INK = '#0E141B';
+const INK = '#03080F';
 
 const fmtCRC = (n: number) =>
   '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -265,7 +265,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
             </BarChart>
           </ResponsiveContainer>
           <div className={`mt-3 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between ${
-            ivaToPay ? 'bg-red-50 text-red-600' : 'bg-teal-50 text-teal-700'
+            ivaToPay ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-700'
           }`}>
             <span>{ivaToPay ? 'Impuesto a pagar' : 'Saldo a favor'}</span>
             <span className="font-bold font-mono tabular-nums">{fmtCRCfull(Math.abs(tax.ivaPosition))}</span>
@@ -284,8 +284,8 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
               {recentInvoices.map((inv) => (
                 <div key={inv.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/60 transition-colors">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-md bg-teal-50 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-4 h-4 text-teal-700" />
+                    <div className="w-9 h-9 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-4 h-4 text-blue-700" />
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-gray-900 truncate">{inv.clientName}</div>
@@ -309,8 +309,8 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
-    ISSUED:   { label: 'Emitida',  cls: 'bg-teal-50 text-teal-700' },
-    ACCEPTED: { label: 'Aceptada', cls: 'bg-teal-50 text-teal-700' },
+    ISSUED:   { label: 'Emitida',  cls: 'bg-blue-50 text-blue-700' },
+    ACCEPTED: { label: 'Aceptada', cls: 'bg-blue-50 text-blue-700' },
     DRAFT:    { label: 'Borrador', cls: 'bg-gray-100 text-gray-500' },
     REJECTED: { label: 'Rechazada',cls: 'bg-red-50 text-red-600' },
     PENDING:  { label: 'Pendiente',cls: 'bg-amber-50 text-amber-600' },

@@ -200,7 +200,7 @@ export default function NuevoEjercicioPage() {
               <select
                 value={form.courseId}
                 onChange={(e) => setForm({ ...form, courseId: e.target.value })}
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Selecciona un curso...</option>
                 {courses.map((c) => (
@@ -225,7 +225,7 @@ export default function NuevoEjercicioPage() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={2}
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -235,7 +235,7 @@ export default function NuevoEjercicioPage() {
                 value={form.instructions}
                 onChange={(e) => setForm({ ...form, instructions: e.target.value })}
                 rows={4}
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function NuevoEjercicioPage() {
                 <label className="text-sm font-medium text-gray-700">Dificultad</label>
                 <div className="flex flex-col gap-2">
                   {DIFFICULTIES.map((d) => (
-                    <label key={d.value} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${form.difficulty === d.value ? 'border-teal-400 bg-teal-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <label key={d.value} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${form.difficulty === d.value ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
                       <input type="radio" name="difficulty" value={d.value} checked={form.difficulty === d.value} onChange={(e) => setForm({ ...form, difficulty: e.target.value })} className="sr-only" />
                       <span className={`text-sm font-medium ${d.color}`}>{d.label}</span>
                     </label>
@@ -259,7 +259,7 @@ export default function NuevoEjercicioPage() {
                 <label className="text-sm font-medium text-gray-700">Tipo de ejercicio</label>
                 <div className="flex flex-col gap-2">
                   {TYPES.map((t) => (
-                    <label key={t.value} className={`flex flex-col gap-0.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${form.type === t.value ? 'border-teal-400 bg-teal-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <label key={t.value} className={`flex flex-col gap-0.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${form.type === t.value ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
                       <input type="radio" name="type" value={t.value} checked={form.type === t.value} onChange={(e) => setForm({ ...form, type: e.target.value })} className="sr-only" />
                       <span className="text-sm font-medium text-gray-900">{t.label}</span>
                       <span className="text-xs text-gray-500 leading-snug">{t.desc}</span>
@@ -300,14 +300,14 @@ export default function NuevoEjercicioPage() {
             {errors.rubrics && <p className="text-xs text-red-600">{errors.rubrics}</p>}
 
             {/* Criteria reference */}
-            <details className="bg-teal-50 border border-teal-200 rounded-xl text-xs">
-              <summary className="px-4 py-2.5 cursor-pointer font-semibold text-teal-700 select-none">
+            <details className="bg-blue-50 border border-blue-200 rounded-xl text-xs">
+              <summary className="px-4 py-2.5 cursor-pointer font-semibold text-blue-700 select-none">
                 ℹ️ Criterios disponibles para auto-calificación
               </summary>
               <div className="px-4 pb-4 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-600">
                 {CRITERIA_OPTIONS.filter(c => c.value).map(c => (
                   <div key={c.value} className="flex items-start gap-1.5">
-                    <code className="text-teal-700 font-mono shrink-0">{c.value}</code>
+                    <code className="text-blue-700 font-mono shrink-0">{c.value}</code>
                     <span className="text-gray-500">— {c.hint}</span>
                   </div>
                 ))}
@@ -328,7 +328,7 @@ export default function NuevoEjercicioPage() {
                           if (opt?.defaultExpected !== undefined && !r.expectedValue)
                             updateRubric(i, 'expectedValue', opt.defaultExpected);
                         }}
-                        className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         {CRITERIA_OPTIONS.map(c => (
                           <option key={c.value} value={c.value}>{c.label}</option>
@@ -373,12 +373,12 @@ export default function NuevoEjercicioPage() {
             </p>
 
             {/* Exam mode toggle */}
-            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:border-teal-300 hover:bg-teal-50 transition-colors">
+            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
               <input
                 type="checkbox"
                 checked={examMode}
                 onChange={e => setExamMode(e.target.checked)}
-                className="rounded w-4 h-4 accent-teal-600"
+                className="rounded w-4 h-4 accent-blue-600"
               />
               <div>
                 <span className="text-sm font-medium text-gray-800">Activar Modo Examen</span>
@@ -389,7 +389,7 @@ export default function NuevoEjercicioPage() {
             </label>
 
             {examMode && (
-              <div className="space-y-4 pl-4 border-l-2 border-teal-200">
+              <div className="space-y-4 pl-4 border-l-2 border-blue-200">
                 <Input
                   label="Tiempo límite (minutos) *"
                   type="number"
@@ -406,7 +406,7 @@ export default function NuevoEjercicioPage() {
                       type="datetime-local"
                       value={examStartsAt}
                       onChange={e => setExamStartsAt(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-xs text-gray-400">Cuando el examen estará disponible</p>
                   </div>
@@ -416,7 +416,7 @@ export default function NuevoEjercicioPage() {
                       type="datetime-local"
                       value={examEndsAt}
                       onChange={e => setExamEndsAt(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-xs text-gray-400">Fecha límite para comenzar</p>
                   </div>
@@ -445,7 +445,7 @@ export default function NuevoEjercicioPage() {
                 <label className="text-sm font-medium text-gray-700">{label}</label>
                 <textarea value={hints[key]} onChange={e => setHints({ ...hints, [key]: e.target.value })}
                   placeholder={`Pista para ${label}...`} rows={2}
-                  className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
+                  className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
               </div>
             ))}
           </div>

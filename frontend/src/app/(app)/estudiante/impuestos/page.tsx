@@ -83,7 +83,7 @@ const TYPE_ROUTE: Record<string, string> = {
 };
 
 const TYPE_COLOR: Record<string, string> = {
-  D104_IVA:        'bg-teal-100 text-teal-700',
+  D104_IVA:        'bg-blue-100 text-blue-700',
   D101_RENTA:      'bg-emerald-100 text-emerald-600',
   D103_RETENCION:  'bg-orange-100 text-orange-600',
   D115_DIVIDENDOS: 'bg-slate-100 text-slate-600',
@@ -166,8 +166,8 @@ export default function ImpuestosPage() {
 
       {/* ── Header ── */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
-          <Receipt className="w-5 h-5 text-teal-700" />
+        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+          <Receipt className="w-5 h-5 text-blue-700" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Declaraciones Tributarias</h1>
@@ -178,18 +178,18 @@ export default function ImpuestosPage() {
       {/* ── Perfil contribuyente (si existe) ── */}
       {perfil && (
         <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-4 h-4 text-teal-700" />
+          <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+            <Building2 className="w-4 h-4 text-blue-700" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-gray-900 uppercase truncate">{perfil.razonSocial || 'Razón social no registrada'}</p>
             <p className="text-xs text-gray-500">
               {perfil.cedula || 'Sin cédula'} ·{' '}
-              <span className="text-teal-700 font-medium">{perfil.actividadCodigo} – {perfil.actividadNombre}</span>
+              <span className="text-blue-700 font-medium">{perfil.actividadCodigo} – {perfil.actividadNombre}</span>
             </p>
           </div>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-            perfil.tipoPersona === 'JURIDICA' ? 'bg-teal-50 text-teal-700' : 'bg-slate-100 text-slate-600'
+            perfil.tipoPersona === 'JURIDICA' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'
           }`}>
             {perfil.tipoPersona === 'JURIDICA' ? 'Jurídica' : 'Física'}
           </span>
@@ -206,8 +206,8 @@ export default function ImpuestosPage() {
           {/* D-104 */}
           <div className={`px-4 py-3 ${d104Due.urgent ? 'bg-red-50' : d104Due.overdue ? 'bg-red-100' : ''}`}>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-lg bg-teal-100 flex items-center justify-center">
-                <FileText className="w-3.5 h-3.5 text-teal-700" />
+              <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                <FileText className="w-3.5 h-3.5 text-blue-700" />
               </div>
               <div>
                 <p className="text-xs font-bold text-gray-800">D-104 — IVA Mensual</p>
@@ -254,8 +254,8 @@ export default function ImpuestosPage() {
       </div>
 
       {/* ── Flujo real de TRIBU CR ── */}
-      <div className="bg-teal-50 border border-teal-100 rounded-xl p-4">
-        <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+        <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
           <Bell className="w-3.5 h-3.5" /> ¿Cómo funciona el proceso real en Hacienda?
         </p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -266,12 +266,12 @@ export default function ImpuestosPage() {
             { step: '4', title: 'Presentar y pagar', desc: 'Presenta antes del día 15. Si hay impuesto a pagar, cancela en el banco o directamente en ATV.' },
           ].map(({ step, title, desc }) => (
             <div key={step} className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
                 {step}
               </div>
               <div>
-                <p className="text-xs font-bold text-teal-800">{title}</p>
-                <p className="text-xs text-teal-700 leading-relaxed">{desc}</p>
+                <p className="text-xs font-bold text-blue-800">{title}</p>
+                <p className="text-xs text-blue-700 leading-relaxed">{desc}</p>
               </div>
             </div>
           ))}
@@ -283,29 +283,29 @@ export default function ImpuestosPage() {
         <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-3">Formularios disponibles</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link href="/estudiante/impuestos/d104"
-            className="group block bg-white border-2 border-gray-200 hover:border-teal-300 rounded-xl p-5 transition-all hover:shadow-md">
+            className="group block bg-white border-2 border-gray-200 hover:border-blue-300 rounded-xl p-5 transition-all hover:shadow-md">
             <div className="flex items-start justify-between">
-              <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center mb-4">
-                <FileText className="w-6 h-6 text-teal-700" />
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4">
+                <FileText className="w-6 h-6 text-blue-700" />
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-teal-600 transition-colors mt-1" />
+              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-600 transition-colors mt-1" />
             </div>
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-lg font-bold text-gray-900">D-104</h2>
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                d104Due.urgent ? 'bg-red-100 text-red-700' : 'bg-teal-50 text-teal-700'
+                d104Due.urgent ? 'bg-red-100 text-red-700' : 'bg-blue-50 text-blue-700'
               }`}>
                 {d104Due.urgent ? '¡Vence pronto!' : `Vence ${d104Due.text}`}
               </span>
             </div>
-            <p className="text-sm font-semibold text-teal-700 mb-2">Declaración IVA mensual</p>
+            <p className="text-sm font-semibold text-blue-700 mb-2">Declaración IVA mensual</p>
             <p className="text-xs text-gray-500 leading-relaxed">
               Impuesto al Valor Agregado. Ventas gravadas por tarifa (13%, 8%, 4%, 2%, 1%),
               crédito fiscal de compras e impuesto neto del período.
             </p>
             <div className="mt-3 flex flex-wrap gap-1">
               {['13%', '8%', '4%', '2%', '1%'].map(t => (
-                <span key={t} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">{t}</span>
+                <span key={t} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">{t}</span>
               ))}
             </div>
           </Link>
@@ -457,7 +457,7 @@ export default function ImpuestosPage() {
                     {d.status === 'DRAFT' ? (
                       <Link
                         href={`/estudiante/impuestos/${TYPE_ROUTE[d.type] ?? 'd104'}?id=${d.id}`}
-                        className="flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 px-2 py-1 rounded-full transition-colors"
+                        className="flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full transition-colors"
                       >
                         <Edit2 className="w-3 h-3" /> Editar
                       </Link>
@@ -469,7 +469,7 @@ export default function ImpuestosPage() {
                               await downloadDeclarationPdf(d.id, `${d.type}-${d.period}.pdf`);
                             } catch { toast.error('No se pudo descargar el PDF'); }
                           }}
-                          className="flex items-center gap-1 text-xs font-medium text-teal-700 bg-teal-50 hover:bg-teal-100 px-2 py-1 rounded-full transition-colors"
+                          className="flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-full transition-colors"
                           title="Descargar comprobante PDF"
                         >
                           <Download className="w-3 h-3" /> PDF

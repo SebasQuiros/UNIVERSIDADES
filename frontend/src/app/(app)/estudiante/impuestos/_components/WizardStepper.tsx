@@ -22,7 +22,7 @@ export function WizardStepper({ steps, currentStep, completedSteps = [] }: Wizar
         {/* Connector line behind steps */}
         <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-200 z-0" />
         <div
-          className="absolute top-4 left-0 h-0.5 bg-teal-600 z-0 transition-all duration-500"
+          className="absolute top-4 left-0 h-0.5 bg-blue-600 z-0 transition-all duration-500"
           style={{ width: `${currentStep === 0 ? 0 : (currentStep / (steps.length - 1)) * 100}%` }}
         />
 
@@ -35,15 +35,15 @@ export function WizardStepper({ steps, currentStep, completedSteps = [] }: Wizar
             <div key={step.id} className="relative z-10 flex flex-col items-center gap-1.5">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all duration-300 ${
                 isDone
-                  ? 'bg-teal-600 border-teal-600 text-white'
+                  ? 'bg-blue-600 border-blue-600 text-white'
                   : isActive
-                  ? 'bg-white border-teal-600 text-teal-600 shadow-md shadow-teal-100'
+                  ? 'bg-white border-blue-600 text-blue-600 shadow-md shadow-blue-100'
                   : 'bg-white border-gray-200 text-gray-400'
               }`}>
                 {isDone ? <CheckCircle2 className="w-4 h-4" /> : idx + 1}
               </div>
               <span className={`text-xs font-medium text-center whitespace-nowrap ${
-                isActive ? 'text-teal-700' : isDone ? 'text-gray-600' : 'text-gray-400'
+                isActive ? 'text-blue-700' : isDone ? 'text-gray-600' : 'text-gray-400'
               }`}>
                 {step.label}
               </span>
@@ -61,14 +61,14 @@ export function WizardStepper({ steps, currentStep, completedSteps = [] }: Wizar
             <div key={step.id} className="flex flex-col items-center gap-1">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
                 isDone
-                  ? 'bg-teal-600 border-teal-600 text-white'
+                  ? 'bg-blue-600 border-blue-600 text-white'
                   : isActive
-                  ? 'bg-white border-teal-600 text-teal-600'
+                  ? 'bg-white border-blue-600 text-blue-600'
                   : 'bg-white border-gray-200 text-gray-300'
               }`}>
                 {isDone ? '✓' : idx + 1}
               </div>
-              <span className={`text-[10px] font-medium ${isActive ? 'text-teal-700' : 'text-gray-400'}`}>
+              <span className={`text-[10px] font-medium ${isActive ? 'text-blue-700' : 'text-gray-400'}`}>
                 {step.shortLabel ?? step.label}
               </span>
             </div>

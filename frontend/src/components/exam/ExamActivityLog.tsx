@@ -94,7 +94,7 @@ export function ExamActivityLog({ attemptId, defaultExpanded = false }: ExamActi
               className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
                 hasCheating
                   ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                  : 'bg-teal-100 text-teal-700 border border-teal-200'
+                  : 'bg-blue-100 text-blue-700 border border-blue-200'
               }`}
             >
               {hasCheating && <AlertTriangle className="w-3 h-3" />}

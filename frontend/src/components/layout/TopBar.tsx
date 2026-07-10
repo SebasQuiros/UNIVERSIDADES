@@ -79,7 +79,7 @@ export function TopBar() {
       <button
         type="button"
         onClick={() => window.dispatchEvent(new Event('contasj:cmdk'))}
-        className="ml-auto hidden xl:flex items-center gap-2 px-3 h-9 rounded-lg w-72 transition-colors hover:border-teal-300"
+        className="ml-auto hidden xl:flex items-center gap-2 px-3 h-9 rounded-lg w-72 transition-colors hover:border-blue-300"
         style={{ background: '#EEF2F4', border: '1px solid #E1E7EA' }}
       >
         <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -115,7 +115,7 @@ export function TopBar() {
 
         <Link href="/estudiante/perfil" className="flex items-center gap-2.5 pl-1 pr-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">
           <div className="w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-sm flex-shrink-0 font-mono"
-            style={{ background: '#0D9488' }}>
+            style={{ background: '#2563EB' }}>
             {user?.avatarUrl
               ? <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-md object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />

@@ -108,7 +108,7 @@ export default function AdminDashboard() {
               label="Estudiantes"
               value={stats?.totalStudents ?? 0}
               icon={GraduationCap}
-              color="bg-teal-50 text-teal-600"
+              color="bg-blue-50 text-blue-600"
             />
             <StatCard
               label="Profesores"
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
               label="Intentos calificados"
               value={stats?.totalGraded ?? 0}
               icon={CheckCircle2}
-              color="bg-teal-50 text-teal-600"
+              color="bg-blue-50 text-blue-600"
             />
             <StatCard
               label="Nota promedio"
@@ -178,8 +178,8 @@ export default function AdminDashboard() {
             title: 'Gestión de Cursos',
             desc: 'Ver todos los cursos activos de la universidad',
             icon: BookOpen,
-            color: 'text-teal-600',
-            bg: 'bg-teal-50',
+            color: 'text-blue-600',
+            bg: 'bg-blue-50',
           },
         ].map((item) => (
           <Link key={item.href} href={item.href}

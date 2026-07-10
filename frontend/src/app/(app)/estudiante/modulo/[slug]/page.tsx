@@ -216,7 +216,7 @@ export default function ModuloPage() {
         <div className="max-w-md mx-auto text-center py-20">
           <Package className="w-10 h-10 mx-auto text-gray-300 mb-3" />
           <h1 className="text-lg font-bold text-gray-800">Sección no encontrada</h1>
-          <Link href="/estudiante" className="text-teal-700 text-sm font-semibold">Volver al inicio</Link>
+          <Link href="/estudiante" className="text-blue-700 text-sm font-semibold">Volver al inicio</Link>
         </div>
       </div>
     );
@@ -232,8 +232,8 @@ export default function ModuloPage() {
         {/* Header */}
         <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#0D948818' }}>
-              <Icon className="w-5 h-5" style={{ color: '#0D9488' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#2563EB18' }}>
+              <Icon className="w-5 h-5" style={{ color: '#2563EB' }} />
             </div>
             <div>
               {area && <p className="text-[11px] font-mono font-semibold uppercase tracking-wide text-gray-400">{area}</p>}
@@ -244,7 +244,7 @@ export default function ModuloPage() {
           {cfg.create && (
             <button onClick={soon}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg text-sm font-semibold text-white"
-              style={{ background: '#0D9488' }}>
+              style={{ background: '#2563EB' }}>
               <Plus className="w-4 h-4" /> {cfg.create}
             </button>
           )}
@@ -288,14 +288,14 @@ export default function ModuloPage() {
                   <td colSpan={cfg.cols.length} className="px-4">
                     <div className="flex flex-col items-center justify-center text-center py-16">
                       <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-                        style={{ background: 'linear-gradient(135deg,#F0FDFA,#F1F5F9)', boxShadow: '0 0 0 1px rgba(13,148,136,0.12), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-                        <div className="absolute inset-0 rounded-2xl" style={{ background: 'radial-gradient(circle at 50% 30%, rgba(13,148,136,0.14), transparent 70%)' }} />
-                        <Icon className="relative w-7 h-7" style={{ color: '#0D9488' }} />
+                        style={{ background: 'linear-gradient(135deg,#F0FDFA,#F1F5F9)', boxShadow: '0 0 0 1px rgba(37,99,235,0.12), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
+                        <div className="absolute inset-0 rounded-2xl" style={{ background: 'radial-gradient(circle at 50% 30%, rgba(37,99,235,0.14), transparent 70%)' }} />
+                        <Icon className="relative w-7 h-7" style={{ color: '#2563EB' }} />
                       </div>
                       <h3 className="text-gray-700 font-semibold">{cfg.emptyTitle}</h3>
                       <p className="text-gray-400 text-sm mt-1 max-w-sm">{cfg.emptyHint}</p>
                       {cfg.create && (
-                        <button onClick={soon} className="mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white" style={{ background: '#0D9488' }}>
+                        <button onClick={soon} className="mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white" style={{ background: '#2563EB' }}>
                           <Plus className="w-4 h-4" /> {cfg.create}
                         </button>
                       )}

@@ -165,7 +165,7 @@ export default function PendientesPage() {
           {/* In progress */}
           {inProgress.length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold text-teal-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <Clock className="w-4 h-4" /> En progreso ({inProgress.length})
               </h3>
               <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">

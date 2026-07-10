@@ -247,7 +247,7 @@ export default function CourseAnalyticsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               {course.code && (
-                <span className="text-xs font-mono text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
                   {course.code}
                 </span>
               )}
@@ -279,7 +279,7 @@ export default function CourseAnalyticsPage() {
           label="Total Estudiantes"
           value={totalStudents}
           icon={Users}
-          colorClass="bg-teal-50 text-teal-700"
+          colorClass="bg-blue-50 text-blue-700"
           sub={`${overallStats.studentsCompleted} completaron todo`}
         />
         <StatCard
@@ -311,7 +311,7 @@ export default function CourseAnalyticsPage() {
         {/* Grade Distribution Chart */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <BarChart2 className="w-4 h-4 text-teal-700" />
+            <BarChart2 className="w-4 h-4 text-blue-700" />
             Distribución de Notas
           </h2>
           <GradeDistributionChart dist={gradeDistribution} />
@@ -334,7 +334,7 @@ export default function CourseAnalyticsPage() {
         {/* Quick overview */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
           <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-teal-700" />
+            <Activity className="w-4 h-4 text-blue-700" />
             Resumen del Curso
           </h2>
           <div className="space-y-3">
@@ -398,7 +398,7 @@ export default function CourseAnalyticsPage() {
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Users className="w-4 h-4 text-teal-700" />
+            <Users className="w-4 h-4 text-blue-700" />
             Progreso por Estudiante
           </h2>
           <span className="text-xs text-gray-400">{studentProgress.length} estudiante{studentProgress.length !== 1 ? 's' : ''}</span>
@@ -428,7 +428,7 @@ export default function CourseAnalyticsPage() {
                     {/* Name / Email */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
                           {sp.studentName.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
@@ -447,7 +447,7 @@ export default function CourseAnalyticsPage() {
                               sp.completionPct === 100
                                 ? 'bg-emerald-500'
                                 : sp.completionPct > 0
-                                ? 'bg-teal-600'
+                                ? 'bg-blue-600'
                                 : 'bg-gray-300'
                             }`}
                             style={{ width: `${sp.completionPct}%` }}
@@ -515,7 +515,7 @@ export default function CourseAnalyticsPage() {
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-teal-700" />
+            <BookOpen className="w-4 h-4 text-blue-700" />
             Estado por Ejercicio
           </h2>
           <span className="text-xs text-gray-400">{exerciseStats.length} ejercicio{exerciseStats.length !== 1 ? 's' : ''} publicados</span>
@@ -549,7 +549,7 @@ export default function CourseAnalyticsPage() {
                     <td className="px-4 py-4 text-center text-gray-600">{ex.totalAttempts}</td>
                     <td className="px-4 py-4 text-center">
                       {ex.submitted > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-50 border border-teal-200 text-teal-700 text-xs font-medium rounded-full">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium rounded-full">
                           {ex.submitted}
                         </span>
                       ) : (

@@ -13,9 +13,11 @@ import {
 } from 'lucide-react';
 
 // ── Paleta v2 (plana, "libro mayor") ───────────────────────────
-const TEAL = '#0D9488';
-const SIDE_BG = '#0E141B';
-const SIDE_LINE = 'rgba(255,255,255,0.10)';
+const TEAL = '#3B82F6';                                        // acento (logo, badge)
+const ACTIVE = 'linear-gradient(90deg,#1E3A8A,#0F2657)';        // item activo (navy)
+const ACTIVE_GLOW = '0 2px 12px rgba(59,130,246,0.35)';
+const SIDE_BG = 'linear-gradient(180deg,#03080F 0%,#060F1C 100%)';
+const SIDE_LINE = 'rgba(59,130,246,0.12)';
 const TXT = 'rgba(255,255,255,0.85)';
 const TXT_FAINT = 'rgba(255,255,255,0.55)';
 
@@ -181,7 +183,7 @@ export function StudentSidebar() {
       return (
         <Link key={g.key} href={g.href!} onClick={() => setOpen(false)}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors duration-100"
-          style={active ? { background: TEAL, color: '#fff' } : { color: muted ? TXT_FAINT : TXT }}
+          style={active ? { background: ACTIVE, color: '#fff', boxShadow: ACTIVE_GLOW } : { color: muted ? TXT_FAINT : TXT }}
           onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#fff'; } }}
           onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = muted ? TXT_FAINT : TXT; } }}>
           <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: active ? '#fff' : 'rgba(255,255,255,0.7)' }} />
@@ -216,7 +218,7 @@ export function StudentSidebar() {
               return (
                 <Link key={s.label} href={href} onClick={() => setOpen(false)}
                   className="flex items-center px-3 py-1.5 rounded-md text-[13px] transition-colors"
-                  style={active ? { background: TEAL, color: '#fff' } : { color: TXT }}
+                  style={active ? { background: ACTIVE, color: '#fff', boxShadow: ACTIVE_GLOW } : { color: TXT }}
                   onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#fff'; } }}
                   onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = TXT; } }}>
                   <span className="flex-1">{s.label}</span>
@@ -247,7 +249,7 @@ export function StudentSidebar() {
           {university.logoUrl ? (
             <img src={university.logoUrl} alt={university.name} className="w-5 h-5 rounded object-contain flex-shrink-0" style={{ opacity: 0.85 }} />
           ) : (
-            <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[11px] font-bold font-mono" style={{ background: 'rgba(13,148,136,0.28)', color: '#5EEAD4' }}>
+            <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[11px] font-bold font-mono" style={{ background: 'rgba(37,99,235,0.28)', color: '#93C5FD' }}>
               {(university.shortName ?? university.name).charAt(0)}
             </div>
           )}
@@ -256,7 +258,7 @@ export function StudentSidebar() {
       )}
 
       {!activeId && (
-        <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(13,148,136,0.12)', border: '1px solid rgba(13,148,136,0.3)', color: '#7FE3CE' }}>
+        <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', color: '#7FE3CE' }}>
           Inicia un ejercicio para operar tu empresa.
         </div>
       )}
@@ -273,7 +275,7 @@ export function StudentSidebar() {
           className="flex items-center gap-3 px-2.5 py-2 mb-1 rounded-md transition-colors" style={{ border: `1px solid ${SIDE_LINE}` }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; }}>
-          <div className="w-7 h-7 rounded flex items-center justify-center text-white font-bold text-[12px] font-mono flex-shrink-0" style={{ background: '#242A31' }}>
+          <div className="w-7 h-7 rounded flex items-center justify-center text-white font-bold text-[12px] font-mono flex-shrink-0" style={{ background: '#1B2E6E' }}>
             {user?.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-7 h-7 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : user?.name?.charAt(0)?.toUpperCase() ?? 'E'}
           </div>
           <div className="flex-1 min-w-0">

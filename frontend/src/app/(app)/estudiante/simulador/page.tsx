@@ -49,10 +49,10 @@ export default function SimuladorPage() {
     <div className="p-4 lg:p-6 space-y-6 max-w-6xl mx-auto">
       {/* ── Header ── */}
       <div className="rounded-xl overflow-hidden text-white"
-        style={{ background: '#0E141B' }}>
+        style={{ background: '#03080F' }}>
         <div className="px-6 py-5 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: '#0D9488' }}>
+            style={{ background: '#2563EB' }}>
             <LineChart className="w-6 h-6" />
           </div>
           <div className="min-w-0">
@@ -63,7 +63,7 @@ export default function SimuladorPage() {
           </div>
         </div>
         {/* mini-leyenda de capas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px" style={{ background: 'rgba(13,148,136,0.15)' }}>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px" style={{ background: 'rgba(37,99,235,0.15)' }}>
           <Layer icon={<TrendingUp className="w-4 h-4" />} label="Precio de acción" />
           <Layer icon={<Globe className="w-4 h-4" />} label="Indicadores macro" />
           <Layer icon={<Sparkles className="w-4 h-4" />} label="Gerente IA" />
@@ -80,7 +80,7 @@ export default function SimuladorPage() {
             Crea tu empresa dentro de un ejercicio para ver su simulación financiera.
           </p>
           <Link href="/estudiante" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white"
-            style={{ background: '#0D9488' }}>
+            style={{ background: '#2563EB' }}>
             Ir a mis ejercicios
           </Link>
         </div>
@@ -99,7 +99,7 @@ export default function SimuladorPage() {
                     <button key={c.id} onClick={() => setSelectedId(c.id)}
                       className="px-3.5 py-2 rounded-xl text-sm font-medium border transition-colors flex items-center gap-2"
                       style={active
-                        ? { background: '#0D9488', color: '#fff', borderColor: '#0D9488' }
+                        ? { background: '#2563EB', color: '#fff', borderColor: '#2563EB' }
                         : { background: '#fff', color: '#334155', borderColor: '#E2E8F0' }}>
                       <Building2 className="w-3.5 h-3.5" />
                       {c.name}
@@ -140,8 +140,8 @@ export default function SimuladorPage() {
 
 function Layer({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="px-3 py-2.5 flex items-center gap-2" style={{ background: '#0E141B' }}>
-      <span style={{ color: '#14B8A6' }}>{icon}</span>
+    <div className="px-3 py-2.5 flex items-center gap-2" style={{ background: '#03080F' }}>
+      <span style={{ color: '#60A5FA' }}>{icon}</span>
       <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>{label}</span>
     </div>
   );

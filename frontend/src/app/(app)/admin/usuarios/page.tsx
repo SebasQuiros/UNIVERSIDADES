@@ -70,7 +70,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  STUDENT:    'bg-teal-50 text-teal-700 border-teal-200',
+  STUDENT:    'bg-blue-50 text-blue-700 border-blue-200',
   TEACHER:    'bg-emerald-50 text-emerald-700 border-emerald-200',
   ADMIN:      'bg-slate-100 text-slate-700 border-slate-200',
   SUPERADMIN: 'bg-red-50 text-red-700 border-red-200',
@@ -162,7 +162,7 @@ function CreateUserModal({
             <select
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-shadow"
+              className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
             >
               <option value="STUDENT">Estudiante</option>
               <option value="TEACHER">Profesor</option>
@@ -244,7 +244,7 @@ function CredentialsModal({
               <span className="flex-1 text-sm font-mono text-gray-800 truncate">{user.email}</span>
               <button
                 onClick={() => copy(user.email, setCopiedEmail)}
-                className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                 title="Copiar email"
               >
                 {copiedEmail ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -272,7 +272,7 @@ function CredentialsModal({
           {/* Copy all button */}
           <button
             onClick={copyAll}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50 transition-all"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-all"
           >
             {copiedAll ? (
               <><CheckCheck className="w-4 h-4 text-emerald-500" /><span className="text-emerald-600">¡Credenciales copiadas!</span></>
@@ -351,9 +351,9 @@ function RoleEditor({
               <button
                 key={r}
                 onClick={() => handleRoleChange(r)}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${r === user.role ? 'font-semibold text-teal-700' : 'text-gray-700'}`}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${r === user.role ? 'font-semibold text-blue-700' : 'text-gray-700'}`}
               >
-                {r === user.role && <span className="w-1.5 h-1.5 rounded-full bg-teal-600 flex-shrink-0" />}
+                {r === user.role && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 flex-shrink-0" />}
                 {r !== user.role && <span className="w-1.5 h-1.5 flex-shrink-0" />}
                 {ROLE_LABELS[r]}
               </button>
@@ -495,7 +495,7 @@ export default function UsuariosPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Estudiantes',        value: counts.STUDENT, icon: GraduationCap, color: 'text-teal-600',   bg: 'bg-teal-50',   filter: 'STUDENT' },
+          { label: 'Estudiantes',        value: counts.STUDENT, icon: GraduationCap, color: 'text-blue-600',   bg: 'bg-blue-50',   filter: 'STUDENT' },
           { label: 'Profesores',         value: counts.TEACHER, icon: BookOpen,      color: 'text-emerald-600',bg: 'bg-emerald-50',filter: 'TEACHER' },
           { label: 'Admins',             value: counts.ADMIN,   icon: ShieldCheck,   color: 'text-slate-600', bg: 'bg-slate-100', filter: 'ADMIN'   },
           { label: 'Contraseña pendiente',value: counts.pending, icon: KeyRound,     color: 'text-amber-600',  bg: 'bg-amber-50',  filter: ''        },
@@ -505,7 +505,7 @@ export default function UsuariosPage() {
             onClick={() => s.filter ? setRoleFilter(roleFilter === s.filter ? '' : s.filter) : setStatusFilter(statusFilter === 'pending' ? '' : 'pending')}
             className={`p-4 rounded-xl border border-gray-200 bg-white shadow-sm text-center transition-all hover:shadow-md hover:border-gray-300 ${
               (s.filter && roleFilter === s.filter) || (!s.filter && statusFilter === 'pending')
-                ? 'ring-2 ring-teal-500 border-teal-300'
+                ? 'ring-2 ring-blue-500 border-blue-300'
                 : ''
             }`}
           >
@@ -526,13 +526,13 @@ export default function UsuariosPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nombre o email…"
-            className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition-shadow"
+            className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
           />
         </div>
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="rounded-xl bg-white border border-gray-300 text-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="rounded-xl bg-white border border-gray-300 text-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Todos los roles</option>
           <option value="STUDENT">Estudiantes</option>
@@ -542,7 +542,7 @@ export default function UsuariosPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl bg-white border border-gray-300 text-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="rounded-xl bg-white border border-gray-300 text-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Todos los estados</option>
           <option value="active">Activos</option>
@@ -572,7 +572,7 @@ export default function UsuariosPage() {
             {search || roleFilter || statusFilter ? 'Sin resultados para los filtros aplicados' : 'No hay usuarios registrados'}
           </p>
           {!search && !roleFilter && !statusFilter && (
-            <button onClick={() => setShowCreate(true)} className="mt-4 text-sm text-teal-700 hover:underline">
+            <button onClick={() => setShowCreate(true)} className="mt-4 text-sm text-blue-700 hover:underline">
               Crear el primer usuario
             </button>
           )}
@@ -598,7 +598,7 @@ export default function UsuariosPage() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                          u.isActive ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 text-gray-500'
+                          u.isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
                         }`}>
                           {u.name.charAt(0).toUpperCase()}
                         </div>

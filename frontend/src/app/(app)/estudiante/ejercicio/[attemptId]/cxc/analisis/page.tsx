@@ -153,7 +153,7 @@ export default function CxCAnalisisPage() {
         {/* ── Customer ledger ──────────────────────────────── */}
         <Card>
           <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Users className="w-4 h-4 text-teal-700" />
+            <Users className="w-4 h-4 text-blue-700" />
             <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
               Saldo por cliente
             </h2>
@@ -186,7 +186,7 @@ export default function CxCAnalisisPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {consolidated.clients.map(c => (
-                    <tr key={c.clientId} className="hover:bg-teal-50/40">
+                    <tr key={c.clientId} className="hover:bg-blue-50/40">
                       <td className="px-4 py-2 font-medium text-gray-900">{c.clientName}</td>
                       <td className="px-4 py-2 text-gray-500 text-xs">{c.identification ?? '—'}</td>
                       <td className="px-4 py-2 text-right font-mono text-gray-700">{fmtMoney(c.totalBilled)}</td>

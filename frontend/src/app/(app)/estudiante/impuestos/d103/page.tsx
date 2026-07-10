@@ -85,7 +85,7 @@ function SectionHeader({ title, color = 'orange' }: { title: string; color?: str
   const colors: Record<string, string> = {
     orange: 'bg-orange-600 text-white',
     gray:   'bg-gray-700 text-white',
-    blue:   'bg-teal-700 text-white',
+    blue:   'bg-blue-700 text-white',
   };
   return (
     <div className={`flex items-center gap-3 px-4 py-2.5 rounded-t-xl ${colors[color] ?? colors.orange}`}>
@@ -512,7 +512,7 @@ export default function D103Page() {
                   } catch { toast.error('No se pudo descargar el PDF'); }
                 }}
                 disabled={!declId}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-teal-700 hover:bg-teal-700 rounded-xl transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50"
               >
                 <Download className="w-4 h-4" /> Descargar comprobante PDF
               </button>

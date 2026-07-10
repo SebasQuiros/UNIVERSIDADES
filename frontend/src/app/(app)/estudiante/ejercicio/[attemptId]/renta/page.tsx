@@ -126,7 +126,7 @@ function SectionTitle({ icon: Icon, title, color = 'emerald' }: {
 }) {
   const colors: Record<string, string> = {
     emerald: 'bg-emerald-700 text-white',
-    blue:    'bg-teal-700 text-white',
+    blue:    'bg-blue-700 text-white',
     purple:  'bg-slate-700 text-white',
     orange:  'bg-orange-600 text-white',
     red:     'bg-red-700 text-white',
@@ -147,7 +147,7 @@ function StatBox({ label, value, sub, color = 'gray' }: {
     gray:    'bg-gray-50  border-gray-200  text-gray-800',
     green:   'bg-emerald-50 border-emerald-200 text-emerald-800',
     red:     'bg-red-50   border-red-200   text-red-800',
-    blue:    'bg-teal-50  border-teal-200  text-teal-800',
+    blue:    'bg-blue-50  border-blue-200  text-blue-800',
     purple:  'bg-slate-50 border-slate-200 text-slate-800',
     orange:  'bg-orange-50 border-orange-200 text-orange-800',
   };
@@ -372,11 +372,11 @@ export default function RentaPage() {
 
         {/* ── No journal data warning ──────────────────────────────────── */}
         {result && !result.hasJournalData && (
-          <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
-            <Info className="w-5 h-5 text-teal-700 flex-shrink-0 mt-0.5" />
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-700 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-teal-800">Sin asientos contables para este período</p>
-              <p className="text-xs text-teal-700 mt-1">
+              <p className="text-sm font-bold text-blue-800">Sin asientos contables para este período</p>
+              <p className="text-xs text-blue-700 mt-1">
                 Aún no hay ingresos ni gastos registrados en el año {fiscalYear}.
                 Los cálculos aparecerán automáticamente al registrar asientos contables en las cuentas de ingresos (4.x.x) y gastos (5.x.x).
               </p>
@@ -412,7 +412,7 @@ export default function RentaPage() {
             <div className="px-5 pb-4">
               <div className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${
                 result.isSmallCompany
-                  ? 'bg-teal-50 text-teal-700 border border-teal-200'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
                   : 'bg-slate-50 text-slate-700 border border-slate-200'
               }`}>
                 <Building2 className="w-4 h-4 flex-shrink-0" />
@@ -485,9 +485,9 @@ export default function RentaPage() {
                 <p className="text-xs text-emerald-600 mb-1">(-) Pagos parciales</p>
                 <p className="font-mono font-bold text-emerald-700">₡ {fmt(result?.pagosParciales ?? 0)}</p>
               </div>
-              <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
-                <p className="text-xs text-teal-700 mb-1">(-) Retenciones recibidas</p>
-                <p className="font-mono font-bold text-teal-700">₡ {fmt(result?.retencionesRecibidas ?? 0)}</p>
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <p className="text-xs text-blue-700 mb-1">(-) Retenciones recibidas</p>
+                <p className="font-mono font-bold text-blue-700">₡ {fmt(result?.retencionesRecibidas ?? 0)}</p>
               </div>
             </div>
 
@@ -536,9 +536,9 @@ export default function RentaPage() {
           <div className="p-5 space-y-4">
 
             {/* Educational note */}
-            <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 flex items-start gap-2">
-              <Info className="w-4 h-4 text-teal-700 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-teal-700">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+              <Info className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-700">
                 Las empresas deben realizar <strong>4 pagos parciales</strong> durante el año fiscal: 25% del impuesto estimado en
                 cada trimestre (Art. 22 LISR). Los pagos son créditos contra el impuesto final del D-101.
               </p>
@@ -560,7 +560,7 @@ export default function RentaPage() {
                       value={estimatedTax}
                       onChange={e => setEstimatedTax(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-7 pr-3 py-2 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-300"
+                      className="w-full pl-7 pr-3 py-2 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                     />
                   </div>
                   {estimatedTax && parseFloat(estimatedTax) > 0 && (
@@ -572,7 +572,7 @@ export default function RentaPage() {
                 <button
                   onClick={handleSchedulePayments}
                   disabled={scheduling || !estimatedTax}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
                 >
                   {scheduling ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />

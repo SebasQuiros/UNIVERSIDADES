@@ -53,7 +53,7 @@ function SuperAdminSidebar() {
                   ? 'text-white'
                   : 'text-white/70 hover:text-white',
               )}
-              style={active ? { background: '#0D9488' } : undefined}
+              style={active ? { background: '#2563EB' } : undefined}
               onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
               onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = ''; }}
             >
@@ -89,12 +89,12 @@ function SuperAdminSidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 flex-shrink-0" style={{ background: '#0E141B' }}>
+      <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 flex-shrink-0" style={{ background: '#03080F' }}>
         {content}
       </aside>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/10 px-4 py-3 flex items-center justify-between" style={{ background: '#0E141B' }}>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 border-b border-white/10 px-4 py-3 flex items-center justify-between" style={{ background: '#03080F' }}>
         <h1 className="text-lg font-bold text-white">ContaSJ <span className="text-white/70">GROUP</span></h1>
         <button
           onClick={() => setOpen(!open)}
@@ -108,7 +108,7 @@ function SuperAdminSidebar() {
       {open && (
         <div className="lg:hidden fixed inset-0 z-30 flex">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <aside className="relative w-72 h-full overflow-y-auto" style={{ background: '#0E141B' }}>
+          <aside className="relative w-72 h-full overflow-y-auto" style={{ background: '#03080F' }}>
             <div className="pt-16">{content}</div>
           </aside>
         </div>

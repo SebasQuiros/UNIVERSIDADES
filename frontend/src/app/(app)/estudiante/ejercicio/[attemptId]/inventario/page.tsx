@@ -65,7 +65,7 @@ const fmtNum = (n: any, decimals = 2) =>
 
 const TYPE_BADGE: Record<string, { label: string; cls: string; icon: any }> = {
   PURCHASE:      { label: 'Compra',          cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: ArrowDownCircle },
-  INITIAL_STOCK: { label: 'Stock inicial',   cls: 'bg-teal-50 text-teal-700 border-teal-200',          icon: Layers          },
+  INITIAL_STOCK: { label: 'Stock inicial',   cls: 'bg-blue-50 text-blue-700 border-blue-200',          icon: Layers          },
   SALE:          { label: 'Venta',           cls: 'bg-red-50 text-red-700 border-red-200',             icon: ArrowUpCircle   },
   ADJUSTMENT:    { label: 'Ajuste',          cls: 'bg-amber-50 text-amber-700 border-amber-200',       icon: MinusCircle     },
   RETURN:        { label: 'Devolución',      cls: 'bg-slate-50 text-slate-700 border-slate-200',    icon: ArrowDownCircle },
@@ -143,7 +143,7 @@ export default function InventarioPage() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Boxes className="w-6 h-6 text-teal-700" />
+              <Boxes className="w-6 h-6 text-blue-700" />
               Inventario (FIFO)
             </h1>
             <p className="text-sm text-gray-500 mt-1">
@@ -192,7 +192,7 @@ export default function InventarioPage() {
                   <tr
                     key={item.productId}
                     onClick={() => openDetail(item)}
-                    className="cursor-pointer hover:bg-teal-50/40"
+                    className="cursor-pointer hover:bg-blue-50/40"
                   >
                     <td className="px-4 py-3 font-medium text-gray-900">{item.productName}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{item.sku ?? '—'}</td>
@@ -201,7 +201,7 @@ export default function InventarioPage() {
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-gray-700">₡ {fmtNum(item.avgUnitCost)}</td>
                     <td className="px-4 py-3 text-right font-mono font-semibold text-gray-900">₡ {fmtNum(item.cost)}</td>
-                    <td className="px-4 py-3 text-right text-teal-700 text-xs">Ver kardex →</td>
+                    <td className="px-4 py-3 text-right text-blue-700 text-xs">Ver kardex →</td>
                   </tr>
                 ))}
               </tbody>

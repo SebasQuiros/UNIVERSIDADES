@@ -86,22 +86,22 @@ export function ExchangeRateWidget({ onRateLoaded, compact = false }: ExchangeRa
   // ── Compact inline version ──────────────────────────────────────────────────
   if (compact) {
     return (
-      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-teal-800">
+      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
         <span className="text-sm">💱</span>
         {loading ? (
-          <RefreshCw className="w-3 h-3 animate-spin text-teal-600" />
+          <RefreshCw className="w-3 h-3 animate-spin text-blue-600" />
         ) : error && !rate ? (
           <span className="text-xs text-amber-600">TC no disponible</span>
         ) : rate ? (
           <>
             <span className="text-xs font-semibold font-mono tabular-nums">₡{rate.venta.toFixed(2)} / $1</span>
-            <span className="text-xs text-teal-700">({rate.source})</span>
+            <span className="text-xs text-blue-700">({rate.source})</span>
           </>
         ) : null}
         <button
           type="button"
           onClick={() => fetchRate(true)}
-          className="text-teal-500 hover:text-teal-700 ml-0.5"
+          className="text-blue-500 hover:text-blue-700 ml-0.5"
           title="Actualizar tipo de cambio"
           disabled={loading}
         >
@@ -113,18 +113,18 @@ export function ExchangeRateWidget({ onRateLoaded, compact = false }: ExchangeRa
 
   // ── Card version ───────────────────────────────────────────────────────────
   return (
-    <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+    <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         {/* Left: icon + label */}
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-teal-700 shrink-0" />
-          <span className="text-sm font-medium text-teal-800">Tipo de cambio BCCR</span>
+          <TrendingUp className="w-4 h-4 text-blue-700 shrink-0" />
+          <span className="text-sm font-medium text-blue-800">Tipo de cambio BCCR</span>
         </div>
 
         {/* Right: rate value + refresh */}
         <div className="flex items-center gap-2">
           {loading ? (
-            <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />
+            <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
           ) : error && !rate ? (
             <div className="flex items-center gap-1.5 text-amber-600">
               <AlertCircle className="w-4 h-4" />
@@ -132,10 +132,10 @@ export function ExchangeRateWidget({ onRateLoaded, compact = false }: ExchangeRa
             </div>
           ) : rate ? (
             <div className="text-right">
-              <p className="text-base font-bold font-mono tabular-nums text-teal-900">
+              <p className="text-base font-bold font-mono tabular-nums text-blue-900">
                 ₡{rate.venta.toFixed(2)} / $1
               </p>
-              <p className="text-xs text-teal-600">
+              <p className="text-xs text-blue-600">
                 Compra: ₡{rate.compra.toFixed(2)}
               </p>
             </div>
@@ -144,7 +144,7 @@ export function ExchangeRateWidget({ onRateLoaded, compact = false }: ExchangeRa
           <button
             type="button"
             onClick={() => fetchRate(true)}
-            className="p-1.5 rounded-lg text-teal-500 hover:text-teal-700 hover:bg-teal-100 transition-colors"
+            className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-colors"
             title="Actualizar tipo de cambio"
             disabled={loading}
           >
@@ -163,7 +163,7 @@ export function ExchangeRateWidget({ onRateLoaded, compact = false }: ExchangeRa
 
       {/* Footer: last updated + source */}
       {lastUpdated && !error && (
-        <p className="mt-1.5 text-xs text-teal-500">
+        <p className="mt-1.5 text-xs text-blue-500">
           Actualizado a las {formatTime(lastUpdated)} · Fuente: {rate?.source ?? 'BCCR'}
         </p>
       )}

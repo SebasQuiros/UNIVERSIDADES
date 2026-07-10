@@ -124,7 +124,7 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
             setError(null);
           }
         }}
-        className="inline-flex items-center gap-1.5 text-xs text-teal-600 hover:text-teal-800 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-teal-50 border border-teal-200 hover:border-teal-300"
+        className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
         title="Sugerencia de cuentas con IA"
       >
         <Sparkles className="w-3.5 h-3.5" />
@@ -135,7 +135,7 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
       {isOpen && (
         <div className="absolute bottom-full mb-2 left-0 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-80 overflow-hidden">
           {/* Popover header */}
-          <div className="flex items-center justify-between px-3 py-2.5 bg-teal-600 text-white">
+          <div className="flex items-center justify-between px-3 py-2.5 bg-blue-600 text-white">
             <div className="flex items-center gap-2">
               <Lightbulb className="w-4 h-4" />
               <span className="text-sm font-semibold">Sugerencia de cuentas</span>
@@ -143,7 +143,7 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="p-0.5 rounded hover:bg-teal-500 transition-colors"
+              className="p-0.5 rounded hover:bg-blue-600 transition-colors"
               aria-label="Cerrar"
             >
               <X className="w-3.5 h-3.5" />
@@ -164,14 +164,14 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
                 onChange={(e) => setDescription(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ej: Pago de alquiler de oficina..."
-                className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={handleSuggest}
                 disabled={isLoading || !description.trim()}
-                className="flex-shrink-0 bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Obtener sugerencia"
               >
                 {isLoading ? (
@@ -184,7 +184,7 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
 
             {/* Result */}
             {result && (
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 text-sm text-gray-800 leading-relaxed">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-gray-800 leading-relaxed">
                 {renderSuggestion(result)}
               </div>
             )}

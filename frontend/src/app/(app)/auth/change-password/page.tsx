@@ -69,7 +69,7 @@ export default function ChangePasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-teal-600 text-white text-2xl font-bold mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-blue-600 text-white text-2xl font-bold mb-4 shadow-lg">
             SJ
           </div>
           <h1 className="text-2xl font-bold text-gray-900">ContaSJ</h1>
@@ -98,7 +98,7 @@ export default function ChangePasswordPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                <Lock className="w-5 h-5 text-teal-700" />
+                <Lock className="w-5 h-5 text-blue-700" />
                 Establecer nueva contraseña
               </h2>
 
@@ -122,7 +122,7 @@ export default function ChangePasswordPage() {
                     required
                     minLength={8}
                     placeholder="Mínimo 8 caracteres"
-                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
                     type="button"
@@ -148,7 +148,7 @@ export default function ChangePasswordPage() {
                     onChange={handleChange}
                     required
                     placeholder="Repite la nueva contraseña"
-                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
                     type="button"
@@ -164,7 +164,7 @@ export default function ChangePasswordPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
+                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors text-sm"
               >
                 {isLoading ? 'Guardando…' : 'Cambiar contraseña'}
               </button>

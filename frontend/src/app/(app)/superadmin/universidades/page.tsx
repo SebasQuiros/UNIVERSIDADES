@@ -126,7 +126,7 @@ function CreateUniversityModal({
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Universidad Técnica Nacional"
-              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
@@ -138,7 +138,7 @@ function CreateUniversityModal({
                 value={form.shortName}
                 onChange={(e) => setForm({ ...form, shortName: e.target.value })}
                 placeholder="UTN"
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -147,7 +147,7 @@ function CreateUniversityModal({
                 value={form.country}
                 onChange={(e) => setForm({ ...form, country: e.target.value })}
                 placeholder="Costa Rica"
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {errors.country && <p className="text-xs text-red-500 mt-1">{errors.country}</p>}
             </div>
@@ -159,7 +159,7 @@ function CreateUniversityModal({
               value={form.website}
               onChange={(e) => setForm({ ...form, website: e.target.value })}
               placeholder="https://utn.ac.cr"
-              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -170,7 +170,7 @@ function CreateUniversityModal({
               value={form.maxStudents}
               onChange={(e) => setForm({ ...form, maxStudents: e.target.value })}
               min={10}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -186,7 +186,7 @@ function CreateUniversityModal({
                   value={form.adminName}
                   onChange={(e) => setForm({ ...form, adminName: e.target.value })}
                   placeholder="Juan Pérez"
-                  className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -196,7 +196,7 @@ function CreateUniversityModal({
                   value={form.adminEmail}
                   onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
                   placeholder="admin@universidad.cr"
-                  className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 {errors.adminEmail && <p className="text-xs text-red-500 mt-1">{errors.adminEmail}</p>}
               </div>
@@ -294,13 +294,13 @@ export default function UniversidadesPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar universidades..."
-            className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Todos los estados</option>
           <option value="active">Activas</option>
@@ -336,8 +336,8 @@ export default function UniversidadesPage() {
                   <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
-                          <Building2 className="w-4 h-4 text-teal-600" />
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="w-4 h-4 text-blue-600" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-800">{u.name}</p>
@@ -368,7 +368,7 @@ export default function UniversidadesPage() {
                     <td className="p-4">
                       <div className="flex items-center justify-end gap-2">
                         <Link href={`/superadmin/universidades/${u.id}`}>
-                          <button className="p-1.5 rounded-lg text-gray-400 hover:text-teal-700 hover:bg-teal-50 transition-colors" title="Ver detalles">
+                          <button className="p-1.5 rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors" title="Ver detalles">
                             <Eye className="w-4 h-4" />
                           </button>
                         </Link>

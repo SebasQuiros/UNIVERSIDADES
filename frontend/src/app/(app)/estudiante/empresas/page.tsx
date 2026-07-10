@@ -75,7 +75,7 @@ export default function EmpresasPage() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-teal-700" />
+            <Building2 className="w-6 h-6 text-blue-700" />
             Mis Empresas
           </h2>
           <p className="text-gray-500 text-sm mt-1">
@@ -89,7 +89,7 @@ export default function EmpresasPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por nombre o cédula…"
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition"
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
           />
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function EmpresasPage() {
             onClick={() => setFilter(key)}
             className="px-3.5 py-1.5 rounded-full text-sm font-medium transition-all border"
             style={filter === key
-              ? { background: '#0E141B', color: '#fff', borderColor: '#0E141B' }
+              ? { background: '#03080F', color: '#fff', borderColor: '#03080F' }
               : { background: '#fff', color: '#475569', borderColor: '#E2E8F0' }}
           >
             {label}
@@ -144,14 +144,14 @@ export default function EmpresasPage() {
             return (
               <div
                 key={company.id}
-                className="group bg-white border border-gray-200 hover:border-teal-300 shadow-sm rounded-xl p-5 flex flex-col gap-4 transition-all duration-200 hover:shadow-md"
+                className="group bg-white border border-gray-200 hover:border-blue-300 shadow-sm rounded-xl p-5 flex flex-col gap-4 transition-all duration-200 hover:shadow-md"
               >
                 {/* Header */}
                 <div className="flex items-start gap-3">
                   <div className="w-11 h-11 rounded-xl flex items-center justify-center font-bold flex-shrink-0 text-white"
                     style={{ background: isGroup
                       ? '#475569'
-                      : '#0D9488' }}>
+                      : '#2563EB' }}>
                     {company.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -169,7 +169,7 @@ export default function EmpresasPage() {
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
                     style={isGroup
                       ? { background: '#F1F5F9', color: '#475569' }
-                      : { background: '#CCFBF1', color: '#0D9488' }}>
+                      : { background: '#CCFBF1', color: '#2563EB' }}>
                     {isGroup ? <Users className="w-3 h-3" /> : <User className="w-3 h-3" />}
                     {isGroup ? `Grupal · ${company.memberCount} miembro${company.memberCount !== 1 ? 's' : ''}` : 'Individual'}
                   </span>
@@ -186,7 +186,7 @@ export default function EmpresasPage() {
                 {/* KPIs rápidos */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-100">
-                    <Receipt className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                    <Receipt className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <div>
                       <p className="text-sm font-bold text-gray-900 leading-none font-mono tabular-nums">{company.invoiceCount}</p>
                       <p className="text-xs text-gray-400 mt-0.5">Facturas</p>

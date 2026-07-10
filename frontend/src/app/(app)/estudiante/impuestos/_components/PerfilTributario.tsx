@@ -133,7 +133,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             {perfil.tipoPersona === 'JURIDICA'
-              ? <Building2 className="w-4 h-4 text-teal-600" />
+              ? <Building2 className="w-4 h-4 text-blue-600" />
               : <User className="w-4 h-4 text-slate-600" />}
             <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">Datos del Contribuyente</span>
             {!isComplete && (
@@ -144,7 +144,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
           </div>
           {!disabled && (
             <button onClick={handleEdit}
-              className="flex items-center gap-1.5 text-xs text-teal-600 hover:text-teal-800 hover:bg-teal-50 px-2 py-1 rounded-lg transition-colors">
+              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors">
               <Pencil className="w-3 h-3" /> Editar
             </button>
           )}
@@ -172,7 +172,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
           </div>
           <div className="flex gap-2 md:col-span-2">
             <span className="text-xs text-gray-400 w-28 flex-shrink-0">Actividad econ.</span>
-            <span className="text-xs font-medium text-teal-700">
+            <span className="text-xs font-medium text-blue-700">
               {perfil.actividadCodigo
                 ? <><span className="font-mono font-bold">{perfil.actividadCodigo}</span> — {perfil.actividadNombre}</>
                 : <span className="text-amber-600 italic">No seleccionada</span>}
@@ -191,10 +191,10 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
 
   // Edit form
   return (
-    <div className="bg-white border border-teal-300 rounded-xl p-4 shadow-sm">
+    <div className="bg-white border border-blue-300 rounded-xl p-4 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-teal-600" />
+          <Building2 className="w-4 h-4 text-blue-600" />
           <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Datos del Contribuyente</span>
         </div>
       </div>
@@ -209,7 +209,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
                 onClick={() => setDraft(d => ({ ...d, tipoPersona: tipo }))}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg border-2 transition-all ${
                   draft.tipoPersona === tipo
-                    ? 'border-teal-600 bg-teal-50 text-teal-700'
+                    ? 'border-blue-600 bg-blue-50 text-blue-700'
                     : 'border-gray-200 text-gray-500 hover:border-gray-300'
                 }`}>
                 {tipo === 'JURIDICA' ? '🏢 Persona Jurídica' : '👤 Persona Física'}
@@ -229,7 +229,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
               value={draft.cedula}
               onChange={e => setDraft(d => ({ ...d, cedula: e.target.value }))}
               placeholder={draft.tipoPersona === 'JURIDICA' ? '3-101-999999' : '1-1234-5678'}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
           </div>
           <div>
@@ -239,7 +239,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
               value={draft.correoTributario}
               onChange={e => setDraft(d => ({ ...d, correoTributario: e.target.value }))}
               placeholder="empresa@demo.cr"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
           </div>
         </div>
@@ -251,7 +251,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
             value={draft.razonSocial}
             onChange={e => setDraft(d => ({ ...d, razonSocial: e.target.value.toUpperCase() }))}
             placeholder="EMPRESA DEMO S.A."
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase font-semibold focus:outline-none focus:ring-2 focus:ring-teal-300"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase font-semibold focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </div>
 
@@ -261,11 +261,11 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
             Actividad Económica (CIIU Rev.4)
           </label>
           {draft.actividadCodigo && (
-            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-700">
+            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
               <span className="font-mono font-bold">{draft.actividadCodigo}</span>
               <span className="flex-1">{draft.actividadNombre}</span>
               <button type="button" onClick={() => setDraft(d => ({ ...d, actividadCodigo: '', actividadNombre: '' }))}
-                className="text-teal-500 hover:text-teal-700">
+                className="text-blue-500 hover:text-blue-700">
                 <X className="w-3 h-3" />
               </button>
             </div>
@@ -276,7 +276,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
               value={actSearch}
               onChange={e => setActSearch(e.target.value)}
               placeholder="Buscar actividad por código o descripción..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
@@ -287,8 +287,8 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
               ) : filteredActs.map(act => (
                 <button key={act.codigo} type="button"
                   onClick={() => selectActividad(act)}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-teal-50 flex items-center gap-2 border-b border-gray-50 last:border-0">
-                  <span className="font-mono font-bold text-teal-700 w-12 flex-shrink-0">{act.codigo}</span>
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2 border-b border-gray-50 last:border-0">
+                  <span className="font-mono font-bold text-blue-700 w-12 flex-shrink-0">{act.codigo}</span>
                   <span className="text-gray-700">{act.nombre}</span>
                 </button>
               ))}
@@ -303,7 +303,7 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
           <X className="w-3.5 h-3.5" /> Cancelar
         </button>
         <button type="button" onClick={handleSave}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors">
+          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
           <Check className="w-3.5 h-3.5" /> Guardar datos
         </button>
       </div>

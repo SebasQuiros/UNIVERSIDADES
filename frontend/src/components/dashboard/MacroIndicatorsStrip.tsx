@@ -37,7 +37,7 @@ export function MacroIndicatorsStrip() {
   }, []);
 
   if (loading) {
-    return <div className="rounded-2xl h-24 animate-pulse" style={{ background: '#0E141B' }} />;
+    return <div className="rounded-2xl h-24 animate-pulse" style={{ background: '#03080F' }} />;
   }
   if (error || !data) return null;
 
@@ -45,10 +45,10 @@ export function MacroIndicatorsStrip() {
 
   return (
     <div className="rounded-2xl overflow-hidden text-white"
-      style={{ background: '#0E141B', border: '1px solid rgba(20,184,166,0.18)' }}>
+      style={{ background: '#03080F', border: '1px solid rgba(96,165,250,0.18)' }}>
       <div className="px-5 pt-4 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" style={{ color: '#14B8A6' }} />
+          <TrendingUp className="w-4 h-4" style={{ color: '#60A5FA' }} />
           <span className="text-sm font-bold tracking-wide">Indicadores económicos · Costa Rica</span>
         </div>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
@@ -58,11 +58,11 @@ export function MacroIndicatorsStrip() {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px mt-1" style={{ background: 'rgba(20,184,166,0.12)' }}>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px mt-1" style={{ background: 'rgba(96,165,250,0.12)' }}>
         <Cell icon={<DollarSign className="w-4 h-4" />} label="Dólar (venta)" value={fmt(data.dolar.venta)}
           sub={`compra ${fmt(data.dolar.compra)}`} color="#34D399" />
         <Cell icon={<Euro className="w-4 h-4" />} label="Euro (venta)" value={fmt(data.euro.venta)}
-          sub={`compra ${fmt(data.euro.compra)}`} color="#14B8A6" />
+          sub={`compra ${fmt(data.euro.compra)}`} color="#60A5FA" />
         <Cell icon={<Percent className="w-4 h-4" />} label="Tasa básica pasiva" value={fmtPct(data.tbp.valor)}
           sub="BCCR · anual" color="#FBBF24" />
         <Cell icon={<TrendingUp className="w-4 h-4" />} label="Inflación interanual" value={fmtPct(data.inflacion.valor)}
@@ -83,7 +83,7 @@ function Cell({ icon, label, value, sub, color }: {
   icon: React.ReactNode; label: string; value: string; sub: string; color: string;
 }) {
   return (
-    <div className="px-4 py-3" style={{ background: '#0E141B' }}>
+    <div className="px-4 py-3" style={{ background: '#03080F' }}>
       <p className="text-[10px] uppercase tracking-wide mb-1 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
         <span style={{ color }}>{icon}</span> {label}
       </p>

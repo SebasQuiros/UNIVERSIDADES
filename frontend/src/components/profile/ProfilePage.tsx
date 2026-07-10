@@ -103,7 +103,7 @@ export function ProfilePage() {
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             ) : (
-              <div className="w-16 h-16 rounded-xl bg-teal-600 flex items-center justify-center text-white font-bold text-xl">
+              <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl">
                 {initials}
               </div>
             )}
@@ -112,7 +112,7 @@ export function ProfilePage() {
             <h3 className="font-semibold text-gray-900 text-lg truncate">{user.name}</h3>
             <p className="text-gray-500 text-sm truncate">{user.email}</p>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
                 <Shield className="w-3 h-3" />
                 {ROLE_LABELS[user.role] ?? user.role}
               </span>
@@ -130,7 +130,7 @@ export function ProfilePage() {
       {/* Edit profile form */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
         <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <User className="w-4 h-4 text-teal-700" />
+          <User className="w-4 h-4 text-blue-700" />
           Información personal
         </h3>
         <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -186,7 +186,7 @@ export function ProfilePage() {
       {/* Change password form */}
       <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
         <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-          <Lock className="w-4 h-4 text-teal-700" />
+          <Lock className="w-4 h-4 text-blue-700" />
           Cambiar contraseña
         </h3>
         <p className="text-xs text-gray-400 mb-4">

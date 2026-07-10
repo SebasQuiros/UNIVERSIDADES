@@ -64,7 +64,7 @@ function StatCard({
 // ── Activity badge ────────────────────────────────────────────────────────────
 
 const ROLE_COLORS: Record<string, string> = {
-  STUDENT:    'bg-teal-50 text-teal-700 border-teal-200',
+  STUDENT:    'bg-blue-50 text-blue-700 border-blue-200',
   TEACHER:    'bg-emerald-50 text-emerald-700 border-emerald-200',
   ADMIN:      'bg-slate-100 text-slate-700 border-slate-200',
   SUPERADMIN: 'bg-red-50 text-red-700 border-red-200',
@@ -146,7 +146,7 @@ export default function SuperAdminDashboard() {
           label="Universidades"
           value={stats.totalUniversities}
           icon={Building2}
-          color="bg-teal-50 text-teal-600"
+          color="bg-blue-50 text-blue-600"
           sub={`${stats.activeUniversities} activas`}
         />
         <StatCard
@@ -177,7 +177,7 @@ export default function SuperAdminDashboard() {
           label="Ingresos anuales"
           value={fmtCrc(annualRevenue)}
           icon={DollarSign}
-          color="bg-teal-50 text-teal-600"
+          color="bg-blue-50 text-blue-600"
           sub={`${stats.totalStudents} × ₡${PRICE_PER_STUDENT_CRC.toLocaleString()}`}
         />
       </div>
@@ -187,7 +187,7 @@ export default function SuperAdminDashboard() {
         {/* Growth line chart */}
         <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-4 h-4 text-teal-600" />
+            <TrendingUp className="w-4 h-4 text-blue-600" />
             <h3 className="font-semibold text-gray-800 text-sm">Crecimiento de universidades</h3>
             <span className="text-xs text-gray-400 ml-auto">últimos 6 meses</span>
           </div>
@@ -203,9 +203,9 @@ export default function SuperAdminDashboard() {
               <Line
                 type="monotone"
                 dataKey="count"
-                stroke="#0D9488"
+                stroke="#2563EB"
                 strokeWidth={2}
-                dot={{ r: 4, fill: '#0D9488' }}
+                dot={{ r: 4, fill: '#2563EB' }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>
@@ -247,7 +247,7 @@ export default function SuperAdminDashboard() {
         <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-800 text-sm">Top universidades por actividad</h3>
-            <Link href="/superadmin/universidades" className="text-xs text-teal-700 hover:text-teal-800 flex items-center gap-1">
+            <Link href="/superadmin/universidades" className="text-xs text-blue-700 hover:text-blue-800 flex items-center gap-1">
               Ver todas <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -292,7 +292,7 @@ export default function SuperAdminDashboard() {
               <Activity className="w-4 h-4 text-slate-600" />
               <h3 className="font-semibold text-gray-800 text-sm">Actividad reciente</h3>
             </div>
-            <Link href="/superadmin/actividad" className="text-xs text-teal-700 hover:text-teal-800 flex items-center gap-1">
+            <Link href="/superadmin/actividad" className="text-xs text-blue-700 hover:text-blue-800 flex items-center gap-1">
               Ver todo <ArrowRight className="w-3 h-3" />
             </Link>
           </div>

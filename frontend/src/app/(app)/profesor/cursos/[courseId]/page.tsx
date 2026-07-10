@@ -110,7 +110,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
               value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre o correo..."
               autoFocus
-              className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-300"
+              className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
           </div>
           <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 rounded-xl border border-gray-200">
@@ -122,7 +122,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
               const isEnrolled = enrolled.includes(s.id);
               return (
                 <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                  <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
                     {s.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -135,7 +135,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
                     <button
                       onClick={() => enroll(s.id)}
                       disabled={saving === s.id}
-                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50 transition-colors"
+                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
                     >
                       {saving === s.id ? '...' : 'Inscribir'}
                     </button>
@@ -201,7 +201,7 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
       <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-lg">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Upload className="w-4 h-4 text-teal-700" />
+            <Upload className="w-4 h-4 text-blue-700" />
             Importar estudiantes en bulk
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
@@ -215,7 +215,7 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
               </p>
 
               {/* File upload */}
-              <label className="flex items-center gap-3 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-teal-400 hover:bg-teal-50 transition-colors">
+              <label className="flex items-center gap-3 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                 <Upload className="w-4 h-4 text-gray-400" />
                 <span className="text-sm text-gray-500">Subir archivo CSV / TXT</span>
                 <input type="file" accept=".csv,.txt" onChange={handleFile} className="hidden" />
@@ -229,13 +229,13 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
                   onChange={e => setRawText(e.target.value)}
                   placeholder={"estudiante1@utn.ac.cr\nestudiante2@utn.ac.cr, estudiante3@utn.ac.cr"}
                   rows={6}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none font-mono"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
                 />
               </div>
 
               {/* Preview count */}
               {emails.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-xl text-sm text-teal-700">
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                   <span><strong>{emails.length}</strong> correo{emails.length !== 1 ? 's' : ''} detectado{emails.length !== 1 ? 's' : ''}</span>
                 </div>
@@ -248,7 +248,7 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
                 Cancelar
               </button>
               <button onClick={handleImport} disabled={loading || emails.length === 0}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl disabled:opacity-50 transition-colors">
+                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50 transition-colors">
                 <Upload className="w-4 h-4" />
                 {loading ? 'Importando...' : `Importar ${emails.length > 0 ? emails.length : ''}`}
               </button>
@@ -290,7 +290,7 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
 
             <div className="p-5 border-t border-gray-200">
               <button onClick={onClose}
-                className="w-full py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors">
+                className="w-full py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors">
                 Cerrar
               </button>
             </div>
@@ -330,7 +330,7 @@ function AnalyticsTab({ courseId, universityId }: { courseId: string; university
       {/* Overview cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Estudiantes', value: overview.totalStudents, icon: Users, color: 'bg-teal-50 text-teal-700' },
+          { label: 'Estudiantes', value: overview.totalStudents, icon: Users, color: 'bg-blue-50 text-blue-700' },
           { label: 'Ejercicios publicados', value: overview.totalExercises, icon: FileText, color: 'bg-slate-100 text-slate-600' },
           { label: 'Entrega promedio', value: `${overview.avgCompletionRate}%`, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-600' },
           { label: 'Nota promedio', value: overview.avgScore !== null ? `${overview.avgScore}%` : '—', icon: BarChart2, color: 'bg-amber-50 text-amber-600' },
@@ -357,7 +357,7 @@ function AnalyticsTab({ courseId, universityId }: { courseId: string; university
           {/* Bar chart - submission rate */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-teal-700" />
+              <TrendingUp className="w-4 h-4 text-blue-700" />
               Entregas y aprobación por ejercicio
             </h4>
             <ResponsiveContainer width="100%" height={220}>
@@ -371,12 +371,12 @@ function AnalyticsTab({ courseId, universityId }: { courseId: string; university
                     name === 'entrega' ? 'Entregaron' : 'Aprobación',
                   ]}
                 />
-                <Bar dataKey="entrega"  fill="#0D9488" radius={[4, 4, 0, 0]} name="entrega" />
+                <Bar dataKey="entrega"  fill="#2563EB" radius={[4, 4, 0, 0]} name="entrega" />
                 <Bar dataKey="aprobado" fill="#10b981" radius={[4, 4, 0, 0]} name="aprobado" />
               </BarChart>
             </ResponsiveContainer>
             <div className="flex items-center gap-4 mt-2 justify-center text-xs text-gray-500">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-teal-600 inline-block" /> Entregaron</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-600 inline-block" /> Entregaron</span>
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-500 inline-block" /> % Aprobación</span>
             </div>
           </div>
@@ -471,7 +471,7 @@ interface CourseEvidence {
 function evMasteryColor(pct: number | null) {
   if (pct == null) return '#CBD5E1';
   if (pct >= 80) return '#059669';
-  if (pct >= 60) return '#0D9488';
+  if (pct >= 60) return '#2563EB';
   if (pct >= 40) return '#D97706';
   return '#DC2626';
 }
@@ -501,7 +501,7 @@ function CompetencyCourseTab({ courseId }: { courseId: string }) {
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-400 mb-1">Competencias cubiertas</p>
-          <p className="text-2xl font-black text-teal-800 font-mono tabular-nums">{data.summary.competenciesCovered}</p>
+          <p className="text-2xl font-black text-blue-800 font-mono tabular-nums">{data.summary.competenciesCovered}</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-400 mb-1">Estudiantes</p>
@@ -518,7 +518,7 @@ function CompetencyCourseTab({ courseId }: { courseId: string }) {
       {/* Dominio por competencia */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">
         <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-          <Award className="w-4 h-4 text-teal-700" /> Dominio por competencia
+          <Award className="w-4 h-4 text-blue-700" /> Dominio por competencia
         </h3>
         {data.competencies.length === 0 ? (
           <div className="text-center py-8 text-gray-400 text-sm">
@@ -547,7 +547,7 @@ function CompetencyCourseTab({ courseId }: { courseId: string }) {
       {/* Roster con riesgo */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">
         <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-          <Users className="w-4 h-4 text-teal-700" /> Estudiantes
+          <Users className="w-4 h-4 text-blue-700" /> Estudiantes
         </h3>
         {data.students.length === 0 ? (
           <div className="text-center py-8 text-gray-400 text-sm">Sin estudiantes inscritos.</div>
@@ -615,7 +615,7 @@ function GradebookTab({ courseId, universityId }: { courseId: string; university
   return (
     <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
       <div className="p-5 border-b border-gray-200 flex items-center gap-2">
-        <Table2 className="w-4 h-4 text-teal-700" />
+        <Table2 className="w-4 h-4 text-blue-700" />
         <h4 className="font-semibold text-gray-900">Libro de Calificaciones</h4>
         <span className="text-xs text-gray-400 ml-auto">{data.students.length} estudiantes · {data.exercises.length} ejercicios</span>
       </div>
@@ -632,7 +632,7 @@ function GradebookTab({ courseId, universityId }: { courseId: string; university
                     <span className="block truncate max-w-[110px] mx-auto" title={ex.title}>{ex.title}</span>
                   </th>
                 ))}
-                <th className="text-center px-4 py-3 min-w-[90px] bg-teal-50 text-teal-700">Promedio</th>
+                <th className="text-center px-4 py-3 min-w-[90px] bg-blue-50 text-blue-700">Promedio</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -657,7 +657,7 @@ function GradebookTab({ courseId, universityId }: { courseId: string; university
                       )}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-center bg-teal-50/50">
+                  <td className="px-4 py-3 text-center bg-blue-50/50">
                     {average !== null ? (
                       <span className={`font-bold ${average >= 70 ? 'text-emerald-600' : average >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
                         {Math.round(average)}%
@@ -712,7 +712,7 @@ function TemplateModal({ courseId, onClose, onCreated }: {
       <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-lg">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <BookMarked className="w-4 h-4 text-teal-700" />
+            <BookMarked className="w-4 h-4 text-blue-700" />
             <h3 className="font-semibold text-gray-900">Usar plantilla</h3>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
@@ -740,7 +740,7 @@ function TemplateModal({ courseId, onClose, onCreated }: {
                   <button
                     onClick={() => useTemplate(t.id)}
                     disabled={saving === t.id}
-                    className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50 transition-colors"
+                    className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
                   >
                     {saving === t.id ? '...' : 'Usar'}
                   </button>
@@ -803,7 +803,7 @@ function UtnTemplateModal({ courseId, onClose, onApplied }: {
       <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-lg">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <GraduationCap className="w-4 h-4 text-teal-700" />
+            <GraduationCap className="w-4 h-4 text-blue-700" />
             <h3 className="font-semibold text-gray-900">Cargar curso base</h3>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
@@ -819,11 +819,11 @@ function UtnTemplateModal({ courseId, onClose, onApplied }: {
           ) : (
             <div className="space-y-3">
               {templates.map((t) => (
-                <div key={t.key} className="p-4 border border-gray-200 rounded-xl hover:border-teal-300 hover:bg-teal-50/40 transition-all">
+                <div key={t.key} className="p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-all">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-teal-700 bg-teal-100 px-1.5 py-0.5 rounded">{t.code}</span>
+                        <span className="text-xs font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">{t.code}</span>
                         <p className="text-sm font-semibold text-gray-900 truncate">{t.name}</p>
                       </div>
                       <p className="text-xs text-gray-500 mt-1.5 leading-snug">{t.description}</p>
@@ -835,7 +835,7 @@ function UtnTemplateModal({ courseId, onClose, onApplied }: {
                     <button
                       onClick={() => apply(t.key)}
                       disabled={applying === t.key}
-                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg disabled:opacity-50 transition-colors"
+                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
                     >
                       {applying === t.key ? 'Cargando…' : 'Cargar'}
                     </button>
@@ -908,11 +908,11 @@ function StudentsTab({ courseId, universityId, onEnroll }: {
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nombre o correo..."
-            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
+            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
           />
         </div>
         <button onClick={() => { onEnroll(); }}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors">
+          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors">
           <UserPlus className="w-4 h-4" /> Inscribir estudiante
         </button>
       </div>
@@ -920,7 +920,7 @@ function StudentsTab({ courseId, universityId, onEnroll }: {
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Inscritos', value: students.length, color: 'text-teal-700', bg: 'bg-teal-50' },
+          { label: 'Inscritos', value: students.length, color: 'text-blue-700', bg: 'bg-blue-50' },
           { label: 'Con entregas', value: students.filter((s) => s.stats.submitted > 0).length, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           { label: 'Promedio clase', value: (() => {
             const withScore = students.filter((s) => s.stats.avgScore !== null);
@@ -942,7 +942,7 @@ function StudentsTab({ courseId, universityId, onEnroll }: {
           <UserX className="w-10 h-10 text-gray-200 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">{search ? 'Sin resultados para tu búsqueda' : 'No hay estudiantes inscritos'}</p>
           {!search && (
-            <button onClick={onEnroll} className="mt-3 text-sm text-teal-700 hover:underline font-medium">
+            <button onClick={onEnroll} className="mt-3 text-sm text-blue-700 hover:underline font-medium">
               Inscribir primer estudiante
             </button>
           )}
@@ -965,7 +965,7 @@ function StudentsTab({ courseId, universityId, onEnroll }: {
                 <tr key={s.student.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
                         {s.student.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -1207,7 +1207,7 @@ export default function CourseDetailPage() {
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             {course.code && (
-              <span className="text-xs font-mono text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
+              <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
                 {course.code}
               </span>
             )}
@@ -1286,14 +1286,14 @@ export default function CourseDetailPage() {
           <section className="bg-white border border-gray-200 shadow-sm rounded-xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-teal-700" />
+                <Users className="w-4 h-4 text-blue-700" />
                 Estudiantes inscritos
                 <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs px-1.5 py-0.5 rounded-full">
                   {course.enrollments.length}
                 </span>
               </h3>
               <button onClick={() => setShowEnroll(true)}
-                className="flex items-center gap-1 text-xs font-medium text-teal-700 hover:text-teal-800 transition-colors">
+                className="flex items-center gap-1 text-xs font-medium text-blue-700 hover:text-blue-800 transition-colors">
                 <UserPlus className="w-3.5 h-3.5" /> Agregar
               </button>
             </div>
@@ -1302,7 +1302,7 @@ export default function CourseDetailPage() {
                 <div className="p-8 text-center">
                   <UserX className="w-8 h-8 text-gray-200 mx-auto mb-2" />
                   <p className="text-gray-500 text-sm">No hay estudiantes inscritos</p>
-                  <button onClick={() => setShowEnroll(true)} className="mt-3 text-xs text-teal-700 hover:underline">
+                  <button onClick={() => setShowEnroll(true)} className="mt-3 text-xs text-blue-700 hover:underline">
                     Inscribir ahora
                   </button>
                 </div>
@@ -1327,7 +1327,7 @@ export default function CourseDetailPage() {
           <section className="bg-white border border-gray-200 shadow-sm rounded-xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-teal-700" />
+                <FileText className="w-4 h-4 text-blue-700" />
                 Ejercicios
                 <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs px-1.5 py-0.5 rounded-full">
                   {exercises.length}

@@ -48,14 +48,14 @@ export function PwaInstallPrompt() {
   return (
     <div
       role="banner"
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between gap-3 bg-[#0E141B] px-4 py-3 text-white shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between gap-3 bg-[#03080F] px-4 py-3 text-white shadow-lg"
     >
       {/* Icon + text */}
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-2xl shrink-0" aria-hidden="true">📱</span>
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-tight truncate">ContaSJ</p>
-          <p className="text-xs text-teal-200 leading-tight">
+          <p className="text-xs text-blue-200 leading-tight">
             Instala la app para acceso rápido sin internet
           </p>
         </div>
@@ -65,14 +65,14 @@ export function PwaInstallPrompt() {
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={handleInstall}
-          className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-[#0E141B] hover:bg-teal-50 transition-colors"
+          className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-[#03080F] hover:bg-blue-50 transition-colors"
         >
           Instalar
         </button>
         <button
           onClick={handleDismiss}
           aria-label="Cerrar"
-          className="rounded-md p-1.5 text-teal-200 hover:text-white hover:bg-white/10 transition-colors"
+          className="rounded-md p-1.5 text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
         >
           ✕
         </button>

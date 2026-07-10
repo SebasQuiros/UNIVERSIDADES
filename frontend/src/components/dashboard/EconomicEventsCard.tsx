@@ -26,7 +26,7 @@ interface EventsResponse {
 
 const CAT_COLOR: Record<EconomicEvent['category'], { bg: string; fg: string; label: string }> = {
   riesgo:     { bg: '#FEF2F2', fg: '#B91C1C', label: 'Riesgo' },
-  fiscal:     { bg: '#F0FDFA', fg: '#0D9488', label: 'Fiscal' },
+  fiscal:     { bg: '#F0FDFA', fg: '#2563EB', label: 'Fiscal' },
   mercado:    { bg: '#FFFBEB', fg: '#B45309', label: 'Mercado' },
   operativo:  { bg: '#F1F5F9', fg: '#475569', label: 'Operativo' },
   oportunidad:{ bg: '#ECFDF5', fg: '#047857', label: 'Oportunidad' },

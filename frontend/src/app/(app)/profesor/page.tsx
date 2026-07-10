@@ -134,7 +134,7 @@ export default function ProfesorDashboard() {
           Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           <>
-            <StatCard label="Cursos activos"  value={stats.courses}   icon={BookOpen}       gradient="#0D9488" glow="rgba(16,24,40,0.04)" sub="Este período" />
+            <StatCard label="Cursos activos"  value={stats.courses}   icon={BookOpen}       gradient="#2563EB" glow="rgba(16,24,40,0.04)" sub="Este período" />
             <StatCard label="Ejercicios"      value={stats.exercises} icon={FileText}       gradient="#475569" glow="rgba(16,24,40,0.04)" sub="Publicados y borradores" />
             <StatCard label="Estudiantes"     value={stats.students}  icon={Users}          gradient="linear-gradient(135deg,#10B981,#059669)" glow="rgba(16,185,129,0.25)" sub="Inscritos en total" />
             <StatCard label="Por calificar"   value={stats.pending}   icon={ClipboardCheck} gradient="linear-gradient(135deg,#F59E0B,#D97706)" glow="rgba(245,158,11,0.25)" sub="Requieren atención" />
@@ -148,7 +148,7 @@ export default function ProfesorDashboard() {
         <section className="bg-white rounded-xl transition-shadow duration-200 hover:shadow-lg" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)', border: '1px solid rgba(226,232,240,0.8)' }}>
           <div className="flex items-center justify-between p-5 border-b border-gray-200">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-teal-700" />
+              <BookOpen className="w-4 h-4 text-blue-700" />
               Mis Cursos
             </h3>
             <Link href="/profesor/cursos">
@@ -180,7 +180,7 @@ export default function ProfesorDashboard() {
                 <Link
                   key={course.id}
                   href={`/profesor/cursos/${course.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-teal-50/50 transition-all duration-150 group"
+                  className="flex items-center justify-between p-4 hover:bg-blue-50/50 transition-all duration-150 group"
                 >
                   <div>
                     <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{course.name}</p>

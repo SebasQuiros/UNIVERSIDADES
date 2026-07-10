@@ -85,7 +85,7 @@ function CreateCourseModal({
               <select
                 value={form.universityId}
                 onChange={(e) => setForm({ ...form, universityId: e.target.value })}
-                className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {universities.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -198,7 +198,7 @@ function CourseCard({
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             {course.code && (
-              <span className="text-xs font-mono text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
+              <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
                 {course.code}
               </span>
             )}
@@ -228,7 +228,7 @@ function CourseCard({
         )}
         <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-auto">
           <span className="text-xs text-gray-400">{formatDate(course.createdAt)}</span>
-          <span className="flex items-center gap-1 text-xs text-teal-700 group-hover:text-teal-700">
+          <span className="flex items-center gap-1 text-xs text-blue-700 group-hover:text-blue-700">
             Ver detalles <ArrowRight className="w-3.5 h-3.5" />
           </span>
         </div>
@@ -262,11 +262,11 @@ function UniversitySection({
         onClick={() => setCollapsed((v) => !v)}
         className="flex items-center gap-3 mb-4 group w-full text-left"
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-teal-50 border border-teal-200">
-          <Building2 className="w-4 h-4 text-teal-700" />
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 border border-blue-200">
+          <Building2 className="w-4 h-4 text-blue-700" />
         </div>
         <div className="flex-1">
-          <span className="font-semibold text-gray-900 group-hover:text-teal-700 transition-colors">
+          <span className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
             {label}
           </span>
           {university.shortName && (

@@ -17,7 +17,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     icon:        BookOpen,
-    color:       'bg-teal-50 text-teal-700',
+    color:       'bg-blue-50 text-blue-700',
     title:       'Crea tu primer curso',
     description: 'Organiza tus clases por curso y período. Puedes tener cursos en distintas universidades.',
     action:      'Ir a Mis Cursos',
@@ -66,18 +66,18 @@ export function OnboardingWizard({ userId, onComplete }: { userId: string; onCom
 
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
         {/* Header */}
-        <div className="bg-[#0D9488] px-6 pt-6 pb-8 text-white">
+        <div className="bg-[#2563EB] px-6 pt-6 pb-8 text-white">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-teal-200" />
-              <span className="text-sm font-medium text-teal-100">Bienvenido a ContaSJ</span>
+              <Sparkles className="w-5 h-5 text-blue-200" />
+              <span className="text-sm font-medium text-blue-100">Bienvenido a ContaSJ</span>
             </div>
-            <button onClick={dismiss} className="text-teal-200 hover:text-white transition-colors">
+            <button onClick={dismiss} className="text-blue-200 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
           <h2 className="text-xl font-bold">Empieza en 3 pasos</h2>
-          <p className="text-teal-100 text-sm mt-1">Configura tu espacio en menos de 5 minutos</p>
+          <p className="text-blue-100 text-sm mt-1">Configura tu espacio en menos de 5 minutos</p>
         </div>
 
         {/* Steps indicator */}
@@ -86,7 +86,7 @@ export function OnboardingWizard({ userId, onComplete }: { userId: string; onCom
             <button
               key={i}
               onClick={() => setStep(i)}
-              className={`flex-1 h-1.5 rounded-full transition-all ${i <= step ? 'bg-teal-600' : 'bg-gray-200'}`}
+              className={`flex-1 h-1.5 rounded-full transition-all ${i <= step ? 'bg-blue-600' : 'bg-gray-200'}`}
             />
           ))}
         </div>
@@ -113,7 +113,7 @@ export function OnboardingWizard({ userId, onComplete }: { userId: string; onCom
                 {i < step ? (
                   <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                 ) : (
-                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${i === step ? 'border-teal-600' : 'border-gray-300'}`} />
+                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${i === step ? 'border-blue-600' : 'border-gray-300'}`} />
                 )}
                 {s.title}
               </div>

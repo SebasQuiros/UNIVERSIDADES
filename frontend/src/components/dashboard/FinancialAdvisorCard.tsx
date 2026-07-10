@@ -28,7 +28,7 @@ const STYLES: Record<Level, { bg: string; border: string; fg: string; icon: Reac
   critical: { bg: '#FEF2F2', border: '#FECACA', fg: '#B91C1C', icon: <AlertTriangle className="w-4 h-4" />, tag: 'Crítico' },
   warning:  { bg: '#FFFBEB', border: '#FDE68A', fg: '#B45309', icon: <AlertCircle className="w-4 h-4" />,  tag: 'Atención' },
   good:     { bg: '#ECFDF5', border: '#A7F3D0', fg: '#047857', icon: <CheckCircle2 className="w-4 h-4" />, tag: 'Bien' },
-  info:     { bg: '#F0FDFA', border: '#99F6E4', fg: '#0D9488', icon: <Info className="w-4 h-4" />,         tag: 'Info' },
+  info:     { bg: '#F0FDFA', border: '#99F6E4', fg: '#2563EB', icon: <Info className="w-4 h-4" />,         tag: 'Info' },
 };
 
 export function FinancialAdvisorCard({ companyId }: { companyId: string }) {
@@ -58,7 +58,7 @@ export function FinancialAdvisorCard({ companyId }: { companyId: string }) {
   return (
     <div className="rounded-xl border bg-white overflow-hidden" style={{ borderColor: '#E2E8F0' }}>
       {/* Header */}
-      <div className="px-5 pt-5 pb-4" style={{ background: '#0E141B' }}>
+      <div className="px-5 pt-5 pb-4" style={{ background: '#03080F' }}>
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
             style={{ background: '#475569' }}>

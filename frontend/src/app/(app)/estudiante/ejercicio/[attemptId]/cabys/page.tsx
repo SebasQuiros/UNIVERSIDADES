@@ -20,7 +20,7 @@ interface CabysItem {
 function IvaBadge({ rate }: { rate: number }) {
   const colors: Record<number, string> = {
     0:  'bg-gray-100 text-gray-600 border-gray-200',
-    1:  'bg-teal-100 text-teal-700 border-teal-200',
+    1:  'bg-blue-100 text-blue-700 border-blue-200',
     2:  'bg-slate-100 text-slate-700 border-slate-200',
     4:  'bg-yellow-100 text-yellow-700 border-yellow-200',
     8:  'bg-orange-100 text-orange-700 border-orange-200',
@@ -53,7 +53,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="p-1.5 rounded-lg text-gray-400 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
       title="Copiar código"
     >
       {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
@@ -132,9 +132,9 @@ export default function CabysPage() {
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
         {/* Informational banner */}
-        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 flex gap-3">
-          <Info className="w-5 h-5 text-teal-700 shrink-0 mt-0.5" />
-          <div className="text-sm text-teal-800 space-y-1">
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex gap-3">
+          <Info className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800 space-y-1">
             <p className="font-semibold">¿Qué es el código CABYS?</p>
             <p>
               El <strong>Catálogo de Bienes y Servicios (CABYS)</strong> es obligatorio en todas las
@@ -154,11 +154,11 @@ export default function CabysPage() {
               value={query}
               onChange={handleChange}
               placeholder="Buscar por nombre de producto o servicio... (ej: computadora, servicio consultoría)"
-              className="w-full pl-12 pr-14 py-3.5 rounded-xl border border-gray-300 bg-white text-gray-900 text-sm placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full pl-12 pr-14 py-3.5 rounded-xl border border-gray-300 bg-white text-gray-900 text-sm placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               autoFocus
             />
             {loading && (
-              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-teal-600 animate-spin" />
+              <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-600 animate-spin" />
             )}
           </div>
           <p className="mt-1.5 text-xs text-gray-400 px-1">
@@ -218,7 +218,7 @@ export default function CabysPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {results.map((item) => (
-                      <tr key={item.codigo} className="hover:bg-teal-50 transition-colors group">
+                      <tr key={item.codigo} className="hover:bg-blue-50 transition-colors group">
                         <td className="px-4 py-3">
                           <span className="font-mono text-xs font-bold text-gray-800 tracking-wider">
                             {item.codigo}

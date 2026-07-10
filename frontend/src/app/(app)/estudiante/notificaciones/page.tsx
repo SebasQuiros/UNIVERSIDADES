@@ -11,7 +11,7 @@ import { Bell, CheckCheck, BookOpen, Award, Info, AlertTriangle } from 'lucide-r
 import { cn } from '@/lib/utils';
 
 const NOTIF_ICONS: Record<string, { icon: React.ElementType; color: string }> = {
-  EXERCISE_ASSIGNED: { icon: BookOpen, color: 'text-teal-700 bg-teal-50' },
+  EXERCISE_ASSIGNED: { icon: BookOpen, color: 'text-blue-700 bg-blue-50' },
   GRADED:            { icon: Award,    color: 'text-emerald-600 bg-emerald-50' },
   EXERCISE_DUE:      { icon: AlertTriangle, color: 'text-amber-600 bg-amber-50' },
   INFO:              { icon: Info,     color: 'text-gray-500 bg-gray-100' },
@@ -70,7 +70,7 @@ export default function NotificacionesPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Bell className="w-6 h-6 text-teal-700" />
+              <Bell className="w-6 h-6 text-blue-700" />
               Notificaciones
             </h2>
             {unread > 0 && (
@@ -123,7 +123,7 @@ export default function NotificacionesPage() {
                         {notif.title}
                       </p>
                       {!notif.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-teal-600 flex-shrink-0 mt-1.5" />
+                        <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1.5" />
                       )}
                     </div>
                     {notif.body && (

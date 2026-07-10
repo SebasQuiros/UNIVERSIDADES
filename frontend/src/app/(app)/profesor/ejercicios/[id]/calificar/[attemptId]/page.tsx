@@ -47,7 +47,7 @@ function SectionCard({ title, icon, children, collapsible = false }: {
         onClick={() => collapsible && setOpen(o => !o)}
       >
         <span className="flex items-center gap-2 font-semibold text-gray-900">
-          <span className="text-teal-700">{icon}</span>
+          <span className="text-blue-700">{icon}</span>
           {title}
         </span>
         {collapsible && (open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />)}
@@ -190,7 +190,7 @@ export default function GradeAttemptPage() {
               <span style="font-size:14px;flex-shrink:0">${passed ? '✓' : failed ? '✗' : '·'}</span>
               <div style="flex:1">
                 <div style="font-size:12px;font-weight:600;color:#111827">${esc(r.description)}</div>
-                ${r.criterion ? `<div style="font-size:11px;font-family:monospace;color:#0D9488;margin-top:2px">${esc(r.criterion)}${r.expectedValue ? ` = ${esc(r.expectedValue)}` : ''}</div>` : ''}
+                ${r.criterion ? `<div style="font-size:11px;font-family:monospace;color:#2563EB;margin-top:2px">${esc(r.criterion)}${r.expectedValue ? ` = ${esc(r.expectedValue)}` : ''}</div>` : ''}
                 ${comment ? `<div style="font-size:11px;color:${passed ? '#15803d' : failed ? '#b91c1c' : '#6b7280'};margin-top:2px">${esc(comment)}</div>` : ''}
               </div>
               <span style="font-size:12px;font-weight:bold;color:#374151;flex-shrink:0">${Number(r.points)} pts</span>
@@ -212,7 +212,7 @@ export default function GradeAttemptPage() {
             </tr></thead>
             <tbody>${invoices.map(inv => `
               <tr style="border-top:1px solid #f3f4f6">
-                <td style="padding:5px 14px;font-family:monospace;color:#0D9488">${esc(inv.consecutiveNumber)}</td>
+                <td style="padding:5px 14px;font-family:monospace;color:#2563EB">${esc(inv.consecutiveNumber)}</td>
                 <td style="padding:5px 14px;color:#374151">${esc(inv.clientName)}</td>
                 <td style="padding:5px 14px;color:#6b7280">${new Date(inv.issueDate).toLocaleDateString('es-CR')}</td>
                 <td style="padding:5px 14px;text-align:right;font-weight:600">${fmt(Number(inv.total))}</td>
@@ -261,8 +261,8 @@ export default function GradeAttemptPage() {
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; font-size: 12px; color: #111827; background: #fff; padding: 32px 40px; }
-  .doc-header { border-bottom: 2px solid #0D9488; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
-  .doc-header .left .title { font-size: 20px; font-weight: bold; color: #0E141B; }
+  .doc-header { border-bottom: 2px solid #2563EB; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .doc-header .left .title { font-size: 20px; font-weight: bold; color: #03080F; }
   .doc-header .left .sub { font-size: 13px; color: #374151; margin-top: 4px; }
   .doc-header .left .meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
   .doc-header .right { text-align: right; }
@@ -272,10 +272,10 @@ export default function GradeAttemptPage() {
   .score-box .pct { font-size: 13px; font-weight: 700; color: #16a34a; margin-top: 2px; }
   .stats-row { display: flex; gap: 12px; margin-bottom: 20px; }
   .stat { flex: 1; text-align: center; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 8px; }
-  .stat .val { font-size: 20px; font-weight: bold; color: #0D9488; }
+  .stat .val { font-size: 20px; font-weight: bold; color: #2563EB; }
   .stat .lbl { font-size: 10px; color: #6b7280; margin-top: 2px; }
   .feedback-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; }
-  .feedback-box .label { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #0D9488; margin-bottom: 6px; }
+  .feedback-box .label { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #2563EB; margin-bottom: 6px; }
   .section { margin-bottom: 18px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; page-break-inside: avoid; }
   .section-header { background: #f9fafb; padding: 8px 14px; font-weight: bold; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #374151; border-bottom: 1px solid #e5e7eb; }
   .row { display: flex; align-items: center; padding: 6px 14px; border-top: 1px solid #f3f4f6; gap: 8px; }
@@ -315,7 +315,7 @@ export default function GradeAttemptPage() {
   ${feedbackText ? `
   <div class="feedback-box">
     <div class="label">Retroalimentación del profesor</div>
-    <div style="font-size:13px;color:#0E141B">${esc(feedbackText)}</div>
+    <div style="font-size:13px;color:#03080F">${esc(feedbackText)}</div>
   </div>` : ''}
 
   ${rubricsHtml}
@@ -389,7 +389,7 @@ export default function GradeAttemptPage() {
             {[
               { label: 'Clientes',  value: prog.clientsCount  ?? 0, color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200'   },
               { label: 'Productos', value: prog.productsCount ?? 0, color: 'text-slate-600',  bg: 'bg-slate-100 border-slate-200' },
-              { label: 'Facturas',  value: prog.invoicesCount ?? 0, color: 'text-teal-700',    bg: 'bg-teal-50 border-teal-200'     },
+              { label: 'Facturas',  value: prog.invoicesCount ?? 0, color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200'     },
               { label: 'Asientos',  value: prog.entriesCount  ?? 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
             ].map(s => (
               <div key={s.label} className={`rounded-xl p-4 text-center border ${s.bg}`}>
@@ -409,7 +409,7 @@ export default function GradeAttemptPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-700">{r.description}</p>
                     {r.criterion && (
-                      <p className="text-xs text-teal-700 mt-0.5 font-mono">
+                      <p className="text-xs text-blue-700 mt-0.5 font-mono">
                         {r.criterion}{r.expectedValue ? ` = ${r.expectedValue}` : ''}
                       </p>
                     )}
@@ -426,23 +426,23 @@ export default function GradeAttemptPage() {
 
         {/* Auto-grade preview panel */}
         {showPreview && preview && (
-          <div className="bg-white border-2 border-teal-200 shadow-md rounded-xl overflow-hidden mb-6">
-            <div className="flex items-center justify-between p-5 bg-teal-50 border-b border-teal-200">
+          <div className="bg-white border-2 border-blue-200 shadow-md rounded-xl overflow-hidden mb-6">
+            <div className="flex items-center justify-between p-5 bg-blue-50 border-b border-blue-200">
               <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-teal-700" />
-                <h3 className="font-bold text-teal-800">Resultado de Auto-calificación</h3>
+                <Zap className="w-5 h-5 text-blue-700" />
+                <h3 className="font-bold text-blue-800">Resultado de Auto-calificación</h3>
               </div>
-              <button onClick={() => setShowPreview(false)} className="text-teal-500 hover:text-teal-700">
+              <button onClick={() => setShowPreview(false)} className="text-blue-500 hover:text-blue-700">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Score summary */}
-            <div className="grid grid-cols-3 gap-4 p-5 border-b border-teal-100">
+            <div className="grid grid-cols-3 gap-4 p-5 border-b border-blue-100">
               <div className="text-center">
-                <p className="text-3xl font-black text-teal-700 font-mono tabular-nums">{preview.score}</p>
+                <p className="text-3xl font-black text-blue-700 font-mono tabular-nums">{preview.score}</p>
                 <p className="text-xs text-gray-500 mt-0.5">/ {preview.maxScore} pts</p>
-                <p className="text-xs font-semibold text-teal-700 mt-1">Puntaje sugerido</p>
+                <p className="text-xs font-semibold text-blue-700 mt-1">Puntaje sugerido</p>
               </div>
               <div className="text-center">
                 <p className="text-3xl font-black text-emerald-600 font-mono tabular-nums">{preview.passedCount}</p>
@@ -517,7 +517,7 @@ export default function GradeAttemptPage() {
                 <tbody className="divide-y divide-gray-100">
                   {invoices.map(inv => (
                     <tr key={inv.id} className="hover:bg-gray-50">
-                      <td className="py-3 text-teal-700 font-mono text-xs">{inv.consecutiveNumber}</td>
+                      <td className="py-3 text-blue-700 font-mono text-xs">{inv.consecutiveNumber}</td>
                       <td className="py-3 text-gray-700">{inv.clientName}</td>
                       <td className="py-3 text-gray-500">{formatDate(inv.issueDate)}</td>
                       <td className="py-3 text-right text-gray-700 font-medium">
@@ -592,7 +592,7 @@ export default function GradeAttemptPage() {
         <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-8">
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-teal-700" />
+              <TrendingUp className="w-4 h-4 text-blue-700" />
               {isAlreadyGraded ? 'Calificación enviada' : 'Enviar calificación'}
             </h3>
             {canAutoGrade && (
@@ -600,7 +600,7 @@ export default function GradeAttemptPage() {
                 type="button"
                 onClick={handleAutoGrade}
                 loading={autoing}
-                className="!bg-teal-600 hover:!bg-teal-700 border-teal-600 gap-2"
+                className="!bg-blue-600 hover:!bg-blue-700 border-blue-600 gap-2"
                 size="sm"
               >
                 <Zap className="w-4 h-4" />
@@ -638,7 +638,7 @@ export default function GradeAttemptPage() {
                 onChange={e => setScore(e.target.value)}
                 disabled={isAlreadyGraded}
                 placeholder={`0 – ${attempt.maxScore}`}
-                className="w-full max-w-xs rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50"
+                className="w-full max-w-xs rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               />
             </div>
 
@@ -649,7 +649,7 @@ export default function GradeAttemptPage() {
                 onChange={e => setFeedback(e.target.value)}
                 disabled={isAlreadyGraded}
                 placeholder="Escribe comentarios para el estudiante sobre su trabajo..."
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none disabled:opacity-50"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50"
               />
             </div>
 

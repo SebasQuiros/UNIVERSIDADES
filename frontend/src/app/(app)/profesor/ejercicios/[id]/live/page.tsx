@@ -62,7 +62,7 @@ const ONLINE_CONFIG = {
   IDLE:        { label: 'Inactivo',     dot: 'bg-amber-400',                 card: 'border-amber-200  bg-amber-50',   text: 'text-amber-700' },
   OFFLINE:     { label: 'Desconectado', dot: 'bg-gray-400',                  card: 'border-gray-200   bg-gray-50',    text: 'text-gray-500' },
   NOT_STARTED: { label: 'Sin iniciar',  dot: 'bg-gray-300',                  card: 'border-gray-200   bg-white',      text: 'text-gray-400' },
-  SUBMITTED:   { label: 'Entregado',    dot: 'bg-teal-600',                  card: 'border-teal-200   bg-teal-50',    text: 'text-teal-700' },
+  SUBMITTED:   { label: 'Entregado',    dot: 'bg-blue-600',                  card: 'border-blue-200   bg-blue-50',    text: 'text-blue-700' },
   GRADED:      { label: 'Calificado',   dot: 'bg-slate-500',                card: 'border-slate-200 bg-slate-100',  text: 'text-slate-700' },
 };
 
@@ -143,7 +143,7 @@ export default function LiveDashboardPage() {
           <div className="relative bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-md">
             <div className="flex items-center justify-between p-5 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-teal-700" />
+                <MessageSquare className="w-5 h-5 text-blue-700" />
                 Enviar mensaje a estudiantes
               </h3>
               <button onClick={() => setShowBroadcast(false)} className="text-gray-400 hover:text-gray-700">
@@ -159,7 +159,7 @@ export default function LiveDashboardPage() {
                 onChange={e => setMessage(e.target.value)}
                 placeholder="Ej: Recuerden revisar que los asientos estén cuadrados antes de entregar."
                 rows={4}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 maxLength={500}
               />
               <p className="text-xs text-gray-400 text-right">{message.length}/500</p>
@@ -170,7 +170,7 @@ export default function LiveDashboardPage() {
                 Cancelar
               </button>
               <button onClick={handleBroadcast} disabled={sending || !message.trim()}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl disabled:opacity-50 transition-colors">
+                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50 transition-colors">
                 <Send className="w-4 h-4" />
                 {sending ? 'Enviando...' : 'Enviar'}
               </button>
@@ -233,7 +233,7 @@ export default function LiveDashboardPage() {
         {[
           { label: 'Total',         value: data.summary.total,      icon: Users,         color: 'text-gray-700' },
           { label: 'Activos ahora', value: data.summary.active,     icon: Wifi,          color: 'text-emerald-600' },
-          { label: 'En progreso',   value: data.summary.inProgress, icon: TrendingUp,    color: 'text-teal-700' },
+          { label: 'En progreso',   value: data.summary.inProgress, icon: TrendingUp,    color: 'text-blue-700' },
           { label: 'Entregados',    value: data.summary.submitted,  icon: CheckCircle2,  color: 'text-amber-600' },
           { label: 'Calificados',   value: data.summary.graded,     icon: BarChart2,     color: 'text-slate-600' },
           { label: 'Progreso prom.',value: `${avgProgress}%`,       icon: FileText,      color: 'text-slate-600' },
@@ -262,7 +262,7 @@ export default function LiveDashboardPage() {
               onClick={() => setFilterStatus(f.key)}
               className={`px-3 py-1 text-xs font-medium rounded-lg border transition-colors ${
                 filterStatus === f.key
-                  ? 'bg-teal-600 text-white border-teal-600'
+                  ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
               }`}
             >
@@ -305,7 +305,7 @@ export default function LiveDashboardPage() {
                           <span className={`inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
                             s.tabSwitchCount > 3
                               ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                              : 'bg-teal-50 text-teal-700 border border-teal-200'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
                           }`}>
                             {s.tabSwitchCount > 3 && <AlertTriangle className="w-2.5 h-2.5" />}
                             <Eye className="w-2.5 h-2.5" />
@@ -332,7 +332,7 @@ export default function LiveDashboardPage() {
                     <div
                       className={`h-2 rounded-full transition-all ${
                         s.progressPct >= 75 ? 'bg-emerald-500' :
-                        s.progressPct >= 50 ? 'bg-teal-600' :
+                        s.progressPct >= 50 ? 'bg-blue-600' :
                         s.progressPct >= 25 ? 'bg-amber-500' : 'bg-gray-400'
                       }`}
                       style={{ width: `${Math.min(100, s.progressPct)}%` }}
@@ -374,7 +374,7 @@ export default function LiveDashboardPage() {
                 {(s.status === 'SUBMITTED' || s.status === 'IN_PROGRESS') && (
                   <div className="mt-3 pt-3 border-t border-white/50">
                     <Link href={`/profesor/ejercicios/${id}/calificar/${s.attemptId}?cursoId=${courseId}`}>
-                      <button className="w-full py-1.5 text-xs font-semibold text-teal-700 bg-teal-100 hover:bg-teal-200 rounded-lg transition-colors">
+                      <button className="w-full py-1.5 text-xs font-semibold text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors">
                         {s.status === 'SUBMITTED' ? 'Calificar' : 'Ver intento'}
                       </button>
                     </Link>
@@ -436,7 +436,7 @@ export default function LiveDashboardPage() {
                             <div
                               className={`h-1.5 rounded-full ${
                                 s.progressPct >= 75 ? 'bg-emerald-500' :
-                                s.progressPct >= 50 ? 'bg-teal-600' :
+                                s.progressPct >= 50 ? 'bg-blue-600' :
                                 s.progressPct >= 25 ? 'bg-amber-500' : 'bg-gray-400'
                               }`}
                               style={{ width: `${Math.min(100, s.progressPct)}%` }}
@@ -454,7 +454,7 @@ export default function LiveDashboardPage() {
                           <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
                             s.tabSwitchCount > 3
                               ? 'bg-amber-100 text-amber-800'
-                              : 'bg-teal-50 text-teal-700'
+                              : 'bg-blue-50 text-blue-700'
                           }`}>
                             {s.tabSwitchCount > 3 && <AlertTriangle className="w-3 h-3" />}
                             {s.tabSwitchCount}
@@ -471,7 +471,7 @@ export default function LiveDashboardPage() {
                       <td className="p-4 text-right">
                         {(s.status === 'SUBMITTED' || s.status === 'IN_PROGRESS') && (
                           <Link href={`/profesor/ejercicios/${id}/calificar/${s.attemptId}?cursoId=${courseId}`}>
-                            <button className="text-xs font-medium text-teal-700 hover:text-teal-700 px-2 py-1 rounded-lg hover:bg-teal-50 transition-colors">
+                            <button className="text-xs font-medium text-blue-700 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors">
                               {s.status === 'SUBMITTED' ? 'Calificar' : 'Ver'}
                             </button>
                           </Link>

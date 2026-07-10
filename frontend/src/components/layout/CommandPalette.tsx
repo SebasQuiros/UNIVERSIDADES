@@ -147,10 +147,10 @@ export function CommandPalette() {
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-[fadeIn_.12s_ease]" onClick={close} />
       <div className="relative w-full max-w-xl rounded-2xl overflow-hidden border shadow-2xl animate-[cmdIn_.14s_cubic-bezier(.2,.8,.2,1)]"
-        style={{ background: '#0E141B', borderColor: 'rgba(20,184,166,0.28)', boxShadow: '0 24px 80px rgba(0,0,0,0.55)' }}>
+        style={{ background: '#03080F', borderColor: 'rgba(96,165,250,0.28)', boxShadow: '0 24px 80px rgba(0,0,0,0.55)' }}>
         {/* Input */}
         <div className="flex items-center gap-3 px-4 h-14 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-          <Search className="w-5 h-5 flex-shrink-0" style={{ color: '#14B8A6' }} />
+          <Search className="w-5 h-5 flex-shrink-0" style={{ color: '#60A5FA' }} />
           <input
             ref={inputRef}
             value={q}
@@ -181,7 +181,7 @@ export function CommandPalette() {
                     onMouseMove={() => setSel(idx)}
                     onClick={() => go(c)}
                     className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                    style={{ background: active ? '#0D9488' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.8)' }}
+                    style={{ background: active ? '#2563EB' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.8)' }}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" style={{ color: active ? '#fff' : 'rgba(255,255,255,0.5)' }} />
                     <span className="flex-1 text-[13.5px]">{c.label}</span>
@@ -197,7 +197,7 @@ export function CommandPalette() {
         <div className="flex items-center gap-4 px-4 h-9 border-t text-[11px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
           <span className="flex items-center gap-1"><ArrowUp className="w-3 h-3" /><ArrowDown className="w-3 h-3" /> navegar</span>
           <span className="flex items-center gap-1"><CornerDownLeft className="w-3 h-3" /> abrir</span>
-          <span className="ml-auto flex items-center gap-1 font-mono"><Sparkles className="w-3 h-3" style={{ color: '#14B8A6' }} /> ContaSJ ⌘K</span>
+          <span className="ml-auto flex items-center gap-1 font-mono"><Sparkles className="w-3 h-3" style={{ color: '#60A5FA' }} /> ContaSJ ⌘K</span>
         </div>
       </div>
 

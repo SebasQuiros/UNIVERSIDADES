@@ -35,7 +35,7 @@ const fmtBig = (n: number) => {
 
 function ratingColor(r: string) {
   if (r.startsWith('AAA') || r.startsWith('AA')) return { bg: '#ECFDF5', fg: '#047857' };
-  if (r.startsWith('A'))   return { bg: '#F0FDFA', fg: '#0D9488' };
+  if (r.startsWith('A'))   return { bg: '#F0FDFA', fg: '#2563EB' };
   if (r.startsWith('BBB') || r.startsWith('BB')) return { bg: '#FFFBEB', fg: '#B45309' };
   return { bg: '#FEF2F2', fg: '#B91C1C' };
 }
@@ -62,7 +62,7 @@ export function CompanyStockCard({ companyId, companyName }: { companyId: string
   }, [companyId]);
 
   if (loading) {
-    return <div className="rounded-2xl h-64 animate-pulse" style={{ background: '#0E141B' }} />;
+    return <div className="rounded-2xl h-64 animate-pulse" style={{ background: '#03080F' }} />;
   }
   if (error || !val) return null;
 
@@ -73,18 +73,18 @@ export function CompanyStockCard({ companyId, companyName }: { companyId: string
 
   return (
     <div className="rounded-2xl overflow-hidden text-white"
-      style={{ background: '#0E141B', border: '1px solid rgba(20,184,166,0.18)' }}>
+      style={{ background: '#03080F', border: '1px solid rgba(96,165,250,0.18)' }}>
 
       {/* Encabezado tipo bolsa */}
       <div className="px-5 pt-5 pb-3 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center font-black flex-shrink-0"
-            style={{ background: '#0D9488' }}>
+            style={{ background: '#2563EB' }}>
             <Building2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-mono font-bold tracking-wider text-sm" style={{ color: '#14B8A6' }}>{ticker}</span>
+              <span className="font-mono font-bold tracking-wider text-sm" style={{ color: '#60A5FA' }}>{ticker}</span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
                 style={{ background: rc.bg, color: rc.fg }}>{val.rating}</span>
             </div>
@@ -116,7 +116,7 @@ export function CompanyStockCard({ companyId, companyName }: { companyId: string
             <YAxis hide domain={['dataMin', 'dataMax']} />
             <Tooltip
               formatter={(v: any) => [fmtCRC(Number(v)), 'Precio']}
-              contentStyle={{ background: '#0E141B', border: '1px solid rgba(20,184,166,0.3)', borderRadius: 10, fontSize: 12, color: '#fff' }}
+              contentStyle={{ background: '#03080F', border: '1px solid rgba(96,165,250,0.3)', borderRadius: 10, fontSize: 12, color: '#fff' }}
               labelStyle={{ color: 'rgba(255,255,255,0.6)' }}
             />
             <Area type="monotone" dataKey="price" stroke={trendColor} strokeWidth={2.5}
@@ -126,7 +126,7 @@ export function CompanyStockCard({ companyId, companyName }: { companyId: string
       </div>
 
       {/* Métricas */}
-      <div className="grid grid-cols-3 gap-px mt-2" style={{ background: 'rgba(20,184,166,0.12)' }}>
+      <div className="grid grid-cols-3 gap-px mt-2" style={{ background: 'rgba(96,165,250,0.12)' }}>
         <Metric label="Capitalización" value={fmtBig(val.marketCap)} />
         <Metric label="Patrimonio" value={fmtBig(val.financials.equity)} />
         <Metric label="Utilidad neta" value={fmtBig(val.financials.netIncome)}
@@ -166,7 +166,7 @@ export function CompanyStockCard({ companyId, companyName }: { companyId: string
 
 function Metric({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="px-4 py-3" style={{ background: '#0E141B' }}>
+    <div className="px-4 py-3" style={{ background: '#03080F' }}>
       <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{label}</p>
       <p className="text-sm font-bold font-mono tabular-nums" style={{ color: color ?? '#fff' }}>{value}</p>
     </div>

@@ -32,7 +32,7 @@ const ROLES = [
   { value: 'SUPERADMIN', label: 'Super Admin', color: 'bg-red-50 text-red-700 border-red-200' },
   { value: 'ADMIN',      label: 'Admin',       color: 'bg-slate-100 text-slate-700 border-slate-200' },
   { value: 'TEACHER',    label: 'Profesor',    color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { value: 'STUDENT',    label: 'Estudiante',  color: 'bg-teal-50 text-teal-700 border-teal-200' },
+  { value: 'STUDENT',    label: 'Estudiante',  color: 'bg-blue-50 text-blue-700 border-blue-200' },
 ];
 
 function roleBadge(role: string) {
@@ -237,13 +237,13 @@ export default function UsuariosPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nombre o correo..."
-            className="w-full rounded-xl bg-white border border-gray-300 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+            className="w-full rounded-xl bg-white border border-gray-300 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Todos los roles</option>
           {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
@@ -251,7 +251,7 @@ export default function UsuariosPage() {
         <select
           value={uniFilter}
           onChange={(e) => setUniFilter(e.target.value)}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Todas las universidades</option>
           {universities.map((u) => (
@@ -295,7 +295,7 @@ export default function UsuariosPage() {
                   <tr key={u.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
                           {u.name.charAt(0).toUpperCase()}
                         </div>
                         <div>

@@ -60,14 +60,14 @@ function TabButton({ id, active, onClick, icon: Icon, label, count }: {
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
         active
-          ? 'border-teal-600 text-teal-700'
+          ? 'border-blue-600 text-blue-700'
           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
       }`}
     >
       <Icon className="w-4 h-4" />
       {label}
       {count != null && (
-        <span className={`text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-teal-50 text-teal-700' : 'bg-gray-100 text-gray-500'}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
           {count}
         </span>
       )}
@@ -160,7 +160,7 @@ function StudentJourney({ companyId, attemptId, prog, status }: {
         {current && current.href && (
           <Link href={current.href}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg"
-            style={{ background: '#0D9488' }}>
+            style={{ background: '#2563EB' }}>
             Siguiente: {current.hint} <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         )}
@@ -169,11 +169,11 @@ function StudentJourney({ companyId, attemptId, prog, status }: {
         {steps.map((s, i) => {
           const Icon = s.icon;
           const isCurrent = current?.key === s.key;
-          const color = s.done ? '#0D9488' : isCurrent ? '#0E141B' : '#CBD5E1';
+          const color = s.done ? '#2563EB' : isCurrent ? '#03080F' : '#CBD5E1';
           const body = (
             <div className="flex flex-col items-center gap-1.5 flex-shrink-0" style={{ minWidth: 64 }}>
               <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white transition-all"
-                style={{ background: color, boxShadow: isCurrent ? '0 0 0 4px rgba(13,148,136,0.15)' : 'none' }}>
+                style={{ background: color, boxShadow: isCurrent ? '0 0 0 4px rgba(37,99,235,0.15)' : 'none' }}>
                 {s.done ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4.5 h-4.5" />}
               </div>
               <span className="text-[11px] font-medium text-center" style={{ color: s.done || isCurrent ? '#334155' : '#94A3B8' }}>
@@ -185,7 +185,7 @@ function StudentJourney({ companyId, attemptId, prog, status }: {
             <div key={s.key} className="flex items-center flex-1 last:flex-none">
               {s.href ? <Link href={s.href}>{body}</Link> : body}
               {i < steps.length - 1 && (
-                <div className="flex-1 h-0.5 mx-1 rounded" style={{ background: s.done ? '#0D9488' : '#E2E8F0', minWidth: 16 }} />
+                <div className="flex-1 h-0.5 mx-1 rounded" style={{ background: s.done ? '#2563EB' : '#E2E8F0', minWidth: 16 }} />
               )}
             </div>
           );
@@ -238,7 +238,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
   const progressPct = Number(progress?.progress?.progressPct ?? attempt.studentProgress?.progressPct ?? 0);
   const LEVELS = [
     { min: 0,  label: 'Principiante', color: '#94a3b8', bg: 'bg-slate-100',   text: 'text-slate-600',   border: 'border-slate-200' },
-    { min: 25, label: 'Aprendiz',     color: '#0D9488', bg: 'bg-teal-100',    text: 'text-teal-700',    border: 'border-teal-200'  },
+    { min: 25, label: 'Aprendiz',     color: '#2563EB', bg: 'bg-blue-100',    text: 'text-blue-700',    border: 'border-blue-200'  },
     { min: 50, label: 'Contador',     color: '#475569', bg: 'bg-slate-100',  text: 'text-slate-700',  border: 'border-slate-200'},
     { min: 75, label: 'Experto',      color: '#10b981', bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200'},
   ];
@@ -266,9 +266,9 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
       {/* Acceso al Simulador Financiero (sección propia) */}
       <Link href="/estudiante/simulador"
         className="flex items-center gap-4 rounded-xl px-5 py-4 text-white transition-colors"
-        style={{ background: '#0E141B' }}>
+        style={{ background: '#03080F' }}>
         <div className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
-          style={{ background: '#0D9488' }}>
+          style={{ background: '#2563EB' }}>
           <LineChart className="w-5 h-5" />
         </div>
         <div className="min-w-0 flex-1">
@@ -277,11 +277,11 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
             Precio de acción, indicadores macro, gerente financiero IA y eventos económicos de tu empresa.
           </p>
         </div>
-        <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: '#14B8A6' }} />
+        <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: '#60A5FA' }} />
       </Link>
 
       {/* ── Gamification card ───────────────────────────────────────────────── */}
-      <div className="bg-teal-50 border border-teal-100 rounded-xl p-5">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
         <div className="flex items-center gap-5 flex-wrap">
           {/* Progress ring */}
           <div className="flex-shrink-0">
@@ -339,7 +339,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
           {[
             { label: 'Clientes',  value: prog.clientsCount ?? 0,  color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200' },
             { label: 'Productos', value: prog.productsCount ?? 0, color: 'text-slate-600',  bg: 'bg-slate-50 border-slate-200' },
-            { label: 'Facturas',  value: prog.invoicesCount ?? 0, color: 'text-teal-700',    bg: 'bg-teal-50 border-teal-200' },
+            { label: 'Facturas',  value: prog.invoicesCount ?? 0, color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200' },
             { label: 'Asientos',  value: prog.entriesCount ?? 0,  color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
           ].map((s) => (
             <div key={s.label} className={`rounded-xl p-4 text-center border ${s.bg}`}>
@@ -386,7 +386,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
       {dash?.totals && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Facturas emitidas', value: dash.totals.invoices,       color: 'text-teal-700',    bg: 'bg-teal-50 border-teal-200',     isNum: false },
+            { label: 'Facturas emitidas', value: dash.totals.invoices,       color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200',     isNum: false },
             { label: 'Clientes activos',  value: dash.totals.clients,        color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200',   isNum: false },
             { label: 'Productos',         value: dash.totals.products,       color: 'text-slate-600',  bg: 'bg-slate-50 border-slate-200', isNum: false },
             { label: 'Asientos',          value: dash.totals.journalEntries, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', isNum: false },
@@ -450,7 +450,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
           INCOME: 'Ingreso', EXPENSE: 'Gasto',
         };
         const typeColorsChart: Record<string, string> = {
-          ASSET: '#0D9488', LIABILITY: '#ef4444', EQUITY: '#475569',
+          ASSET: '#2563EB', LIABILITY: '#ef4444', EQUITY: '#475569',
           INCOME: '#10b981', EXPENSE: '#f59e0b',
         };
         const grouped = ledger.reduce((acc: Record<string, number>, acc2: any) => {
@@ -563,7 +563,7 @@ function ClientsTab({ companyId, readonly, attemptId }: { companyId: string; rea
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Tipo ID *</label>
                 <select value={form.idType} onChange={(e) => setForm({ ...form, idType: e.target.value })}
-                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="01">01 — Física</option>
                   <option value="02">02 — Jurídica</option>
                   <option value="03">03 — DIMEX</option>
@@ -682,7 +682,7 @@ function ProductsTab({ companyId, readonly, attemptId }: { companyId: string; re
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">IVA *</label>
                 <select value={form.taxRate} onChange={(e) => setForm({ ...form, taxRate: e.target.value })}
-                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   {[0,1,2,4,8,13].map((r) => <option key={r} value={r}>{r}%</option>)}
                 </select>
               </div>
@@ -692,7 +692,7 @@ function ProductsTab({ companyId, readonly, attemptId }: { companyId: string; re
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Unidad</label>
                 <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                  className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   {['UNI', 'SRV', 'KG', 'LT', 'MT', 'HRS'].map((u) => <option key={u} value={u}>{u}</option>)}
                 </select>
               </div>
@@ -714,7 +714,7 @@ function ProductsTab({ companyId, readonly, attemptId }: { companyId: string; re
           <p className="text-sm text-gray-500">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
           {attemptId && (
             <Link href={`/estudiante/ejercicio/${attemptId}/cabys`}
-              className="text-xs text-teal-700 hover:text-teal-700 hover:underline flex items-center gap-1">
+              className="text-xs text-blue-700 hover:text-blue-700 hover:underline flex items-center gap-1">
               <Search className="w-3 h-3" /> Buscar CABYS
             </Link>
           )}
@@ -806,7 +806,7 @@ function SuppliersTab({ companyId, readonly }: { companyId: string; readonly: bo
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Tipo ID</label>
                 <select value={form.idType} onChange={(e) => setForm({ ...form, idType: e.target.value })}
-                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="01">01 — Física</option>
                   <option value="02">02 — Jurídica</option>
                   <option value="03">03 — DIMEX</option>
@@ -841,7 +841,7 @@ function SuppliersTab({ companyId, readonly }: { companyId: string; readonly: bo
         <div className="space-y-2">
           {suppliers.map((s) => (
             <div key={s.id} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <div className="w-8 h-8 rounded-full bg-teal-50 flex items-center justify-center text-teal-700 font-semibold text-sm flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-700 font-semibold text-sm flex-shrink-0">
                 {s.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -1043,9 +1043,9 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
   }
   /* Cabecera con gradiente azul */
   .header{
-    position:relative;background:#0E141B;
+    position:relative;background:#03080F;
     color:#FFF;padding:28px 36px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
-    border-bottom:3px solid #0D9488;
+    border-bottom:3px solid #2563EB;
   }
   .brand{display:flex;align-items:center;gap:14px}
   .brand .logo-wrap{
@@ -1062,7 +1062,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
     border-radius:12px;padding:14px 18px;min-width:230px;text-align:right;
   }
   .header .invoice-box .tag{
-    display:inline-block;background:#0D9488;color:#FFF;font-size:10px;font-weight:800;
+    display:inline-block;background:#2563EB;color:#FFF;font-size:10px;font-weight:800;
     letter-spacing:.12em;padding:4px 10px;border-radius:999px;margin-bottom:6px;
   }
   .header .invoice-box .number{font-size:18px;font-weight:800}
@@ -1081,7 +1081,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
     box-shadow:0 2px 8px rgba(15,23,42,0.04);
   }
   .card .label{
-    display:inline-block;background:#0E141B;color:#FFF;font-size:9px;font-weight:800;
+    display:inline-block;background:#03080F;color:#FFF;font-size:9px;font-weight:800;
     letter-spacing:.12em;padding:3px 9px;border-radius:6px;margin-bottom:8px;
   }
   .card .name{font-size:14px;font-weight:700;color:#0F172A;margin-bottom:4px}
@@ -1089,7 +1089,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
   /* Tabla */
   table{width:100%;border-collapse:separate;border-spacing:0;border-radius:10px;overflow:hidden;
     border:1px solid #E5EAF0}
-  thead tr{background:#0E141B}
+  thead tr{background:#03080F}
   thead th{
     padding:10px 12px;font-size:10.5px;font-weight:700;color:#E0EAFE;
     letter-spacing:.08em;text-transform:uppercase;text-align:right;
@@ -1112,12 +1112,12 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
   .totals .row-line.iva{background:#F8FAFC;border-bottom:1px solid #E5EAF0;border-radius:0 0 8px 8px;margin-bottom:8px}
   .totals .row-line strong{color:#0F172A;font-weight:600}
   .totals .total-block{
-    position:relative;background:#0E141B;color:#FFF;
+    position:relative;background:#03080F;color:#FFF;
     border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;
     box-shadow:0 1px 2px rgba(16,24,40,0.04);
   }
   .totals .total-block::before{
-    content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#0D9488;border-radius:12px 0 0 12px;
+    content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#2563EB;border-radius:12px 0 0 12px;
   }
   .totals .total-block .lbl{font-size:11px;font-weight:700;letter-spacing:.12em;color:#BFD2F4}
   .totals .total-block .val{font-size:20px;font-weight:800;letter-spacing:-.01em}
@@ -1290,7 +1290,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
                 {['CRC', 'USD'].map((cur) => (
                   <button key={cur} type="button"
                     onClick={() => setForm({ ...form, currency: cur })}
-                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${form.currency === cur ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400'}`}>
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${form.currency === cur ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}>
                     {cur === 'CRC' ? '₡ Colones (CRC)' : '$ Dólares (USD)'}
                   </button>
                 ))}
@@ -1307,7 +1307,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">Cliente *</label>
               <select value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })}
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="">Selecciona un cliente...</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -1317,14 +1317,14 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-gray-700">Líneas</label>
-                <button type="button" onClick={addLine} className="text-xs text-teal-700 hover:text-teal-700">+ Agregar línea</button>
+                <button type="button" onClick={addLine} className="text-xs text-blue-700 hover:text-blue-700">+ Agregar línea</button>
               </div>
               <div className="space-y-3">
                 {lines.map((line, i) => (
                   <div key={i} className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
                     <div className="flex gap-2">
                       <select value={line.productId} onChange={(e) => updateLine(i, 'productId', e.target.value)}
-                        className="flex-1 rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        className="flex-1 rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <option value="">Seleccionar producto...</option>
                         {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
@@ -1333,18 +1333,18 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
                       </button>
                     </div>
                     <input value={line.description} onChange={(e) => updateLine(i, 'description', e.target.value)}
-                      placeholder="Descripción de la línea *" className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                      placeholder="Descripción de la línea *" className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     <div className="grid grid-cols-4 gap-2">
                       <input type="number" value={line.quantity} onChange={(e) => updateLine(i, 'quantity', e.target.value)}
-                        placeholder="Cant." min="0.001" step="0.001" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                        placeholder="Cant." min="0.001" step="0.001" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       <input type="number" value={line.unitPrice} onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
-                        placeholder="Precio" min="0" step="0.01" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                        placeholder="Precio" min="0" step="0.01" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       <select value={line.taxRate} onChange={(e) => updateLine(i, 'taxRate', e.target.value)}
-                        className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
                         {[0,1,2,4,8,13].map((r) => <option key={r} value={r}>IVA {r}%</option>)}
                       </select>
                       <input value={line.cabysCode} onChange={(e) => updateLine(i, 'cabysCode', e.target.value)}
-                        placeholder="CABYS (13d)" maxLength={13} className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                        placeholder="CABYS (13d)" maxLength={13} className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
                   </div>
                 ))}
@@ -1385,7 +1385,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
             <tbody className="divide-y divide-gray-100">
               {invoices.map((inv) => (
                 <tr key={inv.id} className="hover:bg-gray-50">
-                  <td className="py-3 font-mono text-xs text-teal-700">{inv.consecutiveNumber}</td>
+                  <td className="py-3 font-mono text-xs text-blue-700">{inv.consecutiveNumber}</td>
                   <td className="py-3 text-gray-700">{inv.clientName}</td>
                   <td className="py-3 text-gray-500">{formatDate(inv.issueDate)}</td>
                   <td className="py-3 text-right text-gray-700 font-medium">
@@ -1401,7 +1401,7 @@ function InvoicesTab({ companyId, readonly, attemptId }: { companyId: string; re
                   <td className="py-3 text-right">
                     <div className="flex items-center gap-1 justify-end">
                       <button onClick={() => handlePrintInvoice(inv)} title="Imprimir / PDF"
-                        className="p-1.5 text-gray-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors">
+                        className="p-1.5 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
                         <Printer className="w-3.5 h-3.5" />
                       </button>
                       {(inv.status === 'ISSUED' || inv.status === 'ACCEPTED') && (
@@ -1465,13 +1465,13 @@ function JournalTab({ companyId, attemptId }: { companyId: string; readonly?: bo
   return (
     <div className="space-y-4">
       {/* Info box — auto-generated entries */}
-      <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
-        <div className="text-teal-600 mt-0.5">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+        <div className="text-blue-600 mt-0.5">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </div>
         <div>
-          <p className="font-semibold text-teal-800 text-sm">Asientos generados automáticamente</p>
-          <p className="text-teal-700 text-sm mt-1">
+          <p className="font-semibold text-blue-800 text-sm">Asientos generados automáticamente</p>
+          <p className="text-blue-700 text-sm mt-1">
             El sistema registra los asientos contables automáticamente cuando realizas
             operaciones (facturas, compras, pagos, planillas). Los asientos se muestran
             a continuación para tu revisión.
@@ -1591,7 +1591,7 @@ function LedgerTab({ companyId }: { companyId: string }) {
   }
 
   const typeColors: Record<string, string> = {
-    ASSET:     'bg-teal-50 text-teal-700 border-teal-200',
+    ASSET:     'bg-blue-50 text-blue-700 border-blue-200',
     LIABILITY: 'bg-red-50 text-red-700 border-red-200',
     EQUITY:    'bg-slate-50 text-slate-700 border-slate-200',
     INCOME:   'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -1631,7 +1631,7 @@ function LedgerTab({ companyId }: { companyId: string }) {
             <button key={acc.accountId} onClick={() => selectAccount(acc)}
               className={`w-full text-left p-3 rounded-xl border transition-all ${
                 selected?.accountId === acc.accountId
-                  ? 'bg-teal-50 border-teal-300'
+                  ? 'bg-blue-50 border-blue-300'
                   : 'bg-white border-gray-200 hover:bg-gray-50'
               }`}>
               <div className="flex items-center justify-between gap-2">
@@ -1667,7 +1667,7 @@ function LedgerTab({ companyId }: { companyId: string }) {
               </div>
               <div className="ml-auto grid grid-cols-3 gap-3 text-center">
                 {[
-                  { label: 'Débitos',  value: selected.totalDebit,  color: 'text-teal-700' },
+                  { label: 'Débitos',  value: selected.totalDebit,  color: 'text-blue-700' },
                   { label: 'Créditos', value: selected.totalCredit, color: 'text-red-600' },
                   { label: 'Saldo',    value: selected.balance,     color: 'text-gray-900' },
                 ].map((s) => (
@@ -1698,7 +1698,7 @@ function LedgerTab({ companyId }: { companyId: string }) {
                         <td className="p-3 text-xs text-gray-400">#{m.entryNumber}</td>
                         <td className="p-3 text-xs text-gray-500">{formatDate(m.entryDate)}</td>
                         <td className="p-3 text-gray-700 text-xs max-w-[200px] truncate">{m.description}</td>
-                        <td className="p-3 text-right text-teal-700 font-mono text-xs">
+                        <td className="p-3 text-right text-blue-700 font-mono text-xs">
                           {Number(m.debit) > 0 ? `₡${Number(m.debit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
                         </td>
                         <td className="p-3 text-right text-red-600 font-mono text-xs">
@@ -1965,7 +1965,7 @@ function ReportsTab({ companyId, companyName }: { companyId: string; companyName
         ] as const).map(({ id, label }) => (
           <button key={id} onClick={() => load(id)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              report === id ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              report === id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}>
             {label}
           </button>
@@ -2004,8 +2004,8 @@ function ReportsTab({ companyId, companyName }: { companyId: string; companyName
         <div className="flex justify-center py-10"><Spinner /></div>
       ) : !data ? null : report === 'balance-sheet' ? (
         <div id="print-report-area"><div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-teal-50 rounded-xl p-4 border border-teal-100">
-            <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-3">Activos</p>
+          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-3">Activos</p>
             {(data.assets?.accounts ?? []).map((a: any) => (
               <ReportRow key={a.id} label={`${a.code} ${a.name}`} value={Number(a.balance ?? a.balanceNum ?? 0)} />
             ))}
@@ -2195,12 +2195,12 @@ function BankTab({ companyId, readonly }: { companyId: string; readonly: boolean
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Fecha *</label>
                 <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })}
-                  className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                  className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Tipo *</label>
                 <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
-                  className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="CREDIT">Crédito (entrada)</option>
                   <option value="DEBIT">Débito (salida)</option>
                 </select>
@@ -2223,7 +2223,7 @@ function BankTab({ companyId, readonly }: { companyId: string; readonly: boolean
           {[
             { label: 'Entradas',    value: fmtMoney(summary.credits), color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
             { label: 'Salidas',     value: fmtMoney(summary.debits),  color: 'text-red-700',     bg: 'bg-red-50 border-red-200' },
-            { label: 'Saldo banco', value: fmtMoney(summary.balance), color: 'text-teal-700',    bg: 'bg-teal-50 border-teal-200' },
+            { label: 'Saldo banco', value: fmtMoney(summary.balance), color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200' },
             { label: 'Conciliados', value: `${summary.reconciled}/${summary.total}`, color: 'text-gray-700', bg: 'bg-gray-50 border-gray-200' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl p-4 text-center border ${s.bg}`}>
@@ -2336,13 +2336,13 @@ interface ActivityResponse {
 }
 
 const EVENT_META: Record<string, { label: string; color: string; icon: string; short: string }> = {
-  EXERCISE_OPENED:      { label: 'Ejercicio abierto',      color: 'bg-teal-100 text-teal-700 border-teal-200',       icon: '📂', short: 'Apertura'  },
-  EXERCISE_RESUMED:     { label: 'Ejercicio reanudado',    color: 'bg-teal-100 text-teal-700 border-teal-200',       icon: '▶️', short: 'Reanudado' },
+  EXERCISE_OPENED:      { label: 'Ejercicio abierto',      color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: '📂', short: 'Apertura'  },
+  EXERCISE_RESUMED:     { label: 'Ejercicio reanudado',    color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: '▶️', short: 'Reanudado' },
   CLIENT_CREATED:       { label: 'Cliente creado',         color: 'bg-amber-100 text-amber-700 border-amber-200',    icon: '👤', short: 'Cliente'   },
   PRODUCT_CREATED:      { label: 'Producto creado',        color: 'bg-slate-100 text-slate-700 border-slate-200', icon: '📦', short: 'Producto'  },
   INVOICE_CREATED:      { label: 'Factura creada',         color: 'bg-slate-100 text-slate-700 border-slate-200', icon: '📄', short: 'Factura'   },
   INVOICE_ISSUED:       { label: 'Factura emitida',        color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: '✅', short: 'Emitida' },
-  JOURNAL_ENTRY_SAVED:  { label: 'Asiento registrado',     color: 'bg-teal-100 text-teal-700 border-teal-200',       icon: '📒', short: 'Asiento'   },
+  JOURNAL_ENTRY_SAVED:  { label: 'Asiento registrado',     color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: '📒', short: 'Asiento'   },
   REPORT_VIEWED:        { label: 'Reporte visualizado',    color: 'bg-gray-100 text-gray-700 border-gray-200',       icon: '📊', short: 'Reporte'   },
   EXERCISE_SUBMITTED:   { label: 'Ejercicio enviado',      color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: '🏆', short: 'Entrega' },
 };
@@ -2431,7 +2431,7 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
       {/* ── Summary stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total eventos',      value: events.length,          color: 'text-teal-700',    bg: 'bg-teal-50 border-teal-200'     },
+          { label: 'Total eventos',      value: events.length,          color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200'     },
           { label: 'Duración sesión',    value: durationMin != null ? `${durationMin}m` : '—', color: 'text-slate-600', bg: 'bg-slate-50 border-slate-200' },
           { label: 'Pico 10 min',        value: `${busiestCount} acc.`, color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200'   },
           { label: 'Tipos distintos',    value: Object.keys(distMap).length, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
@@ -2452,7 +2452,7 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
               <defs>
                 {[
                   { id: 'fact', color: '#6366f1' },
-                  { id: 'asie', color: '#14b8a6' },
+                  { id: 'asie', color: '#60A5FA' },
                   { id: 'clie', color: '#f59e0b' },
                   { id: 'prod', color: '#a855f7' },
                 ].map(({ id, color }) => (
@@ -2471,7 +2471,7 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
               />
               <Legend wrapperStyle={{ fontSize: 11 }} formatter={(v: any) => (({ facturas: 'Facturas', asientos: 'Asientos', clientes: 'Clientes', productos: 'Productos' } as any)[v] ?? v)} />
               <Area type="monotone" dataKey="facturas" stroke="#6366f1" fill="url(#fact)" strokeWidth={2} dot={false} />
-              <Area type="monotone" dataKey="asientos" stroke="#14b8a6" fill="url(#asie)" strokeWidth={2} dot={false} />
+              <Area type="monotone" dataKey="asientos" stroke="#60A5FA" fill="url(#asie)" strokeWidth={2} dot={false} />
               <Area type="monotone" dataKey="clientes" stroke="#f59e0b" fill="url(#clie)" strokeWidth={2} dot={false} />
               <Area type="monotone" dataKey="productos" stroke="#a855f7" fill="url(#prod)" strokeWidth={2} dot={false} />
             </AreaChart>
@@ -2533,7 +2533,7 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
         {events.length > 20 && (
           <button
             onClick={() => setShowAll(s => !s)}
-            className="mt-4 w-full py-2 text-xs font-medium text-teal-700 border border-teal-200 bg-teal-50 hover:bg-teal-100 rounded-xl transition-colors"
+            className="mt-4 w-full py-2 text-xs font-medium text-blue-700 border border-blue-200 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
           >
             {showAll ? 'Mostrar menos' : `Ver todos (${events.length} eventos)`}
           </button>
@@ -2580,7 +2580,7 @@ function MayorizacionTab({ companyId }: { companyId: string }) {
             <div className="grid grid-cols-2 divide-x divide-gray-200">
               <div className="p-3 text-center">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">DEBE</p>
-                <p className="text-sm font-bold text-teal-700">₡{Number(acc.totalDebit).toLocaleString('es-CR', { minimumFractionDigits: 0 })}</p>
+                <p className="text-sm font-bold text-blue-700">₡{Number(acc.totalDebit).toLocaleString('es-CR', { minimumFractionDigits: 0 })}</p>
               </div>
               <div className="p-3 text-center">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">HABER</p>
@@ -2597,7 +2597,7 @@ function MayorizacionTab({ companyId }: { companyId: string }) {
       </div>
       <div className="flex gap-3 justify-end flex-wrap">
         {[
-          { label: 'Total Débitos',  value: totalD, color: 'bg-teal-50 border-teal-200 text-teal-700' },
+          { label: 'Total Débitos',  value: totalD, color: 'bg-blue-50 border-blue-200 text-blue-700' },
           { label: 'Total Créditos', value: totalC, color: 'bg-red-50 border-red-200 text-red-700' },
         ].map((s) => (
           <div key={s.label} className={`border rounded-xl px-5 py-3 text-center ${s.color}`}>
@@ -2641,7 +2641,7 @@ function BalanceComprobacionTab({
   const balanced = Math.abs(totalD - totalC) < 0.01;
 
   const typeLabels: Record<string, string> = { ASSET: 'Activo', LIABILITY: 'Pasivo', EQUITY: 'Patrimonio', INCOME: 'Ingreso', EXPENSE: 'Gasto' };
-  const typeColors: Record<string, string> = { ASSET: 'text-teal-700', LIABILITY: 'text-red-600', EQUITY: 'text-slate-600', INCOME: 'text-emerald-600', EXPENSE: 'text-amber-600' };
+  const typeColors: Record<string, string> = { ASSET: 'text-blue-700', LIABILITY: 'text-red-600', EQUITY: 'text-slate-600', INCOME: 'text-emerald-600', EXPENSE: 'text-amber-600' };
 
   if (accounts.length === 0) return (
     <div className="text-center py-10">
@@ -2655,7 +2655,7 @@ function BalanceComprobacionTab({
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <p className="text-sm text-gray-500">{accounts.length} cuentas</p>
-          {note && <p className="text-xs text-teal-700 mt-0.5">{note}</p>}
+          {note && <p className="text-xs text-blue-700 mt-0.5">{note}</p>}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -2706,7 +2706,7 @@ function BalanceComprobacionTab({
                   <td className="p-4 font-mono text-xs text-gray-400">{acc.code}</td>
                   <td className="p-4 font-medium text-gray-700">{acc.name}</td>
                   <td className="p-4"><span className={`text-xs font-medium ${typeColors[acc.type] ?? 'text-gray-500'}`}>{typeLabels[acc.type] ?? acc.type}</span></td>
-                  <td className="p-4 text-right font-mono text-xs text-teal-700">₡{Number(acc.totalDebit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
+                  <td className="p-4 text-right font-mono text-xs text-blue-700">₡{Number(acc.totalDebit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
                   <td className="p-4 text-right font-mono text-xs text-red-600">₡{Number(acc.totalCredit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
                   <td className="p-4 text-right font-mono text-xs font-bold text-gray-800">₡{Number(acc.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
                 </tr>
@@ -2715,7 +2715,7 @@ function BalanceComprobacionTab({
             <tfoot>
               <tr className="bg-gray-50 border-t-2 border-gray-400 font-bold text-sm">
                 <td colSpan={3} className="p-4 text-gray-700 uppercase tracking-wide text-xs">Totales</td>
-                <td className="p-4 text-right font-mono text-teal-700">₡{totalD.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
+                <td className="p-4 text-right font-mono text-blue-700">₡{totalD.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
                 <td className="p-4 text-right font-mono text-red-700">₡{totalC.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
                 <td className="p-4" />
               </tr>
@@ -2805,7 +2805,7 @@ function SpecialJournalTab({
                 <div className="flex items-center gap-1">
                   <span className="text-xs bg-gray-100 border border-gray-200 rounded-xl px-2 py-2.5 text-gray-500 font-mono flex-shrink-0">{prefix}-</span>
                   <input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })}
-                    placeholder="001" className="flex-1 rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                    placeholder="001" className="flex-1 rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
             </div>
@@ -2814,14 +2814,14 @@ function SpecialJournalTab({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-gray-700">Partidas</label>
-                <button type="button" onClick={addLine} className="text-xs text-teal-700 hover:text-teal-700">+ Agregar línea</button>
+                <button type="button" onClick={addLine} className="text-xs text-blue-700 hover:text-blue-700">+ Agregar línea</button>
               </div>
               <div className="space-y-2">
                 {lines.map((line, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-6">
                       <select value={line.accountId} onChange={(e) => updateLine(i, 'accountId', e.target.value)}
-                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500">
+                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <option value="">Cuenta...</option>
                         {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} – {a.name}</option>)}
                       </select>
@@ -2829,12 +2829,12 @@ function SpecialJournalTab({
                     <div className="col-span-2">
                       <input type="number" value={line.debit} onChange={(e) => updateLine(i, 'debit', e.target.value)}
                         placeholder="Débito" min="0" step="0.01"
-                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
                     <div className="col-span-2">
                       <input type="number" value={line.credit} onChange={(e) => updateLine(i, 'credit', e.target.value)}
                         placeholder="Crédito" min="0" step="0.01"
-                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500" />
+                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
                     <div className="col-span-2 flex justify-center">
                       <button type="button" onClick={() => removeLine(i)} disabled={lines.length <= 2}
@@ -2974,7 +2974,7 @@ function FixedAssetsTab({ companyId }: { companyId: string }) {
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Método</label>
                 <select value={form.depreciationMethod} onChange={e => setForm({ ...form, depreciationMethod: e.target.value })}
-                  className="rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  className="rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="STRAIGHT_LINE">Línea recta</option>
                   <option value="SUM_OF_DIGITS">Suma de dígitos</option>
                   <option value="DOUBLE_DECLINING">Doble saldo decreciente</option>
@@ -3017,7 +3017,7 @@ function FixedAssetsTab({ companyId }: { companyId: string }) {
                 {[
                   { label: 'Costo', value: Number(asset.acquisitionCost), color: 'text-gray-700' },
                   { label: 'Depreciación acum.', value: Number(asset.accumulatedDeprec), color: 'text-red-600' },
-                  { label: 'Valor en libros', value: Number(asset.bookValue), color: 'text-teal-700' },
+                  { label: 'Valor en libros', value: Number(asset.bookValue), color: 'text-blue-700' },
                 ].map(s => (
                   <div key={s.label} className="px-2">
                     <p className={`text-sm font-bold ${s.color}`}>₡{s.value.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</p>
@@ -3113,8 +3113,8 @@ function PayrollBreakdownModal({ line, onClose }: { line: any; onClose: () => vo
         </div>
 
         {/* Cargas patronales */}
-        <div className="bg-teal-50 rounded-lg p-3">
-          <p className="font-semibold text-teal-700 mb-2">Cargas Sociales Patronales (22.17%)</p>
+        <div className="bg-blue-50 rounded-lg p-3">
+          <p className="font-semibold text-blue-700 mb-2">Cargas Sociales Patronales (22.17%)</p>
           <div className="flex justify-between text-xs"><span className="text-gray-500">SEM 9.25%</span><span className="font-mono">{fmt(pat.sem ?? 0)}</span></div>
           <div className="flex justify-between text-xs"><span className="text-gray-500">IVM 5.42%</span><span className="font-mono">{fmt(pat.ivm ?? 0)}</span></div>
           <div className="flex justify-between text-xs"><span className="text-gray-500">Banco Popular 0.25%</span><span className="font-mono">{fmt(pat.bancoPop ?? 0)}</span></div>
@@ -3122,10 +3122,10 @@ function PayrollBreakdownModal({ line, onClose }: { line: any; onClose: () => vo
           <div className="flex justify-between text-xs"><span className="text-gray-500">FODESAF 0.50%</span><span className="font-mono">{fmt(pat.fodesaf ?? 0)}</span></div>
           <div className="flex justify-between text-xs"><span className="text-gray-500">INA 1.50%</span><span className="font-mono">{fmt(pat.ina ?? 0)}</span></div>
           <div className="flex justify-between text-xs"><span className="text-gray-500">FCL 3.00%</span><span className="font-mono">{fmt(pat.fcl ?? 0)}</span></div>
-          <div className="flex justify-between text-xs border-b border-teal-200 pb-1 mb-1"><span className="text-gray-500">INS 1.75%</span><span className="font-mono">{fmt(pat.ins ?? 0)}</span></div>
-          <div className="flex justify-between text-xs font-semibold text-teal-800"><span>Subtotal CCSS patrono</span><span className="font-mono">{fmt(pat.total ?? 0)}</span></div>
+          <div className="flex justify-between text-xs border-b border-blue-200 pb-1 mb-1"><span className="text-gray-500">INS 1.75%</span><span className="font-mono">{fmt(pat.ins ?? 0)}</span></div>
+          <div className="flex justify-between text-xs font-semibold text-blue-800"><span>Subtotal CCSS patrono</span><span className="font-mono">{fmt(pat.total ?? 0)}</span></div>
           <div className="flex justify-between text-xs mt-1"><span className="text-gray-500">Aguinaldo prov. 8.33%</span><span className="font-mono">{fmt(line.aguinaldo)}</span></div>
-          <div className="flex justify-between font-bold text-teal-900 border-t border-teal-300 mt-2 pt-1">
+          <div className="flex justify-between font-bold text-blue-900 border-t border-blue-300 mt-2 pt-1">
             <span>Costo total empleador</span><span className="font-mono">{fmt(line.totalEmployerCost)}</span>
           </div>
         </div>
@@ -3249,18 +3249,18 @@ function PayrollTab({ companyId }: { companyId: string }) {
     <div className="space-y-5">
       {/* CCSS Summary card */}
       {ccssPayable !== null && (
-        <div className="bg-teal-600 text-white rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="bg-blue-600 text-white rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-teal-100">CCSS a pagar — {latestPayroll.period}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">CCSS a pagar — {latestPayroll.period}</p>
             <p className="text-2xl font-bold mt-0.5">{fmt(ccssPayable)}</p>
-            <p className="text-xs text-teal-200 mt-0.5">
+            <p className="text-xs text-blue-200 mt-0.5">
               Trabajadores: {fmt(latestPayroll.totalTrabajador)} &nbsp;|&nbsp; Patrono: {fmt(latestPayroll.totalPatrono)}
             </p>
           </div>
-          <div className="text-right text-xs text-teal-100 shrink-0">
+          <div className="text-right text-xs text-blue-100 shrink-0">
             <p className="font-semibold">Vence el día 15</p>
             <p>del mes siguiente</p>
-            <p className="mt-1 text-teal-200">Formulario D-121 CCSS</p>
+            <p className="mt-1 text-blue-200">Formulario D-121 CCSS</p>
           </div>
         </div>
       )}
@@ -3394,7 +3394,7 @@ function PayrollTab({ companyId }: { companyId: string }) {
                   type="month"
                   value={period}
                   onChange={e => { setPeriod(e.target.value); setPreviewData(null); }}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <Button onClick={handlePreview} loading={previewLoading} disabled={employees.length === 0}>
@@ -3434,8 +3434,8 @@ function PayrollTab({ companyId }: { companyId: string }) {
                         <th className="text-right px-3 py-2 text-orange-500">CCSS Trab.</th>
                         <th className="text-right px-3 py-2 text-orange-500">Renta</th>
                         <th className="text-right px-3 py-2 text-emerald-600">Sal. Neto</th>
-                        <th className="text-right px-3 py-2 text-teal-600">CCSS Pat.</th>
-                        <th className="text-right px-3 py-2 text-teal-600">Aguinaldo</th>
+                        <th className="text-right px-3 py-2 text-blue-600">CCSS Pat.</th>
+                        <th className="text-right px-3 py-2 text-blue-600">Aguinaldo</th>
                         <th className="text-right px-3 py-2">Costo Total</th>
                       </tr>
                     </thead>
@@ -3443,7 +3443,7 @@ function PayrollTab({ companyId }: { companyId: string }) {
                       {previewData.lines.map((l: any) => (
                         <tr
                           key={l.employeeId}
-                          className="hover:bg-teal-50 cursor-pointer transition-colors"
+                          className="hover:bg-blue-50 cursor-pointer transition-colors"
                           onClick={() => setDetailLine({ ...l.calc, employee: { name: l.employeeName, position: l.position } })}
                         >
                           <td className="px-3 py-2 font-medium text-gray-800">
@@ -3455,8 +3455,8 @@ function PayrollTab({ companyId }: { companyId: string }) {
                           <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(l.calc.ccssWorker)}</td>
                           <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(l.calc.rentaDeduccion)}</td>
                           <td className="px-3 py-2 text-right font-mono font-bold text-emerald-700">{fmt(l.calc.netSalary)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-teal-700">{fmt(l.calc.ccssPatrono)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-teal-700">{fmt(l.calc.aguinaldo)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(l.calc.ccssPatrono)}</td>
+                          <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(l.calc.aguinaldo)}</td>
                           <td className="px-3 py-2 text-right font-mono font-bold">{fmt(l.calc.totalEmployerCost)}</td>
                         </tr>
                       ))}
@@ -3468,8 +3468,8 @@ function PayrollTab({ companyId }: { companyId: string }) {
                         <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(previewData.totals.totalTrabajador)}</td>
                         <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(previewData.totals.totalRenta)}</td>
                         <td className="px-3 py-2 text-right font-mono text-emerald-700">{fmt(previewData.totals.totalNet)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-teal-700">{fmt(previewData.totals.totalPatrono)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-teal-700">{fmt(previewData.totals.totalAguinaldo)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(previewData.totals.totalPatrono)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(previewData.totals.totalAguinaldo)}</td>
                         <td className="px-3 py-2 text-right font-mono">{fmt(previewData.totals.totalCost)}</td>
                       </tr>
                     </tfoot>
@@ -3484,15 +3484,15 @@ function PayrollTab({ companyId }: { companyId: string }) {
                   <p className="text-lg font-bold text-orange-700 font-mono mt-0.5">{fmt(previewData.totals.totalTrabajador)}</p>
                   <p className="text-xs text-orange-400">10.34% del bruto</p>
                 </div>
-                <div className="bg-teal-50 border border-teal-100 rounded-xl p-3 text-center">
-                  <p className="text-xs text-teal-600 font-medium">CCSS Patrono</p>
-                  <p className="text-lg font-bold text-teal-700 font-mono mt-0.5">{fmt(previewData.totals.totalPatrono)}</p>
-                  <p className="text-xs text-teal-500">22.17% del bruto</p>
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+                  <p className="text-xs text-blue-600 font-medium">CCSS Patrono</p>
+                  <p className="text-lg font-bold text-blue-700 font-mono mt-0.5">{fmt(previewData.totals.totalPatrono)}</p>
+                  <p className="text-xs text-blue-500">22.17% del bruto</p>
                 </div>
-                <div className="bg-teal-50 border border-teal-100 rounded-xl p-3 text-center">
-                  <p className="text-xs text-teal-600 font-medium">Aguinaldo provisión</p>
-                  <p className="text-lg font-bold text-teal-700 font-mono mt-0.5">{fmt(previewData.totals.totalAguinaldo)}</p>
-                  <p className="text-xs text-teal-500">8.33% del bruto</p>
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+                  <p className="text-xs text-blue-600 font-medium">Aguinaldo provisión</p>
+                  <p className="text-lg font-bold text-blue-700 font-mono mt-0.5">{fmt(previewData.totals.totalAguinaldo)}</p>
+                  <p className="text-xs text-blue-500">8.33% del bruto</p>
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
                   <p className="text-xs text-gray-500 font-medium">Total a pagar CCSS</p>
@@ -3554,7 +3554,7 @@ function PayrollTab({ companyId }: { companyId: string }) {
                   onClick={() => setExpandedPayroll(expandedPayroll === p.id ? null : p.id)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="bg-teal-100 text-teal-700 font-mono text-sm font-bold px-3 py-1.5 rounded-lg">{p.period}</div>
+                    <div className="bg-blue-100 text-blue-700 font-mono text-sm font-bold px-3 py-1.5 rounded-lg">{p.period}</div>
                     <div>
                       <p className="text-sm font-semibold text-gray-800">{p.lines?.length ?? 0} empleado{(p.lines?.length ?? 0) !== 1 ? 's' : ''}</p>
                       <p className="text-xs text-gray-400">Neto: <span className="text-emerald-600 font-semibold">{fmt(p.totalNet)}</span></p>
@@ -3576,8 +3576,8 @@ function PayrollTab({ companyId }: { companyId: string }) {
                       <div className="bg-gray-50 rounded-lg p-2 text-center"><p className="text-gray-400">Bruto total</p><p className="font-bold font-mono">{fmt(p.totalGross)}</p></div>
                       <div className="bg-orange-50 rounded-lg p-2 text-center"><p className="text-orange-400">CCSS trab.</p><p className="font-bold font-mono text-orange-700">{fmt(p.totalTrabajador)}</p></div>
                       <div className="bg-emerald-50 rounded-lg p-2 text-center"><p className="text-emerald-400">Neto</p><p className="font-bold font-mono text-emerald-700">{fmt(p.totalNet)}</p></div>
-                      <div className="bg-teal-50 rounded-lg p-2 text-center"><p className="text-teal-500">CCSS patrono</p><p className="font-bold font-mono text-teal-700">{fmt(p.totalPatrono)}</p></div>
-                      <div className="bg-teal-50 rounded-lg p-2 text-center"><p className="text-teal-500">Aguinaldo</p><p className="font-bold font-mono text-teal-700">{fmt(p.totalAguinaldo)}</p></div>
+                      <div className="bg-blue-50 rounded-lg p-2 text-center"><p className="text-blue-500">CCSS patrono</p><p className="font-bold font-mono text-blue-700">{fmt(p.totalPatrono)}</p></div>
+                      <div className="bg-blue-50 rounded-lg p-2 text-center"><p className="text-blue-500">Aguinaldo</p><p className="font-bold font-mono text-blue-700">{fmt(p.totalAguinaldo)}</p></div>
                     </div>
 
                     {/* Employee lines */}
@@ -3590,24 +3590,24 @@ function PayrollTab({ companyId }: { companyId: string }) {
                             <th className="text-right pb-1 text-orange-500">CCSS Trab.</th>
                             <th className="text-right pb-1 text-orange-500">Renta</th>
                             <th className="text-right pb-1 text-emerald-600">Neto</th>
-                            <th className="text-right pb-1 text-teal-600">CCSS Pat.</th>
-                            <th className="text-right pb-1 text-teal-600">Aguinaldo</th>
+                            <th className="text-right pb-1 text-blue-600">CCSS Pat.</th>
+                            <th className="text-right pb-1 text-blue-600">Aguinaldo</th>
                             <th className="text-right pb-1">Costo total</th>
                             <th className="pb-1" />
                           </tr></thead>
                           <tbody className="divide-y divide-gray-50">
                             {p.lines.map((l: any) => (
-                              <tr key={l.id} className="hover:bg-teal-50 cursor-pointer" onClick={() => setDetailLine(l)}>
+                              <tr key={l.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setDetailLine(l)}>
                                 <td className="py-1 font-medium text-gray-700">{l.employee?.name ?? '—'}</td>
                                 <td className="py-1 text-right font-mono">{fmt(l.totalGross)}</td>
                                 <td className="py-1 text-right font-mono text-orange-600">-{fmt(l.ccssWorker)}</td>
                                 <td className="py-1 text-right font-mono text-orange-600">-{fmt(l.rentaDeduccion)}</td>
                                 <td className="py-1 text-right font-mono font-bold text-emerald-700">{fmt(l.netSalary)}</td>
-                                <td className="py-1 text-right font-mono text-teal-700">{fmt(l.ccssPatrono)}</td>
-                                <td className="py-1 text-right font-mono text-teal-700">{fmt(l.aguinaldo)}</td>
+                                <td className="py-1 text-right font-mono text-blue-700">{fmt(l.ccssPatrono)}</td>
+                                <td className="py-1 text-right font-mono text-blue-700">{fmt(l.aguinaldo)}</td>
                                 <td className="py-1 text-right font-mono font-bold">{fmt(l.totalEmployerCost)}</td>
                                 <td className="py-1 pl-2">
-                                  <button className="text-teal-500 hover:text-teal-700" title="Ver desglose"><Search className="w-3.5 h-3.5" /></button>
+                                  <button className="text-blue-500 hover:text-blue-700" title="Ver desglose"><Search className="w-3.5 h-3.5" /></button>
                                 </td>
                               </tr>
                             ))}
@@ -3652,13 +3652,13 @@ function AiAssistant({ activeTab, companyName }: { activeTab: string; companyNam
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-teal-600 hover:bg-teal-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
         title="Asistente IA">
         <MessageCircle className="w-6 h-6" />
       </button>
       {open && (
         <div className="fixed bottom-24 right-6 z-50 w-80 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between p-4 bg-teal-600 text-white">
+          <div className="flex items-center justify-between p-4 bg-blue-600 text-white">
             <p className="font-semibold text-sm">Asistente Contable IA</p>
             <button onClick={() => setOpen(false)}><X className="w-4 h-4" /></button>
           </div>
@@ -3671,7 +3671,7 @@ function AiAssistant({ activeTab, companyName }: { activeTab: string; companyNam
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 placeholder="¿Tienes alguna pregunta contable?"
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 rows={3}
                 maxLength={500}
               />
@@ -3717,8 +3717,8 @@ function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: 
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-xl bg-teal-50 flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8 text-teal-700" />
+          <div className="w-16 h-16 rounded-xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
+            <Building2 className="w-8 h-8 text-blue-700" />
           </div>
           <h3 className="text-xl font-bold text-gray-900">Configura tu empresa</h3>
           <p className="text-gray-500 text-sm mt-1">Datos que aparecerán en tus facturas electrónicas</p>
@@ -3731,7 +3731,7 @@ function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Tipo de cédula *</label>
                 <select value={form.legalIdType} onChange={(e) => setForm({ ...form, legalIdType: e.target.value })}
-                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="01">01 — Física</option>
                   <option value="02">02 — Jurídica</option>
                   <option value="03">03 — DIMEX</option>
@@ -3918,7 +3918,7 @@ export default function ExerciseWorkspacePage() {
             </Link>
             <Link
               href={`/estudiante/ejercicio/${attemptId}/diario`}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors ring-1 ring-teal-200/60"
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors ring-1 ring-blue-200/60"
             >
               Libro diario
             </Link>

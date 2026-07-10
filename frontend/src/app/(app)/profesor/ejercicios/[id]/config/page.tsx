@@ -63,7 +63,7 @@ function Toggle({
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
         className={`relative inline-flex h-5 w-9 flex-shrink-0 mt-0.5 items-center rounded-full transition-colors ${
-          checked ? 'bg-teal-600' : 'bg-gray-300'
+          checked ? 'bg-blue-600' : 'bg-gray-300'
         } ${disabled ? 'cursor-not-allowed' : ''}`}
       >
         <span
@@ -240,7 +240,7 @@ export default function ExerciseConfigPage() {
       {/* Modo empresa */}
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-teal-700" />
+          <Users className="w-4 h-4 text-blue-700" />
           <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
             Modo de empresa
           </h2>
@@ -260,7 +260,7 @@ export default function ExerciseConfigPage() {
                 onClick={() => changeCompanyMode(mode)}
                 className={`text-left p-4 rounded-xl border-2 transition ${
                   active
-                    ? 'border-teal-600 bg-teal-50'
+                    ? 'border-blue-600 bg-blue-50'
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 } ${isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
               >

@@ -50,7 +50,7 @@ export default function AdminCursosPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar cursos..."
-          className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+          className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -68,7 +68,7 @@ export default function AdminCursosPage() {
               className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex flex-col gap-4">
               <div>
                 {course.code && (
-                  <span className="text-xs font-mono text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
                     {course.code}
                   </span>
                 )}

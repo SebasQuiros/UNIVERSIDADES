@@ -34,7 +34,7 @@ const fmtCrc = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-const BAR_COLORS = ['#0D9488', '#10b981', '#f59e0b', '#ef4444', '#475569', '#ec4899'];
+const BAR_COLORS = ['#2563EB', '#10b981', '#f59e0b', '#ef4444', '#475569', '#ec4899'];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -99,8 +99,8 @@ export default function IngresosPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
-            <Users className="w-5 h-5 text-teal-600" />
+          <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <Users className="w-5 h-5 text-blue-600" />
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{totalStudents}</p>
@@ -129,8 +129,8 @@ export default function IngresosPage() {
         </div>
 
         <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
-            <TrendingUp className="w-5 h-5 text-teal-600" />
+          <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-5 h-5 text-blue-600" />
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{fmtCrc(monthlyRevenue)}</p>

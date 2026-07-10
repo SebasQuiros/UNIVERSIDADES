@@ -60,12 +60,12 @@ function ProgressBar({ pct }: { pct: number }) {
     return () => clearTimeout(t);
   }, [pct]);
   return (
-    <div className="w-full rounded-full h-2" style={{ background: 'rgba(13,148,136,0.12)' }}>
+    <div className="w-full rounded-full h-2" style={{ background: 'rgba(37,99,235,0.12)' }}>
       <div
         className="h-2 rounded-full transition-all duration-700 ease-out"
         style={{
           width: `${width}%`,
-          background: '#0D9488',
+          background: '#2563EB',
         }}
       />
     </div>
@@ -150,7 +150,7 @@ function AttemptCard({ attempt, onStart }: { attempt: ExerciseAttempt; onStart: 
   }
 
   return (
-    <div className="group bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4 transition-colors duration-150 hover:border-teal-300"
+    <div className="group bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4 transition-colors duration-150 hover:border-blue-300"
       style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
 
       {/* Header */}
@@ -366,9 +366,9 @@ export default function EstudianteDashboard() {
           Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           <>
-            <StatCard label="Ejercicios totales" value={stats.total}      icon={BookOpen}     accent="#0D9488" />
+            <StatCard label="Ejercicios totales" value={stats.total}      icon={BookOpen}     accent="#2563EB" />
             <StatCard label="En progreso"        value={stats.inProgress} icon={TrendingUp}   accent="#B45309" />
-            <StatCard label="Calificados"        value={stats.graded}     icon={CheckCircle2} accent="#0F766E" />
+            <StatCard label="Calificados"        value={stats.graded}     icon={CheckCircle2} accent="#1D4ED8" />
           </>
         )}
       </div>
@@ -393,11 +393,11 @@ export default function EstudianteDashboard() {
           {companies.filter(c => c.mode === 'GROUP').length > 0 && (
             <section className="mb-8">
               <div className="flex items-center gap-2 mb-4">
-                <Users className="w-4 h-4 text-teal-600" />
+                <Users className="w-4 h-4 text-blue-600" />
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
                   Mis empresas grupales
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white bg-teal-600">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white bg-blue-600">
                   {companies.filter(c => c.mode === 'GROUP').length}
                 </span>
               </div>
@@ -407,11 +407,11 @@ export default function EstudianteDashboard() {
                     key={c.id}
                     className={`flex items-center gap-3 p-4 rounded-xl border ${
                       c.isCompanyEnabled
-                        ? 'border-gray-200 bg-white hover:border-teal-300'
+                        ? 'border-gray-200 bg-white hover:border-blue-300'
                         : 'border-amber-300 bg-amber-50'
                     } transition-colors`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
                       <Building2 className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -443,7 +443,7 @@ export default function EstudianteDashboard() {
                   Pendientes
                 </h3>
                 <span className="text-xs font-bold px-2 py-0.5 rounded text-white font-mono"
-                  style={{ background: '#0D9488' }}>
+                  style={{ background: '#2563EB' }}>
                   {active.length}
                 </span>
               </div>

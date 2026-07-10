@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0D9488',
+  themeColor: '#2563EB',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -33,10 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* Indicador global de transición de ruta — feedback instantáneo en cada navegación */}
         <NextTopLoader
-          color="#0D9488"
+          color="#2563EB"
           height={3}
           showSpinner={false}
-          shadow="0 0 10px #0D9488, 0 0 6px #14B8A6"
+          shadow="0 0 10px #2563EB, 0 0 6px #60A5FA"
           easing="ease"
           speed={400}
           zIndex={1600}

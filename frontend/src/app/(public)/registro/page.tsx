@@ -46,8 +46,8 @@ const STEPS = [
 // ─── Colors & helpers ─────────────────────────────────────────────────────────
 
 const C = {
-  primary:   '#0E141B',
-  accent:    '#0D9488',
+  primary:   '#03080F',
+  accent:    '#2563EB',
   light:     '#F0FDFA',
   border:    '#E2E8F0',
   text:      '#0F172A',
@@ -332,7 +332,7 @@ export default function RegistroPage() {
     }}>
       {/* Header bar */}
       <nav style={{
-        background: '#0E141B',
+        background: '#03080F',
         padding: '0 clamp(16px,4vw,48px)', height: 60,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
@@ -364,8 +364,8 @@ export default function RegistroPage() {
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '5px 16px', background: 'rgba(13,148,136,0.07)',
-            border: '1px solid rgba(13,148,136,0.12)', borderRadius: 999, marginBottom: 12,
+            padding: '5px 16px', background: 'rgba(37,99,235,0.07)',
+            border: '1px solid rgba(37,99,235,0.12)', borderRadius: 999, marginBottom: 12,
           }}>
             <Building2 size={12} color={C.primary} />
             <span style={{ fontSize: '0.68rem', fontWeight: 700, color: C.primary, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
