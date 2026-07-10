@@ -8,7 +8,7 @@ export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={cn(
-        'animate-pulse rounded-lg bg-gradient-to-r from-gray-100 via-gray-200/70 to-gray-100',
+        'animate-pulse motion-reduce:animate-none rounded-lg bg-gradient-to-r from-gray-100 via-gray-200/70 to-gray-100',
         className,
       )}
       aria-hidden
@@ -18,7 +18,7 @@ export function Skeleton({ className }: SkeletonProps) {
 
 export function KPICardSkeleton() {
   return (
-    <div className="relative bg-white border border-gray-200/70 rounded-2xl shadow-sm p-6">
+    <div className="relative bg-white border border-gray-200/70 rounded-card shadow-card p-6">
       <span className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-gray-200" />
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 space-y-2.5">
