@@ -326,6 +326,7 @@ export class PeriodsService {
         tx, companyId, userId, entryDate,
         `Cierre del período "${period.name}" — Traslado a Utilidad/Pérdida del Período`,
         entry1LinesFinal,
+        `${period.id}:PL`,   // Traslado de ingresos/gastos a Utilidad del período
       );
       createdEntryIds.push(entry1Id);
     }
@@ -377,6 +378,7 @@ export class PeriodsService {
         tx, companyId, userId, entryDate,
         `Cierre del período "${period.name}" — Traslado a Utilidades Retenidas`,
         entry2Lines,
+        `${period.id}:RE`,   // Traslado del resultado a Utilidades Retenidas
       );
       createdEntryIds.push(entry2Id);
     }
@@ -398,6 +400,9 @@ export class PeriodsService {
     entryDate: Date,
     description: string,
     lines: Array<{ accountId: string; debit: Decimal; credit: Decimal; description?: string }>,
+    // I-TR-1 (Accounting Manifest): trazabilidad del cierre. sourceId distinto
+    // por asiento (unique(sourceType, sourceId)); ver llamadas con :PL y :RE.
+    sourceId?: string,
   ): Promise<string> {
 
     // Validate balance
@@ -429,6 +434,8 @@ export class PeriodsService {
         description,
         entryDate,
         source:      JournalSource.PERIOD_CLOSING,
+        sourceType:  sourceId ? 'period_closing' : null,
+        sourceId:    sourceId ?? null,
         isReversed:  false,
         createdById: userId,
       },

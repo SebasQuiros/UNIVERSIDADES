@@ -239,6 +239,12 @@ export class PayrollService {
             entryDate,
             reference:    `PLANILLA-${period}`,
             source:       'MANUAL',
+            // I-TR-1 (Accounting Manifest): trazabilidad del evento de nómina.
+            // sourceId determinístico (empresa+período) → idempotente y único
+            // por el constraint unique(sourceType, sourceId). El routing pleno
+            // por el orquestador (I-AT-2) queda para una migración con test e2e.
+            sourceType:   'payroll',
+            sourceId:     `${companyId}:${period}`,
             createdById,
             lines:        { create: journalLines },
           },
