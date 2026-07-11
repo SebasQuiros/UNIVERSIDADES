@@ -198,7 +198,7 @@ export class CompaniesService {
 
   /** Lista la cartera de empresas-cliente de práctica del estudiante. */
   async listPractice(studentId: string) {
-    return this.prisma.company.findMany({
+    const companies = await this.prisma.company.findMany({
       where:   { studentId, isPractice: true },
       orderBy: { createdAt: 'desc' },
       select: {
@@ -206,6 +206,22 @@ export class CompaniesService {
         _count: { select: { invoices: true, journalEntries: true, clients: true } },
       },
     });
+
+    // Última actividad por empresa = fecha del último asiento de diario.
+    const companyIds = companies.map((c) => c.id);
+    if (companyIds.length === 0) return [];
+
+    const lastEntries = await this.prisma.journalEntry.groupBy({
+      by: ['companyId'],
+      where: { companyId: { in: companyIds } },
+      _max: { createdAt: true },
+    });
+    const lastMap = new Map(lastEntries.map((e) => [e.companyId, e._max.createdAt]));
+
+    return companies.map((c) => ({
+      ...c,
+      lastActivityAt: lastMap.get(c.id) ?? null,
+    }));
   }
 
   /** Elimina una empresa de práctica (solo del propio estudiante). */

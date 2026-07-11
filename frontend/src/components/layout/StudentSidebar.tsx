@@ -293,7 +293,7 @@ export function StudentSidebar() {
           </div>
           {[
             { label: 'Mis empresas-cliente', icon: Building2, href: '/estudiante/contador' },
-            { label: 'Mi progreso',          icon: TrendingUp, href: '/estudiante/progreso' },
+            { label: 'Resumen de práctica',  icon: TrendingUp, href: '/estudiante/contador/resumen' },
           ].map((it) => {
             const active = pathname === it.href;
             const Icon = it.icon;
