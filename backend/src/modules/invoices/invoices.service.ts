@@ -498,9 +498,11 @@ export class InvoicesService {
         }
 
         // Asiento contable de la venta (Ventas + IVA + AR/Caja + COGS).
-        // BusinessEventsService.recordSale ya lee el AccountingMode y decide
-        // si crear, marcar pending o saltar.
-        await this.businessEvents.recordSale({
+        // Puerta única de eventos de negocio (Accounting Manifest §6): la venta
+        // es la implementación de referencia SALE_CREATED. El orquestador lee el
+        // AccountingMode y decide si crear, marcar pending o saltar.
+        await this.businessEvents.dispatch({
+          type:              'SALE_CREATED',
           companyId,
           userId,
           tx,

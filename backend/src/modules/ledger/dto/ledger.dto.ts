@@ -8,4 +8,9 @@ export class LedgerFilterDto {
   @IsOptional()
   @IsDateString()
   endDate?: string;
+
+  /** Point-in-time (I-DV-2): corte "a la fecha" (entryDate <= asOfDate). Prioridad sobre endDate. */
+  @IsOptional()
+  @IsDateString()
+  asOfDate?: string;
 }

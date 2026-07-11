@@ -10,7 +10,10 @@ export class LedgerService {
   // ── Ledger summary — all accounts with movements ─────────────
   async getLedger(companyId: string, filter: LedgerFilterDto) {
     const startDate = filter.startDate ? new Date(filter.startDate) : undefined;
-    const endDate   = filter.endDate   ? new Date(filter.endDate)   : undefined;
+    // asOfDate (I-DV-2) fija el corte superior; tiene prioridad sobre endDate.
+    const endDate   = filter.asOfDate ? new Date(filter.asOfDate)
+                    : filter.endDate  ? new Date(filter.endDate)
+                    : undefined;
 
     // Build date filter for journal_entries
     const entryDateFilter = {
@@ -83,7 +86,9 @@ export class LedgerService {
     if (!account) throw new NotFoundException('Cuenta no encontrada');
 
     const startDate = filter.startDate ? new Date(filter.startDate) : undefined;
-    const endDate   = filter.endDate   ? new Date(filter.endDate)   : undefined;
+    const endDate   = filter.asOfDate ? new Date(filter.asOfDate)
+                    : filter.endDate  ? new Date(filter.endDate)
+                    : undefined;
 
     // INNER JOIN journal_lines → journal_entries (no LEFT JOIN — no orphans)
     const lines = await this.prisma.journalLine.findMany({

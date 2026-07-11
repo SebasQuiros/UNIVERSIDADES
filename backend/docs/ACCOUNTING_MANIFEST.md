@@ -131,20 +131,23 @@ Reglas del engine:
 
 ---
 
-## 4. Estado actual vs. contrato — backlog F0
+## 4. Estado actual vs. contrato — progreso F0/F1
 
-| # | Invariante | Estado | Acción F0 |
+| # | Invariante | Estado | Entregado en |
 |---|---|---|---|
-| I-IM-3 | Revertir solo CONFIRMED | 🔴 | Guardia de status en `reverseEntry` |
-| I-AT-2 | Escritor único | 🔴 | `recordPayroll` / `recordWithholding` / `recordPeriodClosing` / `recordDepreciation` en `BusinessEventsService` |
-| I-AT-1 | Atomicidad renta | 🔴 | Envolver `createRetencion` + asiento en `$transaction` |
-| I-AT-4 | Depreciación sin asiento | 🔴 | Emitir asiento vía orquestador (evento `DEPRECIATION_RUN`) |
-| I-TR-1 | Trazabilidad completa | 🟡 | Poblar `sourceType`/`sourceId` en nómina/cierre/depreciación |
-| I-SoT-3/4 | Reconciliación control↔subledger | 🟡 | Invariante verificable + `rebuildProjections` |
-| I-DV-2 | Point-in-time `asOfDate` | 🟡 | Parámetro `asOfDate` de primera clase (F1) |
-| I-DV-3 | Caché invalidable | ⛳ | Regla lista para cuando se introduzca caché |
+| I-IM-3 | Revertir solo CONFIRMED | ✅ | F0.1 — guardia de status en `reverseEntry` |
+| I-AT-1 | Atomicidad renta | ✅ | F0.1 — `createRetencion` + asiento en `$transaction` |
+| I-SoT-3/4 | Reconciliación control↔subledger | ✅ | F0.2 — `ProjectionEngine.reconcile` + `rebuildProjections` |
+| V-1/V-2/V-5 | Invariantes verificables | ✅ | F0.2 — `AccountingEngine` + guard V-5 en `createAutoEntry` + 9 tests |
+| V-6 | Testigo escritor legacy | ✅ | F0.2 — `warnLegacyDirectWrite` |
+| I-DV-2 | Point-in-time `asOfDate` | ✅ | F1 — `asOfDate` en reportes y libro mayor |
+| SALE_CREATED | Implementación de referencia | ✅ | F1 — emisión de factura vía `dispatch()` |
+| I-AT-2 | Escritor único (payroll/cierre/depreciación) | 🔴 | F4 — `recordPayroll`/`recordPeriodClosing`/`recordDepreciation` |
+| I-AT-4 | Depreciación sin asiento | 🔴 | F4 — evento `DEPRECIATION_RUN` |
+| I-TR-1 | Trazabilidad nómina/cierre/depreciación | 🟡 | F4 (renta ya cubierta en F0.1) |
+| I-DV-3 | Caché invalidable | ⛳ | Cuando se introduzca caché |
 
-**Ya sólido (no requiere F0):** I-SoT-1/2, I-DE-1/2/3, I-IM-1/2, I-ST-1/2, I-PE-1/3, I-NUM-1/2, I-TR-2, I-AT-3, I-DV-1, I-CU-1.
+**Ya sólido de base:** I-SoT-1/2, I-DE-1/2/3, I-IM-1/2, I-ST-1/2, I-PE-1/3, I-NUM-1/2, I-TR-2, I-AT-3, I-DV-1, I-CU-1.
 
 ---
 

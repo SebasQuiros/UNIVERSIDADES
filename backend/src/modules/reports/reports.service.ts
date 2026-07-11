@@ -17,8 +17,21 @@ export class ReportsService {
       return { startDate: period.startDate, endDate: period.endDate, period };
     }
 
+    const inception = new Date('2000-01-01');
+
+    // Point-in-time (I-DV-2): asOfDate fija el corte superior (entryDate <= asOf)
+    // y, sin startDate, arma un snapshot acumulado desde el inicio. Prioridad
+    // sobre endDate.
+    if (filter.asOfDate) {
+      return {
+        startDate: filter.startDate ? new Date(filter.startDate) : inception,
+        endDate:   new Date(filter.asOfDate),
+        period:    null,
+      };
+    }
+
     return {
-      startDate: filter.startDate ? new Date(filter.startDate) : new Date('2000-01-01'),
+      startDate: filter.startDate ? new Date(filter.startDate) : inception,
       endDate:   filter.endDate   ? new Date(filter.endDate)   : new Date(),
       period:    null,
     };

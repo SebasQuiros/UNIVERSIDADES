@@ -361,6 +361,15 @@ export class JournalService {
     isPending?: boolean,
   ) {
     try {
+      // ── V-5 (Accounting Manifest): todo asiento AUTOMÁTICO debe ser trazable
+      //    a su evento de negocio. Este es el único chokepoint de asientos
+      //    automáticos, así que aquí se obliga la trazabilidad.
+      if (source !== JournalSource.MANUAL && (!sourceType || !sourceId)) {
+        throw new BadRequestException(
+          `Asiento automático sin trazabilidad (V-5): source=${source} sin sourceType/sourceId.`,
+        );
+      }
+
       // ── Idempotencia: si ya existe un asiento para esta misma fuente
       //    (sourceType, sourceId), NO creamos un duplicado. Devolvemos el
       //    existente. La unique constraint en BD es la red de seguridad
