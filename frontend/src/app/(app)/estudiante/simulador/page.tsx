@@ -8,7 +8,8 @@ import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
 import { MacroIndicatorsStrip } from '@/components/dashboard/MacroIndicatorsStrip';
 import { FinancialAdvisorCard } from '@/components/dashboard/FinancialAdvisorCard';
 import { EconomicEventsCard } from '@/components/dashboard/EconomicEventsCard';
-import { LineChart, Building2, ChevronDown, Sparkles, Zap, TrendingUp, Globe } from 'lucide-react';
+import { BusinessSimulator } from '@/components/dashboard/BusinessSimulator';
+import { LineChart, Building2, ChevronDown, Sparkles, Zap, TrendingUp, Globe, Target } from 'lucide-react';
 
 interface CompanyCard {
   id: string;
@@ -58,17 +59,31 @@ export default function SimuladorPage() {
           <div className="min-w-0">
             <h1 className="text-xl font-black leading-tight">Simulador Financiero</h1>
             <p className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              Valoración bursátil, indicadores macro, gerente financiero IA y eventos económicos de tu empresa.
+              Simulá la viabilidad de un negocio con datos reales de mercado, y explorá la simulación bursátil de tus empresas.
             </p>
           </div>
         </div>
         {/* mini-leyenda de capas */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-px" style={{ background: 'rgba(37,99,235,0.15)' }}>
-          <Layer icon={<TrendingUp className="w-4 h-4" />} label="Precio de acción" />
+          <Layer icon={<Target className="w-4 h-4" />} label="Viabilidad de negocio" />
           <Layer icon={<Globe className="w-4 h-4" />} label="Indicadores macro" />
           <Layer icon={<Sparkles className="w-4 h-4" />} label="Gerente IA" />
           <Layer icon={<Zap className="w-4 h-4" />} label="Eventos económicos" />
         </div>
+      </div>
+
+      {/* ── Simulador de viabilidad (contenido principal) ── */}
+      <BusinessSimulator />
+
+      {/* ── Simulación bursátil de tus empresas (sección secundaria) ── */}
+      <div className="pt-2 border-t" style={{ borderColor: '#E2E8F0' }}>
+        <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-blue-700" />
+          Simulación bursátil de tus empresas
+        </h2>
+        <p className="text-gray-500 text-sm mt-1">
+          Valoración de acción, gerente financiero IA y eventos económicos de las empresas que creaste en tus ejercicios.
+        </p>
       </div>
 
       {/* ── Empty / error ── */}
