@@ -226,6 +226,22 @@ export class CompaniesService {
       },
     });
     await this.accounts.seedChartOfAccounts(company.id);
+
+    // Período contable ABIERTO por defecto (año actual) para que el comercio
+    // entre empresas de práctica pueda facturar/asentar (recordPurchase exige
+    // un período abierto que cubra la fecha). Solo para empresas NUEVAS.
+    const y = new Date().getFullYear();
+    await this.prisma.accountingPeriod.create({
+      data: {
+        companyId: company.id,
+        name:      `Año ${y}`,
+        type:      'ANNUAL',
+        startDate: new Date(`${y}-01-01`),
+        endDate:   new Date(`${y}-12-31`),
+        status:    'OPEN',
+      },
+    });
+
     return company;
   }
 

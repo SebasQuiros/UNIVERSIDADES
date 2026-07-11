@@ -42,7 +42,7 @@ interface ProcurementOrder {
   counterpartyName: string | null;
 }
 
-// Empresa hermana del ejercicio (candidata a vendedora).
+// Empresa hermana del ejercicio o grupo de práctica (candidata a vendedora).
 interface SiblingCompany { id: string; name: string; }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -136,7 +136,12 @@ function Stepper({ status }: { status: OrderStatus }) {
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
-export function ProcurementOrders({ companyId, exerciseId }: { companyId: string; exerciseId?: string }) {
+export function ProcurementOrders({
+  companyId, exerciseId, practiceGroupId,
+}: { companyId: string; exerciseId?: string; practiceGroupId?: string }) {
+  // El modal de "Nueva orden de compra" se muestra cuando participamos en un
+  // ejercicio (comportamiento original) O en un grupo de práctica multiempresa.
+  const canCreate = Boolean(exerciseId || practiceGroupId);
   const [orders, setOrders]   = useState<ProcurementOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId]   = useState<string | null>(null);
@@ -188,7 +193,7 @@ export function ProcurementOrders({ companyId, exerciseId }: { companyId: string
             comprador paga.
           </p>
         </div>
-        {exerciseId && (
+        {canCreate && (
           <Button onClick={() => setShowModal(true)} className="flex-shrink-0">
             <Plus className="w-4 h-4" /> Nueva orden de compra
           </Button>
@@ -204,8 +209,8 @@ export function ProcurementOrders({ companyId, exerciseId }: { companyId: string
           </div>
           <h3 className="text-gray-700 font-semibold">No hay órdenes de aprovisionamiento</h3>
           <p className="text-gray-500 text-sm mt-1 max-w-md">
-            {exerciseId
-              ? 'Emití una orden de compra a otra empresa del curso para iniciar el flujo ERP.'
+            {canCreate
+              ? 'Emití una orden de compra a otra empresa del grupo para iniciar el flujo ERP.'
               : 'Aparecerán aquí las órdenes de compra donde participes como comprador o vendedor.'}
           </p>
         </div>
@@ -310,10 +315,11 @@ export function ProcurementOrders({ companyId, exerciseId }: { companyId: string
         </div>
       )}
 
-      {showModal && exerciseId && (
+      {showModal && canCreate && (
         <NewOrderModal
           companyId={companyId}
           exerciseId={exerciseId}
+          practiceGroupId={practiceGroupId}
           onClose={() => setShowModal(false)}
           onCreated={() => { setShowModal(false); load(); }}
         />
@@ -329,10 +335,11 @@ const BLANK_ITEM: DraftItem = { description: '', cabysCode: '', quantity: '1', u
 const INPUT = 'w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition';
 
 function NewOrderModal({
-  companyId, exerciseId, onClose, onCreated,
+  companyId, exerciseId, practiceGroupId, onClose, onCreated,
 }: {
   companyId: string;
-  exerciseId: string;
+  exerciseId?: string;
+  practiceGroupId?: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -344,11 +351,16 @@ function NewOrderModal({
   const [notes, setNotes]           = useState('');
   const [saving, setSaving]         = useState(false);
 
-  // Poblar el selector de vendedor con TODAS las empresas del ejercicio
-  // (endpoint accesible al estudiante que participa). Si no hay ninguna
+  // Poblar el selector de vendedor con las empresas candidatas:
+  //  - En un grupo de práctica: las empresas miembro del grupo.
+  //  - En un ejercicio: TODAS las empresas del ejercicio.
+  // (endpoints accesibles al estudiante que participa). Si no hay ninguna
   // utilizable, el usuario pega el companyId manualmente como respaldo.
   useEffect(() => {
-    api.get<any[]>(`/api/v1/exercises/${exerciseId}/trading-companies`)
+    const url = practiceGroupId
+      ? `/api/v1/practice/groups/${practiceGroupId}/companies`
+      : `/api/v1/exercises/${exerciseId}/trading-companies`;
+    api.get<any[]>(url)
       .then(({ data }) => {
         const list = (Array.isArray(data) ? data : [])
           .map((c) => ({ id: c.id, name: c.name }))
@@ -357,7 +369,7 @@ function NewOrderModal({
         if (list.length === 0) setUseManual(true);
       })
       .catch(() => setUseManual(true));
-  }, [exerciseId, companyId]);
+  }, [exerciseId, practiceGroupId, companyId]);
 
   const setItem = (i: number, patch: Partial<DraftItem>) =>
     setItems((prev) => prev.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
@@ -387,7 +399,7 @@ function NewOrderModal({
     setSaving(true);
     try {
       await api.post('/api/v1/procurement/orders', {
-        exerciseId,
+        ...(practiceGroupId ? { practiceGroupId } : { exerciseId }),
         buyerCompanyId: companyId,
         sellerCompanyId: seller,
         items: cleanItems,

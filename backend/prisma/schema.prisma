@@ -1365,7 +1365,10 @@ model PurchaseInvoice {
 // no tocar la lista de relaciones de Company.
 model ProcurementOrder {
   id                String   @id @default(uuid()) @db.Uuid
-  exerciseId        String   @map("exercise_id") @db.Uuid
+  // Contexto: un ejercicio (empresas del curso) O un grupo de práctica
+  // (multiempresa en modo Contador). Exactamente uno de los dos.
+  exerciseId        String?  @map("exercise_id") @db.Uuid
+  practiceGroupId   String?  @map("practice_group_id") @db.Uuid
   buyerCompanyId    String   @map("buyer_company_id") @db.Uuid
   sellerCompanyId   String   @map("seller_company_id") @db.Uuid
   status            String   @default("PO_ISSUED")  // PO_ISSUED|DISPATCHED|RECEIVED|INVOICED|PAID|CANCELLED
@@ -1381,9 +1384,41 @@ model ProcurementOrder {
   updatedAt         DateTime @updatedAt      @map("updated_at")
 
   @@index([exerciseId])
+  @@index([practiceGroupId])
   @@index([buyerCompanyId])
   @@index([sellerCompanyId])
   @@map("procurement_orders")
+}
+
+// ── Multiempresa en modo práctica (Espacio Contador) — grupos de estudiantes ──
+// Los estudiantes forman un grupo; sus empresas de PRÁCTICA (isPractice) se unen
+// y pueden comerciar entre sí (misma máquina de estados de ProcurementOrder,
+// usando practiceGroupId en vez de exerciseId).
+model PracticeGroup {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  code        String   @unique              // código de invitación para unirse
+  createdById String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  members     PracticeGroupMember[]
+
+  @@map("practice_groups")
+}
+
+model PracticeGroupMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @map("group_id") @db.Uuid
+  companyId String   @map("company_id") @db.Uuid   // empresa de práctica miembro
+  studentId String   @map("student_id") @db.Uuid
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  group     PracticeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, companyId])
+  @@index([groupId])
+  @@index([companyId])
+  @@map("practice_group_members")
 }
 
 // ── F3 · Pedagogical Engine — eventos pedagógicos + perfil de aprendizaje ──

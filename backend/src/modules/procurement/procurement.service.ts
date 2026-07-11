@@ -63,26 +63,50 @@ export class ProcurementService {
       throw new BadRequestException('El comprador y el vendedor no pueden ser la misma empresa.');
     }
 
+    // Debe venir EXACTAMENTE un contexto: exercise (curso) o practiceGroup (práctica).
+    const hasExercise      = !!dto.exerciseId;
+    const hasPracticeGroup = !!dto.practiceGroupId;
+    if (hasExercise === hasPracticeGroup) {
+      throw new BadRequestException(
+        'Debes indicar exactamente uno: exerciseId (ejercicio) o practiceGroupId (grupo de práctica).',
+      );
+    }
+
     // El usuario que actúa debe ser dueño de la empresa COMPRADORA.
     await this.verifyOwner(dto.buyerCompanyId, userId);
 
-    // Validar que ambas empresas pertenezcan al mismo exercise.
-    const [buyer, seller] = await Promise.all([
-      this.prisma.company.findUnique({
-        where:  { id: dto.buyerCompanyId },
-        select: { id: true, exerciseId: true },
-      }),
-      this.prisma.company.findUnique({
-        where:  { id: dto.sellerCompanyId },
-        select: { id: true, exerciseId: true },
-      }),
-    ]);
-    if (!buyer)  throw new NotFoundException('Empresa compradora no encontrada');
-    if (!seller) throw new NotFoundException('Empresa vendedora no encontrada');
-    if (buyer.exerciseId !== dto.exerciseId || seller.exerciseId !== dto.exerciseId) {
-      throw new BadRequestException(
-        'Ambas empresas deben pertenecer al exercise indicado.',
-      );
+    if (hasPracticeGroup) {
+      // ── Contexto PRÁCTICA: ambas empresas deben ser miembros del grupo. ──
+      const membersInGroup = await this.prisma.practiceGroupMember.count({
+        where: {
+          groupId:   dto.practiceGroupId!,
+          companyId: { in: [dto.buyerCompanyId, dto.sellerCompanyId] },
+        },
+      });
+      if (membersInGroup !== 2) {
+        throw new BadRequestException(
+          'Ambas empresas deben pertenecer al grupo de práctica indicado.',
+        );
+      }
+    } else {
+      // ── Contexto EJERCICIO: ambas empresas deben pertenecer al mismo exercise. ──
+      const [buyer, seller] = await Promise.all([
+        this.prisma.company.findUnique({
+          where:  { id: dto.buyerCompanyId },
+          select: { id: true, exerciseId: true },
+        }),
+        this.prisma.company.findUnique({
+          where:  { id: dto.sellerCompanyId },
+          select: { id: true, exerciseId: true },
+        }),
+      ]);
+      if (!buyer)  throw new NotFoundException('Empresa compradora no encontrada');
+      if (!seller) throw new NotFoundException('Empresa vendedora no encontrada');
+      if (buyer.exerciseId !== dto.exerciseId || seller.exerciseId !== dto.exerciseId) {
+        throw new BadRequestException(
+          'Ambas empresas deben pertenecer al exercise indicado.',
+        );
+      }
     }
 
     const taxRate = new Decimal(dto.taxRate ?? 0.13);
@@ -106,7 +130,8 @@ export class ProcurementService {
 
     const order = await this.prisma.procurementOrder.create({
       data: {
-        exerciseId:      dto.exerciseId,
+        exerciseId:      dto.exerciseId ?? null,
+        practiceGroupId: dto.practiceGroupId ?? null,
         buyerCompanyId:  dto.buyerCompanyId,
         sellerCompanyId: dto.sellerCompanyId,
         status:          'PO_ISSUED',

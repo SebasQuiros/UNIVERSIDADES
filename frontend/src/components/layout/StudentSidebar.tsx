@@ -10,7 +10,7 @@ import {
   Home, ArrowDownCircle, ArrowUpCircle, Package, Landmark, BookOpen,
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
   LogOut, Menu, X, ChevronRight, ChevronDown, UserCircle,
-  GraduationCap, Calculator,
+  GraduationCap, Calculator, Users,
 } from 'lucide-react';
 
 // ── Paleta v2 (plana, "libro mayor") ───────────────────────────
@@ -77,8 +77,20 @@ export function StudentSidebar() {
     return () => clearInterval(id);
   }, [pathname]);
 
+  // Espacio Contador: empresa-cliente de práctica abierta (si estamos en su workspace).
+  const contadorCompanyId = (() => {
+    const m = pathname.match(/^\/estudiante\/contador\/([0-9a-fA-F-]{36})/);
+    return m ? m[1] : null;
+  })();
+
   const base = activeId ? `/estudiante/ejercicio/${activeId}` : null;
   const subHref = (s: Sub): string => {
+    // Espacio Contador → navega los libros de la empresa-cliente ABIERTA (por tab).
+    if (isContador) {
+      if (s.tab) return contadorCompanyId ? `/estudiante/contador/${contadorCompanyId}?tab=${s.tab}` : '/estudiante/contador';
+      if (s.path) return s.path;
+      return '/estudiante/contador';
+    }
     // Con ejercicio activo → pestaña/subruta real del ejercicio.
     if (base && s.endsWith) return `${base}${s.endsWith}`;
     if (base && s.tab)      return `${base}?tab=${s.tab}`;
@@ -164,9 +176,53 @@ export function StudentSidebar() {
     { key: 'notif',label: 'Notificaciones',       icon: Bell,       href: '/estudiante/notificaciones', path: '/estudiante/notificaciones', isNotif: true },
   ];
 
+  // ── Espacio Contador: menú "de contador real", contabilidad separada por
+  //    empresa. Los ítems del ciclo contable navegan la empresa-cliente ABIERTA
+  //    (deep-link ?tab=). Sin sección Aprendizaje. + vista Multiempresa (grupos).
+  const CONTADOR_TOP: Group[] = [
+    { key: 'c-emp', label: 'Mis empresas-cliente', icon: Building2, href: '/estudiante/contador', path: '/estudiante/contador', exact: true },
+    { key: 'c-res', label: 'Resumen de práctica', icon: TrendingUp, href: '/estudiante/contador/resumen', path: '/estudiante/contador/resumen' },
+    { key: 'c-grp', label: 'Multiempresa (grupos)', icon: Users, href: '/estudiante/contador/grupos', path: '/estudiante/contador/grupos' },
+  ];
+  const CONTADOR_GROUPS: Group[] = [
+    { key: 'c-ing', label: 'Ingresos', icon: ArrowDownCircle, children: [
+      { label: 'Clientes',          tab: 'clients' },
+      { label: 'Facturas de venta', tab: 'invoices' },
+    ]},
+    { key: 'c-gas', label: 'Gastos', icon: ArrowUpCircle, children: [
+      { label: 'Proveedores', tab: 'suppliers' },
+    ]},
+    { key: 'c-inv', label: 'Inventario', icon: Package, children: [
+      { label: 'Productos', tab: 'products' },
+    ]},
+    { key: 'c-ban', label: 'Bancos', icon: Landmark, children: [
+      { label: 'Bancos y cajas', tab: 'bank' },
+    ]},
+    { key: 'c-con', label: 'Contabilidad', icon: BookOpen, children: [
+      { label: 'Diario (asientos)',       tab: 'journal' },
+      { label: 'Libro mayor',             tab: 'ledger' },
+      { label: 'Mayorización',            tab: 'mayorizacion' },
+      { label: 'Balance de comprobación', tab: 'balance-comprobacion' },
+      { label: 'Ajustes',                 tab: 'ajustes' },
+      { label: 'Balance ajustado',        tab: 'balance-ajustado' },
+      { label: 'Asientos de cierre',      tab: 'asientos-cierre' },
+      { label: 'Balanza post-cierre',     tab: 'balanza-post-cierre' },
+      { label: 'Activos fijos',           tab: 'fixed-assets' },
+      { label: 'Nómina',                  tab: 'payroll' },
+    ]},
+    { key: 'c-rep', label: 'Reportes', icon: BarChart2, children: [
+      { label: 'Estados financieros', tab: 'reports' },
+    ]},
+  ];
+
   const inExercise = pathname.includes('/ejercicio/');
   const isContador = pathname.startsWith('/estudiante/contador');
   const subActive = (s: Sub) => {
+    if (isContador) {
+      if (s.path && pathname.startsWith(s.path)) return true;
+      if (s.tab) return !!contadorCompanyId && (currentTab ?? 'dashboard') === s.tab;
+      return false;
+    }
     if (s.path && pathname.startsWith(s.path)) return true;
     if (s.slug && pathname.startsWith(`/estudiante/modulo/${s.slug}`)) return true;
     if (base && s.endsWith) return pathname.endsWith(s.endsWith);
@@ -174,7 +230,7 @@ export function StudentSidebar() {
     return false;
   };
   const groupActive = (g: Group) => {
-    if (g.exact) return pathname === '/estudiante';
+    if (g.exact) return pathname === (g.path ?? g.href);
     if (g.href && g.path) return pathname.startsWith(g.path);
     return !!g.children?.some(subActive);
   };
@@ -292,24 +348,15 @@ export function StudentSidebar() {
       {isContador ? (
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
           <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(212,160,23,0.12)', border: '1px solid rgba(212,160,23,0.3)', color: '#F5D67B' }}>
-            Práctica libre: gestioná tus empresas-cliente sin nota. Ideal para replicar ejercicios del libro.
+            {contadorCompanyId
+              ? 'Estás operando una empresa-cliente. El menú de abajo navega SUS libros.'
+              : 'Espacio Contador — tu contabilidad separada por empresa. Abrí una empresa-cliente para operar sus libros.'}
           </div>
-          {[
-            { label: 'Mis empresas-cliente', icon: Building2, href: '/estudiante/contador' },
-            { label: 'Resumen de práctica',  icon: TrendingUp, href: '/estudiante/contador/resumen' },
-          ].map((it) => {
-            const active = pathname === it.href;
-            const Icon = it.icon;
-            return (
-              <Link key={it.href} href={it.href} onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-2.5 py-2 mb-0.5 rounded-md text-[14px] font-medium transition-all"
-                style={active ? { background: '#D4A017', color: '#1a1205', boxShadow: '0 2px 12px rgba(212,160,23,0.3)' } : { color: TXT }}
-                onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
-                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = ''; }}>
-                <Icon className="w-[18px] h-[18px] flex-shrink-0" /> {it.label}
-              </Link>
-            );
-          })}
+          <div className="space-y-0.5 mb-4">{CONTADOR_TOP.map(renderGroup)}</div>
+          <p className="px-2.5 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: TXT_FAINT }}>
+            Contabilidad {contadorCompanyId ? '' : '· abrí una empresa'}
+          </p>
+          <div className="space-y-0.5">{CONTADOR_GROUPS.map(renderGroup)}</div>
         </nav>
       ) : (
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">

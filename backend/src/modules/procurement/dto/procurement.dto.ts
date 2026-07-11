@@ -23,8 +23,16 @@ export class ProcurementItemDto {
 }
 
 export class CreateProcurementOrderDto {
+  // Contexto: un ejercicio (empresas del curso) O un grupo de práctica
+  // (multiempresa en modo Contador). Exactamente uno debe estar presente
+  // (validado en el servicio).
+  @IsOptional()
   @IsUUID('4')
-  exerciseId: string;
+  exerciseId?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  practiceGroupId?: string;
 
   @IsUUID('4')
   buyerCompanyId: string;
