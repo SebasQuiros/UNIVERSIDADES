@@ -25,6 +25,7 @@ import {
   Lightbulb, ShoppingCart, Search, LineChart, Inbox,
 } from 'lucide-react';
 import { PurchaseProposalsInbox } from '@/components/business/PurchaseProposalsInbox';
+import { ProcurementOrders } from '@/components/business/ProcurementOrders';
 import {
   TYPE_LABELS,
   ClientsTab, ProductsTab, SuppliersTab, InvoicesTab, JournalTab, LedgerTab,
@@ -39,7 +40,7 @@ interface Company { id: string; name: string; legalId: string | null; email: str
 type Tab = 'dashboard' | 'clients' | 'suppliers' | 'products' | 'invoices' | 'journal' | 'ledger' | 'bank'
          | 'mayorizacion' | 'balance-comprobacion' | 'ajustes' | 'balance-ajustado'
          | 'reports' | 'asientos-cierre' | 'balanza-post-cierre' | 'activity'
-         | 'fixed-assets' | 'payroll' | 'purchase-proposals';
+         | 'fixed-assets' | 'payroll' | 'purchase-proposals' | 'procurement';
 
 function TabButton({ id, active, onClick, icon: Icon, label, count }: {
   id: Tab; active: boolean; onClick: () => void; icon: React.ElementType; label: string; count?: number;
@@ -902,6 +903,8 @@ export default function ExerciseWorkspacePage() {
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'suppliers' as Tab, label: 'Proveedores', icon: Truck   }] : []),
     // Modo Empresarial: propuestas de compra recibidas de ventas de otras empresas del curso
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'purchase-proposals' as Tab, label: 'Propuestas de compra', icon: Inbox }] : []),
+    // Modo ERP (F2.3): órdenes de aprovisionamiento entre empresas del curso
+    ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'procurement' as Tab, label: 'Aprovisionamiento (ERP)', icon: Truck }] : []),
     ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVOICING_ONLY' ? [{ id: 'products' as Tab, label: 'Productos', icon: Package }] : []),
     // 1. Transacciones
     ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVENTORY_ONLY' ? [{ id: 'invoices' as Tab, label: '1. Facturas',  icon: FileText  }] : []),
@@ -1052,6 +1055,7 @@ export default function ExerciseWorkspacePage() {
             {activeTab === 'clients'   && <ClientsTab    companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'suppliers' && <SuppliersTab  companyId={company.id} readonly={isReadonly} />}
             {activeTab === 'purchase-proposals' && <PurchaseProposalsInbox companyId={company.id} />}
+            {activeTab === 'procurement' && <ProcurementOrders companyId={company.id} exerciseId={attempt.exerciseId} />}
             {activeTab === 'products'  && <ProductsTab   companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'invoices'  && <InvoicesTab   companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'journal'   && <JournalTab    companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}

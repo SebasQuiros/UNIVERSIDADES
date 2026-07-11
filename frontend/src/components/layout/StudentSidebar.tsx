@@ -108,6 +108,7 @@ export function StudentSidebar() {
       children: [
         { label: 'Proveedores',         tab: 'suppliers', slug: 'proveedores' },
         { label: 'Propuestas de compra', tab: 'purchase-proposals' },
+        { label: 'Aprovisionamiento (ERP)', tab: 'procurement' },
         { label: 'Facturas de compra',  endsWith: '/compras', slug: 'facturas-compra' },
         { label: 'Órdenes de compra',   slug: 'ordenes-compra' },
         { label: 'Pagos recurrentes',   slug: 'pagos-recurrentes' },
