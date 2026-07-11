@@ -1358,6 +1358,34 @@ model PurchaseInvoice {
   @@map("purchase_invoices")
 }
 
+// ── F2.3 · Modo ERP Completo — orden de aprovisionamiento (state machine) ──
+// Flujo entre empresas del mismo curso: PO_ISSUED → DISPATCHED → RECEIVED
+// (inventario en B) → INVOICED (Invoice del vendedor + PurchaseInvoice + asiento
+// + CxP en B) → PAID (pago). buyer/seller como UUID scalars (sin relación) para
+// no tocar la lista de relaciones de Company.
+model ProcurementOrder {
+  id                String   @id @default(uuid()) @db.Uuid
+  exerciseId        String   @map("exercise_id") @db.Uuid
+  buyerCompanyId    String   @map("buyer_company_id") @db.Uuid
+  sellerCompanyId   String   @map("seller_company_id") @db.Uuid
+  status            String   @default("PO_ISSUED")  // PO_ISSUED|DISPATCHED|RECEIVED|INVOICED|PAID|CANCELLED
+  items             Json     // [{ description, cabysCode, quantity, unitPrice }]
+  subtotal          Decimal  @db.Decimal(15, 2)
+  taxAmount         Decimal  @db.Decimal(15, 2) @map("tax_amount")
+  total             Decimal  @db.Decimal(15, 2)
+  sellerInvoiceId   String?  @map("seller_invoice_id")   @db.Uuid
+  purchaseInvoiceId String?  @map("purchase_invoice_id") @db.Uuid
+  notes             String?
+  createdById       String   @map("created_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt      @map("updated_at")
+
+  @@index([exerciseId])
+  @@index([buyerCompanyId])
+  @@index([sellerCompanyId])
+  @@map("procurement_orders")
+}
+
 // ================================================================
 //  BLOQUE 14b — IMPUESTO SOBRE LA RENTA (D-101)
 // ================================================================

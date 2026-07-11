@@ -26,6 +26,7 @@ import { ExerciseConfigModule } from './modules/exercise-config/exercise-config.
 import { CompanyMembershipsModule } from './modules/company-memberships/company-memberships.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { InterCompanyModule } from './modules/inter-company/inter-company.module';
+import { ProcurementModule } from './modules/procurement/procurement.module';
 import { AttemptsModule }       from './modules/attempts/attempts.module';
 import { TrackingModule }       from './modules/tracking/tracking.module';
 import { GradingModule }        from './modules/grading/grading.module';
@@ -84,6 +85,7 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     CompanyMembershipsModule,  // Fase 1 — Group companies + memberships + isCompanyEnabled
     InventoryModule,           // Fase 2 — Inventory FIFO + COGS
     InterCompanyModule,        // Fase 4 — Mirror sale → purchase entre companies del mismo exercise
+    ProcurementModule,         // F2.3 — Modo ERP Completo: máquina de estados de órdenes de aprovisionamiento
     AttemptsModule,
     TrackingModule,
     GradingModule,
