@@ -17,14 +17,6 @@ export function TeacherSidebar() {
   const { user, logout }       = useAuth();
   const [open, setOpen] = useState(false);
   const [pending, setPending]  = useState(0);
-  const [university, setUniversity] = useState<{ name: string; shortName: string | null; logoUrl: string | null } | null>(null);
-
-  useEffect(() => {
-    if (!user?.universityId) return;
-    api.get('/api/v1/universities/mine')
-      .then(({ data }) => setUniversity(data))
-      .catch(() => {});
-  }, [user?.universityId]);
 
   useEffect(() => {
     api.get<ExerciseAttempt[]>('/api/v1/attempts')
@@ -66,25 +58,6 @@ export function TeacherSidebar() {
           </div>
         </Link>
       </div>
-
-      {/* University badge */}
-      {university && (
-        <div className="px-5 py-2.5 flex items-center gap-2.5"
-          style={{ background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(59,130,246,0.08)' }}>
-          {university.logoUrl ? (
-            <img src={university.logoUrl} alt={university.name} className="w-5 h-5 rounded object-contain flex-shrink-0"
-              style={{ opacity: 0.85 }} />
-          ) : (
-            <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-xs font-bold"
-              style={{ background: 'rgba(59,130,246,0.2)', color: '#93C5FD' }}>
-              {(university.shortName ?? university.name).charAt(0)}
-            </div>
-          )}
-          <p className="text-xs truncate leading-tight" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            {university.shortName ?? university.name}
-          </p>
-        </div>
-      )}
 
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
@@ -178,7 +151,6 @@ export function TeacherSidebar() {
           </div>
           <div>
             <h1 className="text-lg font-black leading-none" style={{ color: '#60A5FA' }}>ContaSJ</h1>
-            {university && <p className="text-xs leading-none mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{university.shortName ?? university.name}</p>}
           </div>
         </div>
         <button onClick={() => setOpen(!open)} className="p-2 rounded-lg"

@@ -49,14 +49,8 @@ export function StudentSidebar() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
-  const [university, setUniversity] = useState<{ name: string; shortName: string | null; logoUrl: string | null } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (!user?.universityId) return;
-    api.get('/api/v1/universities/mine').then(({ data }) => setUniversity(data)).catch(() => {});
-  }, [user?.universityId]);
 
   useEffect(() => {
     api.get<any[]>('/api/v1/attempts').then(({ data }) => {
@@ -337,18 +331,6 @@ export function StudentSidebar() {
         </Link>
       </div>
 
-      {university && !isContador && !isMultiempresa && (
-        <div className="mx-3 mt-3 mb-1 px-2.5 py-2 rounded-md flex items-center gap-2.5" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${SIDE_LINE}` }}>
-          {university.logoUrl ? (
-            <img src={university.logoUrl} alt={university.name} className="w-5 h-5 rounded object-contain flex-shrink-0" style={{ opacity: 0.85 }} />
-          ) : (
-            <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[11px] font-bold font-mono" style={{ background: 'rgba(37,99,235,0.28)', color: '#93C5FD' }}>
-              {(university.shortName ?? university.name).charAt(0)}
-            </div>
-          )}
-          <p className="text-[11px] truncate leading-tight" style={{ color: TXT_FAINT }}>{university.shortName ?? university.name}</p>
-        </div>
-      )}
 
       {!activeId && !isContador && !isMultiempresa && (
         <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', color: '#7FE3CE' }}>
@@ -419,7 +401,6 @@ export function StudentSidebar() {
           <div className="w-7 h-7 rounded-md flex items-center justify-center font-mono font-extrabold text-white text-sm" style={{ background: TEAL }}>C</div>
           <div>
             <h1 className="text-[15px] font-bold text-white leading-none tracking-wide">ContaSJ</h1>
-            {university && <p className="text-[10.5px] leading-none mt-1" style={{ color: TXT_FAINT }}>{university.shortName ?? university.name}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">
