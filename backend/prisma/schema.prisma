@@ -349,6 +349,12 @@ model ExerciseConfig {
   autoInventory                    Boolean @default(false) @map("auto_inventory")
   autoTransactionsBetweenCompanies Boolean @default(false) @map("auto_inter_company")
 
+  // Motor de Simulación Comercial (F2): modo de interacción A→B cuando
+  // autoTransactionsBetweenCompanies=true. Valores: CONTABLE (compra espejo
+  // automática), EMPRESARIAL (propuesta de compra que B acepta/rechaza),
+  // ERP_COMPLETO (cotización→OC→recepción→factura→pago). String validado por DTO.
+  commercialMode                   String  @default("CONTABLE") @map("commercial_mode")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt      @map("updated_at")
 

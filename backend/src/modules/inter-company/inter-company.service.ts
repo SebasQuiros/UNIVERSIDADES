@@ -64,6 +64,15 @@ export class InterCompanyService {
     if (!config?.autoTransactionsBetweenCompanies) {
       return { mirrored: false, reason: 'auto_inter_company_off' };
     }
+
+    // Motor de Simulación Comercial (F2): solo el Modo Contable postea la compra
+    // espejo automáticamente. Empresarial (propuesta que B acepta) y ERP_COMPLETO
+    // (cotización→OC→recepción→factura→pago) usan sus propios flujos (F2.2/F2.3);
+    // aquí NO se auto-postea para no adelantar inventario/CxP/asiento sin aceptación.
+    const commercialMode = (config as any).commercialMode ?? 'CONTABLE';
+    if (commercialMode !== 'CONTABLE') {
+      return { mirrored: false, reason: `commercial_mode_${String(commercialMode).toLowerCase()}_awaiting_flow` };
+    }
     if (!input.customerId) {
       return { mirrored: false, reason: 'no_customer' };
     }
