@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PedagogyService } from '../pedagogy/pedagogy.service';
 
 export interface RubricResult {
   rubricId:    string;
@@ -8,6 +9,7 @@ export interface RubricResult {
   points:      number;
   passed:      boolean;
   detail:      string;
+  area:        string | null; // área de competencia del criterio (si está anclado)
 }
 
 export interface AutoGradePreview {
@@ -24,7 +26,11 @@ export interface AutoGradePreview {
 
 @Injectable()
 export class AutoGradingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // Motor pedagógico (one-way): grading emite eventos; pedagogy no importa grading.
+    private readonly pedagogy: PedagogyService,
+  ) {}
 
   // ── Main entry point ────────────────────────────────────────────────────────
   async preview(attemptId: string, teacherId: string | null): Promise<AutoGradePreview> {
@@ -33,7 +39,10 @@ export class AutoGradingService {
       include: {
         exercise: {
           include: {
-            rubrics: { orderBy: { order: 'asc' } },
+            rubrics: {
+              orderBy: { order: 'asc' },
+              include: { competency: { select: { area: true } } },
+            },
             course:  { select: { teacherId: true } },
           },
         },
@@ -124,6 +133,7 @@ export class AutoGradingService {
         points:      Number(r.points),
         passed,
         detail,
+        area:        (r as any).competency?.area ?? null,
       };
     });
 
@@ -169,6 +179,39 @@ export class AutoGradingService {
         gradedAt: new Date(),
       },
     });
+
+    // ── Detección pedagógica DETERMINISTA ──────────────────────────────────
+    // Por cada criterio de rúbrica NO cumplido, emitimos un evento pedagógico.
+    // El motor (PedagogyService) decide QUÉ es; aquí sólo reportamos hechos.
+    // Defensivo: envuelto en try/catch para que la calificación NUNCA falle si
+    // pedagogy tuviera un error.
+    try {
+      const failed = result.results.filter(r => !r.passed);
+      if (failed.length > 0) {
+        const attempt = await this.prisma.exerciseAttempt.findUnique({
+          where:  { id: attemptId },
+          select: { studentId: true, company: { select: { id: true } } },
+        });
+        if (attempt?.studentId) {
+          const companyId = attempt.company?.id ?? null;
+          for (const r of failed) {
+            await this.pedagogy.emit({
+              studentId: attempt.studentId,
+              attemptId,
+              companyId,
+              type:     'PEDAGOGY_RUBRIC_FAILED',
+              severity: 'WARNING',
+              area:     r.area,
+              context:  { criterion: r.criterion, expected: r.description, got: r.detail },
+              message:  `${r.description} no cumplido`,
+            }).catch(() => null);
+          }
+        }
+      }
+    } catch {
+      // Nunca romper la calificación por un fallo pedagógico.
+    }
+
     return result;
   }
 

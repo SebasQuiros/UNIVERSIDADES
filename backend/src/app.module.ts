@@ -46,6 +46,7 @@ import { SecurityModule }            from './modules/security/security.module';
 import { MacroModule }               from './modules/macro/macro.module';
 import { CompetenciesModule }        from './modules/competencies/competencies.module';
 import { CourseTemplatesModule }     from './modules/course-templates/course-templates.module';
+import { PedagogyModule }            from './modules/pedagogy/pedagogy.module';
 import { AccountingEngineModule }    from './modules/accounting-engine/accounting-engine.module';
 import { RedisModule }               from './redis/redis.module';
 import { LoggerMiddleware }     from './common/middleware/logger.middleware';
@@ -118,6 +119,8 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     CompetenciesModule,
     // Plantillas de curso base (contenido listo para usar, multi-universidad)
     CourseTemplatesModule,
+    // F3 — Motor pedagógico + perfil de aprendizaje + tutor IA (profe socrático)
+    PedagogyModule,
   ],
   providers: [
     { provide: APP_GUARD,        useClass: ThrottlerGuard },

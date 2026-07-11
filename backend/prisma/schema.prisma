@@ -1386,6 +1386,46 @@ model ProcurementOrder {
   @@map("procurement_orders")
 }
 
+// ── F3 · Pedagogical Engine — eventos pedagógicos + perfil de aprendizaje ──
+// Los motores DETERMINISTAS detectan situaciones de aprendizaje y emiten eventos
+// pedagógicos (nunca el LLM decide si hay error). El LLM (Tutor/Mentor) recibe
+// estos eventos + el LearningProfile para verbalizar preguntas socráticas y
+// retroalimentación. El perfil se agrega deterministamente desde los eventos y
+// los attempts (evidencia SINAES; el profe lo ve).
+model PedagogicalEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  companyId String?  @map("company_id") @db.Uuid
+  attemptId String?  @map("attempt_id") @db.Uuid
+  // p. ej. PEDAGOGY_NEGATIVE_STOCK | PEDAGOGY_HIGH_DEBT | PEDAGOGY_WRONG_DEPRECIATION
+  //        | PEDAGOGY_UNBALANCED | PEDAGOGY_IVA_OMITTED | PEDAGOGY_CREDIT_RISK
+  type      String
+  severity  String   @default("INFO")   // INFO | WARNING | CRITICAL
+  area      String?  // CONTABLE | TRIBUTARIO | FINANCIERO | COSTOS | AUDITORIA | DATOS | GESTION
+  context   Json     // detalles deterministas (montos, cuentas, ratios)
+  message   String?  // resumen determinista (NO generado por LLM)
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([studentId])
+  @@index([attemptId])
+  @@index([type])
+  @@map("pedagogical_events")
+}
+
+model LearningProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  studentId         String   @unique @map("student_id") @db.Uuid
+  competencyMastery Json     @default("{}") @map("competency_mastery") // { area/code: pct 0-100 }
+  strengths         Json     @default("[]")  // [{ area, note }]
+  recurringErrors   Json     @default("[]") @map("recurring_errors")   // [{ type, count, lastSeen }]
+  stats             Json     @default("{}")  // { totalEvents, exercisesGraded, avgScore, ... }
+  updatedAt         DateTime @updatedAt      @map("updated_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("learning_profiles")
+}
+
 // ================================================================
 //  BLOQUE 14b — IMPUESTO SOBRE LA RENTA (D-101)
 // ================================================================
