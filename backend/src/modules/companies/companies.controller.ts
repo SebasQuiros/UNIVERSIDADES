@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch,
+  Controller, Get, Post, Patch, Delete,
   Body, Param, Request, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
@@ -16,6 +16,23 @@ export class CompaniesController {
   @Get('companies')
   findAll(@Request() req: any) {
     return this.svc.findByStudent(req.user.id);
+  }
+
+  // ── Espacio Contador: empresas de práctica (libres, sin nota) ──
+  @Get('practice/companies')
+  listPractice(@Request() req: any) {
+    return this.svc.listPractice(req.user.id);
+  }
+
+  @Post('practice/companies')
+  @HttpCode(HttpStatus.CREATED)
+  createPractice(@Body() dto: CreateCompanyDto, @Request() req: any) {
+    return this.svc.createPractice(req.user.id, dto);
+  }
+
+  @Delete('practice/companies/:companyId')
+  deletePractice(@Param('companyId') companyId: string, @Request() req: any) {
+    return this.svc.deletePractice(companyId, req.user.id);
   }
 
   // GET — company linked to an exercise attempt

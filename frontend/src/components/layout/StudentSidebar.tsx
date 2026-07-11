@@ -10,6 +10,7 @@ import {
   Home, ArrowDownCircle, ArrowUpCircle, Package, Landmark, BookOpen,
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
   LogOut, Menu, X, ChevronRight, ChevronDown, UserCircle,
+  GraduationCap, Calculator,
 } from 'lucide-react';
 
 // ── Paleta v2 (plana, "libro mayor") ───────────────────────────
@@ -134,18 +135,21 @@ export function StudentSidebar() {
     {
       key: 'contabilidad', label: 'Contabilidad', icon: BookOpen,
       children: [
-        { label: 'Catálogo de cuentas', slug: 'catalogo-cuentas' },
-        { label: 'Asiento contable',    tab: 'journal',       slug: 'asiento-contable' },
-        { label: 'Libro diario',        tab: 'ledger',        slug: 'libro-diario' },
-        { label: 'Libro mayor',         tab: 'mayorizacion',  slug: 'libro-mayor' },
-        { label: 'Ajustes',             tab: 'ajustes',       slug: 'ajustes' },
-        { label: 'Asientos de cierre',  tab: 'asientos-cierre', slug: 'asientos-cierre' },
-        { label: 'Activos fijos',       tab: 'fixed-assets',  slug: 'activos' },
+        { label: 'Catálogo de cuentas',     slug: 'catalogo-cuentas' },
+        { label: 'Diario (asientos)',       tab: 'journal',        slug: 'asiento-contable' },
+        { label: 'Libro mayor',             tab: 'ledger',         slug: 'libro-mayor' },
+        { label: 'Mayorización',            tab: 'mayorizacion' },
+        { label: 'Balance de comprobación', tab: 'balance-comprobacion', slug: 'balance-comprobacion' },
+        { label: 'Ajustes',                 tab: 'ajustes',        slug: 'ajustes' },
+        { label: 'Balance ajustado',        tab: 'balance-ajustado' },
+        { label: 'Asientos de cierre',      tab: 'asientos-cierre', slug: 'asientos-cierre' },
+        { label: 'Balanza post-cierre',     tab: 'balanza-post-cierre' },
+        { label: 'Activos fijos',           tab: 'fixed-assets',   slug: 'activos' },
+        { label: 'Nómina',                  tab: 'payroll' },
       ],
     },
     { key: 'reportes', label: 'Reportes', icon: BarChart2, children: [
-        { label: 'Balance de comprobación', tab: 'balance-comprobacion', slug: 'balance-comprobacion' },
-        { label: 'Estados financieros',     tab: 'reports',              slug: 'estados-financieros' },
+        { label: 'Estados financieros', tab: 'reports', slug: 'estados-financieros' },
     ]},
     { key: 'tribu', label: 'Tributación · TRIBU', icon: Receipt, href: '/estudiante/impuestos', path: '/estudiante/impuestos' },
   ];
@@ -158,6 +162,7 @@ export function StudentSidebar() {
   ];
 
   const inExercise = pathname.includes('/ejercicio/');
+  const isContador = pathname.startsWith('/estudiante/contador');
   const subActive = (s: Sub) => {
     if (s.path && pathname.startsWith(s.path)) return true;
     if (s.slug && pathname.startsWith(`/estudiante/modulo/${s.slug}`)) return true;
@@ -239,12 +244,30 @@ export function StudentSidebar() {
           <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 font-mono font-extrabold text-white text-base" style={{ background: TEAL }}>C</div>
           <div>
             <h1 className="text-[15px] font-bold text-white tracking-wide leading-none">ContaSJ</h1>
-            <p className="text-[10.5px] mt-1 leading-none" style={{ color: TXT_FAINT }}>Portal Estudiante</p>
+            <p className="text-[10.5px] mt-1 leading-none" style={{ color: TXT_FAINT }}>{isContador ? 'Espacio Contador' : 'Espacio Estudiante'}</p>
           </div>
         </Link>
       </div>
 
-      {university && (
+      {/* Switch de espacios: Estudiante (ejercicios/nota) ↔ Contador (práctica libre) */}
+      <div className="mx-3 mt-3 p-1 rounded-lg flex gap-1" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${SIDE_LINE}` }}>
+        <Link href="/estudiante" onClick={() => setOpen(false)}
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[12px] font-semibold transition-all"
+          style={!isContador
+            ? { background: TEAL, color: '#fff', boxShadow: ACTIVE_GLOW }
+            : { color: TXT_FAINT }}>
+          <GraduationCap className="w-3.5 h-3.5" /> Estudiante
+        </Link>
+        <Link href="/estudiante/contador" onClick={() => setOpen(false)}
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[12px] font-semibold transition-all"
+          style={isContador
+            ? { background: '#D4A017', color: '#1a1205', boxShadow: '0 2px 12px rgba(212,160,23,0.35)' }
+            : { color: TXT_FAINT }}>
+          <Calculator className="w-3.5 h-3.5" /> Contador
+        </Link>
+      </div>
+
+      {university && !isContador && (
         <div className="mx-3 mt-3 mb-1 px-2.5 py-2 rounded-md flex items-center gap-2.5" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${SIDE_LINE}` }}>
           {university.logoUrl ? (
             <img src={university.logoUrl} alt={university.name} className="w-5 h-5 rounded object-contain flex-shrink-0" style={{ opacity: 0.85 }} />
@@ -257,17 +280,41 @@ export function StudentSidebar() {
         </div>
       )}
 
-      {!activeId && (
+      {!activeId && !isContador && (
         <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', color: '#7FE3CE' }}>
           Inicia un ejercicio para operar tu empresa.
         </div>
       )}
 
-      <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
-        <div className="space-y-0.5 mb-4">{GROUPS.map(renderGroup)}</div>
-        <p className="px-2.5 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: TXT_FAINT }}>Aprendizaje</p>
-        <div className="space-y-0.5">{LEARN.map(renderGroup)}</div>
-      </nav>
+      {isContador ? (
+        <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
+          <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(212,160,23,0.12)', border: '1px solid rgba(212,160,23,0.3)', color: '#F5D67B' }}>
+            Práctica libre: gestioná tus empresas-cliente sin nota. Ideal para replicar ejercicios del libro.
+          </div>
+          {[
+            { label: 'Mis empresas-cliente', icon: Building2, href: '/estudiante/contador' },
+            { label: 'Mi progreso',          icon: TrendingUp, href: '/estudiante/progreso' },
+          ].map((it) => {
+            const active = pathname === it.href;
+            const Icon = it.icon;
+            return (
+              <Link key={it.href} href={it.href} onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 px-2.5 py-2 mb-0.5 rounded-md text-[14px] font-medium transition-all"
+                style={active ? { background: '#D4A017', color: '#1a1205', boxShadow: '0 2px 12px rgba(212,160,23,0.3)' } : { color: TXT }}
+                onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = ''; }}>
+                <Icon className="w-[18px] h-[18px] flex-shrink-0" /> {it.label}
+              </Link>
+            );
+          })}
+        </nav>
+      ) : (
+        <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
+          <div className="space-y-0.5 mb-4">{GROUPS.map(renderGroup)}</div>
+          <p className="px-2.5 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: TXT_FAINT }}>Aprendizaje</p>
+          <div className="space-y-0.5">{LEARN.map(renderGroup)}</div>
+        </nav>
+      )}
 
       {/* User + Logout */}
       <div className="p-2.5" style={{ borderTop: `1px solid ${SIDE_LINE}` }}>

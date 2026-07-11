@@ -534,6 +534,8 @@ model Company {
   attemptId          String?      @unique @map("attempt_id")  @db.Uuid
   studentId          String?      @map("student_id")          @db.Uuid
   exerciseId         String?      @map("exercise_id")         @db.Uuid
+  // Práctica (Espacio Contador): empresa-cliente libre, sin intento ni nota.
+  isPractice         Boolean      @default(false) @map("is_practice")
   mode               CompanyMode  @default(INDIVIDUAL)
   isCompanyEnabled   Boolean      @default(true) @map("is_company_enabled")
   name               String

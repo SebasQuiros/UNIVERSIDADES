@@ -172,6 +172,52 @@ export class CompaniesService {
     return company;
   }
 
+  // ══════════════════════════════════════════════════════════════
+  //  ESPACIO CONTADOR — empresas de práctica (libres, sin nota)
+  // ══════════════════════════════════════════════════════════════
+
+  /** Crea una empresa-cliente de práctica del estudiante-contador. */
+  async createPractice(studentId: string, dto: CreateCompanyDto) {
+    const company = await this.prisma.company.create({
+      data: {
+        studentId,
+        isPractice:       true,
+        name:             dto.name,
+        legalId:          dto.legalId,
+        legalIdType:      dto.legalIdType,
+        economicActivity: dto.economicActivity,
+        address:          dto.address ?? null,
+        phone:            dto.phone   ?? null,
+        email:            dto.email   ?? null,
+        currency:         'CRC',
+      },
+    });
+    await this.accounts.seedChartOfAccounts(company.id);
+    return company;
+  }
+
+  /** Lista la cartera de empresas-cliente de práctica del estudiante. */
+  async listPractice(studentId: string) {
+    return this.prisma.company.findMany({
+      where:   { studentId, isPractice: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, name: true, legalId: true, economicActivity: true, createdAt: true,
+        _count: { select: { invoices: true, journalEntries: true, clients: true } },
+      },
+    });
+  }
+
+  /** Elimina una empresa de práctica (solo del propio estudiante). */
+  async deletePractice(companyId: string, studentId: string) {
+    const company = await this.prisma.company.findFirst({
+      where: { id: companyId, studentId, isPractice: true },
+    });
+    if (!company) throw new NotFoundException('Empresa de práctica no encontrada');
+    await this.prisma.company.delete({ where: { id: companyId } });
+    return { ok: true };
+  }
+
   // ── Update company info ───────────────────────────────────────
   async update(companyId: string, dto: UpdateCompanyDto) {
     return this.prisma.company.update({
