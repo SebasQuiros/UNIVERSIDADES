@@ -353,11 +353,12 @@ export class AttemptsService {
         xp:        xpMap.get(p.id)?.xp ?? 0,
         completed: xpMap.get(p.id)?.completed ?? 0,
         isMe:      p.id === studentId,
+        rank:      0,
       }))
       .sort((a, b) => b.xp - a.xp || b.completed - a.completed);
 
     // Asignar rank (1-based)
-    leaderboard.forEach((r, i) => ((r as any).rank = i + 1));
+    leaderboard.forEach((r, i) => { r.rank = i + 1; });
 
     const myXp   = xpMap.get(studentId)?.xp ?? 0;
     const myRank = leaderboard.find(r => r.isMe)?.rank ?? null;
