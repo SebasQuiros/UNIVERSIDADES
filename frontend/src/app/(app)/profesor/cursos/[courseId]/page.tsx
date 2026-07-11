@@ -15,7 +15,7 @@ import {
   ArrowLeft, Users, FileText, Plus, UserPlus,
   Calendar, X, ChevronRight, Globe, Lock, Search, UserX,
   BarChart2, Download, TrendingUp, Clock, CheckCircle, AlertCircle,
-  Table2, Layers, BookMarked, Mail, Trash2, GraduationCap, Upload, CheckCircle2, Award,
+  Table2, Layers, BookMarked, Mail, Trash2, GraduationCap, Upload, CheckCircle2, Award, Calculator,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -1240,6 +1240,11 @@ export default function CourseDetailPage() {
             <Link href={`/profesor/cursos/${id}/analytics`}>
               <Button variant="secondary" size="sm">
                 <TrendingUp className="w-4 h-4" /> Analytics
+              </Button>
+            </Link>
+            <Link href={`/profesor/cursos/${id}/practica`}>
+              <Button variant="secondary" size="sm">
+                <Calculator className="w-4 h-4" /> Práctica
               </Button>
             </Link>
             <Link href={`/profesor/ejercicios/nuevo?cursoId=${id}`}>

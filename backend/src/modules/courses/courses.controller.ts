@@ -96,6 +96,15 @@ export class CoursesController {
     return this.svc.getStudentsWithProgress(universityId, id);
   }
 
+  @Get(':id/practice')
+  @Roles('TEACHER', 'ADMIN', 'SUPERADMIN')
+  getPractice(
+    @Param('universityId') universityId: string,
+    @Param('id') id: string,
+  ) {
+    return this.svc.getPracticeOverview(universityId, id);
+  }
+
   @Delete(':id/students/:studentId')
   @Roles('TEACHER', 'ADMIN', 'SUPERADMIN')
   unenroll(

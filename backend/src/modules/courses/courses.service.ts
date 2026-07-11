@@ -172,6 +172,62 @@ export class CoursesService {
     });
   }
 
+  // Espacio Contador — vista del profesor sobre la práctica libre de sus
+  // estudiantes. Por cada estudiante inscrito (activo) del curso, devuelve sus
+  // empresas-cliente de práctica (isPractice) con conteos y última actividad.
+  async getPracticeOverview(universityId: string, courseId: string) {
+    const course = await this.prisma.course.findFirst({
+      where: { id: courseId, universityId },
+      include: {
+        enrollments: {
+          where: { isActive: true },
+          include: { student: { select: { id: true, name: true, email: true } } },
+          orderBy: { enrolledAt: 'asc' },
+        },
+      },
+    });
+    if (!course) throw new NotFoundException('Curso no encontrado');
+
+    const studentIds = course.enrollments.map((e) => e.studentId);
+
+    const companies = studentIds.length === 0 ? [] : await this.prisma.company.findMany({
+      where: { studentId: { in: studentIds }, isPractice: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, name: true, economicActivity: true, studentId: true, createdAt: true,
+        _count: { select: { invoices: true, journalEntries: true, clients: true } },
+      },
+    });
+
+    // Última actividad por empresa = fecha del último asiento de diario.
+    const companyIds = companies.map((c) => c.id);
+    const lastEntries = companyIds.length === 0 ? [] : await this.prisma.journalEntry.groupBy({
+      by: ['companyId'],
+      where: { companyId: { in: companyIds } },
+      _max: { createdAt: true },
+    });
+    const lastMap = new Map(lastEntries.map((e) => [e.companyId, e._max.createdAt]));
+
+    return course.enrollments.map((enroll) => {
+      const studentCompanies = companies
+        .filter((c) => c.studentId === enroll.studentId)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          economicActivity: c.economicActivity,
+          createdAt: c.createdAt,
+          counts: c._count,
+          lastActivityAt: lastMap.get(c.id) ?? null,
+        }));
+      return {
+        student: enroll.student,
+        totalCompanies: studentCompanies.length,
+        totalEntries: studentCompanies.reduce((s, c) => s + c.counts.journalEntries, 0),
+        companies: studentCompanies,
+      };
+    });
+  }
+
   async remove(
     universityId: string,
     courseId: string,
