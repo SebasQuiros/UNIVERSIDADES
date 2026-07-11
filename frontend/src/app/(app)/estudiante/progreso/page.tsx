@@ -6,12 +6,13 @@ import { Spinner } from '@/components/ui/Spinner';
 import toast from 'react-hot-toast';
 import {
   TrendingUp, Award, Clock, BookOpen, Target, Star,
-  Trophy, Zap, Medal, Crown,
+  Trophy, Zap, Medal, Crown, GraduationCap, Compass,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
+import { LearningProfileCard } from '@/components/pedagogy/LearningProfileCard';
 
 interface Stats {
   total:       number;
@@ -56,6 +57,53 @@ function rankStyle(rank: number) {
   if (rank === 2) return { bg: 'linear-gradient(135deg,#CBD5E1,#94A3B8)', icon: Medal,  color: '#fff' };
   if (rank === 3) return { bg: 'linear-gradient(135deg,#D97706,#B45309)', icon: Medal,  color: '#fff' };
   return { bg: '#F1F5F9', icon: Trophy, color: '#64748B' };
+}
+
+// ─── Mentor IA ─────────────────────────────────────────────────────────────
+// El mentor da retroalimentación personalizada cruzando ejercicios.
+interface Mentor {
+  level: 'MENTOR';
+  message: string;
+  suggestedFocus?: string;
+}
+
+function MentorNote() {
+  const [mentor, setMentor] = useState<Mentor | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get<Mentor>('/api/v1/pedagogy/mentor')
+      .then(({ data }) => setMentor(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return null;
+  if (!mentor?.message) return null;
+
+  return (
+    <div className="rounded-2xl p-6 text-white relative overflow-hidden mb-6"
+      style={{ background: 'linear-gradient(135deg,#4F46E5,#7C3AED)' }}>
+      <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20"
+        style={{ background: 'radial-gradient(circle,#fff,transparent 70%)', transform: 'translate(30%,-30%)' }} />
+      <div className="relative flex items-start gap-4">
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
+          <GraduationCap className="w-6 h-6" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#C7D2FE' }}>Mentor IA</p>
+          <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap">{mentor.message}</p>
+          {mentor.suggestedFocus && (
+            <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
+              <Compass className="w-3.5 h-3.5" /> Enfoque sugerido: {mentor.suggestedFocus}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function StatCard({ label, value, sub, icon: Icon, color }: {
@@ -374,6 +422,19 @@ export default function ProgresoPage() {
           </div>
         </>
       )}
+
+      {/* ── Perfil de aprendizaje + Mentor IA (evidencia SINAES) ── */}
+      <div className="mt-8">
+        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-1">
+          <GraduationCap className="w-5 h-5 text-indigo-600" />
+          Perfil de aprendizaje
+        </h3>
+        <p className="text-gray-500 text-sm mb-4">
+          Cómo vas construyendo criterio contable: dominio por competencia, fortalezas y errores a repasar.
+        </p>
+        <MentorNote />
+        <LearningProfileCard />
+      </div>
     </div>
   );
 }

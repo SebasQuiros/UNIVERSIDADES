@@ -6,10 +6,11 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
+import { LearningProfileCard } from '@/components/pedagogy/LearningProfileCard';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Calculator, Users, Building2, FileText, ChevronDown, ChevronRight,
-  Receipt, UserSquare2, Clock, ExternalLink, Sparkles,
+  Receipt, UserSquare2, Clock, ExternalLink, Sparkles, GraduationCap,
 } from 'lucide-react';
 
 interface PracticeCompany {
@@ -37,6 +38,7 @@ export default function TeacherPracticePage() {
   const [courseName, setName]   = useState('');
   const [loading, setLoading]   = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [profileOpen, setProfileOpen] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,6 +76,12 @@ export default function TeacherPracticePage() {
   };
 
   const toggle = (id: string) => setExpanded((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  const toggleProfile = (id: string) => setProfileOpen((prev) => {
     const n = new Set(prev);
     if (n.has(id)) n.delete(id); else n.add(id);
     return n;
@@ -154,6 +162,27 @@ export default function TeacherPracticePage() {
                         ? (open ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />)
                         : <span className="text-[11px] text-gray-300 w-4 text-center">·</span>}
                     </button>
+
+                    {(() => {
+                      const profOpen = profileOpen.has(r.student.id);
+                      return (
+                        <div className="border-t border-gray-100">
+                          <button
+                            onClick={() => toggleProfile(r.student.id)}
+                            className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-xs font-semibold transition-colors hover:bg-indigo-50/60"
+                            style={{ color: '#4F46E5' }}>
+                            <GraduationCap className="w-4 h-4 flex-shrink-0" />
+                            <span className="flex-1">Perfil de aprendizaje · evidencia SINAES</span>
+                            {profOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </button>
+                          {profOpen && (
+                            <div className="px-4 pb-4 bg-gray-50/60">
+                              <LearningProfileCard studentId={r.student.id} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {open && has && (
                       <div className="border-t border-gray-100 bg-gray-50/60 p-3 grid grid-cols-1 md:grid-cols-2 gap-2.5">

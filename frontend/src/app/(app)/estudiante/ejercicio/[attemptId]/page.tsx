@@ -22,10 +22,11 @@ import {
   Clock, TrendingUp, X, RefreshCw, ChevronRight, AlertCircle, Truck,
   Printer, Landmark, Award, Star, Zap, Circle, History, Upload,
   Scale, ClipboardList, ClipboardCheck, Lock, Download, MessageCircle,
-  Lightbulb, ShoppingCart, Search, LineChart, Inbox,
+  Lightbulb, ShoppingCart, Search, LineChart, Inbox, GraduationCap,
 } from 'lucide-react';
 import { PurchaseProposalsInbox } from '@/components/business/PurchaseProposalsInbox';
 import { ProcurementOrders } from '@/components/business/ProcurementOrders';
+import { SocraticTutorPanel } from '@/components/pedagogy/SocraticTutorPanel';
 import {
   TYPE_LABELS,
   ClientsTab, ProductsTab, SuppliersTab, InvoicesTab, JournalTab, LedgerTab,
@@ -40,7 +41,7 @@ interface Company { id: string; name: string; legalId: string | null; email: str
 type Tab = 'dashboard' | 'clients' | 'suppliers' | 'products' | 'invoices' | 'journal' | 'ledger' | 'bank'
          | 'mayorizacion' | 'balance-comprobacion' | 'ajustes' | 'balance-ajustado'
          | 'reports' | 'asientos-cierre' | 'balanza-post-cierre' | 'activity'
-         | 'fixed-assets' | 'payroll' | 'purchase-proposals' | 'procurement';
+         | 'fixed-assets' | 'payroll' | 'purchase-proposals' | 'procurement' | 'tutor';
 
 function TabButton({ id, active, onClick, icon: Icon, label, count }: {
   id: Tab; active: boolean; onClick: () => void; icon: React.ElementType; label: string; count?: number;
@@ -933,6 +934,8 @@ export default function ExerciseWorkspacePage() {
     { id: 'fixed-assets'         as Tab, label: 'Activos Fijos',          icon: Building2      },
     // Feature 7: Nómina
     { id: 'payroll'              as Tab, label: 'Nómina',                 icon: Users          },
+    // Aprendizaje: Tutor socrático (profe IA)
+    { id: 'tutor'                as Tab, label: 'Tutor IA',              icon: GraduationCap  },
   ];
 
   // ── Exam mode config (from exercise settings) ─────────────────────────────
@@ -1071,6 +1074,7 @@ export default function ExerciseWorkspacePage() {
             {activeTab === 'activity'           && <ActivityTab          attemptId={attemptId} />}
             {activeTab === 'fixed-assets'       && <FixedAssetsTab       companyId={company.id} />}
             {activeTab === 'payroll'            && <PayrollTab           companyId={company.id} />}
+            {activeTab === 'tutor'              && <SocraticTutorPanel   attemptId={attemptId} companyId={company.id} />}
           </div>
         </div>
       )}
