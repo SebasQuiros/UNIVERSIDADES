@@ -18,6 +18,12 @@ export class CompaniesController {
     return this.svc.findByStudent(req.user.id);
   }
 
+  // GET — empresas del mismo ejercicio para elegir contraparte de comercio (ERP)
+  @Get('exercises/:exerciseId/trading-companies')
+  tradingPartners(@Param('exerciseId') exerciseId: string, @Request() req: any) {
+    return this.svc.findTradingPartners(exerciseId, req.user.id);
+  }
+
   // ── Espacio Contador: empresas de práctica (libres, sin nota) ──
   @Get('practice/companies')
   listPractice(@Request() req: any) {

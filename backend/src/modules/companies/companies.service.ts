@@ -13,6 +13,39 @@ export class CompaniesService {
     private readonly accounts: AccountsService,
   ) {}
 
+  // ── Empresas del ejercicio con las que se puede comerciar (F2/ERP) ──────────
+  // Devuelve las empresas del mismo ejercicio para que el estudiante elija una
+  // contraparte (vendedor) al crear una orden de compra. Verifica que el usuario
+  // PARTICIPE del ejercicio (tiene un intento o está inscrito en el curso).
+  async findTradingPartners(exerciseId: string, userId: string) {
+    const attempt = await this.prisma.exerciseAttempt.findFirst({
+      where: { exerciseId, studentId: userId }, select: { id: true },
+    });
+    let allowed = !!attempt;
+    if (!allowed) {
+      const exercise = await this.prisma.exercise.findUnique({
+        where: { id: exerciseId }, select: { courseId: true },
+      });
+      if (exercise) {
+        const enrolled = await this.prisma.enrollment.findFirst({
+          where: { courseId: exercise.courseId, studentId: userId, isActive: true },
+          select: { id: true },
+        });
+        allowed = !!enrolled;
+      }
+    }
+    if (!allowed) {
+      throw new ForbiddenException('No participás en este ejercicio.');
+    }
+
+    // Empresas del ejercicio: GROUP (exerciseId directo) o INDIVIDUAL (por attempt).
+    return this.prisma.company.findMany({
+      where: { OR: [{ exerciseId }, { attempt: { exerciseId } }] },
+      select: { id: true, name: true, legalId: true, mode: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   // ── Get company by student ────────────────────────────────────
   // Fase 1: incluye companies INDIVIDUAL (dueño directo) + GROUP donde
   // el estudiante figura en CompanyMembership.

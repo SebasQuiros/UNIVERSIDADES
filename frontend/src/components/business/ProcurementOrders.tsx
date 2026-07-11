@@ -344,12 +344,11 @@ function NewOrderModal({
   const [notes, setNotes]           = useState('');
   const [saving, setSaving]         = useState(false);
 
-  // Poblar el selector de vendedor con las empresas hermanas del ejercicio.
-  // Único endpoint accesible al estudiante: /exercises/:id/group-companies
-  // (empresas GRUPO donde es miembro). Si no hay ninguna utilizable, el usuario
-  // pega el companyId manualmente.
+  // Poblar el selector de vendedor con TODAS las empresas del ejercicio
+  // (endpoint accesible al estudiante que participa). Si no hay ninguna
+  // utilizable, el usuario pega el companyId manualmente como respaldo.
   useEffect(() => {
-    api.get<any[]>(`/api/v1/exercises/${exerciseId}/group-companies`)
+    api.get<any[]>(`/api/v1/exercises/${exerciseId}/trading-companies`)
       .then(({ data }) => {
         const list = (Array.isArray(data) ? data : [])
           .map((c) => ({ id: c.id, name: c.name }))
