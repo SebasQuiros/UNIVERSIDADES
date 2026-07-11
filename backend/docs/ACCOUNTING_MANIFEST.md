@@ -142,9 +142,9 @@ Reglas del engine:
 | V-6 | Testigo escritor legacy | ✅ | F0.2 — `warnLegacyDirectWrite` |
 | I-DV-2 | Point-in-time `asOfDate` | ✅ | F1 — `asOfDate` en reportes y libro mayor |
 | SALE_CREATED | Implementación de referencia | ✅ | F1 — emisión de factura vía `dispatch()` |
-| I-AT-2 | Escritor único (payroll/cierre/depreciación) | 🔴 | F4 — `recordPayroll`/`recordPeriodClosing`/`recordDepreciation` |
-| I-AT-4 | Depreciación sin asiento | 🔴 | F4 — evento `DEPRECIATION_RUN` |
-| I-TR-1 | Trazabilidad nómina/cierre/depreciación | 🟡 | F4 (renta ya cubierta en F0.1) |
+| I-AT-4 | Depreciación genera su asiento | ✅ | F4.2 — vía `createAutoEntry` (D Gasto / C Dep. Acum.); + fix netting contra-activo por tipo |
+| I-TR-1 | Trazabilidad de todos los generadores | ✅ | F0.1 (renta) + F4.1 (nómina/cierre) + F4.2 (depreciación) |
+| I-AT-2 | Escritor único total (routing por orquestador) | 🟡 | depreciación ya vía `createAutoEntry`; nómina/cierre trazables pero aún directas (routing pleno = paso con test e2e) |
 | I-DV-3 | Caché invalidable | ⛳ | Cuando se introduzca caché |
 
 **Ya sólido de base:** I-SoT-1/2, I-DE-1/2/3, I-IM-1/2, I-ST-1/2, I-PE-1/3, I-NUM-1/2, I-TR-2, I-AT-3, I-DV-1, I-CU-1.

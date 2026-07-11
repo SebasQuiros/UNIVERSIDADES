@@ -26,10 +26,14 @@ export const ACCOUNT_CODES = {
   REVENUE_SALES: '4.1.01.01', // Ventas
 
   // ── Gastos ──────────────────────────────────────────────────────
-  COGS:           '5.1.01.01', // Costo de mercadería vendida
-  WAGES_EXPENSE:  '6.1.01.01', // Sueldos y salarios
-  CCSS_EXPENSE:   '6.1.02.01', // Cargas sociales patrono
-  AGUINALDO_EXP:  '6.1.03.01', // Provisión aguinaldo
+  COGS:                 '5.1.01.01', // Costo de mercadería vendida
+  DEPRECIATION_EXPENSE: '5.2.01.05', // Gasto por depreciación
+  WAGES_EXPENSE:        '6.1.01.01', // Sueldos y salarios
+  CCSS_EXPENSE:         '6.1.02.01', // Cargas sociales patrono
+  AGUINALDO_EXP:        '6.1.03.01', // Provisión aguinaldo
+
+  // ── Contra-activo ───────────────────────────────────────────────
+  ACCUMULATED_DEPRECIATION: '1.2.02.02', // Depreciación acumulada (general)
 } as const;
 
 export type AccountCode = typeof ACCOUNT_CODES[keyof typeof ACCOUNT_CODES];

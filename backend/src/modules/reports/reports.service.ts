@@ -81,7 +81,13 @@ export class ReportsService {
       const totalDebit  = aggMap.get(account.id)?.debit  ?? new Decimal(0);
       const totalCredit = aggMap.get(account.id)?.credit ?? new Decimal(0);
 
-      const balance = account.normalBalance === 'DEBIT'
+      // Firmamos por TIPO (no por normalBalance) para que las cuentas de
+      // contrapartida (contra-activos como Depreciación Acumulada: ASSET con
+      // saldo CREDIT) NETEEN correctamente dentro de su tipo. Para toda cuenta
+      // normal el signo por tipo == el de normalBalance, así que esto solo
+      // cambia el comportamiento de las contra-cuentas (lo correcto).
+      const debitNormalType = account.type === 'ASSET' || account.type === 'EXPENSE';
+      const balance = debitNormalType
         ? totalDebit.minus(totalCredit)
         : totalCredit.minus(totalDebit);
 

@@ -35,6 +35,7 @@ const CHART: Array<{
   { code:'1.2.01.02',  name:'Vehículos',                       type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.01',  isHeader:false },
   { code:'1.2.02',     name:'Depreciación Acumulada',          type:'ASSET',     normal:'CREDIT', level:3, parent:'1.2',     isHeader:true  },
   { code:'1.2.02.01',  name:'Dep. Acum. Equipo de Cómputo',    type:'ASSET',     normal:'CREDIT', level:4, parent:'1.2.02',  isHeader:false },
+  { code:'1.2.02.02',  name:'Depreciación Acumulada — General', type:'ASSET',    normal:'CREDIT', level:4, parent:'1.2.02',  isHeader:false },
   // ── 2. PASIVOS ──────────────────────────────────────────────
   { code:'2',          name:'PASIVOS',                         type:'LIABILITY', normal:'CREDIT', level:1, parent:null,      isHeader:true  },
   { code:'2.1',        name:'Pasivo Corriente',                type:'LIABILITY', normal:'CREDIT', level:2, parent:'2',       isHeader:true  },
@@ -88,6 +89,7 @@ const CHART: Array<{
   { code:'5.2.01.02',  name:'Alquiler de Local',               type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
   { code:'5.2.01.03',  name:'Servicios Públicos (Agua, Luz)',   type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
   { code:'5.2.01.04',  name:'Comunicaciones y Internet',        type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.05',  name:'Gasto por Depreciación',           type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
   { code:'5.2.02',     name:'Gastos de Ventas',                type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'5.2',     isHeader:true  },
   { code:'5.2.02.01',  name:'Publicidad y Propaganda',         type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
   { code:'5.2.02.02',  name:'Fletes y Envíos',                 type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },

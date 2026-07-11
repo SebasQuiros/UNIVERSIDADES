@@ -89,7 +89,10 @@ export class FinancialStatementEngine {
     return accounts.map((a) => {
       const debit = aggMap.get(a.id)?.debit ?? new Decimal(0);
       const credit = aggMap.get(a.id)?.credit ?? new Decimal(0);
-      const balance = a.normalBalance === 'DEBIT' ? debit.minus(credit) : credit.minus(debit);
+      // Signo por TIPO (no por normalBalance): las contra-cuentas (p. ej.
+      // Depreciación Acumulada, ASSET con saldo CREDIT) netean dentro de su tipo.
+      const debitNormalType = a.type === 'ASSET' || a.type === 'EXPENSE';
+      const balance = debitNormalType ? debit.minus(credit) : credit.minus(debit);
       return {
         id: a.id,
         code: a.code,

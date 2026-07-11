@@ -53,6 +53,21 @@ describe('AccountingEngine — invariantes puros', () => {
       expect(r.detail?.netIncome).toBe('1000.00');
     });
 
+    it('se mantiene tras depreciación (contra-activo netea + gasto)', () => {
+      // Base cuadrada: A=15000, P=4000, PN=10000, I=3000, G=2000 (net=1000).
+      // Depreciación de 500 → activos −500 (Dep. Acumulada, contra-activo que
+      // netea por tipo) y gasto +500. Debe seguir cuadrando: 14500 = 4000 +
+      // 10000 + (3000 − 2500) = 14500.
+      const r = equationDiff({
+        assets: new Decimal(14500),
+        liabilities: new Decimal(4000),
+        equity: new Decimal(10000),
+        income: new Decimal(3000),
+        expense: new Decimal(2500),
+      });
+      expect(r.ok).toBe(true);
+    });
+
     it('detecta una ecuación rota', () => {
       const r = equationDiff({
         assets: new Decimal(15000),
