@@ -52,7 +52,7 @@ export class PracticeGroupsService {
 
   /** Enriquece una lista de members con name/legalId de su empresa. */
   private async withCompanyInfo(
-    members: Array<{ companyId: string; [k: string]: any }>,
+    members: Array<{ id: string; companyId: string; [k: string]: any }>,
   ) {
     const companyIds = Array.from(new Set(members.map((m) => m.companyId)));
     const companies = companyIds.length
