@@ -45,6 +45,7 @@ import { SecurityModule }            from './modules/security/security.module';
 import { MacroModule }               from './modules/macro/macro.module';
 import { CompetenciesModule }        from './modules/competencies/competencies.module';
 import { CourseTemplatesModule }     from './modules/course-templates/course-templates.module';
+import { AccountingEngineModule }    from './modules/accounting-engine/accounting-engine.module';
 import { RedisModule }               from './redis/redis.module';
 import { LoggerMiddleware }     from './common/middleware/logger.middleware';
 
@@ -103,6 +104,7 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     SuperadminModule,
     // Phase 12 — Bank Reconciliation
     BankReconciliationModule,
+    AccountingEngineModule,    // Motor: invariantes verificables + ProjectionEngine (Accounting Manifest)
     // Phase 13 — AR/AP
     AccountsReceivableModule,
     AccountsPayableModule,

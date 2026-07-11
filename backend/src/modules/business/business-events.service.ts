@@ -87,6 +87,18 @@ export interface RecordPaymentInput extends BaseEventInput {
   amount:            number;
 }
 
+/**
+ * Evento de negocio tipado (Accounting Manifest §6). `dispatch()` es la
+ * puerta única de escritura contable automática; cada `type` mapea a su
+ * handler de dominio. Los escritores directos (nómina/cierre/depreciación)
+ * se migran a esta puerta en F4 (I-AT-2).
+ */
+export type BusinessEvent =
+  | ({ type: 'SALE_CREATED' }     & RecordSaleInput)
+  | ({ type: 'PURCHASE_CREATED' } & RecordPurchaseInput)
+  | ({ type: 'PAYMENT_RECEIVED' } & RecordCollectionInput)
+  | ({ type: 'PAYMENT_MADE' }     & RecordPaymentInput);
+
 @Injectable()
 export class BusinessEventsService {
   private readonly logger = new Logger(BusinessEventsService.name);
@@ -101,6 +113,23 @@ export class BusinessEventsService {
   ) {}
 
   // ── Public API ────────────────────────────────────────────────────────────
+
+  /**
+   * Puerta única de eventos de negocio (Accounting Manifest §6, I-AT-2).
+   * Mapea el evento tipado a su handler de dominio.
+   */
+  async dispatch(event: BusinessEvent) {
+    switch (event.type) {
+      case 'SALE_CREATED':     return this.recordSale(event);
+      case 'PURCHASE_CREATED': return this.recordPurchase(event);
+      case 'PAYMENT_RECEIVED': return this.recordCollection(event);
+      case 'PAYMENT_MADE':     return this.recordPayment(event);
+      default: {
+        const _exhaustive: never = event;
+        throw new Error(`Evento de negocio no soportado: ${(_exhaustive as any)?.type}`);
+      }
+    }
+  }
 
   /**
    * Evento "venta": una factura fue emitida.
