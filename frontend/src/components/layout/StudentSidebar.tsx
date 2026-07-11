@@ -107,6 +107,7 @@ export function StudentSidebar() {
       key: 'gastos', label: 'Gastos', icon: ArrowUpCircle,
       children: [
         { label: 'Proveedores',         tab: 'suppliers', slug: 'proveedores' },
+        { label: 'Propuestas de compra', tab: 'purchase-proposals' },
         { label: 'Facturas de compra',  endsWith: '/compras', slug: 'facturas-compra' },
         { label: 'Órdenes de compra',   slug: 'ordenes-compra' },
         { label: 'Pagos recurrentes',   slug: 'pagos-recurrentes' },

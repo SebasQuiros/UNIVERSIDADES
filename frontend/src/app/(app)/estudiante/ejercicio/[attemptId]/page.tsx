@@ -22,8 +22,9 @@ import {
   Clock, TrendingUp, X, RefreshCw, ChevronRight, AlertCircle, Truck,
   Printer, Landmark, Award, Star, Zap, Circle, History, Upload,
   Scale, ClipboardList, ClipboardCheck, Lock, Download, MessageCircle,
-  Lightbulb, ShoppingCart, Search, LineChart,
+  Lightbulb, ShoppingCart, Search, LineChart, Inbox,
 } from 'lucide-react';
+import { PurchaseProposalsInbox } from '@/components/business/PurchaseProposalsInbox';
 import {
   TYPE_LABELS,
   ClientsTab, ProductsTab, SuppliersTab, InvoicesTab, JournalTab, LedgerTab,
@@ -38,7 +39,7 @@ interface Company { id: string; name: string; legalId: string | null; email: str
 type Tab = 'dashboard' | 'clients' | 'suppliers' | 'products' | 'invoices' | 'journal' | 'ledger' | 'bank'
          | 'mayorizacion' | 'balance-comprobacion' | 'ajustes' | 'balance-ajustado'
          | 'reports' | 'asientos-cierre' | 'balanza-post-cierre' | 'activity'
-         | 'fixed-assets' | 'payroll';
+         | 'fixed-assets' | 'payroll' | 'purchase-proposals';
 
 function TabButton({ id, active, onClick, icon: Icon, label, count }: {
   id: Tab; active: boolean; onClick: () => void; icon: React.ElementType; label: string; count?: number;
@@ -899,6 +900,8 @@ export default function ExerciseWorkspacePage() {
     // Maestros
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'clients'   as Tab, label: 'Clientes',    icon: Users   }] : []),
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'suppliers' as Tab, label: 'Proveedores', icon: Truck   }] : []),
+    // Modo Empresarial: propuestas de compra recibidas de ventas de otras empresas del curso
+    ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'purchase-proposals' as Tab, label: 'Propuestas de compra', icon: Inbox }] : []),
     ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVOICING_ONLY' ? [{ id: 'products' as Tab, label: 'Productos', icon: Package }] : []),
     // 1. Transacciones
     ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVENTORY_ONLY' ? [{ id: 'invoices' as Tab, label: '1. Facturas',  icon: FileText  }] : []),
@@ -1048,6 +1051,7 @@ export default function ExerciseWorkspacePage() {
             {activeTab === 'dashboard' && <DashboardTab  companyId={company.id} attempt={attempt} />}
             {activeTab === 'clients'   && <ClientsTab    companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'suppliers' && <SuppliersTab  companyId={company.id} readonly={isReadonly} />}
+            {activeTab === 'purchase-proposals' && <PurchaseProposalsInbox companyId={company.id} />}
             {activeTab === 'products'  && <ProductsTab   companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'invoices'  && <InvoicesTab   companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'journal'   && <JournalTab    companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
