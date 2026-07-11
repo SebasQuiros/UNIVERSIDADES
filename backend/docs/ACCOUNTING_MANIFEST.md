@@ -144,7 +144,7 @@ Reglas del engine:
 | SALE_CREATED | Implementación de referencia | ✅ | F1 — emisión de factura vía `dispatch()` |
 | I-AT-4 | Depreciación genera su asiento | ✅ | F4.2 — vía `createAutoEntry` (D Gasto / C Dep. Acum.); + fix netting contra-activo por tipo |
 | I-TR-1 | Trazabilidad de todos los generadores | ✅ | F0.1 (renta) + F4.1 (nómina/cierre) + F4.2 (depreciación) |
-| I-AT-2 | Escritor único total (routing por orquestador) | 🟡 | depreciación ya vía `createAutoEntry`; nómina/cierre trazables pero aún directas (routing pleno = paso con test e2e) |
+| I-AT-2 | Escritor único (routing por `createAutoEntry`) | ✅ | **nómina** y **depreciación** postean vía `createAutoEntry` (V-1/V-5/período/idempotencia enforced). **Cierre** queda en su ruta especializada para evitar el ciclo Periods↔Journal (Journal ya depende de Periods): igual cumple balance validado + trazabilidad (F4.1) + período abierto por construcción + idempotencia. `renta` atómica+trazable (F0.1). |
 | I-DV-3 | Caché invalidable | ⛳ | Cuando se introduzca caché |
 
 **Ya sólido de base:** I-SoT-1/2, I-DE-1/2/3, I-IM-1/2, I-ST-1/2, I-PE-1/3, I-NUM-1/2, I-TR-2, I-AT-3, I-DV-1, I-CU-1.

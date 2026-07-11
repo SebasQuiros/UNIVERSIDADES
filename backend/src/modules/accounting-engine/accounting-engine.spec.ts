@@ -25,6 +25,22 @@ describe('AccountingEngine — invariantes puros', () => {
       expect(r.ok).toBe(true);
     });
 
+    it('el asiento de planilla cuadra (nómina CR, I-AT-2)', () => {
+      // Invariante de nómina: totalGross = totalNet + totalTrabajador + totalRenta.
+      const totalGross = 1000000, totalNet = 850000, totalTrabajador = 100000, totalRenta = 50000;
+      const totalPatrono = 265000, totalAguinaldo = 83333;
+      const lines = [
+        { debit: totalGross,     credit: 0 },                       // D Sueldos
+        { debit: totalPatrono,   credit: 0 },                       // D CCSS Patrono
+        { debit: totalAguinaldo, credit: 0 },                       // D Aguinaldo
+        { debit: 0, credit: totalNet },                             // C Sueldos por pagar
+        { debit: 0, credit: totalTrabajador + totalPatrono },       // C CCSS por pagar
+        { debit: 0, credit: totalAguinaldo },                       // C Aguinaldo por pagar
+        { debit: 0, credit: totalRenta },                           // C Renta retenida
+      ];
+      expect(isBalanced(lines).ok).toBe(true);
+    });
+
     it('rechaza un asiento descuadrado', () => {
       const r = isBalanced([
         { debit: 1000, credit: 0 },

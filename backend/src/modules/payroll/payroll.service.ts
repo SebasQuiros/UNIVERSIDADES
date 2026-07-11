@@ -13,6 +13,8 @@ import { PayrollCalculatorService } from './payroll-calculator.service';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
 import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
 import { REDIS_CLIENT } from '../../redis/redis.module';
+import { JournalService } from '../journal/journal.service';
+import { JournalSource } from '@prisma/client';
 
 @Injectable()
 export class PayrollService {
@@ -20,6 +22,7 @@ export class PayrollService {
     private readonly prisma: PrismaService,
     private readonly calculator: PayrollCalculatorService,
     @Inject(REDIS_CLIENT) private readonly redis: any,
+    private readonly journal: JournalService,
   ) {}
 
   // ── Ownership guard (Fase 1: soporta INDIVIDUAL + GROUP) ────────────────
@@ -157,39 +160,9 @@ export class PayrollService {
 
     // Run everything in a single transaction
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1. Resolve payroll accounts (they must exist already — seeded in chart)
+      // 1. Empresa + creador (GROUP exige studentId concreto).
       const company = await tx.company.findUnique({ where: { id: companyId } });
       if (!company) throw new NotFoundException('Empresa no encontrada');
-
-      // Códigos centralizados en /accounting/constants/account-codes.ts —
-      // si cambia el plan contable, se actualiza un solo lugar.
-      const accountCodes = [
-        ACCOUNT_CODES.WAGES_EXPENSE,
-        ACCOUNT_CODES.CCSS_EXPENSE,
-        ACCOUNT_CODES.AGUINALDO_EXP,
-        ACCOUNT_CODES.WAGES_PAYABLE,
-        ACCOUNT_CODES.CCSS_PAYABLE,
-        ACCOUNT_CODES.AGUINALDO_PAYABLE,
-        ACCOUNT_CODES.RENTA_RETENIDA,
-      ];
-      const accounts = await tx.account.findMany({
-        where: { companyId, code: { in: accountCodes } },
-      });
-      const byCode = Object.fromEntries(accounts.map(a => [a.code, a]));
-
-      // 2. Get/increment journal sequence
-      const seq = await tx.journalSequence.upsert({
-        where:  { companyId },
-        update: { lastNumber: { increment: 1 } },
-        create: { companyId, lastNumber: 1 },
-      });
-
-      // 3. Build journal entry lines
-      const [periodYear, periodMonth] = period.split('-');
-      const entryDate = new Date(`${periodYear}-${periodMonth}-01`);
-      // Fase 1: studentId es opcional para companies modo GROUP. Payroll
-      // requiere un creador concreto, así que para GROUP companies se exige
-      // que el caller especifique uno (futuro: tomarlo de Membership OWNER).
       const createdById = company.studentId;
       if (!createdById) {
         throw new Error(
@@ -198,59 +171,43 @@ export class PayrollService {
         );
       }
 
-      const journalLines: Array<{
-        accountId: string;
-        companyId: string;
-        debit: Decimal;
-        credit: Decimal;
-        description: string;
-      }> = [];
+      const [periodYear, periodMonth] = period.split('-');
+      const entryDate = new Date(`${periodYear}-${periodMonth}-01`);
 
-      const d = (code: string, amount: number, desc: string) => {
-        const acc = byCode[code];
-        if (acc) journalLines.push({ accountId: acc.id, companyId, debit: new Decimal(amount.toFixed(2)), credit: new Decimal('0'), description: desc });
-      };
-      const c = (code: string, amount: number, desc: string) => {
-        const acc = byCode[code];
-        if (acc) journalLines.push({ accountId: acc.id, companyId, debit: new Decimal('0'), credit: new Decimal(amount.toFixed(2)), description: desc });
-      };
-
-      // Debits (expenses)
-      d(ACCOUNT_CODES.WAGES_EXPENSE,   totalGross,     `Sueldos y Salarios — ${period}`);
-      d(ACCOUNT_CODES.CCSS_EXPENSE,    totalPatrono,   `Cargas Sociales Patrono — ${period}`);
-      d(ACCOUNT_CODES.AGUINALDO_EXP,   totalAguinaldo, `Provisión Aguinaldo — ${period}`);
-
-      // Credits (liabilities)
-      c(ACCOUNT_CODES.WAGES_PAYABLE,     totalNet,                       `Sueldos por Pagar — ${period}`);
-      c(ACCOUNT_CODES.CCSS_PAYABLE,      totalTrabajador + totalPatrono, `CCSS por Pagar (trab + patrón) — ${period}`);
-      c(ACCOUNT_CODES.AGUINALDO_PAYABLE, totalAguinaldo,                 `Aguinaldo por Pagar — ${period}`);
+      // 2. Asiento de planilla por el ESCRITOR ÚNICO (I-AT-2). createAutoEntry
+      //    resuelve las cuentas por código y enfuerza los invariantes: partida
+      //    doble (V-1), período abierto (I-PE-1), trazabilidad (V-5) e
+      //    idempotencia por (sourceType, sourceId). Códigos centralizados en
+      //    /accounting/constants/account-codes.ts.
+      //      D Sueldos/CCSS Patrono/Aguinaldo · C Sueldos/CCSS/Aguinaldo por pagar
+      //      (+ Renta retenida si aplica).
+      const journalLines: Array<{ accountCode: string; debit: number; credit: number; description?: string }> = [
+        { accountCode: ACCOUNT_CODES.WAGES_EXPENSE,     debit: totalGross,     credit: 0, description: `Sueldos y Salarios — ${period}` },
+        { accountCode: ACCOUNT_CODES.CCSS_EXPENSE,      debit: totalPatrono,   credit: 0, description: `Cargas Sociales Patrono — ${period}` },
+        { accountCode: ACCOUNT_CODES.AGUINALDO_EXP,     debit: totalAguinaldo, credit: 0, description: `Provisión Aguinaldo — ${period}` },
+        { accountCode: ACCOUNT_CODES.WAGES_PAYABLE,     debit: 0, credit: totalNet,                       description: `Sueldos por Pagar — ${period}` },
+        { accountCode: ACCOUNT_CODES.CCSS_PAYABLE,      debit: 0, credit: totalTrabajador + totalPatrono, description: `CCSS por Pagar (trab + patrón) — ${period}` },
+        { accountCode: ACCOUNT_CODES.AGUINALDO_PAYABLE, debit: 0, credit: totalAguinaldo,                 description: `Aguinaldo por Pagar — ${period}` },
+      ];
       if (totalRenta > 0) {
-        c(ACCOUNT_CODES.RENTA_RETENIDA, totalRenta, `Retención Imp. Renta — ${period}`);
+        journalLines.push({ accountCode: ACCOUNT_CODES.RENTA_RETENIDA, debit: 0, credit: totalRenta, description: `Retención Imp. Renta — ${period}` });
       }
 
-      // 4. Create journal entry (only if we have payroll accounts)
-      let journalEntryId: string | undefined;
-      if (journalLines.length >= 2) {
-        const entry = await tx.journalEntry.create({
-          data: {
-            companyId,
-            entryNumber:  seq.lastNumber,
-            description:  `Planilla de sueldos — ${period}`,
-            entryDate,
-            reference:    `PLANILLA-${period}`,
-            source:       'MANUAL',
-            // I-TR-1 (Accounting Manifest): trazabilidad del evento de nómina.
-            // sourceId determinístico (empresa+período) → idempotente y único
-            // por el constraint unique(sourceType, sourceId). El routing pleno
-            // por el orquestador (I-AT-2) queda para una migración con test e2e.
-            sourceType:   'payroll',
-            sourceId:     `${companyId}:${period}`,
-            createdById,
-            lines:        { create: journalLines },
-          },
-        });
-        journalEntryId = entry.id;
-      }
+      const entry = await this.journal.createAutoEntry(
+        companyId,
+        `Planilla de sueldos — ${period}`,
+        entryDate,
+        journalLines,
+        createdById,
+        JournalSource.MANUAL,
+        tx,
+        undefined,
+        undefined,
+        'payroll',
+        `${companyId}:${period}`,
+        false,
+      );
+      const journalEntryId = entry.id;
 
       // 5. Create Payroll record
       const payroll = await tx.payroll.create({
