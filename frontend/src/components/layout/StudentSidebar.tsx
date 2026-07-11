@@ -178,11 +178,14 @@ export function StudentSidebar() {
 
   // ── Espacio Contador: menú "de contador real", contabilidad separada por
   //    empresa. Los ítems del ciclo contable navegan la empresa-cliente ABIERTA
-  //    (deep-link ?tab=). Sin sección Aprendizaje. + vista Multiempresa (grupos).
+  //    (deep-link ?tab=). Sin sección Aprendizaje. (Multiempresa es su propio espacio.)
   const CONTADOR_TOP: Group[] = [
     { key: 'c-emp', label: 'Mis empresas-cliente', icon: Building2, href: '/estudiante/contador', path: '/estudiante/contador', exact: true },
     { key: 'c-res', label: 'Resumen de práctica', icon: TrendingUp, href: '/estudiante/contador/resumen', path: '/estudiante/contador/resumen' },
-    { key: 'c-grp', label: 'Multiempresa (grupos)', icon: Users, href: '/estudiante/contador/grupos', path: '/estudiante/contador/grupos' },
+  ];
+  // ── Espacio Multiempresa: grupos de práctica + comercio entre empresas.
+  const MULTIEMPRESA_TOP: Group[] = [
+    { key: 'm-grp', label: 'Grupos de práctica', icon: Users, href: '/estudiante/multiempresa', path: '/estudiante/multiempresa', exact: true },
   ];
   const CONTADOR_GROUPS: Group[] = [
     { key: 'c-ing', label: 'Ingresos', icon: ArrowDownCircle, children: [
@@ -216,6 +219,7 @@ export function StudentSidebar() {
   ];
 
   const inExercise = pathname.includes('/ejercicio/');
+  const isMultiempresa = pathname.startsWith('/estudiante/multiempresa');
   const isContador = pathname.startsWith('/estudiante/contador');
   const subActive = (s: Sub) => {
     if (isContador) {
@@ -303,30 +307,37 @@ export function StudentSidebar() {
           <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 font-mono font-extrabold text-white text-base" style={{ background: TEAL }}>C</div>
           <div>
             <h1 className="text-[15px] font-bold text-white tracking-wide leading-none">ContaSJ</h1>
-            <p className="text-[10.5px] mt-1 leading-none" style={{ color: TXT_FAINT }}>{isContador ? 'Espacio Contador' : 'Espacio Estudiante'}</p>
+            <p className="text-[10.5px] mt-1 leading-none" style={{ color: TXT_FAINT }}>{isMultiempresa ? 'Espacio Multiempresa' : isContador ? 'Espacio Contador' : 'Espacio Educación'}</p>
           </div>
         </Link>
       </div>
 
-      {/* Switch de espacios: Estudiante (ejercicios/nota) ↔ Contador (práctica libre) */}
-      <div className="mx-3 mt-3 p-1 rounded-lg flex gap-1" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${SIDE_LINE}` }}>
+      {/* Switch de 3 espacios: Educación · Contador · Multiempresa */}
+      <div className="mx-3 mt-3 p-1 rounded-lg space-y-1" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${SIDE_LINE}` }}>
         <Link href="/estudiante" onClick={() => setOpen(false)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[12px] font-semibold transition-all"
-          style={!isContador
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-all"
+          style={(!isContador && !isMultiempresa)
             ? { background: TEAL, color: '#fff', boxShadow: ACTIVE_GLOW }
             : { color: TXT_FAINT }}>
-          <GraduationCap className="w-3.5 h-3.5" /> Estudiante
+          <GraduationCap className="w-4 h-4 flex-shrink-0" /> Educación
         </Link>
         <Link href="/estudiante/contador" onClick={() => setOpen(false)}
-          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[12px] font-semibold transition-all"
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-all"
           style={isContador
             ? { background: '#D4A017', color: '#1a1205', boxShadow: '0 2px 12px rgba(212,160,23,0.35)' }
             : { color: TXT_FAINT }}>
-          <Calculator className="w-3.5 h-3.5" /> Contador
+          <Calculator className="w-4 h-4 flex-shrink-0" /> Contador
+        </Link>
+        <Link href="/estudiante/multiempresa" onClick={() => setOpen(false)}
+          className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-all"
+          style={isMultiempresa
+            ? { background: '#7C3AED', color: '#fff', boxShadow: '0 2px 12px rgba(124,58,237,0.35)' }
+            : { color: TXT_FAINT }}>
+          <Users className="w-4 h-4 flex-shrink-0" /> Multiempresa
         </Link>
       </div>
 
-      {university && !isContador && (
+      {university && !isContador && !isMultiempresa && (
         <div className="mx-3 mt-3 mb-1 px-2.5 py-2 rounded-md flex items-center gap-2.5" style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${SIDE_LINE}` }}>
           {university.logoUrl ? (
             <img src={university.logoUrl} alt={university.name} className="w-5 h-5 rounded object-contain flex-shrink-0" style={{ opacity: 0.85 }} />
@@ -339,13 +350,20 @@ export function StudentSidebar() {
         </div>
       )}
 
-      {!activeId && !isContador && (
+      {!activeId && !isContador && !isMultiempresa && (
         <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', color: '#7FE3CE' }}>
           Inicia un ejercicio para operar tu empresa.
         </div>
       )}
 
-      {isContador ? (
+      {isMultiempresa ? (
+        <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
+          <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)', color: '#C4B5FD' }}>
+            Multiempresa — formá grupos con otros contadores y comerciá entre sus empresas de práctica (compra/venta, inventario, CxC/CxP y asientos reales).
+          </div>
+          <div className="space-y-0.5">{MULTIEMPRESA_TOP.map(renderGroup)}</div>
+        </nav>
+      ) : isContador ? (
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
           <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(212,160,23,0.12)', border: '1px solid rgba(212,160,23,0.3)', color: '#F5D67B' }}>
             {contadorCompanyId
