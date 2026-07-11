@@ -287,6 +287,18 @@ export class JournalService {
       );
     }
 
+    // I-IM-3 (Accounting Manifest): solo se revierten asientos CONFIRMED.
+    // Un PENDING no afecta saldos (se descarta con 'reject'); un REJECTED ya
+    // está descartado. Revertir uno de esos crearía un asiento CONFIRMED que
+    // alteraría los saldos, violando la semántica de estados (I-ST-1).
+    if (original.status !== JournalEntryStatus.CONFIRMED) {
+      throw new BadRequestException(
+        `Solo se pueden revertir asientos confirmados. El asiento #${original.entryNumber} ` +
+        `está en estado ${original.status}: usá 'reject' para descartar un PENDING; ` +
+        `un REJECTED no requiere reversa.`,
+      );
+    }
+
     const reverseDate = dto.reverseDate
       ? new Date(dto.reverseDate)
       : new Date(); // today if not specified

@@ -309,93 +309,101 @@ export class RentaService {
     const netPaid         = grossAmount.minus(retentionAmount);
     const date            = new Date(dto.date);
 
-    const retencion = await this.prisma.retencion.create({
-      data: {
-        companyId,
-        attemptId:       company.attemptId,
-        type:            dto.type,
-        supplierName:    dto.supplierName,
-        supplierCedula:  dto.supplierCedula ?? null,
-        grossAmount,
-        retentionRate:   rate,
-        retentionAmount,
-        netPaid,
-        date,
-        description:     dto.description ?? null,
-      },
-    });
-
-    // ── Auto journal entry ────────────────────────────────────────────────
-    // D: Gasto de Servicios / Alquiler / etc = grossAmount
-    // C: Caja/Banco                          = netPaid
-    // C: Retenciones por Pagar               = retentionAmount
+    // I-AT-1 (Accounting Manifest): la retención y su asiento se crean como UNA
+    // unidad atómica. Antes el asiento era "best-effort" fuera de transacción con
+    // un catch que tragaba el error → retención sin asiento (dato inconsistente).
+    // Ahora: o ambos se confirman, o ninguno. Exigimos el catálogo de cuentas
+    // (todo evento financiero debe producir su asiento; el Diario es la verdad).
     //
-    // We look up accounts by type; if not found we skip (company may not
-    // have seeded the chart yet).
-    try {
+    // Asiento:  D Gasto (bruto) · C Caja/Banco (neto) · C Retenciones por Pagar.
+    // NOTA: el enrutado por BusinessEventsService (escritor único, RulesEngine,
+    // AccountingMode) es parte de F4 (ver I-AT-2 en el manifiesto). Aquí solo se
+    // corrige la atomicidad y se agrega trazabilidad source/sourceType/sourceId.
+    return this.prisma.$transaction(async (tx) => {
+      const retencion = await tx.retencion.create({
+        data: {
+          companyId,
+          attemptId:       company.attemptId,
+          type:            dto.type,
+          supplierName:    dto.supplierName,
+          supplierCedula:  dto.supplierCedula ?? null,
+          grossAmount,
+          retentionRate:   rate,
+          retentionAmount,
+          netPaid,
+          date,
+          description:     dto.description ?? null,
+        },
+      });
+
       const [expenseAcc, retencionesAcc, cajaAcc] = await Promise.all([
-        this.prisma.account.findFirst({
+        tx.account.findFirst({
           where: { companyId, type: 'EXPENSE', isHeader: false, isActive: true },
           orderBy: { code: 'asc' },
         }),
-        this.prisma.account.findFirst({
+        tx.account.findFirst({
           where: { companyId, code: '2.1.02.02' },   // Retenciones por Pagar
         }),
-        this.prisma.account.findFirst({
+        tx.account.findFirst({
           where: { companyId, type: 'ASSET', isHeader: false, isActive: true },
           orderBy: { code: 'asc' },
         }),
       ]);
 
-      if (expenseAcc && retencionesAcc && cajaAcc) {
-        // Get/create journal sequence
-        const seq = await this.prisma.journalSequence.upsert({
-          where:  { companyId },
-          update: { lastNumber: { increment: 1 } },
-          create: { companyId, lastNumber: 1 },
-        });
-
-        await this.prisma.journalEntry.create({
-          data: {
-            companyId,
-            createdById: studentId,
-            entryNumber: seq.lastNumber,
-            entryDate:   date,
-            source:      'MANUAL',
-            description: `Retención en fuente — ${dto.supplierName} (${dto.type})`,
-            lines: {
-              create: [
-                {
-                  companyId,
-                  accountId: expenseAcc.id,
-                  debit:     grossAmount,
-                  credit:    new Decimal(0),
-                  description: `Gasto bruto: ${dto.supplierName}`,
-                },
-                {
-                  companyId,
-                  accountId: cajaAcc.id,
-                  debit:     new Decimal(0),
-                  credit:    netPaid,
-                  description: `Pago neto: ${dto.supplierName}`,
-                },
-                {
-                  companyId,
-                  accountId: retencionesAcc.id,
-                  debit:     new Decimal(0),
-                  credit:    retentionAmount,
-                  description: `Retención ${(rate * 100).toFixed(0)}%: ${dto.supplierName}`,
-                },
-              ],
-            },
-          },
-        });
+      if (!expenseAcc || !retencionesAcc || !cajaAcc) {
+        throw new BadRequestException(
+          'La empresa no tiene el catálogo de cuentas necesario para registrar la ' +
+          'retención (se requieren una cuenta de gasto, una de activo/caja y la cuenta ' +
+          '"Retenciones por Pagar" 2.1.02.02). Verificá el plan de cuentas.',
+        );
       }
-    } catch {
-      // Journal entry creation is best-effort; don't fail the main operation
-    }
 
-    return retencion;
+      const seq = await tx.journalSequence.upsert({
+        where:  { companyId },
+        update: { lastNumber: { increment: 1 } },
+        create: { companyId, lastNumber: 1 },
+      });
+
+      await tx.journalEntry.create({
+        data: {
+          companyId,
+          createdById: studentId,
+          entryNumber: seq.lastNumber,
+          entryDate:   date,
+          source:      'MANUAL',
+          sourceType:  'withholding',   // I-TR-1: trazabilidad del evento
+          sourceId:    retencion.id,
+          description: `Retención en fuente — ${dto.supplierName} (${dto.type})`,
+          lines: {
+            create: [
+              {
+                companyId,
+                accountId: expenseAcc.id,
+                debit:     grossAmount,
+                credit:    new Decimal(0),
+                description: `Gasto bruto: ${dto.supplierName}`,
+              },
+              {
+                companyId,
+                accountId: cajaAcc.id,
+                debit:     new Decimal(0),
+                credit:    netPaid,
+                description: `Pago neto: ${dto.supplierName}`,
+              },
+              {
+                companyId,
+                accountId: retencionesAcc.id,
+                debit:     new Decimal(0),
+                credit:    retentionAmount,
+                description: `Retención ${(rate * 100).toFixed(0)}%: ${dto.supplierName}`,
+              },
+            ],
+          },
+        },
+      });
+
+      return retencion;
+    });
   }
 
   // ── List retenciones (optionally filter by year) ─────────────────────────
