@@ -318,7 +318,7 @@ export default function RentaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="flex-1 overflow-y-auto bg-gray-100">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="bg-emerald-900 text-white">
