@@ -47,6 +47,7 @@ import { MacroModule }               from './modules/macro/macro.module';
 import { CompetenciesModule }        from './modules/competencies/competencies.module';
 import { CourseTemplatesModule }     from './modules/course-templates/course-templates.module';
 import { PedagogyModule }            from './modules/pedagogy/pedagogy.module';
+import { SimulatorModule }           from './modules/simulator/simulator.module';
 import { AccountingEngineModule }    from './modules/accounting-engine/accounting-engine.module';
 import { RedisModule }               from './redis/redis.module';
 import { LoggerMiddleware }     from './common/middleware/logger.middleware';
@@ -121,6 +122,8 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     CourseTemplatesModule,
     // F3 — Motor pedagógico + perfil de aprendizaje + tutor IA (profe socrático)
     PedagogyModule,
+    // F5 — Economía simulada + Simulador financiero (macro real como contexto)
+    SimulatorModule,
   ],
   providers: [
     { provide: APP_GUARD,        useClass: ThrottlerGuard },
