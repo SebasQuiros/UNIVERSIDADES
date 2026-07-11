@@ -145,7 +145,7 @@ export default function ImpuestosPage() {
   const d101Due = getD101DueDate();
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="flex-1 overflow-y-auto p-6 max-w-5xl mx-auto space-y-6">
       {toDelete && (
         <DeleteDeclarationModal
           onConfirm={handleDelete}

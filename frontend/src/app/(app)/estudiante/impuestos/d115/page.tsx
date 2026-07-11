@@ -177,12 +177,12 @@ export default function D115Page() {
       }
       await autoSave();
       setStep(s => s + 1);
-      topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      topRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
   function goPrev() {
-    if (step > 0) { setStep(s => s - 1); topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    if (step > 0) { setStep(s => s - 1); topRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }
   }
 
   async function handleSubmit() {
@@ -214,7 +214,7 @@ export default function D115Page() {
   const isSubmitted = status === 'SUBMITTED';
 
   return (
-    <div className="min-h-screen bg-gray-100" ref={topRef}>
+    <div className="flex-1 overflow-y-auto bg-gray-100" ref={topRef}>
       {/* Encabezado TRIBU-CR unificado */}
       <TribuHeader
         code="D-115"
