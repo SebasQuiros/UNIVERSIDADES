@@ -229,7 +229,9 @@ export class FinancialSimulatorService {
         ? Math.ceil(monthlyFixedCosts / contributionPerUnit)
         : null;
     const paybackMonths =
-      monthlyProfit > 0 ? this.round(initialInvestment / monthlyProfit, 1) : null;
+      monthlyProfit > 0 && initialInvestment > 0
+        ? this.round(initialInvestment / monthlyProfit, 1)
+        : null;
     const annualROI =
       initialInvestment > 0
         ? this.round(((monthlyProfit * 12) / initialInvestment) * 100, 1)

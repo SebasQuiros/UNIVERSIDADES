@@ -201,10 +201,20 @@ export class InterCompanyService {
    */
   async acceptProposal(companyId: string, purchaseInvoiceId: string, userId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const pi = await tx.purchaseInvoice.findFirst({
-        where: { id: purchaseInvoiceId, companyId, isAccepted: false },
+      // Claim ATÓMICO primero: marca aceptada solo si seguía pendiente. Evita
+      // que dos llamadas concurrentes (doble-click) apliquen los efectos dos
+      // veces (doble asiento/CxP/inventario). Si los efectos fallan luego, toda
+      // la tx revierte (incluido este claim).
+      const claimed = await tx.purchaseInvoice.updateMany({
+        where: { id: purchaseInvoiceId, companyId, isAccepted: false, sourceInvoiceId: { not: null } },
+        data:  { isAccepted: true },
       });
-      if (!pi) throw new NotFoundException('Propuesta de compra no encontrada o ya procesada.');
+      if (claimed.count === 0) {
+        throw new NotFoundException('Propuesta de compra no encontrada o ya procesada.');
+      }
+
+      const pi = await tx.purchaseInvoice.findUnique({ where: { id: purchaseInvoiceId } });
+      if (!pi) throw new NotFoundException('Propuesta de compra no encontrada.');
 
       let sellerItems: Array<{ cabysCode: string | null; quantity: any; unitPrice: any }> = [];
       if (pi.sourceInvoiceId) {
@@ -224,7 +234,6 @@ export class InterCompanyService {
         userId,
       });
 
-      await tx.purchaseInvoice.update({ where: { id: pi.id }, data: { isAccepted: true } });
       this.logger.log(`Propuesta de compra ${pi.id} aceptada por empresa ${companyId}.`);
       return { accepted: true, purchaseInvoiceId: pi.id };
     });
@@ -232,12 +241,16 @@ export class InterCompanyService {
 
   /** Rechaza (elimina) una propuesta pendiente. Aún no tuvo efectos contables. */
   async rejectProposal(companyId: string, purchaseInvoiceId: string) {
-    const pi = await this.prisma.purchaseInvoice.findFirst({
-      where: { id: purchaseInvoiceId, companyId, isAccepted: false },
+    // deleteMany ATÓMICO con guard isAccepted=false: solo borra si sigue
+    // pendiente. Si una aceptación concurrente ya la procesó, count=0 → no la
+    // borra (no destruye el rastro contable de una compra ya aceptada).
+    const deleted = await this.prisma.purchaseInvoice.deleteMany({
+      where: { id: purchaseInvoiceId, companyId, isAccepted: false, sourceInvoiceId: { not: null } },
     });
-    if (!pi) throw new NotFoundException('Propuesta de compra no encontrada o ya procesada.');
-    await this.prisma.purchaseInvoice.delete({ where: { id: pi.id } });
-    this.logger.log(`Propuesta de compra ${pi.id} rechazada por empresa ${companyId}.`);
+    if (deleted.count === 0) {
+      throw new NotFoundException('Propuesta de compra no encontrada o ya procesada.');
+    }
+    this.logger.log(`Propuesta de compra ${purchaseInvoiceId} rechazada por empresa ${companyId}.`);
     return { rejected: true, purchaseInvoiceId };
   }
 

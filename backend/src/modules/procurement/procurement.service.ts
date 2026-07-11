@@ -52,14 +52,8 @@ export class ProcurementService {
     return order;
   }
 
-  private assertStatus(order: { status: string }, expected: string, action: string) {
-    if (order.status !== expected) {
-      throw new BadRequestException(
-        `No se puede ${action}: la orden está en estado "${order.status}", ` +
-        `se requiere "${expected}".`,
-      );
-    }
-  }
+  // (Las transiciones de estado se hacen con updateMany atómico + guard de
+  //  status, por lo que ya no se usa un assertStatus previo no-atómico.)
 
   // ─────────────────────────────────────────────────────────────────────────
   //  createOrder — el COMPRADOR emite una Orden de Compra (PO_ISSUED)
@@ -137,12 +131,15 @@ export class ProcurementService {
   async dispatch(orderId: string, userId: string) {
     const order = await this.getOrderOrThrow(orderId);
     await this.verifyOwner(order.sellerCompanyId, userId);
-    this.assertStatus(order, 'PO_ISSUED', 'despachar la orden');
-
-    return this.prisma.procurementOrder.update({
-      where: { id: orderId },
+    // Transición atómica (idempotente ante doble-click / carrera).
+    const moved = await this.prisma.procurementOrder.updateMany({
+      where: { id: orderId, status: 'PO_ISSUED' },
       data:  { status: 'DISPATCHED' },
     });
+    if (moved.count === 0) {
+      throw new BadRequestException('No se puede despachar: la orden no está en estado PO_ISSUED.');
+    }
+    return this.getOrderOrThrow(orderId);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -151,13 +148,21 @@ export class ProcurementService {
   async receive(orderId: string, userId: string) {
     const order = await this.getOrderOrThrow(orderId);
     await this.verifyOwner(order.buyerCompanyId, userId);
-    this.assertStatus(order, 'DISPATCHED', 'recibir la orden');
 
     const items = (order.items as unknown as Array<{
       description: string; cabysCode: string | null; quantity: number; unitPrice: number;
     }>) ?? [];
 
     return this.prisma.$transaction(async (tx) => {
+      // Transición atómica PRIMERO: si otra llamada ya recibió, count=0 → aborta
+      // (evita duplicar lotes de inventario).
+      const moved = await tx.procurementOrder.updateMany({
+        where: { id: orderId, status: 'DISPATCHED' },
+        data:  { status: 'RECEIVED' },
+      });
+      if (moved.count === 0) {
+        throw new BadRequestException('No se puede recibir: la orden no está en estado DISPATCHED (¿ya recibida?).');
+      }
       for (const item of items) {
         if (!item.cabysCode) continue;
         const product = await tx.product.findFirst({
@@ -187,10 +192,7 @@ export class ProcurementService {
         );
       }
 
-      return tx.procurementOrder.update({
-        where: { id: orderId },
-        data:  { status: 'RECEIVED' },
-      });
+      return tx.procurementOrder.findUnique({ where: { id: orderId } });
     });
   }
 
@@ -200,7 +202,6 @@ export class ProcurementService {
   async invoice(orderId: string, userId: string) {
     const order = await this.getOrderOrThrow(orderId);
     await this.verifyOwner(order.sellerCompanyId, userId);
-    this.assertStatus(order, 'RECEIVED', 'facturar la orden');
 
     const seller = await this.prisma.company.findUnique({
       where:  { id: order.sellerCompanyId },
@@ -223,6 +224,16 @@ export class ProcurementService {
     const invoiceNumber = `PO-${order.id.slice(0, 8)}`;
 
     return this.prisma.$transaction(async (tx) => {
+      // Transición atómica PRIMERO (status RECEIVED + sin factura previa): evita
+      // doble facturación / doble asiento por doble-click o carrera.
+      const moved = await tx.procurementOrder.updateMany({
+        where: { id: orderId, status: 'RECEIVED', purchaseInvoiceId: null },
+        data:  { status: 'INVOICED' },
+      });
+      if (moved.count === 0) {
+        throw new BadRequestException('No se puede facturar: la orden no está en RECEIVED o ya fue facturada.');
+      }
+
       // 1. PurchaseInvoice del COMPRADOR (proveedor = empresa vendedora).
       const purchaseInvoice = await tx.purchaseInvoice.create({
         data: {
@@ -258,10 +269,10 @@ export class ProcurementService {
         date,
       });
 
-      // 3. Guardar el purchaseInvoiceId en la orden.
+      // 3. Enlazar el purchaseInvoiceId (el status ya se movió atómicamente).
       return tx.procurementOrder.update({
         where: { id: orderId },
-        data:  { status: 'INVOICED', purchaseInvoiceId: purchaseInvoice.id },
+        data:  { purchaseInvoiceId: purchaseInvoice.id },
       });
     });
   }
@@ -272,7 +283,6 @@ export class ProcurementService {
   async pay(orderId: string, userId: string) {
     const order = await this.getOrderOrThrow(orderId);
     await this.verifyOwner(order.buyerCompanyId, userId);
-    this.assertStatus(order, 'INVOICED', 'pagar la orden');
 
     if (!order.purchaseInvoiceId) {
       throw new BadRequestException(
@@ -280,24 +290,39 @@ export class ProcurementService {
       );
     }
 
-    // Reutiliza el path probado de pago a proveedor:
-    //   ApPayment + PurchaseInvoice.paidAmount/isPaid + recordPayment (asiento) atómico.
-    await this.accountsPayable.registerPayment(
-      order.buyerCompanyId,
-      {
-        purchaseInvoiceId: order.purchaseInvoiceId,
-        amount:            new Decimal(order.total.toString()).toNumber(),
-        paymentDate:       new Date().toISOString(),
-        method:            'TRANSFER',
-        reference:         `PO-${order.id.slice(0, 8)}`,
-      },
-      userId,
-    );
-
-    return this.prisma.procurementOrder.update({
-      where: { id: orderId },
+    // Claim atómico de la transición (previene doble pago por doble-click).
+    const moved = await this.prisma.procurementOrder.updateMany({
+      where: { id: orderId, status: 'INVOICED' },
       data:  { status: 'PAID' },
     });
+    if (moved.count === 0) {
+      throw new BadRequestException('No se puede pagar: la orden no está en estado INVOICED (¿ya pagada?).');
+    }
+
+    // Path probado de pago a proveedor (ApPayment + paidAmount/isPaid + asiento,
+    // atómico). Si falla, revertimos la transición para no dejar la orden PAID
+    // sin pago registrado.
+    try {
+      await this.accountsPayable.registerPayment(
+        order.buyerCompanyId,
+        {
+          purchaseInvoiceId: order.purchaseInvoiceId,
+          amount:            new Decimal(order.total.toString()).toNumber(),
+          paymentDate:       new Date().toISOString(),
+          method:            'TRANSFER',
+          reference:         `PO-${order.id.slice(0, 8)}`,
+        },
+        userId,
+      );
+    } catch (e) {
+      await this.prisma.procurementOrder.updateMany({
+        where: { id: orderId, status: 'PAID' },
+        data:  { status: 'INVOICED' },
+      });
+      throw e;
+    }
+
+    return this.getOrderOrThrow(orderId);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -321,17 +346,18 @@ export class ProcurementService {
       throw new NotFoundException('Orden de aprovisionamiento no encontrada');
     }
 
-    if (order.status !== 'PO_ISSUED' && order.status !== 'DISPATCHED') {
+    // Transición atómica (solo desde PO_ISSUED/DISPATCHED).
+    const moved = await this.prisma.procurementOrder.updateMany({
+      where: { id: orderId, status: { in: ['PO_ISSUED', 'DISPATCHED'] } },
+      data:  { status: 'CANCELLED' },
+    });
+    if (moved.count === 0) {
       throw new BadRequestException(
         `No se puede cancelar: la orden está en estado "${order.status}" ` +
         `(solo se permite en PO_ISSUED o DISPATCHED).`,
       );
     }
-
-    return this.prisma.procurementOrder.update({
-      where: { id: orderId },
-      data:  { status: 'CANCELLED' },
-    });
+    return this.getOrderOrThrow(orderId);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
