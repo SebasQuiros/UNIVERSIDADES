@@ -1341,6 +1341,10 @@ model PurchaseInvoice {
   isAccepted     Boolean  @default(true)  @map("is_accepted")
   isPaid         Boolean  @default(false) @map("is_paid")
   paidAmount     Decimal  @default(0)     @map("paid_amount") @db.Decimal(15,2)
+  // F2 (Modo Empresarial/ERP): factura del vendedor que originó esta compra
+  // inter-company. Permite, al aceptar la propuesta, sincronizar inventario
+  // desde las líneas del vendedor. NULL para compras normales del estudiante.
+  sourceInvoiceId String? @map("source_invoice_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt      @map("updated_at")
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -65,14 +65,15 @@ export class InterCompanyService {
       return { mirrored: false, reason: 'auto_inter_company_off' };
     }
 
-    // Motor de Simulación Comercial (F2): solo el Modo Contable postea la compra
-    // espejo automáticamente. Empresarial (propuesta que B acepta) y ERP_COMPLETO
-    // (cotización→OC→recepción→factura→pago) usan sus propios flujos (F2.2/F2.3);
-    // aquí NO se auto-postea para no adelantar inventario/CxP/asiento sin aceptación.
+    // Motor de Simulación Comercial (F2).
+    //   CONTABLE     → compra espejo inmediata (efectos ahora).
+    //   EMPRESARIAL  → propuesta de compra pendiente que B acepta/rechaza (F2.2).
+    //   ERP_COMPLETO → cotización→OC→recepción→factura→pago (F2.3, aún no acá).
     const commercialMode = (config as any).commercialMode ?? 'CONTABLE';
-    if (commercialMode !== 'CONTABLE') {
-      return { mirrored: false, reason: `commercial_mode_${String(commercialMode).toLowerCase()}_awaiting_flow` };
+    if (commercialMode === 'ERP_COMPLETO') {
+      return { mirrored: false, reason: 'commercial_mode_erp_completo_awaiting_flow' };
     }
+    const isContable = commercialMode === 'CONTABLE';
     if (!input.customerId) {
       return { mirrored: false, reason: 'no_customer' };
     }
@@ -146,62 +147,32 @@ export class InterCompanyService {
         taxRate:        taxRate,
         taxAmount:      tax,
         total:          total,
-        description:    `Inter-company: compra automática a ${seller.name}`,
-        isAccepted:     true,
+        description:    isContable
+          ? `Inter-company: compra automática a ${seller.name}`
+          : `Propuesta de compra de ${seller.name} — pendiente de aceptación`,
+        isAccepted:      isContable,
+        sourceInvoiceId: invoice.id,
       },
     });
 
-    // 6. Mirror de inventario: si buyer tiene autoInventory activo, intentamos
-    // mapear cada línea con product de buyer (por cabysCode o por nombre).
-    const buyerCfg = await this.modeResolver.resolveConfig(buyer.id);
-    if (buyerCfg.config?.autoInventory) {
-      for (const item of invoice.items) {
-        // Match SOLO por cabysCode (estricto, 13 dígitos único por catálogo
-        // CABYS de Hacienda CR). El match por `name`/descripción libre era
-        // laxo y abría contaminación de inventario por colisión.
-        if (!item.cabysCode) continue;
-        const buyerProduct = await tx.product.findFirst({
-          where: {
-            companyId:      buyer.id,
-            cabysCode:      item.cabysCode,
-            isActive:       true,
-            isService:      false,
-            trackInventory: true,
-          },
-          select: { id: true },
-        });
-        if (!buyerProduct) continue; // sin match → solo asiento agregado
-
-        await this.inventory.addLot(
-          {
-            companyId:   buyer.id,
-            productId:   buyerProduct.id,
-            qty:         item.quantity,
-            unitCost:    item.unitPrice, // costo del comprador = precio cobrado por el vendedor
-            source:      'PURCHASE',
-            sourceId:    purchaseInvoice.id,
-            receivedAt:  invoice.issueDate,
-            createdById: input.userId,
-          },
-          tx,
-        );
-      }
+    // EMPRESARIAL: la propuesta queda pendiente; los efectos (inventario, asiento,
+    // CxP) se aplican cuando la empresa compradora ACEPTA (acceptProposal).
+    if (!isContable) {
+      this.logger.log(
+        `Inter-company: propuesta de compra ${seller.name} → ${buyer.name} ` +
+        `(pendiente, PI ${purchaseInvoice.id})`,
+      );
+      return { mirrored: false, reason: 'proposal_created', buyerCompanyId: buyer.id, purchaseInvoiceId: purchaseInvoice.id };
     }
 
-    // 7. Asiento contable + AccountPayable en buyer (recordPurchase respeta su propio modo).
-    await this.businessEvents.recordPurchase({
-      companyId:         buyer.id,
-      userId:            input.userId,
-      tx,
-      purchaseInvoiceId: purchaseInvoice.id,
-      invoiceNumber:     purchaseInvoice.invoiceNumber,
-      supplierName:      seller.name,
-      supplierCedula:    seller.legalId,
-      subtotal:          Number(subtotal),
-      taxAmount:         Number(tax),
-      total:             Number(total),
-      paymentType:       'CREDIT', // convención inter-company: a crédito
-      date:              invoice.issueDate,
+    // 6-7. Modo Contable: efectos de la compra (inventario + asiento + CxP) ahora.
+    await this._applyPurchaseEffects(tx, {
+      buyerId:        buyer.id,
+      sellerName:     seller.name,
+      sellerLegalId:  seller.legalId,
+      purchaseInvoice,
+      sellerItems:    invoice.items,
+      userId:         input.userId,
     });
 
     this.logger.log(
@@ -212,5 +183,116 @@ export class InterCompanyService {
       buyerCompanyId:    buyer.id,
       purchaseInvoiceId: purchaseInvoice.id,
     };
+  }
+
+  // ── F2.2 · Modo Empresarial: propuestas de compra ────────────────────────
+
+  /** Propuestas de compra pendientes de aceptación de una empresa compradora. */
+  async listPendingProposals(companyId: string) {
+    return this.prisma.purchaseInvoice.findMany({
+      where:   { companyId, isAccepted: false, sourceInvoiceId: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Acepta una propuesta: aplica los efectos (inventario + asiento + CxP) y la
+   * marca aceptada. Todo en una transacción atómica.
+   */
+  async acceptProposal(companyId: string, purchaseInvoiceId: string, userId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const pi = await tx.purchaseInvoice.findFirst({
+        where: { id: purchaseInvoiceId, companyId, isAccepted: false },
+      });
+      if (!pi) throw new NotFoundException('Propuesta de compra no encontrada o ya procesada.');
+
+      let sellerItems: Array<{ cabysCode: string | null; quantity: any; unitPrice: any }> = [];
+      if (pi.sourceInvoiceId) {
+        const sellerInvoice = await tx.invoice.findUnique({
+          where:   { id: pi.sourceInvoiceId },
+          include: { items: true },
+        });
+        if (sellerInvoice) sellerItems = sellerInvoice.items as any;
+      }
+
+      await this._applyPurchaseEffects(tx, {
+        buyerId:         companyId,
+        sellerName:      pi.supplierName,
+        sellerLegalId:   pi.supplierCedula,
+        purchaseInvoice: pi,
+        sellerItems,
+        userId,
+      });
+
+      await tx.purchaseInvoice.update({ where: { id: pi.id }, data: { isAccepted: true } });
+      this.logger.log(`Propuesta de compra ${pi.id} aceptada por empresa ${companyId}.`);
+      return { accepted: true, purchaseInvoiceId: pi.id };
+    });
+  }
+
+  /** Rechaza (elimina) una propuesta pendiente. Aún no tuvo efectos contables. */
+  async rejectProposal(companyId: string, purchaseInvoiceId: string) {
+    const pi = await this.prisma.purchaseInvoice.findFirst({
+      where: { id: purchaseInvoiceId, companyId, isAccepted: false },
+    });
+    if (!pi) throw new NotFoundException('Propuesta de compra no encontrada o ya procesada.');
+    await this.prisma.purchaseInvoice.delete({ where: { id: pi.id } });
+    this.logger.log(`Propuesta de compra ${pi.id} rechazada por empresa ${companyId}.`);
+    return { rejected: true, purchaseInvoiceId };
+  }
+
+  // ── Efectos de compra reusables (Contable inmediato / aceptación Empresarial) ──
+  private async _applyPurchaseEffects(
+    tx: Prisma.TransactionClient,
+    p: {
+      buyerId: string;
+      sellerName: string;
+      sellerLegalId: string | null;
+      purchaseInvoice: { id: string; invoiceNumber: string; subtotal: any; taxAmount: any; total: any; date: Date };
+      sellerItems: Array<{ cabysCode: string | null; quantity: any; unitPrice: any }>;
+      userId: string;
+    },
+  ) {
+    // Inventario (si el comprador tiene autoInventory): match estricto por cabysCode.
+    const buyerCfg = await this.modeResolver.resolveConfig(p.buyerId);
+    if (buyerCfg.config?.autoInventory) {
+      for (const item of p.sellerItems) {
+        if (!item.cabysCode) continue;
+        const buyerProduct = await tx.product.findFirst({
+          where:  { companyId: p.buyerId, cabysCode: item.cabysCode, isActive: true, isService: false, trackInventory: true },
+          select: { id: true },
+        });
+        if (!buyerProduct) continue;
+        await this.inventory.addLot(
+          {
+            companyId:   p.buyerId,
+            productId:   buyerProduct.id,
+            qty:         item.quantity,
+            unitCost:    item.unitPrice,
+            source:      'PURCHASE',
+            sourceId:    p.purchaseInvoice.id,
+            receivedAt:  p.purchaseInvoice.date,
+            createdById: p.userId,
+          },
+          tx,
+        );
+      }
+    }
+
+    // Asiento contable + AccountPayable (recordPurchase respeta el modo de la empresa).
+    await this.businessEvents.recordPurchase({
+      companyId:         p.buyerId,
+      userId:            p.userId,
+      tx,
+      purchaseInvoiceId: p.purchaseInvoice.id,
+      invoiceNumber:     p.purchaseInvoice.invoiceNumber,
+      supplierName:      p.sellerName,
+      supplierCedula:    p.sellerLegalId,
+      subtotal:          Number(p.purchaseInvoice.subtotal),
+      taxAmount:         Number(p.purchaseInvoice.taxAmount),
+      total:             Number(p.purchaseInvoice.total),
+      paymentType:       'CREDIT',
+      date:              p.purchaseInvoice.date,
+    });
   }
 }
