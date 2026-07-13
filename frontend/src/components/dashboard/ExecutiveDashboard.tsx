@@ -39,8 +39,8 @@ const fmtCRC = (n: number) =>
 const fmtCRCfull = (n: number) =>
   '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const CARD = 'bg-white rounded-xl border border-gray-200';
-const CARD_SH = { boxShadow: '0 1px 2px rgba(16,24,40,0.04)' };
+const CARD = 'bg-white rounded-card border border-gray-200/70';
+const CARD_SH = { boxShadow: '0 4px 16px rgba(27,46,110,0.06)' };
 
 const ZERO_DATA: DashboardData = {
   totals: { invoices: 0, clients: 0, products: 0, journalEntries: 0, totalSales: 0, totalSalesBase: 0, totalPurchases: 0, grossMargin: 0 },
@@ -151,7 +151,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
     return (
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+          <div key={i} className="h-32 bg-gray-100 rounded-card animate-pulse" />
         ))}
       </div>
     );
@@ -159,7 +159,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
 
   if (error || !data) {
     return (
-      <div className="flex items-center gap-3 p-5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm">
+      <div className="flex items-center gap-3 p-5 bg-red-50 border border-red-100 rounded-card text-red-600 text-sm">
         <AlertCircle className="w-5 h-5" /> No se pudo cargar el resumen.
       </div>
     );
@@ -181,7 +181,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
   const hasSales = salesTrend.some((p) => p.total > 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lp-in">
 
       {/* ── KPI row (estilo Alegra) ───────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -538,6 +538,7 @@ body {
   .lp-pulse, .lp-tilt, .lp-number-pop,
   .lp-text-flow, .lp-shine::after, .lp-card-pro,
   .lp-marquee-track, .lp-reveal-stagger > *,
+  .lp-in, .lp-float,
   .lp-drift, .lp-drift-2,
   .lp-blob-bg::before, .lp-blob-bg::after,
   .lp-drawer, .lp-drawer-overlay, .lp-drawer.open .lp-drawer-item {

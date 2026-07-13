@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Card } from '@/components/ui/Card';
+import { ArtBalance } from '@/components/illustrations';
 import { Target, Award, AlertTriangle, BarChart2 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -49,10 +54,13 @@ export function LearningProfileCard({ studentId }: { studentId?: string }) {
   );
 
   if (error || !profile) return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
-      <BarChart2 className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-      <p className="text-gray-500 text-sm">No hay perfil de aprendizaje disponible todavía.</p>
-    </div>
+    <Card>
+      <EmptyState
+        illustration={<ArtBalance size={150} className="lp-drift" />}
+        title="Perfil en construcción"
+        description="No hay perfil de aprendizaje disponible todavía."
+      />
+    </Card>
   );
 
   const mastery = Object.entries(profile.competencyMastery ?? {});
@@ -64,35 +72,22 @@ export function LearningProfileCard({ studentId }: { studentId?: string }) {
     <div className="flex flex-col gap-4">
       {/* Stats clave */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-50 text-blue-700">
-            <Target className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums leading-none">
-              {stats.avgScore != null ? `${Math.round(stats.avgScore)}%` : '—'}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">Nota promedio</p>
-          </div>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-50 text-indigo-600">
-            <BarChart2 className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums leading-none">
-              {stats.totalEvents ?? 0}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">Observaciones del tutor</p>
-          </div>
-        </div>
+        <StatCard
+          label="Nota promedio"
+          value={stats.avgScore != null ? `${Math.round(stats.avgScore)}%` : '—'}
+          icon={Target}
+          tint="#2563EB"
+        />
+        <StatCard
+          label="Observaciones del tutor"
+          value={String(stats.totalEvents ?? 0)}
+          icon={BarChart2}
+          tint="#4F46E5"
+        />
       </div>
 
       {/* Dominio por competencia */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <p className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <BarChart2 className="w-4 h-4 text-blue-700" /> Dominio por competencia
-        </p>
+      <SectionCard icon={BarChart2} iconTint="#2563EB" eyebrow="Evidencia SINAES" title="Dominio por competencia">
         {mastery.length === 0 ? (
           <p className="text-sm text-gray-400">Sin datos de competencias aún.</p>
         ) : (
@@ -114,13 +109,10 @@ export function LearningProfileCard({ studentId }: { studentId?: string }) {
             })}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* Fortalezas */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <Award className="w-4 h-4 text-emerald-600" /> Fortalezas
-        </p>
+      <SectionCard icon={Award} iconTint="#059669" title="Fortalezas">
         {strengths.length === 0 ? (
           <p className="text-sm text-gray-400">Todavía no se identificaron fortalezas.</p>
         ) : (
@@ -134,13 +126,10 @@ export function LearningProfileCard({ studentId }: { studentId?: string }) {
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* Errores recurrentes */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600" /> Errores recurrentes
-        </p>
+      <SectionCard icon={AlertTriangle} iconTint="#D97706" title="Errores recurrentes">
         {recurringErrors.length === 0 ? (
           <p className="text-sm text-gray-400">Sin errores recurrentes registrados. ¡Buen trabajo!</p>
         ) : (
@@ -161,7 +150,7 @@ export function LearningProfileCard({ studentId }: { studentId?: string }) {
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
     </div>
   );
 }

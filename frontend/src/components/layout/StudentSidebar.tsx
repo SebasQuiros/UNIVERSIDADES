@@ -9,16 +9,18 @@ import type { Notification } from '@/types';
 import {
   Home, ArrowDownCircle, ArrowUpCircle, Package, Landmark, BookOpen,
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
-  LogOut, Menu, X, ChevronRight, ChevronDown, UserCircle,
+  LogOut, Menu, X, ChevronDown, UserCircle,
   GraduationCap, Calculator, Users,
 } from 'lucide-react';
 
-// ── Paleta v2 (plana, "libro mayor") ───────────────────────────
-const TEAL = '#3B82F6';                                        // acento (logo, badge)
-const ACTIVE = 'linear-gradient(90deg,#1E3A8A,#0F2657)';        // item activo (navy)
-const ACTIVE_GLOW = '0 2px 12px rgba(59,130,246,0.35)';
+// ── Paleta de marca (azul noche + acento dorado) ───────────────
+const ACCENT = '#3B82F6';                                       // azul de marca (badges)
+const ACTIVE = 'linear-gradient(90deg,#1E3A8A,#0F2657)';        // item activo (azul noche)
+const ACTIVE_GLOW = '0 4px 16px rgba(37,99,235,0.30), inset 0 0 0 1px rgba(251,191,36,0.12)';
+const GOLD_BAR = 'linear-gradient(180deg,#FDE68A,#D4A017)';     // barra/acento dorado del activo
+const GOLD_EYEBROW = 'rgba(251,191,36,0.7)';                    // eyebrow dorado de sección
 const SIDE_BG = 'linear-gradient(180deg,#03080F 0%,#060F1C 100%)';
-const SIDE_LINE = 'rgba(59,130,246,0.12)';
+const SIDE_LINE = 'rgba(59,130,246,0.14)';
 const TXT = 'rgba(255,255,255,0.85)';
 const TXT_FAINT = 'rgba(255,255,255,0.55)';
 
@@ -235,24 +237,28 @@ export function StudentSidebar() {
   const isExpanded = (g: Group) => expanded[g.key] ?? groupActive(g);
   const toggle = (k: string) => setExpanded((e) => ({ ...e, [k]: !(e[k] ?? false) }));
 
-  function renderGroup(g: Group) {
+  function renderGroup(g: Group, i: number) {
     const Icon = g.icon;
     const muted = g.needsExercise && !activeId;
+    const delay = `${Math.min(i, 9) * 0.045}s`;   // entrada escalonada (lp-in)
 
     // Grupo-enlace directo (sin hijos)
     if (!g.children) {
       const active = groupActive(g);
       return (
         <Link key={g.key} href={g.href!} onClick={() => setOpen(false)}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors duration-100"
-          style={active ? { background: ACTIVE, color: '#fff', boxShadow: ACTIVE_GLOW } : { color: muted ? TXT_FAINT : TXT }}
+          className="lp-in relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors duration-100"
+          style={active
+            ? { background: ACTIVE, color: '#fff', boxShadow: ACTIVE_GLOW, animationDelay: delay }
+            : { color: muted ? TXT_FAINT : TXT, animationDelay: delay }}
           onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#fff'; } }}
           onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = muted ? TXT_FAINT : TXT; } }}>
-          <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: active ? '#fff' : 'rgba(255,255,255,0.7)' }} />
+          {active && <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full" style={{ background: GOLD_BAR, boxShadow: '0 0 8px rgba(251,191,36,0.5)' }} />}
+          <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: active ? '#fff' : 'rgba(96,165,250,0.75)' }} />
           <span className="flex-1">{g.label}</span>
           {g.isNotif && unread > 0 && (
             <span className="text-[11px] font-mono font-bold rounded px-1.5 py-0.5 min-w-[18px] text-center leading-none"
-              style={{ background: active ? 'rgba(255,255,255,0.25)' : TEAL, color: '#fff' }}>{unread > 9 ? '9+' : unread}</span>
+              style={{ background: active ? 'rgba(255,255,255,0.25)' : ACCENT, color: '#fff' }}>{unread > 9 ? '9+' : unread}</span>
           )}
         </Link>
       );
@@ -262,13 +268,13 @@ export function StudentSidebar() {
     const exp = isExpanded(g);
     const gActive = groupActive(g);
     return (
-      <div key={g.key}>
+      <div key={g.key} className="lp-in" style={{ animationDelay: delay }}>
         <button onClick={() => toggle(g.key)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[14px] font-medium transition-colors duration-100"
           style={{ color: gActive ? '#fff' : (muted ? TXT_FAINT : TXT) }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; }}>
-          <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: gActive ? TEAL : 'rgba(255,255,255,0.7)' }} />
+          <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: gActive ? '#93C5FD' : 'rgba(96,165,250,0.6)' }} />
           <span className="flex-1 text-left">{g.label}</span>
           <ChevronDown className="w-4 h-4 flex-shrink-0 transition-transform" style={{ color: TXT_FAINT, transform: exp ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
         </button>
@@ -279,10 +285,11 @@ export function StudentSidebar() {
               const active = subActive(s);
               return (
                 <Link key={s.label} href={href} onClick={() => setOpen(false)}
-                  className="flex items-center px-3 py-1.5 rounded-md text-[13px] transition-colors"
+                  className="relative flex items-center px-3 py-1.5 rounded-md text-[13px] transition-colors"
                   style={active ? { background: ACTIVE, color: '#fff', boxShadow: ACTIVE_GLOW } : { color: TXT }}
                   onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#fff'; } }}
                   onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = TXT; } }}>
+                  {active && <span aria-hidden className="absolute -left-3 top-1 bottom-1 w-[2px] rounded-r-full" style={{ background: GOLD_BAR }} />}
                   <span className="flex-1">{s.label}</span>
                 </Link>
               );
@@ -297,21 +304,27 @@ export function StudentSidebar() {
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="px-4 py-4" style={{ borderBottom: `1px solid ${SIDE_LINE}` }}>
-        <Link href="/estudiante" onClick={() => setOpen(false)} className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 font-mono font-extrabold text-white text-base" style={{ background: TEAL }}>C</div>
+        <Link href="/estudiante" onClick={() => setOpen(false)} className="flex items-center gap-3 group">
+          <div className="relative flex-shrink-0">
+            <div className="w-9 h-9 rounded-[10px] overflow-hidden flex items-center justify-center" style={{ background: '#000' }}>
+              <img src="/sjqa-logo.png" alt="ContaSJ" className="w-9 h-9 object-contain" />
+            </div>
+            <div className="absolute inset-0 rounded-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ boxShadow: '0 0 16px rgba(59,130,246,0.55)' }} />
+          </div>
           <div>
-            <h1 className="text-[15px] font-bold text-white tracking-wide leading-none">ContaSJ</h1>
+            <h1 className="text-[15px] font-black text-white tracking-wide leading-none">ContaSJ</h1>
             <p className="text-[10.5px] mt-1 leading-none" style={{ color: TXT_FAINT }}>{isMultiempresa ? 'Espacio Multiempresa' : isContador ? 'Espacio Contador' : 'Espacio Educación'}</p>
           </div>
         </Link>
       </div>
 
       {/* Switch de 3 espacios: Educación · Contador · Multiempresa */}
-      <div className="mx-3 mt-3 p-1 rounded-lg space-y-1" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${SIDE_LINE}` }}>
+      <div className="lp-in mx-3 mt-3 p-1 rounded-lg space-y-1" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${SIDE_LINE}` }}>
         <Link href="/estudiante" onClick={() => setOpen(false)}
           className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-all"
           style={(!isContador && !isMultiempresa)
-            ? { background: TEAL, color: '#fff', boxShadow: ACTIVE_GLOW }
+            ? { background: ACCENT, color: '#fff', boxShadow: ACTIVE_GLOW }
             : { color: TXT_FAINT }}>
           <GraduationCap className="w-4 h-4 flex-shrink-0" /> Educación
         </Link>
@@ -333,7 +346,7 @@ export function StudentSidebar() {
 
 
       {!activeId && !isContador && !isMultiempresa && (
-        <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', color: '#7FE3CE' }}>
+        <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', color: '#93C5FD' }}>
           Inicia un ejercicio para operar tu empresa.
         </div>
       )}
@@ -353,7 +366,7 @@ export function StudentSidebar() {
               : 'Espacio Contador — tu contabilidad separada por empresa. Abrí una empresa-cliente para operar sus libros.'}
           </div>
           <div className="space-y-0.5 mb-4">{CONTADOR_TOP.map(renderGroup)}</div>
-          <p className="px-2.5 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: TXT_FAINT }}>
+          <p className="px-2.5 mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: GOLD_EYEBROW }}>
             Contabilidad {contadorCompanyId ? '' : '· abrí una empresa'}
           </p>
           <div className="space-y-0.5">{CONTADOR_GROUPS.map(renderGroup)}</div>
@@ -361,7 +374,7 @@ export function StudentSidebar() {
       ) : (
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
           <div className="space-y-0.5 mb-4">{GROUPS.map(renderGroup)}</div>
-          <p className="px-2.5 mb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: TXT_FAINT }}>Aprendizaje</p>
+          <p className="px-2.5 mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: GOLD_EYEBROW }}>Aprendizaje</p>
           <div className="space-y-0.5">{LEARN.map(renderGroup)}</div>
         </nav>
       )}
@@ -372,7 +385,7 @@ export function StudentSidebar() {
           className="flex items-center gap-3 px-2.5 py-2 mb-1 rounded-md transition-colors" style={{ border: `1px solid ${SIDE_LINE}` }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; }}>
-          <div className="w-7 h-7 rounded flex items-center justify-center text-white font-bold text-[12px] font-mono flex-shrink-0" style={{ background: '#1B2E6E' }}>
+          <div className="w-7 h-7 rounded flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0" style={{ background: 'linear-gradient(135deg,#3B82F6,#1E3A8A)' }}>
             {user?.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-7 h-7 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : user?.name?.charAt(0)?.toUpperCase() ?? 'E'}
           </div>
           <div className="flex-1 min-w-0">
@@ -392,19 +405,21 @@ export function StudentSidebar() {
 
   return (
     <>
-      <aside className="hidden lg:flex flex-col w-64 h-full flex-shrink-0" style={{ background: SIDE_BG, borderRight: '1px solid #000' }}>
+      <aside className="hidden lg:flex flex-col w-64 h-full flex-shrink-0" style={{ background: SIDE_BG, borderRight: '1px solid rgba(59,130,246,0.1)' }}>
         {sidebarContent}
       </aside>
 
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between" style={{ background: SIDE_BG, borderBottom: `1px solid ${SIDE_LINE}` }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md flex items-center justify-center font-mono font-extrabold text-white text-sm" style={{ background: TEAL }}>C</div>
+          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0" style={{ background: '#000' }}>
+            <img src="/sjqa-logo.png" alt="ContaSJ" className="w-8 h-8 object-contain" />
+          </div>
           <div>
-            <h1 className="text-[15px] font-bold text-white leading-none tracking-wide">ContaSJ</h1>
+            <h1 className="text-[15px] font-black text-white leading-none tracking-wide">ContaSJ</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {unread > 0 && <span className="text-[11px] font-mono font-bold rounded px-1.5 py-0.5" style={{ background: TEAL, color: '#fff' }}>{unread}</span>}
+          {unread > 0 && <span className="text-[11px] font-mono font-bold rounded px-1.5 py-0.5" style={{ background: ACCENT, color: '#fff' }}>{unread}</span>}
           <button onClick={() => setOpen(!open)} className="p-2 rounded-md transition-colors" style={{ color: TXT }}>
             {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>

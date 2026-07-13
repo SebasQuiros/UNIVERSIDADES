@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { IconTile } from '@/components/ui/IconTile';
 import {
   DollarSign, Euro, Percent, TrendingUp, RefreshCw, Wifi, WifiOff,
 } from 'lucide-react';
@@ -37,18 +38,18 @@ export function MacroIndicatorsStrip() {
   }, []);
 
   if (loading) {
-    return <div className="rounded-2xl h-24 animate-pulse" style={{ background: '#03080F' }} />;
+    return <div className="rounded-card h-24 animate-pulse" style={{ background: '#03080F' }} />;
   }
   if (error || !data) return null;
 
   const live = data.source !== 'fallback';
 
   return (
-    <div className="rounded-2xl overflow-hidden text-white"
+    <div className="rounded-card overflow-hidden text-white shadow-soft lp-in"
       style={{ background: '#03080F', border: '1px solid rgba(96,165,250,0.18)' }}>
       <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" style={{ color: '#60A5FA' }} />
+        <div className="flex items-center gap-2.5">
+          <IconTile icon={TrendingUp} size={34} onDark />
           <span className="text-sm font-bold tracking-wide">Indicadores económicos · Costa Rica</span>
         </div>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"

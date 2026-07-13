@@ -61,7 +61,7 @@ export function TeacherSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {NAV.map(({ href, label, icon: Icon, exact, badge }) => {
+        {NAV.map(({ href, label, icon: Icon, exact, badge }, i) => {
           const active = exact ? pathname === href : pathname.startsWith(href);
           return (
             <Link
@@ -69,13 +69,14 @@ export function TeacherSidebar() {
               href={href}
               onClick={() => setOpen(false)}
               className={cn(
-                'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                'lp-in relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
                 active ? 'text-white' : 'text-white/55 hover:bg-csq-dark-hover hover:text-white/90',
               )}
               style={active ? {
                 background: 'linear-gradient(90deg,#1E3A8A,#0F2657)',
                 boxShadow: '0 4px 16px rgba(37,99,235,0.28), inset 0 0 0 1px rgba(251,191,36,0.12)',
-              } : undefined}
+                animationDelay: `${i * 0.06}s`,
+              } : { animationDelay: `${i * 0.06}s` }}
             >
               {/* Barra/acento dorado del item activo */}
               {active && (

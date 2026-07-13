@@ -6,6 +6,11 @@ import { getErrorMessage } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtInventory, SceneEmptyBox } from '@/components/illustrations';
 import { ProcurementOrders } from '@/components/business/ProcurementOrders';
 import toast from 'react-hot-toast';
 import {
@@ -94,19 +99,32 @@ export default function GruposPage() {
 
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <span className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212,160,23,0.14)' }}>
-            <Users className="w-5 h-5" style={{ color: '#B8860B' }} />
-          </span>
-          Multiempresa — grupos de práctica
-        </h2>
-        <p className="text-gray-500 text-sm mt-1 max-w-3xl">
-          Formá un grupo con otros estudiantes-contadores; sus empresas de práctica pueden comerciar
-          entre sí (comprar/vender, con inventario, CxC/CxP y asientos reales).
-        </p>
-      </div>
+      {/* Encabezado */}
+      <PageHeader
+        eyebrow="Espacio Contador"
+        title="Multiempresa — grupos de práctica"
+        subtitle="Formá un grupo con otros estudiantes-contadores; sus empresas de práctica pueden comerciar entre sí (comprar/vender, con inventario, CxC/CxP y asientos reales)."
+        icon={Users}
+        iconTint="#B8860B"
+        className="lp-in"
+      />
+
+      {/* Hero: cadena de suministro entre empresas */}
+      <Card variant="onDark" className="lp-in lp-in-d1 mt-6 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+              Comercio entre pares
+            </p>
+            <h2 className="text-lg font-bold leading-snug">Una cadena de suministro real, entre compañeros.</h2>
+            <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+              Cada compra y venta genera inventario, cuentas por cobrar o pagar y asientos contables en
+              ambas empresas del grupo.
+            </p>
+          </div>
+          <ArtInventory size={155} className="lp-drift flex-shrink-0" />
+        </div>
+      </Card>
 
       {/* Acciones: crear / unirse */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
@@ -118,23 +136,20 @@ export default function GruposPage() {
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : groups.length === 0 ? (
-        <div className="flex flex-col items-center py-16 text-center">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5" style={{ background: 'rgba(212,160,23,0.12)' }}>
-            <Users className="w-10 h-10" style={{ color: GOLD }} />
-          </div>
-          <h3 className="text-gray-800 font-semibold text-lg">Todavía no estás en ningún grupo</h3>
-          <p className="text-gray-500 text-sm mt-1.5 max-w-md">
-            Creá un grupo con una de tus empresas de práctica y compartí el código, o unite al grupo
-            de un compañero con el código que te pase.
-          </p>
-        </div>
+        <Card className="lp-in">
+          <EmptyState
+            illustration={<SceneEmptyBox size={220} className="lp-drift" />}
+            title="Todavía no estás en ningún grupo"
+            description="Creá un grupo con una de tus empresas de práctica y compartí el código, o unite al grupo de un compañero con el código que te pase."
+          />
+        </Card>
       ) : (
         <div className="flex flex-col gap-4">
-          {groups.map((group) => {
+          {groups.map((group, gi) => {
             const mine = group.members.find((m) => m.studentId === user?.id);
             const isOpen = expanded === group.id;
             return (
-              <div key={group.id} className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+              <div key={group.id} className={`bg-white border border-gray-200/70 shadow-card rounded-card overflow-hidden lp-in lp-in-d${Math.min(gi + 1, 5)}`}>
                 {/* Encabezado del grupo */}
                 <div className="p-5 flex flex-col gap-4">
                   <div className="flex items-start justify-between gap-3">
@@ -253,14 +268,13 @@ function CreateGroupCard({ companies, onDone }: { companies: PracticeCompany[]; 
   };
 
   return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(212,160,23,0.14)' }}>
-          <Plus className="w-4 h-4" style={{ color: '#B8860B' }} />
-        </span>
-        <h3 className="font-bold text-gray-900">Crear grupo</h3>
-      </div>
-
+    <SectionCard
+      icon={Plus}
+      iconTint="#B8860B"
+      eyebrow="Nuevo grupo"
+      title="Crear grupo"
+      className="lp-in lp-in-d2"
+    >
       <form onSubmit={submit} className="flex flex-col gap-3">
         <label className="block">
           <span className="text-xs font-semibold text-gray-600 mb-1 block">Nombre del grupo</span>
@@ -276,23 +290,23 @@ function CreateGroupCard({ companies, onDone }: { companies: PracticeCompany[]; 
             ))}
           </select>
         </label>
-        <Button type="submit" loading={saving} style={{ background: GOLD, borderColor: GOLD, color: '#1a1205' }}>
+        <Button type="submit" variant="gold" loading={saving}>
           <Plus className="w-4 h-4" /> Crear grupo
         </Button>
       </form>
 
       {created && (
-        <div className="p-3 rounded-xl flex items-center justify-between gap-3" style={{ background: 'rgba(212,160,23,0.10)' }}>
+        <div className="mt-4 p-3.5 rounded-card flex items-center justify-between gap-3 bg-gold-50 border border-gold-100">
           <div className="min-w-0">
             <p className="text-xs text-gray-600">Compartí este código con tu grupo:</p>
-            <code className="text-lg font-mono font-bold" style={{ color: '#8a6d0f' }}>{created.code}</code>
+            <code className="text-lg font-mono font-bold text-gold-900">{created.code}</code>
           </div>
           <Button size="sm" variant="secondary" onClick={() => copyCode(created.code)} className="flex-shrink-0">
             <Copy className="w-3.5 h-3.5" /> Copiar
           </Button>
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 }
 
@@ -324,14 +338,13 @@ function JoinGroupCard({ companies, onDone }: { companies: PracticeCompany[]; on
   };
 
   return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(212,160,23,0.14)' }}>
-          <Users className="w-4 h-4" style={{ color: '#B8860B' }} />
-        </span>
-        <h3 className="font-bold text-gray-900">Unirme a un grupo</h3>
-      </div>
-
+    <SectionCard
+      icon={Users}
+      iconTint="#2563EB"
+      eyebrow="Con un código"
+      title="Unirme a un grupo"
+      className="lp-in lp-in-d3"
+    >
       <form onSubmit={submit} className="flex flex-col gap-3">
         <label className="block">
           <span className="text-xs font-semibold text-gray-600 mb-1 block">Código del grupo</span>
@@ -347,10 +360,10 @@ function JoinGroupCard({ companies, onDone }: { companies: PracticeCompany[]; on
             ))}
           </select>
         </label>
-        <Button type="submit" loading={saving} variant="secondary">
+        <Button type="submit" loading={saving} variant="outline">
           <Users className="w-4 h-4" /> Unirme
         </Button>
       </form>
-    </div>
+    </SectionCard>
   );
 }

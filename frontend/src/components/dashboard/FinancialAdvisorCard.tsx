@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import { IconTile } from '@/components/ui/IconTile';
 import {
   Sparkles, AlertTriangle, AlertCircle, CheckCircle2, Info, ChevronRight,
 } from 'lucide-react';
@@ -28,7 +29,7 @@ const STYLES: Record<Level, { bg: string; border: string; fg: string; icon: Reac
   critical: { bg: '#FEF2F2', border: '#FECACA', fg: '#B91C1C', icon: <AlertTriangle className="w-4 h-4" />, tag: 'Crítico' },
   warning:  { bg: '#FFFBEB', border: '#FDE68A', fg: '#B45309', icon: <AlertCircle className="w-4 h-4" />,  tag: 'Atención' },
   good:     { bg: '#ECFDF5', border: '#A7F3D0', fg: '#047857', icon: <CheckCircle2 className="w-4 h-4" />, tag: 'Bien' },
-  info:     { bg: '#F0FDFA', border: '#99F6E4', fg: '#2563EB', icon: <Info className="w-4 h-4" />,         tag: 'Info' },
+  info:     { bg: '#EFF6FF', border: '#BFDBFE', fg: '#2563EB', icon: <Info className="w-4 h-4" />,         tag: 'Info' },
 };
 
 export function FinancialAdvisorCard({ companyId }: { companyId: string }) {
@@ -48,22 +49,18 @@ export function FinancialAdvisorCard({ companyId }: { companyId: string }) {
   }, [companyId]);
 
   if (loading) {
-    return <div className="rounded-xl h-64 bg-slate-100 animate-pulse" />;
+    return <div className="rounded-card h-64 bg-slate-100 animate-pulse" />;
   }
   if (error || !data) return null;
 
   const { counts } = data;
-  const accent = counts.critical > 0 ? '#B91C1C' : counts.warnings > 0 ? '#B45309' : '#047857';
 
   return (
-    <div className="rounded-xl border bg-white overflow-hidden" style={{ borderColor: '#E2E8F0' }}>
+    <div className="rounded-card border bg-white overflow-hidden shadow-card lp-in" style={{ borderColor: '#E2E8F0' }}>
       {/* Header */}
       <div className="px-5 pt-5 pb-4" style={{ background: '#03080F' }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: '#475569' }}>
-            <Sparkles className="w-4.5 h-4.5 text-white" />
-          </div>
+          <IconTile icon={Sparkles} size={38} onDark />
           <div>
             <p className="text-white font-bold text-sm leading-tight">Gerente Financiero IA</p>
             <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.55)' }}>

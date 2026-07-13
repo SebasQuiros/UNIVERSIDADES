@@ -5,6 +5,10 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Spinner } from '@/components/ui/Spinner';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SceneSearchEmpty } from '@/components/illustrations';
 import ExecutiveDashboard from '@/components/dashboard/ExecutiveDashboard';
 import {
   ClientsTab, SuppliersTab, ProductsTab, InvoicesTab, JournalTab, LedgerTab,
@@ -79,9 +83,17 @@ export default function PracticeWorkspacePage() {
   }
   if (!company) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center p-8">
-        <p className="text-gray-600">No se encontró esta empresa de práctica.</p>
-        <Link href="/estudiante/contador" className="text-amber-700 font-semibold text-sm hover:underline">← Volver a mis empresas</Link>
+      <div className="flex-1 flex items-center justify-center p-8">
+        <EmptyState
+          illustration={<SceneSearchEmpty size={220} className="lp-drift" />}
+          title="No se encontró esta empresa de práctica"
+          description="Puede que se haya eliminado o que el enlace no sea correcto."
+          action={(
+            <Link href="/estudiante/contador">
+              <Button variant="gold"><ChevronLeft className="w-4 h-4" /> Volver a mis empresas</Button>
+            </Link>
+          )}
+        />
       </div>
     );
   }
@@ -94,20 +106,18 @@ export default function PracticeWorkspacePage() {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Cabecera de la empresa */}
-      <div className="px-6 lg:px-8 pt-5 pb-3 border-b border-gray-100 bg-white">
-        <Link href="/estudiante/contador" className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-amber-700 mb-2">
+      <div className="px-6 lg:px-8 pt-5 pb-3 border-b border-gray-100 bg-white lp-in">
+        <Link href="/estudiante/contador" className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gold-700 mb-2">
           <ChevronLeft className="w-3.5 h-3.5" /> Mis empresas-cliente
         </Link>
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white flex-shrink-0" style={{ background: '#D4A017' }}>
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg text-white flex-shrink-0 shadow-[0_6px_20px_rgba(184,134,11,0.3)]" style={{ background: 'linear-gradient(145deg,#D4A017,#B8860B)' }}>
             {company.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-gray-900 truncate flex items-center gap-2">
               {company.name}
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(212,160,23,0.14)', color: '#8a6d0f' }}>
-                <Calculator className="w-3 h-3" /> Práctica
-              </span>
+              <Badge variant="gold"><Calculator className="w-3 h-3" /> Práctica</Badge>
             </h2>
             <p className="text-xs text-gray-500 mt-0.5 truncate">
               {company.legalId ? `Cédula ${company.legalId}` : 'Sin cédula'}

@@ -6,12 +6,17 @@ import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import {
   Building2, Users, BookOpen, FileText, DollarSign,
-  GraduationCap, ArrowRight, Activity, TrendingUp,
+  GraduationCap, ArrowRight, Activity, TrendingUp, Globe,
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
 } from 'recharts';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtGrowth, SceneSearchEmpty } from '@/components/illustrations';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,27 +44,11 @@ interface ActivityEntry {
   universityName: string | null;
 }
 
-// ── Stat Card ─────────────────────────────────────────────────────────────────
-
-function StatCard({
-  label, value, icon: Icon, color, sub,
-}: {
-  label: string; value: number | string; icon: React.ElementType;
-  color: string; sub?: string;
-}) {
-  return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
-        <Icon className="w-5 h-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{value}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-        {sub && <p className="text-xs text-gray-400">{sub}</p>}
-      </div>
-    </div>
-  );
-}
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
 
 // ── Activity badge ────────────────────────────────────────────────────────────
 
@@ -80,23 +69,24 @@ function formatRelative(dateStr: string) {
 }
 
 // ── Skeleton del dashboard ──────────────────────────────────────────────────
-// Reproduce la estructura (6 KPIs + 4 paneles) con placeholders animados, para
-// que el shell aparezca de inmediato y solo se rellenen los huecos con los datos.
+// Reproduce la estructura (hero + 3 KPIs + 2 gráficas + 2 paneles) con
+// placeholders animados, para que el shell aparezca de inmediato.
 function SuperAdminSkeleton() {
   return (
     <>
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-24 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
+      <div className="h-48 rounded-card bg-gray-100 border border-gray-200 animate-pulse mb-8" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-28 bg-gray-100 rounded-card border border-gray-200 animate-pulse" />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="h-72 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
-        <div className="h-72 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-card border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-card border border-gray-200 animate-pulse" />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="h-72 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
-        <div className="h-72 bg-gray-100 rounded-xl border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-card border border-gray-200 animate-pulse" />
+        <div className="h-72 bg-gray-100 rounded-card border border-gray-200 animate-pulse" />
       </div>
     </>
   );
@@ -129,68 +119,91 @@ export default function SuperAdminDashboard() {
     new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC', maximumFractionDigits: 0 }).format(n);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      {/* Header — visible siempre, incluso mientras cargan los datos */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Panel SuperAdmin</h2>
-        <p className="text-gray-500 text-sm mt-1">Vista global de la plataforma ContaSJ</p>
-      </div>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      {/* Cabecera — visible siempre, incluso mientras cargan los datos */}
+      <PageHeader
+        eyebrow="Consola global"
+        title="Panel SuperAdmin"
+        subtitle="Vista global de la plataforma ContaSJ"
+        icon={Globe}
+        className="mb-8"
+      />
 
       {loading || !stats ? (
         <SuperAdminSkeleton />
       ) : (
       <>
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        <StatCard
-          label="Universidades"
-          value={stats.totalUniversities}
-          icon={Building2}
-          color="bg-blue-50 text-blue-600"
-          sub={`${stats.activeUniversities} activas`}
-        />
-        <StatCard
-          label="Estudiantes"
-          value={stats.totalStudents}
-          icon={GraduationCap}
-          color="bg-emerald-50 text-emerald-600"
-        />
+      {/* Banda hero — métricas de negocio sobre azul noche */}
+      <div className="relative overflow-hidden rounded-card shadow-soft mb-8 lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+        <div aria-hidden className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 hidden xl:block opacity-95">
+          <ArtGrowth size={190} className="lp-drift" />
+        </div>
+        <div className="relative p-6 lg:p-8">
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500 mb-2">
+            Estado de la plataforma
+          </p>
+          <h2 className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
+            Crecimiento y alcance
+          </h2>
+          <p className="text-sm text-blue-200/80 mt-1.5 max-w-md">
+            Universidades, estudiantes activos e ingresos anuales estimados.
+          </p>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 xl:max-w-3xl">
+            <StatCard
+              variant="dark"
+              label="Universidades"
+              value={String(stats.totalUniversities)}
+              icon={Building2}
+              hint={`${stats.activeUniversities} activas`}
+            />
+            <StatCard
+              variant="dark"
+              label="Estudiantes"
+              value={String(stats.totalStudents)}
+              icon={GraduationCap}
+            />
+            <StatCard
+              variant="dark"
+              label="Ingresos anuales"
+              value={fmtCrc(annualRevenue)}
+              icon={DollarSign}
+              hint={`${stats.totalStudents} × ₡${PRICE_PER_STUDENT_CRC.toLocaleString()}`}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* KPIs secundarios */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <StatCard
           label="Profesores"
-          value={stats.totalTeachers}
+          value={String(stats.totalTeachers)}
           icon={Users}
-          color="bg-slate-100 text-slate-600"
+          tint="#475569"
         />
         <StatCard
           label="Cursos"
-          value={stats.totalCourses}
+          value={String(stats.totalCourses)}
           icon={BookOpen}
-          color="bg-amber-50 text-amber-600"
+          tint="#B8860B"
         />
         <StatCard
           label="Ejercicios"
-          value={stats.totalExercises}
+          value={String(stats.totalExercises)}
           icon={FileText}
-          color="bg-pink-50 text-pink-600"
-        />
-        <StatCard
-          label="Ingresos anuales"
-          value={fmtCrc(annualRevenue)}
-          icon={DollarSign}
-          color="bg-blue-50 text-blue-600"
-          sub={`${stats.totalStudents} × ₡${PRICE_PER_STUDENT_CRC.toLocaleString()}`}
+          tint="#2563EB"
         />
       </div>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Growth line chart */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
-            <h3 className="font-semibold text-gray-800 text-sm">Crecimiento de universidades</h3>
-            <span className="text-xs text-gray-400 ml-auto">últimos 6 meses</span>
-          </div>
+        <SectionCard
+          icon={TrendingUp}
+          eyebrow="Últimos 6 meses"
+          title="Crecimiento de universidades"
+        >
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={stats.universitiesGrowth} margin={{ top: 5, right: 10, bottom: 5, left: -20 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -210,19 +223,22 @@ export default function SuperAdminDashboard() {
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </SectionCard>
 
         {/* Top universities bar chart */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Building2 className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-semibold text-gray-800 text-sm">Top universidades por estudiantes</h3>
-          </div>
+        <SectionCard
+          icon={Building2}
+          iconTint="#059669"
+          eyebrow="Por estudiantes"
+          title="Top universidades"
+        >
           {stats.topUniversities.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-[200px] text-gray-400">
-              <Building2 className="w-8 h-8 mb-2 opacity-30" />
-              <p className="text-sm">Sin datos aún</p>
-            </div>
+            <EmptyState
+              illustration={<SceneSearchEmpty size={150} className="lp-drift" />}
+              title="Sin datos aún"
+              description="Cuando se registren universidades con estudiantes, verás su ranking aquí."
+              className="py-4"
+            />
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={stats.topUniversities} margin={{ top: 5, right: 10, bottom: 5, left: -20 }}>
@@ -238,24 +254,29 @@ export default function SuperAdminDashboard() {
               </BarChart>
             </ResponsiveContainer>
           )}
-        </div>
+        </SectionCard>
       </div>
 
       {/* Bottom row: top universities table + activity feed */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top 5 universities table */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-800 text-sm">Top universidades por actividad</h3>
+        <SectionCard
+          icon={Building2}
+          eyebrow="Ranking"
+          title="Top universidades por actividad"
+          flushBody
+          action={
             <Link href="/superadmin/universidades" className="text-xs text-blue-700 hover:text-blue-800 flex items-center gap-1">
               Ver todas <ArrowRight className="w-3 h-3" />
             </Link>
-          </div>
+          }
+        >
           {stats.topUniversities.length === 0 ? (
-            <div className="py-12 text-center">
-              <Building2 className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">Sin universidades registradas</p>
-            </div>
+            <EmptyState
+              illustration={<SceneSearchEmpty size={150} className="lp-drift" />}
+              title="Sin universidades registradas"
+              description="Cuando registres tu primera universidad, aparecerá en este ranking."
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -275,7 +296,7 @@ export default function SuperAdminDashboard() {
                         </div>
                       </td>
                       <td className="p-4 text-right">
-                        <span className="text-gray-600 font-medium">{u.students}</span>
+                        <span className="text-gray-600 font-medium font-mono tabular-nums">{u.students}</span>
                       </td>
                     </tr>
                   ))}
@@ -283,24 +304,27 @@ export default function SuperAdminDashboard() {
               </table>
             </div>
           )}
-        </div>
+        </SectionCard>
 
         {/* Recent activity feed */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-slate-600" />
-              <h3 className="font-semibold text-gray-800 text-sm">Actividad reciente</h3>
-            </div>
+        <SectionCard
+          icon={Activity}
+          iconTint="#475569"
+          eyebrow="En tiempo real"
+          title="Actividad reciente"
+          flushBody
+          action={
             <Link href="/superadmin/actividad" className="text-xs text-blue-700 hover:text-blue-800 flex items-center gap-1">
               Ver todo <ArrowRight className="w-3 h-3" />
             </Link>
-          </div>
+          }
+        >
           {stats.recentActivity.length === 0 ? (
-            <div className="py-12 text-center">
-              <Activity className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">Sin actividad registrada</p>
-            </div>
+            <EmptyState
+              illustration={<SceneSearchEmpty size={150} className="lp-drift" />}
+              title="Sin actividad registrada"
+              description="La actividad de las universidades y usuarios aparecerá aquí."
+            />
           ) : (
             <div className="divide-y divide-gray-50 max-h-72 overflow-y-auto">
               {stats.recentActivity.map((entry) => (
@@ -325,7 +349,7 @@ export default function SuperAdminDashboard() {
               ))}
             </div>
           )}
-        </div>
+        </SectionCard>
       </div>
       </>
       )}
