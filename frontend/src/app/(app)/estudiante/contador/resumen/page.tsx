@@ -128,7 +128,7 @@ export default function ContadorResumenPage() {
           </div>
 
           {/* Desglose por empresa */}
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gold-700 mb-2.5">Por empresa</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gold-900 mb-2.5">Por empresa</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {sorted.map((c, i) => (
               <div key={c.id}

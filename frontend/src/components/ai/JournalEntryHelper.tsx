@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { Lightbulb, X, Send, Loader2, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Lightbulb, X, Send, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -10,10 +11,6 @@ interface JournalEntryHelperProps {
   companyId?: string;
   /** Pre-fill the description field (e.g. from a nearby form input) */
   defaultDescription?: string;
-}
-
-interface SuggestionResult {
-  text: string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -94,7 +91,7 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
   };
 
   /**
-   * Light renderer: turns **bold** and \n into JSX.
+   * Renderizador ligero: convierte **negrita** y \n en JSX.
    */
   const renderSuggestion = (text: string) => {
     const parts = text.split(/(\*\*[^*]+\*\*)/g);
@@ -114,7 +111,7 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
 
   return (
     <div ref={containerRef} className="relative inline-block">
-      {/* Trigger button */}
+      {/* Disparador */}
       <button
         type="button"
         onClick={() => {
@@ -124,36 +121,52 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
             setError(null);
           }
         }}
-        className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-blue-50 border border-blue-200 hover:border-blue-300"
+        className={cn(
+          'inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors',
+          'text-blue-700 border border-blue-200 hover:bg-blue-50 hover:border-blue-300',
+          'cx-press cx-wiggle-parent',
+        )}
         title="Sugerencia de cuentas con IA"
       >
-        <Sparkles className="w-3.5 h-3.5" />
+        <Sparkles className="w-3.5 h-3.5 text-gold-600 cx-wiggle" />
         ¿Necesitas ayuda?
       </button>
 
       {/* Popover */}
       {isOpen && (
-        <div className="absolute bottom-full mb-2 left-0 z-50 bg-white border border-gray-200 rounded-xl shadow-xl w-80 overflow-hidden">
-          {/* Popover header */}
-          <div className="flex items-center justify-between px-3 py-2.5 bg-blue-600 text-white">
+        <div className="absolute bottom-full mb-2 left-0 z-50 w-80 overflow-hidden rounded-card border border-gray-200/70 bg-white shadow-2xl cx-pop">
+          {/* Cabecera */}
+          <div className="relative flex items-center justify-between px-3.5 py-2.5 text-white bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+            <span
+              aria-hidden
+              className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent"
+            />
             <div className="flex items-center gap-2">
-              <Lightbulb className="w-4 h-4" />
-              <span className="text-sm font-semibold">Sugerencia de cuentas</span>
+              <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/10 border border-white/15">
+                <Lightbulb className="w-3.5 h-3.5 text-gold-500" />
+              </span>
+              <div>
+                <p className="text-sm font-bold leading-tight tracking-tight">Sugerencia de cuentas</p>
+                <p className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-gold-500 leading-tight mt-0.5">
+                  Asistente ContaSJ
+                </p>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="p-0.5 rounded hover:bg-blue-600 transition-colors"
+              className="p-1 rounded-lg hover:bg-white/10 transition-colors cx-press"
               aria-label="Cerrar"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Body */}
-          <div className="p-3 space-y-3">
-            <p className="text-xs text-gray-500">
-              Describe la transacción y te sugeriré las cuentas a debitar y acreditar.
+          {/* Cuerpo */}
+          <div className="p-3.5 space-y-3">
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Describe la transacción y te sugiero qué cuentas debitar y acreditar. La decisión final
+              (y el asiento) siguen siendo tuyos.
             </p>
 
             <div className="flex gap-2">
@@ -163,15 +176,15 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ej: Pago de alquiler de oficina..."
-                className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Ej: Pago de alquiler de oficina…"
+                className="flex-1 text-sm border border-gray-300 rounded-xl px-3 py-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 disabled:opacity-50"
                 disabled={isLoading}
               />
               <button
                 type="button"
                 onClick={handleSuggest}
                 disabled={isLoading || !description.trim()}
-                className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-white bg-gradient-to-br from-blue-600 to-[#1B2E6E] shadow-[0_6px_16px_rgba(27,46,110,0.25)] transition-all hover:shadow-[0_10px_24px_rgba(27,46,110,0.35)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none cx-press"
                 aria-label="Obtener sugerencia"
               >
                 {isLoading ? (
@@ -182,17 +195,28 @@ export default function JournalEntryHelper({ companyId, defaultDescription = '' 
               </button>
             </div>
 
-            {/* Result */}
+            {/* Pensando */}
+            {isLoading && (
+              <div className="flex items-center gap-1.5 px-1">
+                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full cx-bounce" />
+                <span className="w-1.5 h-1.5 bg-blue-600 rounded-full cx-bounce" style={{ animationDelay: '160ms' }} />
+                <span className="w-1.5 h-1.5 bg-gold-500 rounded-full cx-bounce" style={{ animationDelay: '320ms' }} />
+                <span className="text-xs text-gray-400 ml-1.5">Pensando…</span>
+              </div>
+            )}
+
+            {/* Resultado */}
             {result && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-gray-800 leading-relaxed">
+              <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm leading-relaxed text-gray-800 cx-pop">
                 {renderSuggestion(result)}
               </div>
             )}
 
             {/* Error */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
-                {error}
+              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 cx-shake">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
             )}
           </div>

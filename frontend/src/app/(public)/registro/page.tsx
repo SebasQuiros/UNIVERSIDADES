@@ -1,30 +1,40 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
+import { SceneWelcome } from '@/components/illustrations';
 import {
-  CheckCircle, ArrowRight, ArrowLeft, Building2,
-  User, ClipboardList, GraduationCap,
-  Globe, Phone, Mail, Loader2, AlertCircle,
+  CheckCircle2, ArrowRight, ArrowLeft, Building2,
+  User, ClipboardList, GraduationCap, ShieldCheck, Sparkles,
+  Globe, Phone, Mail, AlertCircle, Check,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface FormData {
-  // Step 1 — Universidad
+  // Paso 1 — Universidad
   universityName: string;
   universityShortName: string;
   country: string;
   website: string;
-  // Step 2 — Admin
+  // Paso 2 — Admin
   adminName: string;
   adminEmail: string;
   adminPhone: string;
-  // Step 3 — Confirmación
+  // Paso 3 — Confirmación
   acceptedTerms: boolean;
 }
 
 type StepErrors = Partial<Record<keyof FormData, string>>;
+
+/** Respuesta del endpoint público de onboarding (sólo lo que consumimos). */
+interface OnboardingResponse {
+  message?: string | string[];
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -43,22 +53,24 @@ const STEPS = [
   { label: 'Confirmación',  icon: ClipboardList },
 ];
 
-// ─── Colors & helpers ─────────────────────────────────────────────────────────
+const BENEFITS = [
+  { icon: GraduationCap, label: 'Cada estudiante opera su propia empresa contable' },
+  { icon: ShieldCheck,   label: 'Datos aislados por institución y por empresa' },
+  { icon: Sparkles,      label: 'Calificación automática por rúbricas' },
+];
 
-const C = {
-  primary:   '#03080F',
-  accent:    '#2563EB',
-  light:     '#F0FDFA',
-  border:    '#E2E8F0',
-  text:      '#0F172A',
-  muted:     '#64748B',
-  error:     '#DC2626',
-  errorBg:   '#FEF2F2',
-  success:   '#059669',
-  successBg: '#ECFDF5',
-  white:     '#FFFFFF',
-  bg:        '#F8FAFC',
-};
+// ─── Campos ───────────────────────────────────────────────────────────────────
+
+const INPUT_BASE =
+  'w-full rounded-xl bg-white border text-sm text-gray-900 placeholder-gray-400 transition-colors ' +
+  'px-4 py-2.5 focus:outline-none focus:ring-2';
+
+const inputCls = (hasError?: boolean, withIcon?: boolean) =>
+  `${INPUT_BASE} ${withIcon ? 'pl-10' : ''} ${
+    hasError
+      ? 'border-red-400 focus:ring-red-500/60 focus:border-red-500'
+      : 'border-gray-300 hover:border-gray-400 focus:ring-blue-500/60 focus:border-blue-500'
+  }`;
 
 function Field({
   label, required, error, children,
@@ -66,96 +78,78 @@ function Field({
   label: string; required?: boolean; error?: string; children: React.ReactNode;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ fontSize: '0.83rem', fontWeight: 600, color: C.text }}>
-        {label}{required && <span style={{ color: C.error }}> *</span>}
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-gray-700">
+        {label}{required && <span className="text-red-500"> *</span>}
       </label>
       {children}
       {error && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: C.error }}>
-          <AlertCircle size={12} />
+        <p className="flex items-center gap-1 text-xs text-red-600 cx-shake">
+          <AlertCircle className="w-3 h-3 flex-shrink-0" />
           {error}
-        </div>
+        </p>
       )}
     </div>
   );
 }
 
-const inputStyle = (hasError?: boolean): React.CSSProperties => ({
-  width: '100%',
-  padding: '10px 14px',
-  borderRadius: 10,
-  border: `1.5px solid ${hasError ? C.error : C.border}`,
-  fontSize: '0.9rem',
-  color: C.text,
-  background: C.white,
-  outline: 'none',
-  transition: 'border-color 0.2s',
-  boxSizing: 'border-box',
-});
+// ─── Stepper ──────────────────────────────────────────────────────────────────
 
-// ─── Progress bar ─────────────────────────────────────────────────────────────
-
-function ProgressBar({ current, total }: { current: number; total: number }) {
+function Stepper({ current }: { current: number }) {
   return (
-    <div style={{ width: '100%', marginBottom: 36 }}>
-      {/* Step labels */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+    <div className="mb-8">
+      <div className="flex items-center gap-2">
         {STEPS.map((s, i) => {
-          const done    = i < current;
-          const active  = i === current;
-          const Icon    = s.icon;
+          const done   = i < current;
+          const active = i === current;
+          const Icon   = s.icon;
           return (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: done ? C.success : active ? C.primary : C.bg,
-                border: `2px solid ${done ? C.success : active ? C.primary : C.border}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.3s',
-              }}>
+            <div key={s.label} className="flex items-center gap-2 flex-1 last:flex-none">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border transition-all ${
+                  done
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                    : active
+                      ? 'bg-gradient-to-br from-blue-600 to-[#1B2E6E] border-transparent text-white shadow-[0_6px_18px_rgba(27,46,110,0.28)] cx-pop'
+                      : 'bg-gray-50 border-gray-200 text-gray-400'
+                }`}
+              >
                 {done
-                  ? <CheckCircle size={18} color={C.white} />
-                  : <Icon size={15} color={active ? C.white : C.muted} />
-                }
+                  ? <Check className="w-4 h-4" strokeWidth={2.6} />
+                  : <Icon className="w-4 h-4" strokeWidth={1.9} />}
               </div>
-              <span style={{
-                fontSize: '0.68rem', fontWeight: active || done ? 700 : 500,
-                color: active ? C.primary : done ? C.success : C.muted,
-                display: 'none',
-              }}>
-                {s.label}
-              </span>
+              {i < STEPS.length - 1 && (
+                <div className="h-1 flex-1 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-blue-600 to-[#1B2E6E] transition-all duration-500"
+                    style={{ width: done ? '100%' : '0%' }}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-      {/* Progress line */}
-      <div style={{ height: 4, background: C.border, borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${(current / (total - 1)) * 100}%`,
-          background: C.accent,
-          borderRadius: 2, transition: 'width 0.4s cubic-bezier(.22,1,.36,1)',
-        }} />
-      </div>
-      <div style={{ textAlign: 'right', fontSize: '0.72rem', color: C.muted, marginTop: 6 }}>
-        Paso {current + 1} de {total}
+      <div className="flex items-center justify-between mt-3">
+        <p className="text-sm font-bold text-gray-800">{STEPS[current].label}</p>
+        <p className="text-xs text-gray-400 font-mono tabular-nums">
+          Paso {current + 1} de {STEPS.length}
+        </p>
       </div>
     </div>
   );
 }
 
-// ─── Main wizard ──────────────────────────────────────────────────────────────
+// ─── Wizard ───────────────────────────────────────────────────────────────────
 
 export default function RegistroPage() {
   const router = useRouter();
-  const [step, setStep]                 = useState(0);
-  const [submitting, setSubmitting]     = useState(false);
-  const [submitError, setSubmitError]   = useState('');
-  const [success, setSuccess]           = useState(false);
-  const [successData, setSuccessData]   = useState({ universityName: '', adminEmail: '' });
-  const [errors, setErrors]             = useState<StepErrors>({});
+  const [step, setStep]               = useState(0);
+  const [submitting, setSubmitting]   = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [success, setSuccess]         = useState(false);
+  const [successData, setSuccessData] = useState({ universityName: '', adminEmail: '' });
+  const [errors, setErrors]           = useState<StepErrors>({});
 
   const [form, setForm] = useState<FormData>({
     universityName:      '',
@@ -173,7 +167,7 @@ export default function RegistroPage() {
     setErrors(prev => ({ ...prev, [field]: undefined }));
   }, []);
 
-  // ── Validation per step ─────────────────────────────────────────────────────
+  // ── Validación por paso ─────────────────────────────────────────────────────
 
   function validateStep(s: number): boolean {
     const errs: StepErrors = {};
@@ -206,7 +200,7 @@ export default function RegistroPage() {
   }
   function back() { setStep(s => Math.max(s - 1, 0)); }
 
-  // ── Submit ──────────────────────────────────────────────────────────────────
+  // ── Envío ───────────────────────────────────────────────────────────────────
 
   async function handleSubmit() {
     if (!validateStep(2)) return;
@@ -227,439 +221,420 @@ export default function RegistroPage() {
           acceptedTerms:       form.acceptedTerms,
         }),
       });
-      const data = await res.json();
+      const data: OnboardingResponse = await res.json();
       if (!res.ok) {
         const msg = data?.message || 'Error al procesar la solicitud.';
         throw new Error(Array.isArray(msg) ? msg[0] : msg);
       }
       setSuccessData({ universityName: form.universityName.trim(), adminEmail: form.adminEmail.trim() });
       setSuccess(true);
-    } catch (err: any) {
-      setSubmitError(err.message || 'Ocurrió un error inesperado. Por favor intente de nuevo.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      setSubmitError(msg || 'Ocurrió un error inesperado. Por favor intente de nuevo.');
     } finally {
       setSubmitting(false);
     }
   }
 
-  // ── Success screen ──────────────────────────────────────────────────────────
-
-  if (success) {
-    return (
-      <div style={{
-        minHeight: '100svh', background: C.bg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '24px 16px',
-      }}>
-        <div style={{
-          background: C.white, borderRadius: 16, padding: 'clamp(32px,6vw,56px)',
-          maxWidth: 560, width: '100%',
-          boxShadow: '0 1px 2px rgba(16,24,40,0.04)',
-          border: `1px solid ${C.border}`,
-          textAlign: 'center',
-        }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%',
-            background: C.successBg, border: `2px solid ${C.success}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 24px',
-          }}>
-            <CheckCircle size={36} color={C.success} />
-          </div>
-
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: C.text, margin: '0 0 8px' }}>
-            ¡Solicitud recibida!
-          </h1>
-          <p style={{ color: C.muted, fontSize: '0.95rem', margin: '0 0 32px', lineHeight: 1.6 }}>
-            Tu universidad <strong style={{ color: C.text }}>{successData.universityName}</strong> ha sido registrada exitosamente.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 36 }}>
-            {/* Email */}
-            <div style={{ background: C.light, borderRadius: 12, padding: '16px 20px', textAlign: 'left', display: 'flex', gap: 14 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: C.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Mail size={16} color={C.white} />
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: C.text, marginBottom: 3 }}>Revisa tu correo</div>
-                <div style={{ fontSize: '0.8rem', color: C.muted, lineHeight: 1.5 }}>
-                  Hemos enviado las credenciales de acceso a <strong>{successData.adminEmail}</strong>.
-                  Si no ves el correo, revisa tu carpeta de spam.
-                </div>
-              </div>
-            </div>
-
-            {/* Password change notice */}
-            <div style={{ background: '#FFFBEB', borderRadius: 12, padding: '16px 20px', textAlign: 'left', display: 'flex', gap: 14, border: '1px solid #FDE68A' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <GraduationCap size={16} color={C.white} />
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#92400E', marginBottom: 3 }}>Activa tu acceso</div>
-                <div style={{ fontSize: '0.8rem', color: '#78350F', lineHeight: 1.5 }}>
-                  Recibirás un correo para confirmar tu cuenta y definir tu contraseña de acceso.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => router.push('/login')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 10,
-              padding: '13px 32px', borderRadius: 12,
-              background: C.primary, color: C.white,
-              border: 'none', fontSize: '0.95rem', fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.2s',
-              boxShadow: '0 1px 2px rgba(16,24,40,0.04)',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = C.primary; e.currentTarget.style.transform = 'none'; }}
-          >
-            Ir al login
-            <ArrowRight size={16} />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Wizard layout ───────────────────────────────────────────────────────────
-
   return (
-    <div style={{
-      minHeight: '100svh', background: C.bg,
-      fontFamily: "'Inter','Segoe UI',system-ui,sans-serif",
-    }}>
-      {/* Header bar */}
-      <nav style={{
-        background: '#03080F',
-        padding: '0 clamp(16px,4vw,48px)', height: 60,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 8, overflow: 'hidden', background: '#000' }}>
-            <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: 34, height: 34, objectFit: 'contain' }} />
-          </div>
-          <span style={{ fontSize: '0.88rem', fontWeight: 800, color: C.white }}>ContaSJ</span>
-        </div>
-        <button
-          onClick={() => router.push('/')}
+    <div className="min-h-screen flex" style={{ background: '#EFF6FF' }}>
+
+      {/* ── Panel izquierdo: marca (solo desktop) ── */}
+      <div
+        className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #03080F 0%, #0F2657 60%, #1E3A8A 100%)' }}
+      >
+        <div className="lp-blob-bg" aria-hidden />
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'rgba(255,255,255,0.12)', color: C.white,
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: 8, padding: '6px 14px', fontSize: '0.78rem',
-            fontWeight: 600, cursor: 'pointer',
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)',
+            backgroundSize: '26px 26px',
           }}
-        >
-          ← Inicio
-        </button>
-      </nav>
+        />
 
-      {/* Main content */}
-      <div style={{
-        maxWidth: 820, margin: '0 auto',
-        padding: 'clamp(24px,4vw,48px) clamp(16px,4vw,24px)',
-      }}>
-        {/* Title */}
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '5px 16px', background: 'rgba(37,99,235,0.07)',
-            border: '1px solid rgba(37,99,235,0.12)', borderRadius: 999, marginBottom: 12,
-          }}>
-            <Building2 size={12} color={C.primary} />
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: C.primary, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
-              Registro de Universidad
-            </span>
+        {/* Logo + marca */}
+        <Link href="/" className="flex items-center gap-3 relative z-10 w-fit">
+          <div
+            className="w-10 h-10 rounded-[11px] overflow-hidden flex items-center justify-center flex-shrink-0"
+            style={{ background: '#000', boxShadow: '0 0 20px rgba(59,130,246,0.4)' }}
+          >
+            <Image src="/sjqa-logo.png" alt="ContaSJ" width={40} height={40} priority className="w-10 h-10 object-contain" />
           </div>
-          <h1 style={{ fontSize: 'clamp(1.4rem,3vw,2rem)', fontWeight: 900, color: C.text, margin: '0 0 8px', letterSpacing: '-0.02em' }}>
-            Registra tu universidad en ContaSJ
-          </h1>
-          <p style={{ color: C.muted, fontSize: '0.9rem', margin: 0, lineHeight: 1.6 }}>
-            Completa los siguientes pasos para solicitar acceso a la plataforma.
-          </p>
+          <div>
+            <h1 className="text-2xl font-black tracking-tight leading-none" style={{ color: '#60A5FA' }}>
+              ContaSJ
+            </h1>
+            <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] mt-1" style={{ color: '#FBBF24' }}>
+              Plataforma educativa · Costa Rica
+            </p>
+          </div>
+        </Link>
+
+        {/* Contenido central */}
+        <div className="relative z-10 space-y-8 lp-in lp-in-d2">
+          <div>
+            <p className="text-[0.7rem] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: '#FBBF24' }}>
+              Registro institucional
+            </p>
+            <p
+              className="text-white font-extrabold leading-tight"
+              style={{ fontSize: 'clamp(1.4rem,2.4vw,1.9rem)', letterSpacing: '-0.02em' }}
+            >
+              Lleva tu curso de contabilidad{' '}
+              <span style={{ color: '#93C5FD' }}>a la práctica real.</span>
+            </p>
+          </div>
+
+          <div className="flex justify-center lp-drift" aria-hidden>
+            <SceneWelcome size={250} />
+          </div>
+
+          <div className="space-y-3">
+            {BENEFITS.map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(59,130,246,0.22)', border: '1px solid rgba(96,165,250,0.2)' }}
+                >
+                  <Icon className="w-4 h-4" style={{ color: '#93C5FD' }} strokeWidth={1.9} />
+                </div>
+                <span className="text-white/80 text-sm">{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Card */}
-        <div style={{
-          background: C.white, borderRadius: 16,
-          padding: 'clamp(24px,4vw,40px)',
-          boxShadow: '0 1px 2px rgba(16,24,40,0.04)',
-          border: `1px solid ${C.border}`,
-        }}>
-          <ProgressBar current={step} total={STEPS.length} />
-
-          {/* ── STEP 0: Universidad ───────────────────────────────── */}
-          {step === 0 && (
-            <div>
-              <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>
-                  Información de la universidad
-                </h2>
-                <p style={{ color: C.muted, fontSize: '0.85rem', margin: 0 }}>
-                  Ingresa los datos de tu institución educativa.
-                </p>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <Field label="Nombre completo de la universidad" required error={errors.universityName}>
-                  <input
-                    style={inputStyle(!!errors.universityName)}
-                    value={form.universityName}
-                    onChange={e => set('universityName', e.target.value)}
-                    placeholder="Ej: Universidad Técnica Nacional"
-                    onFocus={e => { e.target.style.borderColor = C.primary; }}
-                    onBlur={e => { e.target.style.borderColor = errors.universityName ? C.error : C.border; }}
-                  />
-                </Field>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  <Field label="Nombre corto / siglas" required error={errors.universityShortName}>
-                    <input
-                      style={inputStyle(!!errors.universityShortName)}
-                      value={form.universityShortName}
-                      onChange={e => set('universityShortName', e.target.value.toUpperCase())}
-                      placeholder="Ej: UTN"
-                      maxLength={20}
-                      onFocus={e => { e.target.style.borderColor = C.primary; }}
-                      onBlur={e => { e.target.style.borderColor = errors.universityShortName ? C.error : C.border; }}
-                    />
-                  </Field>
-                  <Field label="País" required error={errors.country}>
-                    <select
-                      style={{ ...inputStyle(!!errors.country), appearance: 'auto' }}
-                      value={form.country}
-                      onChange={e => set('country', e.target.value)}
-                    >
-                      {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </Field>
-                </div>
-
-                <Field label="Sitio web institucional" error={errors.website}>
-                  <div style={{ position: 'relative' }}>
-                    <Globe size={16} color={C.muted} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-                    <input
-                      style={{ ...inputStyle(!!errors.website), paddingLeft: 36 }}
-                      value={form.website}
-                      onChange={e => set('website', e.target.value)}
-                      placeholder="https://universidad.edu.cr"
-                      type="url"
-                      onFocus={e => { e.target.style.borderColor = C.primary; }}
-                      onBlur={e => { e.target.style.borderColor = errors.website ? C.error : C.border; }}
-                    />
-                  </div>
-                </Field>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 1: Admin ─────────────────────────────────────── */}
-          {step === 1 && (
-            <div>
-              <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>
-                  Datos del administrador
-                </h2>
-                <p style={{ color: C.muted, fontSize: '0.85rem', margin: 0 }}>
-                  Esta persona recibirá las credenciales de acceso y será el administrador de la plataforma.
-                </p>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <Field label="Nombre completo del administrador" required error={errors.adminName}>
-                  <div style={{ position: 'relative' }}>
-                    <User size={16} color={C.muted} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-                    <input
-                      style={{ ...inputStyle(!!errors.adminName), paddingLeft: 36 }}
-                      value={form.adminName}
-                      onChange={e => set('adminName', e.target.value)}
-                      placeholder="Ej: María González Pérez"
-                      onFocus={e => { e.target.style.borderColor = C.primary; }}
-                      onBlur={e => { e.target.style.borderColor = errors.adminName ? C.error : C.border; }}
-                    />
-                  </div>
-                </Field>
-
-                <Field label="Correo electrónico institucional" required error={errors.adminEmail}>
-                  <div style={{ position: 'relative' }}>
-                    <Mail size={16} color={C.muted} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-                    <input
-                      style={{ ...inputStyle(!!errors.adminEmail), paddingLeft: 36 }}
-                      value={form.adminEmail}
-                      onChange={e => set('adminEmail', e.target.value)}
-                      placeholder="admin@universidad.edu.cr"
-                      type="email"
-                      onFocus={e => { e.target.style.borderColor = C.primary; }}
-                      onBlur={e => { e.target.style.borderColor = errors.adminEmail ? C.error : C.border; }}
-                    />
-                  </div>
-                </Field>
-
-                <Field label="Teléfono de contacto" error={errors.adminPhone}>
-                  <div style={{ position: 'relative' }}>
-                    <Phone size={16} color={C.muted} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
-                    <input
-                      style={{ ...inputStyle(false), paddingLeft: 36 }}
-                      value={form.adminPhone}
-                      onChange={e => set('adminPhone', e.target.value)}
-                      placeholder="+506 8888-8888"
-                      type="tel"
-                      onFocus={e => { e.target.style.borderColor = C.primary; }}
-                      onBlur={e => { e.target.style.borderColor = C.border; }}
-                    />
-                  </div>
-                </Field>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 2: Summary + confirm ─────────────────────────── */}
-          {step === 2 && (
-            <div>
-              <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>
-                  Resumen y confirmación
-                </h2>
-                <p style={{ color: C.muted, fontSize: '0.85rem', margin: 0 }}>
-                  Verifica que los datos sean correctos antes de enviar.
-                </p>
-              </div>
-
-              {/* Summary card */}
-              <div style={{ background: C.bg, borderRadius: 14, padding: 20, marginBottom: 20, border: `1px solid ${C.border}` }}>
-                {/* Universidad */}
-                <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Universidad</div>
-                  <div style={{ display: 'grid', gap: 4, fontSize: '0.85rem' }}>
-                    <div><span style={{ color: C.muted }}>Nombre: </span><strong>{form.universityName}</strong></div>
-                    <div><span style={{ color: C.muted }}>Siglas: </span><strong>{form.universityShortName}</strong></div>
-                    <div><span style={{ color: C.muted }}>País: </span><strong>{form.country}</strong></div>
-                    {form.website && <div><span style={{ color: C.muted }}>Web: </span><strong>{form.website}</strong></div>}
-                  </div>
-                </div>
-
-                {/* Admin */}
-                <div>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Administrador</div>
-                  <div style={{ display: 'grid', gap: 4, fontSize: '0.85rem' }}>
-                    <div><span style={{ color: C.muted }}>Nombre: </span><strong>{form.adminName}</strong></div>
-                    <div><span style={{ color: C.muted }}>Correo: </span><strong>{form.adminEmail}</strong></div>
-                    {form.adminPhone && <div><span style={{ color: C.muted }}>Teléfono: </span><strong>{form.adminPhone}</strong></div>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Terms checkbox */}
-              <label style={{
-                display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer',
-                padding: 16, borderRadius: 12, marginBottom: 16,
-                background: form.acceptedTerms ? C.light : C.white,
-                border: `1.5px solid ${errors.acceptedTerms ? C.error : form.acceptedTerms ? C.primary : C.border}`,
-                transition: 'all 0.2s',
-              }}>
-                <input
-                  type="checkbox"
-                  checked={form.acceptedTerms}
-                  onChange={e => set('acceptedTerms', e.target.checked)}
-                  style={{ width: 18, height: 18, flexShrink: 0, marginTop: 1, accentColor: C.primary }}
-                />
-                <span style={{ fontSize: '0.85rem', color: C.text, lineHeight: 1.5 }}>
-                  Acepto los <a href="/terminos" target="_blank" style={{ color: C.accent, fontWeight: 600 }}>términos y condiciones de uso</a> de ContaSJ y confirmo que la información proporcionada es correcta.
-                </span>
-              </label>
-              {errors.acceptedTerms && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.error, fontSize: '0.8rem', marginBottom: 12 }}>
-                  <AlertCircle size={13} />
-                  {errors.acceptedTerms}
-                </div>
-              )}
-
-              {/* Submit error */}
-              {submitError && (
-                <div style={{
-                  display: 'flex', gap: 10, alignItems: 'flex-start',
-                  background: C.errorBg, border: `1px solid #FECACA`,
-                  borderRadius: 10, padding: '12px 16px',
-                }}>
-                  <AlertCircle size={18} color={C.error} style={{ flexShrink: 0, marginTop: 1 }} />
-                  <span style={{ fontSize: '0.85rem', color: C.error, lineHeight: 1.5 }}>{submitError}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Navigation ────────────────────────────────────────── */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 32, gap: 12 }}>
-            <button
-              onClick={back}
-              disabled={step === 0}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '11px 24px', borderRadius: 10,
-                background: 'transparent', color: step === 0 ? '#CBD5E1' : C.muted,
-                border: `1.5px solid ${step === 0 ? '#E2E8F0' : C.border}`,
-                fontSize: '0.88rem', fontWeight: 600,
-                cursor: step === 0 ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s',
-              }}
-            >
-              <ArrowLeft size={15} />
-              Atrás
-            </button>
-
-            {step < STEPS.length - 1 ? (
-              <button
-                onClick={next}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '11px 28px', borderRadius: 10,
-                  background: C.primary, color: C.white,
-                  border: 'none', fontSize: '0.88rem', fontWeight: 700,
-                  cursor: 'pointer', transition: 'all 0.2s',
-                  boxShadow: '0 1px 2px rgba(16,24,40,0.04)',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = C.primary; e.currentTarget.style.transform = 'none'; }}
-              >
-                Siguiente
-                <ArrowRight size={15} />
-              </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '11px 28px', borderRadius: 10,
-                  background: submitting ? '#94A3B8' : C.primary, color: C.white,
-                  border: 'none', fontSize: '0.88rem', fontWeight: 700,
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: submitting ? 'none' : '0 1px 2px rgba(16,24,40,0.04)',
-                }}
-                onMouseEnter={e => { if (!submitting) { e.currentTarget.style.background = C.accent; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-                onMouseLeave={e => { e.currentTarget.style.background = submitting ? '#94A3B8' : C.primary; e.currentTarget.style.transform = 'none'; }}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    Solicitar acceso
-                    <ArrowRight size={15} />
-                  </>
-                )}
-              </button>
-            )}
-          </div>
+        <div className="relative z-10 flex items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1.5 text-[0.68rem] font-medium px-2.5 py-1 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(184,134,11,0.28)', color: 'rgba(253,230,138,0.9)' }}
+          >
+            IVA 13% · Hacienda v4.4 · NIIF PYMES
+          </span>
+          <span className="text-xs ml-auto" style={{ color: 'rgba(96,165,250,0.6)' }}>
+            © {new Date().getFullYear()}
+          </span>
         </div>
       </div>
 
-      {/* Spin keyframes */}
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+      {/* ── Panel derecho: wizard / éxito ── */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-white overflow-y-auto">
+        <div className="w-full max-w-lg">
+
+          {/* Cabecera móvil */}
+          <div className="lg:hidden text-center mb-8">
+            <Link href="/" className="inline-flex items-center justify-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-[10px] overflow-hidden flex items-center justify-center" style={{ background: '#000' }}>
+                <Image src="/sjqa-logo.png" alt="ContaSJ" width={36} height={36} className="w-9 h-9 object-contain" />
+              </div>
+              <h1 className="text-2xl font-black tracking-tight">
+                <span style={{ color: '#2563EB' }}>ContaSJ</span>
+              </h1>
+            </Link>
+          </div>
+
+          {success ? (
+            /* ── Pantalla de éxito ── */
+            <div className="text-center">
+              <div className="flex justify-center mb-5 cx-tada">
+                <IconTile icon={CheckCircle2} tint="#059669" size={64} />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-900 mb-1">
+                Solicitud recibida
+              </p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">
+                ¡Ya casi estamos!
+              </h2>
+              <p className="text-gray-500 text-sm mt-2">
+                Registramos a <strong className="text-gray-800">{successData.universityName}</strong> en ContaSJ.
+              </p>
+
+              <div className="mt-7 space-y-3 text-left">
+                <div className="flex gap-3.5 p-4 rounded-card bg-blue-50/70 border border-blue-100">
+                  <IconTile icon={Mail} tint="#2563EB" size={40} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-800">Revisa tu correo</p>
+                    <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                      Enviamos las credenciales de acceso a{' '}
+                      <strong className="text-gray-800 break-all">{successData.adminEmail}</strong>.
+                      Si no lo ves, revisa la carpeta de spam.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3.5 p-4 rounded-card bg-gold-50 border border-gold-100">
+                  <IconTile icon={GraduationCap} tint="#B8860B" size={40} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gold-900">Activa tu acceso</p>
+                    <p className="text-xs text-gold-900/80 mt-0.5 leading-relaxed">
+                      Recibirás un correo para confirmar la cuenta y definir tu contraseña.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                size="lg"
+                onClick={() => router.push('/login')}
+                className="w-full mt-7 cx-press"
+              >
+                Ir al inicio de sesión <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            /* ── Wizard ── */
+            <>
+              <div className="mb-7">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-900 mb-1">
+                  Registro de universidad
+                </p>
+                <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">
+                  Registra tu universidad
+                </h2>
+                <p className="text-gray-500 text-sm mt-1.5">
+                  Completa estos pasos para solicitar acceso a la plataforma.
+                </p>
+              </div>
+
+              <Stepper current={step} />
+
+              {/* ── PASO 0: Universidad ── */}
+              {step === 0 && (
+                <div className="space-y-4 lp-in">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">Información de la universidad</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">Datos de tu institución educativa.</p>
+                  </div>
+
+                  <Field label="Nombre completo de la universidad" required error={errors.universityName}>
+                    <input
+                      className={inputCls(!!errors.universityName)}
+                      value={form.universityName}
+                      onChange={e => set('universityName', e.target.value)}
+                      placeholder="Nombre oficial de la institución"
+                    />
+                  </Field>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Nombre corto / siglas" required error={errors.universityShortName}>
+                      <input
+                        className={`${inputCls(!!errors.universityShortName)} font-mono uppercase`}
+                        value={form.universityShortName}
+                        onChange={e => set('universityShortName', e.target.value.toUpperCase())}
+                        placeholder="SIGLAS"
+                        maxLength={20}
+                      />
+                    </Field>
+                    <Field label="País" required error={errors.country}>
+                      <select
+                        className={inputCls(!!errors.country)}
+                        value={form.country}
+                        onChange={e => set('country', e.target.value)}
+                      >
+                        {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+
+                  <Field label="Sitio web institucional" error={errors.website}>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <input
+                        className={inputCls(!!errors.website, true)}
+                        value={form.website}
+                        onChange={e => set('website', e.target.value)}
+                        placeholder="https://institucion.ac.cr"
+                        type="url"
+                      />
+                    </div>
+                  </Field>
+                </div>
+              )}
+
+              {/* ── PASO 1: Administrador ── */}
+              {step === 1 && (
+                <div className="space-y-4 lp-in">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">Datos del administrador</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Esta persona recibirá las credenciales y administrará la plataforma.
+                    </p>
+                  </div>
+
+                  <Field label="Nombre completo del administrador" required error={errors.adminName}>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <input
+                        className={inputCls(!!errors.adminName, true)}
+                        value={form.adminName}
+                        onChange={e => set('adminName', e.target.value)}
+                        placeholder="Nombre y apellidos"
+                      />
+                    </div>
+                  </Field>
+
+                  <Field label="Correo electrónico institucional" required error={errors.adminEmail}>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <input
+                        className={inputCls(!!errors.adminEmail, true)}
+                        value={form.adminEmail}
+                        onChange={e => set('adminEmail', e.target.value)}
+                        placeholder="admin@institucion.ac.cr"
+                        type="email"
+                      />
+                    </div>
+                  </Field>
+
+                  <Field label="Teléfono de contacto" error={errors.adminPhone}>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      <input
+                        className={inputCls(false, true)}
+                        value={form.adminPhone}
+                        onChange={e => set('adminPhone', e.target.value)}
+                        placeholder="+506 8888-8888"
+                        type="tel"
+                      />
+                    </div>
+                  </Field>
+                </div>
+              )}
+
+              {/* ── PASO 2: Resumen y confirmación ── */}
+              {step === 2 && (
+                <div className="space-y-4 lp-in">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">Resumen y confirmación</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">Verifica que los datos sean correctos antes de enviar.</p>
+                  </div>
+
+                  {/* Resumen */}
+                  <div className="rounded-card border border-gray-200/70 bg-gray-50/70 p-5 space-y-4">
+                    <div className="pb-4 border-b border-gray-200">
+                      <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900 mb-2">
+                        Universidad
+                      </p>
+                      <dl className="grid gap-1 text-sm">
+                        <div className="flex gap-2">
+                          <dt className="text-gray-500">Nombre:</dt>
+                          <dd className="font-semibold text-gray-800">{form.universityName}</dd>
+                        </div>
+                        <div className="flex gap-2">
+                          <dt className="text-gray-500">Siglas:</dt>
+                          <dd className="font-semibold text-gray-800 font-mono">{form.universityShortName}</dd>
+                        </div>
+                        <div className="flex gap-2">
+                          <dt className="text-gray-500">País:</dt>
+                          <dd className="font-semibold text-gray-800">{form.country}</dd>
+                        </div>
+                        {form.website && (
+                          <div className="flex gap-2 min-w-0">
+                            <dt className="text-gray-500 flex-shrink-0">Web:</dt>
+                            <dd className="font-semibold text-gray-800 truncate">{form.website}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
+
+                    <div>
+                      <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900 mb-2">
+                        Administrador
+                      </p>
+                      <dl className="grid gap-1 text-sm">
+                        <div className="flex gap-2">
+                          <dt className="text-gray-500">Nombre:</dt>
+                          <dd className="font-semibold text-gray-800">{form.adminName}</dd>
+                        </div>
+                        <div className="flex gap-2 min-w-0">
+                          <dt className="text-gray-500 flex-shrink-0">Correo:</dt>
+                          <dd className="font-semibold text-gray-800 truncate">{form.adminEmail}</dd>
+                        </div>
+                        {form.adminPhone && (
+                          <div className="flex gap-2">
+                            <dt className="text-gray-500">Teléfono:</dt>
+                            <dd className="font-semibold text-gray-800 font-mono">{form.adminPhone}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
+                  </div>
+
+                  {/* Términos */}
+                  <label
+                    className={`flex items-start gap-3 p-4 rounded-card border cursor-pointer transition-all ${
+                      errors.acceptedTerms
+                        ? 'border-red-300 bg-red-50/50'
+                        : form.acceptedTerms
+                          ? 'border-blue-300 bg-blue-50/60'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.acceptedTerms}
+                      onChange={e => set('acceptedTerms', e.target.checked)}
+                      className="w-4 h-4 mt-0.5 flex-shrink-0 rounded accent-blue-600"
+                    />
+                    <span className="text-sm text-gray-700 leading-relaxed">
+                      Acepto los{' '}
+                      <a href="/terminos" target="_blank" rel="noopener noreferrer" className="text-blue-700 font-semibold hover:underline">
+                        términos y condiciones de uso
+                      </a>{' '}
+                      de ContaSJ y confirmo que la información proporcionada es correcta.
+                    </span>
+                  </label>
+                  {errors.acceptedTerms && (
+                    <p className="flex items-center gap-1 text-xs text-red-600 cx-shake">
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                      {errors.acceptedTerms}
+                    </p>
+                  )}
+
+                  {/* Error de envío */}
+                  {submitError && (
+                    <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-xl cx-shake" role="alert">
+                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700">{submitError}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Navegación ── */}
+              <div className="flex items-center justify-between gap-3 mt-8">
+                <Button
+                  variant="secondary"
+                  onClick={back}
+                  disabled={step === 0}
+                  className="cx-press"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Atrás
+                </Button>
+
+                {step < STEPS.length - 1 ? (
+                  <Button onClick={next} className="cx-press">
+                    Siguiente <ArrowRight className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button onClick={handleSubmit} loading={submitting} className="cx-press">
+                    {submitting ? 'Procesando…' : <>Solicitar acceso <ArrowRight className="w-4 h-4" /></>}
+                  </Button>
+                )}
+              </div>
+
+              <p className="text-center text-xs text-gray-400 mt-8">
+                ¿Tu universidad ya está registrada?{' '}
+                <Link href="/login" className="text-blue-700 font-semibold hover:underline">
+                  Inicia sesión
+                </Link>
+              </p>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

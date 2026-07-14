@@ -4,7 +4,13 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Spinner } from '@/components/ui/Spinner';
+import { buttonClasses } from '@/components/ui/Button';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtGrowth, ArtReport, SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -28,6 +34,12 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,75 +112,51 @@ function gradeColor(pct: number | null): string {
   if (pct === null) return 'text-gray-400';
   if (pct >= 90)   return 'text-emerald-600';
   if (pct >= 80)   return 'text-green-600';
-  if (pct >= 70)   return 'text-yellow-600';
+  if (pct >= 70)   return 'text-gold-700';
   if (pct >= 60)   return 'text-orange-500';
   return 'text-red-600';
 }
 
 function studentStatusDot(sp: StudentProgress) {
-  if (sp.completionPct === 100)    return <span className="inline-flex w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" title="Completado" />;
-  if (sp.exercisesInProgress > 0) return <span className="inline-flex w-2.5 h-2.5 rounded-full bg-yellow-400 flex-shrink-0" title="En progreso" />;
-  return <span className="inline-flex w-2.5 h-2.5 rounded-full bg-red-400 flex-shrink-0" title="Sin iniciar" />;
-}
-
-// ── Stat Card ─────────────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: React.ElementType;
-  colorClass: string;
-  sub?: string;
-}
-
-function StatCard({ label, value, icon: Icon, colorClass, sub }: StatCardProps) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
-        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${colorClass}`}>
-          <Icon className="w-4 h-4" />
-        </div>
-      </div>
-      <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
-    </div>
-  );
+  if (sp.completionPct === 100)   return <span className="inline-flex h-2.5 w-2.5 flex-shrink-0 rounded-full bg-emerald-500" title="Completado" />;
+  if (sp.exercisesInProgress > 0) return <span className="inline-flex h-2.5 w-2.5 flex-shrink-0 rounded-full bg-gold-500" title="En progreso" />;
+  return <span className="inline-flex h-2.5 w-2.5 flex-shrink-0 rounded-full bg-red-400" title="Sin iniciar" />;
 }
 
 // ── Grade Distribution Chart ──────────────────────────────────────────────────
 
 function GradeDistributionChart({ dist }: { dist: AnalyticsData['gradeDistribution'] }) {
   const data = [
-    { label: 'A (≥90)', value: dist.A, fill: '#10b981' },
-    { label: 'B (80-89)', value: dist.B, fill: '#34d399' },
-    { label: 'C (70-79)', value: dist.C, fill: '#fbbf24' },
-    { label: 'D (60-69)', value: dist.D, fill: '#f97316' },
-    { label: 'F (<60)',  value: dist.F, fill: '#ef4444' },
+    { label: 'A (≥90)',   value: dist.A, fill: '#059669' },
+    { label: 'B (80-89)', value: dist.B, fill: '#2563EB' },
+    { label: 'C (70-79)', value: dist.C, fill: '#D4A017' },
+    { label: 'D (60-69)', value: dist.D, fill: '#F59E0B' },
+    { label: 'F (<60)',   value: dist.F, fill: '#DC2626' },
   ];
 
   const total = data.reduce((s, d) => s + d.value, 0);
 
   if (total === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-        <BarChart2 className="w-10 h-10 mb-3 text-gray-200" />
-        <p className="text-sm">Sin calificaciones aún</p>
-      </div>
+      <EmptyState
+        illustration={<SceneSearchEmpty size={170} className="cx-float" />}
+        title="Sin calificaciones aún"
+        description="La distribución aparecerá cuando califiques las primeras entregas."
+      />
     );
   }
 
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-        <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#EFF6FF" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748B' }} />
+        <YAxis tick={{ fontSize: 11, fill: '#64748B' }} allowDecimals={false} />
         <Tooltip
-          formatter={(value: any) => [`${value} estudiante${value !== 1 ? 's' : ''}`, 'Cantidad']}
-          contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
+          formatter={(value) => [`${value} estudiante${value !== 1 ? 's' : ''}`, 'Cantidad']}
+          contentStyle={{ borderRadius: 12, border: '1px solid #DBEAFE', fontSize: 12 }}
         />
-        <Bar dataKey="value" radius={[5, 5, 0, 0]} maxBarSize={60}>
+        <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={60}>
           {data.map((entry, i) => (
             <Cell key={i} fill={entry.fill} />
           ))}
@@ -209,135 +197,181 @@ export default function CourseAnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <Spinner size="lg" />
+      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+        <div className="mb-8 h-40 rounded-card border border-gray-200/70 bg-white shadow-card" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-card border border-gray-200/70 bg-white p-5 shadow-card">
+              <div className="space-y-2.5">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
-        <p>No se pudo cargar el análisis.</p>
+      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+        <div className="rounded-card border border-gray-200/70 bg-white shadow-card">
+          <EmptyState
+            illustration={<SceneSearchEmpty size={200} className="cx-float" />}
+            title="No se pudo cargar el análisis"
+            description="Vuelve a intentarlo o regresa al curso."
+            action={
+              <Link
+                href={`/profesor/cursos/${courseId}`}
+                className={buttonClasses({ variant: 'secondary', className: 'cx-press' })}
+              >
+                <ArrowLeft className="w-4 h-4" /> Volver al curso
+              </Link>
+            }
+          />
+        </div>
       </div>
     );
   }
 
   const { course, totalStudents, totalExercises, studentProgress, exerciseStats, gradeDistribution, overallStats } = data;
+  const totalGrades = exerciseStats.reduce((s, e) => s + e.graded, 0);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
 
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/profesor/cursos" className="hover:text-gray-700 flex items-center gap-1">
-          Mis Cursos
+      <div className="mb-5 flex items-center gap-2 text-sm text-gray-500">
+        <Link href="/profesor/cursos" className="transition-colors hover:text-gray-700">
+          Mis cursos
         </Link>
-        <span>/</span>
-        <Link href={`/profesor/cursos/${courseId}`} className="hover:text-gray-700 flex items-center gap-1">
-          <ArrowLeft className="w-3.5 h-3.5" /> {course.name}
+        <span className="text-gray-300">/</span>
+        <Link href={`/profesor/cursos/${courseId}`} className="flex items-center gap-1 transition-colors hover:text-gray-700">
+          {course.name}
         </Link>
-        <span>/</span>
-        <span className="text-gray-700 font-medium">Analytics</span>
+        <span className="text-gray-300">/</span>
+        <span className="font-medium text-gray-700">Analítica</span>
       </div>
 
-      {/* Page header */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 mb-6">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              {course.code && (
-                <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                  {course.code}
-                </span>
-              )}
-              {course.period && (
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
-                  {course.period}
-                </span>
-              )}
-            </div>
-            <h1 className="text-xl font-bold text-gray-900">{course.name}</h1>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-              <Activity className="w-3.5 h-3.5" />
-              Panel de análisis académico
-            </p>
-          </div>
+      <PageHeader
+        eyebrow="Analítica del curso"
+        title={course.name}
+        subtitle="Panel de análisis académico: progreso, notas y estado por ejercicio"
+        icon={Activity}
+        className="mb-6"
+        actions={
           <Link
             href={`/profesor/cursos/${courseId}`}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+            className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'cx-press' })}
           >
-            <ArrowLeft className="w-4 h-4" />
-            Volver al curso
+            <ArrowLeft className="w-4 h-4" /> Volver al curso
           </Link>
+        }
+      />
+
+      {/* Banda hero — identidad del curso */}
+      <div className="relative mb-8 overflow-hidden rounded-card shadow-soft lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+        <div aria-hidden className="pointer-events-none absolute right-6 bottom-4 hidden opacity-95 xl:block">
+          <ArtGrowth size={160} className="cx-float" />
+        </div>
+        <div className="relative p-6 lg:p-8">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            {course.code && (
+              <span className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-xs text-blue-100">
+                {course.code}
+              </span>
+            )}
+            {course.period && (
+              <span className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-blue-100">
+                {course.period}
+              </span>
+            )}
+          </div>
+          <h2 className="text-xl font-extrabold tracking-tight text-white lg:text-2xl">
+            Desempeño del grupo
+          </h2>
+          <p className="mt-1.5 max-w-md text-sm text-blue-200/80">
+            Cómo avanzan tus estudiantes y qué ejercicios les cuestan más.
+          </p>
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* ── KPIs ── */}
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label="Total Estudiantes"
-          value={totalStudents}
+          label="Estudiantes"
+          value={String(totalStudents)}
           icon={Users}
-          colorClass="bg-blue-50 text-blue-700"
-          sub={`${overallStats.studentsCompleted} completaron todo`}
+          tint="#2563EB"
+          hint={`${overallStats.studentsCompleted} completaron todo`}
+          className="cx-pop cx-d1"
         />
         <StatCard
-          label="Ejercicios Activos"
-          value={totalExercises}
+          label="Ejercicios activos"
+          value={String(totalExercises)}
           icon={FileText}
-          colorClass="bg-slate-100 text-slate-600"
-          sub={`${exerciseStats.reduce((s, e) => s + e.graded, 0)} calificaciones emitidas`}
+          tint="#1B2E6E"
+          hint={`${totalGrades} calificaciones emitidas`}
+          className="cx-pop cx-d2"
         />
         <StatCard
-          label="Promedio General"
+          label="Promedio general"
           value={overallStats.avgGrade !== null ? `${overallStats.avgGrade}%` : '—'}
           icon={BarChart2}
-          colorClass="bg-amber-50 text-amber-600"
-          sub="sobre ejercicios calificados"
+          tint="#B8860B"
+          hint="Sobre ejercicios calificados"
+          className="cx-pop cx-d3"
         />
         <StatCard
-          label="% Completado"
+          label="% completado"
           value={`${overallStats.avgCompletion}%`}
           icon={TrendingUp}
-          colorClass="bg-emerald-50 text-emerald-600"
-          sub={`${overallStats.studentsNotStarted} sin iniciar`}
+          tint="#059669"
+          hint={`${overallStats.studentsNotStarted} sin iniciar`}
+          className="cx-pop cx-d4"
         />
       </div>
 
-      {/* ── Two-column layout ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+      {/* ── Dos columnas ── */}
+      <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
 
-        {/* Grade Distribution Chart */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <BarChart2 className="w-4 h-4 text-blue-700" />
-            Distribución de Notas
-          </h2>
+        {/* Distribución de notas */}
+        <SectionCard
+          icon={BarChart2}
+          iconTint="#B8860B"
+          eyebrow="Calificaciones"
+          title="Distribución de notas"
+          className="cx-pop"
+        >
           <GradeDistributionChart dist={gradeDistribution} />
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
             {[
-              { label: 'A ≥90%', color: 'bg-emerald-500', count: gradeDistribution.A },
-              { label: 'B 80-89%', color: 'bg-green-400', count: gradeDistribution.B },
-              { label: 'C 70-79%', color: 'bg-yellow-400', count: gradeDistribution.C },
-              { label: 'D 60-69%', color: 'bg-orange-400', count: gradeDistribution.D },
-              { label: 'F <60%', color: 'bg-red-500', count: gradeDistribution.F },
+              { label: 'A ≥90%',   color: 'bg-emerald-600', count: gradeDistribution.A },
+              { label: 'B 80-89%', color: 'bg-blue-600',    count: gradeDistribution.B },
+              { label: 'C 70-79%', color: 'bg-gold-600',    count: gradeDistribution.C },
+              { label: 'D 60-69%', color: 'bg-amber-500',   count: gradeDistribution.D },
+              { label: 'F <60%',   color: 'bg-red-600',     count: gradeDistribution.F },
             ].map(({ label, color, count }) => (
-              <span key={label} className="flex items-center gap-1">
-                <span className={`w-2.5 h-2.5 rounded-sm inline-block ${color}`} />
+              <span key={label} className="flex items-center gap-1 tabular-nums">
+                <span className={`inline-block h-2.5 w-2.5 rounded-sm ${color}`} />
                 {label} ({count})
               </span>
             ))}
           </div>
-        </div>
+        </SectionCard>
 
-        {/* Quick overview */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-blue-700" />
-            Resumen del Curso
-          </h2>
-          <div className="space-y-3">
+        {/* Resumen del curso */}
+        <SectionCard
+          icon={Activity}
+          iconTint="#2563EB"
+          eyebrow="Panorama"
+          title="Resumen del curso"
+          className="cx-pop cx-d2"
+        >
+          <div className="space-y-3.5">
             {[
               {
                 label: 'Completaron todos los ejercicios',
@@ -349,7 +383,7 @@ export default function CourseAnalyticsPage() {
                 label: 'Con al menos un ejercicio en progreso',
                 value: studentProgress.filter(sp => sp.exercisesInProgress > 0).length,
                 total: totalStudents,
-                color: 'bg-yellow-400',
+                color: 'bg-blue-600',
               },
               {
                 label: 'Sin iniciar ningún ejercicio',
@@ -361,89 +395,94 @@ export default function CourseAnalyticsPage() {
               const pct = total > 0 ? Math.round((value / total) * 100) : 0;
               return (
                 <div key={label}>
-                  <div className="flex items-center justify-between text-sm mb-1">
+                  <div className="mb-1 flex items-center justify-between text-sm">
                     <span className="text-gray-600">{label}</span>
-                    <span className="font-semibold text-gray-900">{value} <span className="text-gray-400 font-normal text-xs">/ {total}</span></span>
+                    <span className="font-semibold text-gray-900 tabular-nums">
+                      {value} <span className="text-xs font-normal text-gray-400">/ {total}</span>
+                    </span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+                  <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+                    <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="mt-5 pt-4 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
+          <div className="mt-5 grid grid-cols-3 gap-2 border-t border-gray-100 pt-4 text-center">
             <div>
-              <p className="text-xl font-bold text-gray-900 font-mono tabular-nums">{overallStats.avgCompletion}%</p>
+              <p className="text-xl font-extrabold text-gray-900 tabular-nums">{overallStats.avgCompletion}%</p>
               <p className="text-xs text-gray-400">Compl. prom.</p>
             </div>
             <div>
-              <p className={`text-xl font-bold font-mono tabular-nums ${gradeColor(overallStats.avgGrade)}`}>
+              <p className={`text-xl font-extrabold tabular-nums ${gradeColor(overallStats.avgGrade)}`}>
                 {overallStats.avgGrade !== null ? `${overallStats.avgGrade}%` : '—'}
               </p>
               <p className="text-xs text-gray-400">Nota prom.</p>
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900 font-mono tabular-nums">
-                {exerciseStats.reduce((s, e) => s + e.graded, 0)}
-              </p>
+              <p className="text-xl font-extrabold text-gray-900 tabular-nums">{totalGrades}</p>
               <p className="text-xs text-gray-400">Calificaciones</p>
             </div>
           </div>
-        </div>
+        </SectionCard>
       </div>
 
-      {/* ── Student Progress Table ── */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Users className="w-4 h-4 text-blue-700" />
-            Progreso por Estudiante
-          </h2>
-          <span className="text-xs text-gray-400">{studentProgress.length} estudiante{studentProgress.length !== 1 ? 's' : ''}</span>
-        </div>
-
+      {/* ── Progreso por estudiante ── */}
+      <SectionCard
+        icon={Users}
+        iconTint="#2563EB"
+        eyebrow="Seguimiento individual"
+        title="Progreso por estudiante"
+        flushBody
+        className="mb-6 cx-pop"
+        action={
+          <span className="text-xs text-gray-400 tabular-nums">
+            {studentProgress.length} estudiante{studentProgress.length !== 1 ? 's' : ''}
+          </span>
+        }
+      >
         {studentProgress.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
-            <Users className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-            <p className="text-sm font-medium">No hay estudiantes inscritos</p>
-          </div>
+          <EmptyState
+            illustration={<SceneEmptyBox size={190} className="cx-float" />}
+            title="No hay estudiantes inscritos"
+            description="Inscribe estudiantes en el curso para ver su progreso aquí."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
+              <thead className="border-b border-gray-100 bg-gray-50/70 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="text-left px-5 py-3 min-w-[200px]">Nombre / Email</th>
-                  <th className="text-center px-4 py-3 min-w-[150px]">Progreso</th>
-                  <th className="text-center px-4 py-3 hidden sm:table-cell">En Progreso</th>
-                  <th className="text-center px-4 py-3">Calificación</th>
-                  <th className="text-center px-4 py-3 hidden md:table-cell">Última Actividad</th>
-                  <th className="text-center px-4 py-3">Estado</th>
+                  <th className="min-w-[200px] px-5 py-3 text-left">Nombre / correo</th>
+                  <th className="min-w-[150px] px-4 py-3 text-center">Progreso</th>
+                  <th className="hidden px-4 py-3 text-center sm:table-cell">En progreso</th>
+                  <th className="px-4 py-3 text-center">Calificación</th>
+                  <th className="hidden px-4 py-3 text-center md:table-cell">Última actividad</th>
+                  <th className="px-4 py-3 text-center">Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {studentProgress.map((sp) => (
-                  <tr key={sp.studentId} className="hover:bg-gray-50 transition-colors">
-                    {/* Name / Email */}
+                  <tr key={sp.studentId} className="transition-colors hover:bg-blue-50/50">
+                    {/* Nombre / correo */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-sm font-bold text-blue-700">
                           {sp.studentName.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-800 truncate max-w-[160px]">{sp.studentName}</p>
-                          <p className="text-xs text-gray-400 truncate max-w-[160px]">{sp.email}</p>
+                          <p className="max-w-[160px] truncate font-medium text-gray-800">{sp.studentName}</p>
+                          <p className="max-w-[160px] truncate text-xs text-gray-400">{sp.email}</p>
                         </div>
                       </div>
                     </td>
 
-                    {/* Progress mini-bar */}
+                    {/* Barra de progreso */}
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden min-w-[60px]">
+                        <div className="h-2 min-w-[60px] flex-1 overflow-hidden rounded-full bg-gray-100">
                           <div
-                            className={`h-full rounded-full transition-all ${
+                            className={`h-full rounded-full transition-all duration-500 ${
                               sp.completionPct === 100
                                 ? 'bg-emerald-500'
                                 : sp.completionPct > 0
@@ -453,28 +492,28 @@ export default function CourseAnalyticsPage() {
                             style={{ width: `${sp.completionPct}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-500 flex-shrink-0 font-mono">
+                        <span className="flex-shrink-0 text-xs text-gray-500 tabular-nums">
                           {sp.exercisesCompleted}/{sp.exercisesTotal}
                         </span>
                       </div>
                     </td>
 
-                    {/* In progress badge */}
-                    <td className="px-4 py-4 text-center hidden sm:table-cell">
+                    {/* En progreso */}
+                    <td className="hidden px-4 py-4 text-center sm:table-cell">
                       {sp.exercisesInProgress > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-50 border border-yellow-200 text-yellow-700 text-xs font-medium rounded-full">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-gold-100 bg-gold-50 px-2 py-0.5 text-xs font-semibold text-gold-900 tabular-nums">
                           <Clock className="w-3 h-3" />
                           {sp.exercisesInProgress}
                         </span>
                       ) : (
-                        <span className="text-gray-300 text-xs">—</span>
+                        <span className="text-xs text-gray-300">—</span>
                       )}
                     </td>
 
-                    {/* Average grade */}
+                    {/* Nota promedio */}
                     <td className="px-4 py-4 text-center">
                       {sp.averageGrade !== null ? (
-                        <span className={`font-bold ${gradeColor(sp.averageGrade)}`}>
+                        <span className={`font-bold tabular-nums ${gradeColor(sp.averageGrade)}`}>
                           {sp.averageGrade}%
                         </span>
                       ) : (
@@ -482,19 +521,19 @@ export default function CourseAnalyticsPage() {
                       )}
                     </td>
 
-                    {/* Last activity */}
-                    <td className="px-4 py-4 text-center text-xs text-gray-400 hidden md:table-cell">
+                    {/* Última actividad */}
+                    <td className="hidden px-4 py-4 text-center text-xs text-gray-400 md:table-cell">
                       <span className="flex items-center justify-center gap-1">
                         <Clock className="w-3 h-3" />
                         {relativeDate(sp.lastActivity)}
                       </span>
                     </td>
 
-                    {/* Status dot */}
+                    {/* Estado */}
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
                         {studentStatusDot(sp)}
-                        <span className="text-xs text-gray-500 hidden lg:inline">
+                        <span className="hidden text-xs text-gray-500 lg:inline">
                           {sp.completionPct === 100
                             ? 'Listo'
                             : sp.exercisesInProgress > 0
@@ -509,47 +548,51 @@ export default function CourseAnalyticsPage() {
             </table>
           </div>
         )}
-      </div>
+      </SectionCard>
 
-      {/* ── Exercise Stats Table ── */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-blue-700" />
-            Estado por Ejercicio
-          </h2>
-          <span className="text-xs text-gray-400">{exerciseStats.length} ejercicio{exerciseStats.length !== 1 ? 's' : ''} publicados</span>
-        </div>
-
+      {/* ── Estado por ejercicio ── */}
+      <SectionCard
+        icon={BookOpen}
+        iconTint="#1B2E6E"
+        eyebrow="Por actividad"
+        title="Estado por ejercicio"
+        flushBody
+        className="cx-pop cx-d2"
+        action={
+          <span className="text-xs text-gray-400 tabular-nums">
+            {exerciseStats.length} publicado{exerciseStats.length !== 1 ? 's' : ''}
+          </span>
+        }
+      >
         {exerciseStats.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
-            <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-            <p className="text-sm font-medium">No hay ejercicios publicados</p>
-            <p className="text-xs text-gray-400 mt-1">Publica un ejercicio para ver estadísticas aquí</p>
-          </div>
+          <EmptyState
+            illustration={<ArtReport size={170} className="cx-float" />}
+            title="No hay ejercicios publicados"
+            description="Publica un ejercicio para ver sus estadísticas aquí."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
+              <thead className="border-b border-gray-100 bg-gray-50/70 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                  <th className="text-left px-5 py-3">Nombre del Ejercicio</th>
-                  <th className="text-center px-4 py-3">Total Intentos</th>
-                  <th className="text-center px-4 py-3">Enviados</th>
-                  <th className="text-center px-4 py-3">Calificados</th>
-                  <th className="text-center px-4 py-3">Sin Iniciar</th>
-                  <th className="text-center px-4 py-3">Promedio</th>
+                  <th className="px-5 py-3 text-left">Ejercicio</th>
+                  <th className="px-4 py-3 text-center">Total intentos</th>
+                  <th className="px-4 py-3 text-center">Enviados</th>
+                  <th className="px-4 py-3 text-center">Calificados</th>
+                  <th className="px-4 py-3 text-center">Sin iniciar</th>
+                  <th className="px-4 py-3 text-center">Promedio</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {exerciseStats.map((ex) => (
-                  <tr key={ex.exerciseId} className="hover:bg-gray-50 transition-colors">
+                  <tr key={ex.exerciseId} className="transition-colors hover:bg-blue-50/50">
                     <td className="px-5 py-4">
                       <p className="font-medium text-gray-800">{ex.exerciseName}</p>
                     </td>
-                    <td className="px-4 py-4 text-center text-gray-600">{ex.totalAttempts}</td>
+                    <td className="px-4 py-4 text-center text-gray-600 tabular-nums">{ex.totalAttempts}</td>
                     <td className="px-4 py-4 text-center">
                       {ex.submitted > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium rounded-full">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 tabular-nums">
                           {ex.submitted}
                         </span>
                       ) : (
@@ -558,7 +601,7 @@ export default function CourseAnalyticsPage() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       {ex.graded > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-medium rounded-full">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 tabular-nums">
                           <CheckCircle className="w-3 h-3" />
                           {ex.graded}
                         </span>
@@ -568,7 +611,7 @@ export default function CourseAnalyticsPage() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       {ex.notStarted > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 border border-gray-200 text-gray-500 text-xs font-medium rounded-full">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-500 tabular-nums">
                           <AlertCircle className="w-3 h-3" />
                           {ex.notStarted}
                         </span>
@@ -578,7 +621,7 @@ export default function CourseAnalyticsPage() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       {ex.averageGrade !== null ? (
-                        <span className={`font-bold ${gradeColor(ex.averageGrade)}`}>
+                        <span className={`font-bold tabular-nums ${gradeColor(ex.averageGrade)}`}>
                           {ex.averageGrade}%
                         </span>
                       ) : (
@@ -591,7 +634,7 @@ export default function CourseAnalyticsPage() {
             </table>
           </div>
         )}
-      </div>
+      </SectionCard>
     </div>
   );
 }

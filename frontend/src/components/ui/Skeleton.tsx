@@ -4,13 +4,15 @@ interface SkeletonProps {
   className?: string;
 }
 
+/**
+ * Bloque de carga. El brillo que recorre la superficie es `.cx-shimmer`
+ * (globals.css); se desactiva solo con `prefers-reduced-motion`, dejando el
+ * fondo gris estático.
+ */
 export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
-      className={cn(
-        'animate-pulse motion-reduce:animate-none rounded-lg bg-gradient-to-r from-gray-100 via-gray-200/70 to-gray-100',
-        className,
-      )}
+      className={cn('cx-shimmer rounded-lg bg-gray-200/70', className)}
       aria-hidden
     />
   );

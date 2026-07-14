@@ -101,7 +101,7 @@ export function SocraticTutorPanel({ attemptId, companyId }: { attemptId?: strin
       <div className="flex items-start gap-3.5 lp-in">
         <IconTile icon={GraduationCap} tint="#4F46E5" size={46} className="mt-0.5" />
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-700 mb-0.5">Tutor IA</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-900 mb-0.5">Tutor IA</p>
           <h2 className="text-lg font-bold text-gray-900 leading-tight">Profe socrático</h2>
           <p className="text-gray-500 text-sm mt-1 max-w-prose">
             El tutor detecta situaciones de aprendizaje mientras registrás operaciones y te
@@ -130,7 +130,7 @@ export function SocraticTutorPanel({ attemptId, companyId }: { attemptId?: strin
           {/* Respuesta del tutor */}
           {tutor && (
             <div className="mt-4 rounded-card bg-white p-4 lp-pop border-l-4 border-gold-500 shadow-soft">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-gold-700 flex items-center gap-1.5">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-gold-900 flex items-center gap-1.5">
                 <GraduationCap className="w-3.5 h-3.5" /> El tutor te pregunta
               </p>
               <p className="text-base font-bold text-gray-900 mt-1.5 leading-snug">{tutor.question}</p>
@@ -155,7 +155,7 @@ export function SocraticTutorPanel({ attemptId, companyId }: { attemptId?: strin
         </Card>
       ) : (
         <div className="flex flex-col gap-2.5">
-          <p className="text-xs font-semibold text-gold-700 uppercase tracking-wide">
+          <p className="text-xs font-semibold text-gold-900 uppercase tracking-wide">
             Observaciones del tutor <span className="text-gray-400 font-normal">({events.length})</span>
           </p>
           {events.map((ev, ei) => {

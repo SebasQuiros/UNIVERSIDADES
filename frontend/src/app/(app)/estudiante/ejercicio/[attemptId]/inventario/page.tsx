@@ -19,11 +19,16 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
-  ArrowLeft, Boxes, Layers, ArrowDownCircle, ArrowUpCircle, MinusCircle, X,
+  ArrowLeft, Boxes, Layers, ArrowDownCircle, ArrowUpCircle, MinusCircle, X, ChevronRight,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtInventory, SceneEmptyBox } from '@/components/illustrations';
 import { getErrorMessage } from '@/lib/utils';
 
 interface ValuationItem {
@@ -130,60 +135,93 @@ export default function InventarioPage() {
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50/60">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8 space-y-7">
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Link href={`/estudiante/ejercicio/${attemptId}`}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="w-4 h-4" /> Volver al ejercicio
-          </Link>
-        </div>
+        {/* Volver */}
+        <Link href={`/estudiante/ejercicio/${attemptId}`}
+          className="inline-flex items-center gap-2 -ml-1 text-sm font-medium text-gray-500 hover:text-blue-700 transition-colors cx-press">
+          <ArrowLeft className="w-4 h-4" /> Volver al ejercicio
+        </Link>
 
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Boxes className="w-6 h-6 text-blue-700" />
-              Inventario (FIFO)
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Lotes activos por producto y kardex de movimientos.
-            </p>
+        {/* Encabezado */}
+        <PageHeader
+          eyebrow="Costos e inventarios"
+          title="Inventario (FIFO)"
+          subtitle="Lotes activos por producto y kardex de movimientos."
+          icon={Boxes}
+          iconTint="#1B2E6E"
+          className="lp-in"
+        />
+
+        {/* Banda del módulo */}
+        <Card variant="onDark" className="cx-pop">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+                Primeras entradas, primeras salidas
+              </p>
+              <h2 className="text-lg font-bold leading-snug">Lo primero que entra es lo primero que se vende.</h2>
+              <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+                Cada venta consume los lotes más antiguos y define tu costo de ventas. Abre un producto
+                para ver sus lotes y su kardex.
+              </p>
+            </div>
+            <ArtInventory size={140} className="lp-drift flex-shrink-0" />
           </div>
-          {valuation && (
-            <Card className="px-5 py-3 text-right">
-              <div className="text-xs uppercase tracking-wide text-gray-500">Valor total al costo</div>
-              <div className="text-2xl font-bold text-gray-900 font-mono tabular-nums">
-                ₡ {fmtNum(valuation.total)}
-              </div>
-              <div className="text-xs text-gray-400">
-                Cuenta 1.1.03.01 · {valuation.items.length} producto(s)
-              </div>
-            </Card>
-          )}
-        </div>
+        </Card>
+
+        {/* Valuación total */}
+        {valuation && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <StatCard
+              label="Valor total al costo"
+              value={`₡ ${fmtNum(valuation.total)}`}
+              hint="Cuenta 1.1.03.01"
+              icon={Boxes}
+              tint="#1B2E6E"
+              className="cx-pop cx-d1 cx-lift cx-hop-parent"
+            />
+            <StatCard
+              label="Productos con stock"
+              value={String(valuation.items.length)}
+              hint="Con lotes activos"
+              icon={Layers}
+              tint="#2563EB"
+              className="cx-pop cx-d2 cx-lift cx-hop-parent"
+            />
+          </div>
+        )}
 
         {/* Tabla de productos */}
         {loading || !valuation ? (
           <div className="flex justify-center py-20"><Spinner /></div>
         ) : valuation.items.length === 0 ? (
-          <Card className="py-14 flex flex-col items-center text-gray-500">
-            <Boxes className="w-10 h-10 text-gray-300 mb-3" />
-            <div className="text-sm">Aún no hay inventario.</div>
-            <div className="text-xs text-gray-400 mt-1">
-              Las compras de proveedores con `lines` crearán los primeros lotes.
-            </div>
+          <Card className="cx-pop cx-d3">
+            <EmptyState
+              illustration={<SceneEmptyBox size={200} className="lp-drift" />}
+              title="Aún no hay inventario"
+              description="Las compras de proveedores con líneas de producto crearán los primeros lotes."
+              className="py-14"
+            />
           </Card>
         ) : (
-          <Card className="overflow-hidden">
+          <SectionCard
+            eyebrow="Valuación"
+            title="Productos en existencia"
+            description="Haz clic en un producto para ver sus lotes activos y su kardex."
+            icon={Layers}
+            iconTint="#2563EB"
+            flushBody
+            className="cx-pop cx-d3"
+          >
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600 uppercase text-[10px] tracking-wide">Producto</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-600 uppercase text-[10px] tracking-wide">SKU</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-600 uppercase text-[10px] tracking-wide">Stock</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-600 uppercase text-[10px] tracking-wide">Costo prom.</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-600 uppercase text-[10px] tracking-wide">Valor</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase text-[10px] tracking-wide">Producto</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-500 uppercase text-[10px] tracking-wide">SKU</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-500 uppercase text-[10px] tracking-wide">Stock</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-500 uppercase text-[10px] tracking-wide">Costo prom.</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-500 uppercase text-[10px] tracking-wide">Valor</th>
                   <th></th>
                 </tr>
               </thead>
@@ -192,40 +230,46 @@ export default function InventarioPage() {
                   <tr
                     key={item.productId}
                     onClick={() => openDetail(item)}
-                    className="cursor-pointer hover:bg-blue-50/40"
+                    className="group cx-hop-parent cx-press cursor-pointer hover:bg-blue-50/40 transition-colors"
                   >
                     <td className="px-4 py-3 font-medium text-gray-900">{item.productName}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{item.sku ?? '—'}</td>
-                    <td className="px-4 py-3 text-right font-mono">
+                    <td className="px-4 py-3 text-gray-500 text-xs font-mono">{item.sku ?? '—'}</td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums">
                       {fmtNum(item.qty, 3)} <span className="text-xs text-gray-400">{item.unit}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-700">₡ {fmtNum(item.avgUnitCost)}</td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold text-gray-900">₡ {fmtNum(item.cost)}</td>
-                    <td className="px-4 py-3 text-right text-blue-700 text-xs">Ver kardex →</td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-gray-700">₡ {fmtNum(item.avgUnitCost)}</td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums font-bold text-gray-900">₡ {fmtNum(item.cost)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-flex items-center gap-1 text-blue-700 text-xs font-semibold">
+                        Ver kardex <ChevronRight className="w-3.5 h-3.5 cx-hop" />
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </Card>
+          </SectionCard>
         )}
       </div>
 
       {/* Drawer de detalle */}
       {selected && (
         <div className="fixed inset-0 z-40 flex" onClick={() => setSelected(null)}>
-          <div className="flex-1 bg-black/30" />
+          <div className="flex-1 bg-csq-dark/40 backdrop-blur-[2px]" />
           <div
-            className="w-full max-w-2xl bg-white shadow-xl overflow-y-auto"
+            className="w-full max-w-2xl bg-white shadow-card-hover overflow-y-auto cx-pop"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-gray-900">{selected.productName}</div>
-                <div className="text-xs text-gray-500">
-                  Stock: {fmtNum(selected.qty, 3)} {selected.unit} · Costo prom. ₡ {fmtNum(selected.avgUnitCost)}
+            <div className="sticky top-0 z-10 bg-gradient-to-br from-csq-mid to-csq-active text-white px-6 py-5 flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-0.5">Kardex del producto</p>
+                <div className="font-bold text-lg truncate">{selected.productName}</div>
+                <div className="text-xs text-blue-200/80">
+                  Stock: <span className="font-mono tabular-nums">{fmtNum(selected.qty, 3)} {selected.unit}</span>
+                  {' · '}Costo prom. <span className="font-mono tabular-nums">₡ {fmtNum(selected.avgUnitCost)}</span>
                 </div>
               </div>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-700">
+              <button onClick={() => setSelected(null)} className="text-blue-200/80 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors cx-press">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -235,30 +279,30 @@ export default function InventarioPage() {
 
               {/* Lotes activos */}
               <section>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <h3 className="text-[0.68rem] font-bold text-gold-900 uppercase tracking-[0.13em] mb-2.5 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5" /> Lotes activos
                 </h3>
                 {!lots ? null : lots.length === 0 ? (
                   <div className="text-xs text-gray-400 py-3">Sin lotes activos.</div>
                 ) : (
-                  <table className="w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
-                    <thead className="bg-gray-50">
+                  <table className="w-full text-xs border border-gray-200 rounded-xl overflow-hidden">
+                    <thead className="bg-gray-50 text-gray-500 uppercase tracking-wide text-[10px] font-semibold">
                       <tr>
-                        <th className="px-2 py-1.5 text-left">Recibido</th>
-                        <th className="px-2 py-1.5 text-left">Origen</th>
-                        <th className="px-2 py-1.5 text-right">Original</th>
-                        <th className="px-2 py-1.5 text-right">Disponible</th>
-                        <th className="px-2 py-1.5 text-right">Costo unit.</th>
+                        <th className="px-2.5 py-2 text-left">Recibido</th>
+                        <th className="px-2.5 py-2 text-left">Origen</th>
+                        <th className="px-2.5 py-2 text-right">Original</th>
+                        <th className="px-2.5 py-2 text-right">Disponible</th>
+                        <th className="px-2.5 py-2 text-right">Costo unit.</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {lots.map(l => (
-                        <tr key={l.id}>
-                          <td className="px-2 py-1.5 text-gray-700">{new Date(l.receivedAt).toLocaleDateString('es-CR')}</td>
-                          <td className="px-2 py-1.5 text-gray-500">{l.source}</td>
-                          <td className="px-2 py-1.5 text-right font-mono">{fmtNum(l.qtyOriginal, 3)}</td>
-                          <td className="px-2 py-1.5 text-right font-mono font-semibold">{fmtNum(l.qtyRemaining, 3)}</td>
-                          <td className="px-2 py-1.5 text-right font-mono">₡ {fmtNum(l.unitCost)}</td>
+                        <tr key={l.id} className="hover:bg-blue-50/40 transition-colors">
+                          <td className="px-2.5 py-2 text-gray-700">{new Date(l.receivedAt).toLocaleDateString('es-CR')}</td>
+                          <td className="px-2.5 py-2 text-gray-500">{l.source}</td>
+                          <td className="px-2.5 py-2 text-right font-mono tabular-nums">{fmtNum(l.qtyOriginal, 3)}</td>
+                          <td className="px-2.5 py-2 text-right font-mono tabular-nums font-bold">{fmtNum(l.qtyRemaining, 3)}</td>
+                          <td className="px-2.5 py-2 text-right font-mono tabular-nums">₡ {fmtNum(l.unitCost)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -268,8 +312,8 @@ export default function InventarioPage() {
 
               {/* Kardex */}
               <section>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  Kardex
+                <h3 className="text-[0.68rem] font-bold text-gold-900 uppercase tracking-[0.13em] mb-2.5 flex items-center gap-1.5">
+                  Kardex de movimientos
                 </h3>
                 {!movs ? null : movs.length === 0 ? (
                   <div className="text-xs text-gray-400 py-3">Sin movimientos.</div>
@@ -280,22 +324,22 @@ export default function InventarioPage() {
                       const Icon  = badge.icon;
                       const qty   = Number(m.quantity);
                       return (
-                        <div key={m.id} className="flex items-center gap-3 p-2 border border-gray-100 rounded-lg">
-                          <div className={`px-1.5 py-1 rounded border ${badge.cls} flex items-center gap-1 text-[10px] font-bold uppercase`}>
-                            <Icon className="w-3 h-3" />
+                        <div key={m.id} className="cx-hop-parent flex items-center gap-3 p-2.5 border border-gray-100 rounded-xl hover:border-blue-200 hover:bg-blue-50/30 transition-colors">
+                          <div className={`px-1.5 py-1 rounded-lg border ${badge.cls} flex items-center gap-1 text-[10px] font-bold uppercase`}>
+                            <Icon className="w-3 h-3 cx-hop" />
                             {badge.label}
                           </div>
                           <div className="flex-1 text-xs text-gray-600">
                             {new Date(m.createdAt).toLocaleString('es-CR')}
                           </div>
-                          <div className={`text-xs font-mono ${qty < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                          <div className={`text-xs font-mono tabular-nums font-bold ${qty < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
                             {qty > 0 ? '+' : ''}{fmtNum(qty, 3)}
                           </div>
-                          <div className="text-xs text-gray-500 font-mono w-24 text-right">
+                          <div className="text-xs text-gray-500 font-mono tabular-nums w-24 text-right">
                             saldo {fmtNum(m.balanceAfter, 3)}
                           </div>
                           {m.totalCost != null && (
-                            <div className="text-xs text-gray-700 font-mono w-24 text-right">
+                            <div className="text-xs text-gray-700 font-mono tabular-nums w-24 text-right">
                               ₡ {fmtNum(m.totalCost)}
                             </div>
                           )}

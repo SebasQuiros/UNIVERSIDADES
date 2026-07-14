@@ -5,8 +5,15 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtInvoice, SceneEmptyBox } from '@/components/illustrations';
 import {
-  ArrowLeft, ShoppingCart, Plus, Trash2, RefreshCw,
+  ArrowLeft, ShoppingCart, Plus, RefreshCw,
   AlertTriangle, CheckCircle2, Info, TrendingDown, TrendingUp,
   FileText, Building2,
 } from 'lucide-react';
@@ -240,71 +247,75 @@ export default function ComprasPage() {
   const creditoTotal = summary?.liquidacion.creditoFiscal ?? 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/estudiante/ejercicio/${attemptId}`}
-              className="text-gray-400 hover:text-gray-700 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-emerald-600" />
-              <div>
-                <h1 className="text-base font-bold text-gray-900">Facturas de Compra</h1>
-                {company && (
-                  <p className="text-xs text-gray-500 flex items-center gap-1">
-                    <Building2 className="w-3 h-3" /> {company.name}
-                  </p>
-                )}
-              </div>
+    <div className="flex-1 overflow-y-auto bg-gray-50/60">
+      <div className="max-w-5xl mx-auto px-6 lg:px-10 py-8 space-y-7">
+
+        {/* Volver */}
+        <Link
+          href={`/estudiante/ejercicio/${attemptId}`}
+          className="inline-flex items-center gap-2 -ml-1 text-sm font-medium text-gray-500 hover:text-blue-700 transition-colors cx-press"
+        >
+          <ArrowLeft className="w-4 h-4" /> Volver al ejercicio
+        </Link>
+
+        {/* ── Encabezado ─────────────────────────────────────────────────── */}
+        <PageHeader
+          eyebrow="Crédito fiscal"
+          title="Facturas de compra"
+          subtitle={company ? `Empresa: ${company.name}` : 'Registra las facturas que recibes de tus proveedores.'}
+          icon={ShoppingCart}
+          iconTint="#1B2E6E"
+          className="lp-in"
+          actions={
+            <Button onClick={() => setShowForm(v => !v)} className="cx-press">
+              <Plus className="w-4 h-4" />
+              Nueva factura de compra
+            </Button>
+          }
+        />
+
+        {/* ── Banda del módulo (nota pedagógica) ─────────────────────────── */}
+        <Card variant="onDark" className="cx-pop">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+                ¿Qué es el crédito fiscal IVA?
+              </p>
+              <h2 className="text-lg font-bold leading-snug">El IVA que pagas se resta del IVA que cobras.</h2>
+              <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+                Cuando tu empresa compra bienes o servicios gravados, el IVA pagado se convierte en
+                <strong className="text-white"> crédito fiscal</strong> y se deduce del IVA cobrado a tus clientes en la
+                declaración D-104. Solo se acredita el IVA de facturas <em>electrónicas aceptadas</em> por Hacienda.
+              </p>
             </div>
+            <ArtInvoice size={140} className="lp-drift flex-shrink-0" />
           </div>
-          <button
-            onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Nueva Factura de Compra
-          </button>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-
-        {/* ── Educational banner ────────────────────────────────────────── */}
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-3">
-          <Info className="w-5 h-5 text-blue-700 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-bold text-blue-800">¿Qué es el Crédito Fiscal IVA?</p>
-            <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-              Cuando tu empresa compra bienes o servicios gravados con IVA, el monto pagado se convierte en un
-              <strong> crédito fiscal</strong> que se deduce del IVA cobrado a tus clientes en la declaración D-104.
-              Solo se puede acreditar el IVA de facturas <em>electrónicas aceptadas</em> por Hacienda.
-            </p>
-          </div>
-        </div>
+          {company && (
+            <div className="flex items-center gap-2 px-6 lg:px-7 py-3 border-t border-white/10 text-xs text-blue-100/80">
+              <Building2 className="w-3.5 h-3.5" /> {company.name}
+            </div>
+          )}
+        </Card>
 
         {/* ── New invoice form ──────────────────────────────────────────── */}
         {showForm && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-600" />
-                Registrar Factura de Compra
-              </h2>
+          <SectionCard
+            eyebrow="Nuevo registro"
+            title="Registrar factura de compra"
+            icon={FileText}
+            iconTint="#2563EB"
+            flushBody
+            className="cx-pop"
+            action={
               <button
                 onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600 text-xs"
+                className="text-gray-400 hover:text-gray-600 text-xs font-semibold cx-press"
               >
                 Cancelar
               </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            }
+          >
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {/* Proveedor */}
@@ -316,7 +327,7 @@ export default function ComprasPage() {
                     type="text" value={form.supplierName}
                     onChange={e => setField('supplierName', e.target.value)}
                     placeholder="Ej. Distribuidora ABC S.A."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     required
                   />
                 </div>
@@ -330,7 +341,7 @@ export default function ComprasPage() {
                     type="text" value={form.supplierCedula}
                     onChange={e => setField('supplierCedula', e.target.value)}
                     placeholder="3-101-000000"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                   />
                 </div>
 
@@ -343,7 +354,7 @@ export default function ComprasPage() {
                     type="text" value={form.invoiceNumber}
                     onChange={e => setField('invoiceNumber', e.target.value)}
                     placeholder="FE-001-000000001"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     required
                   />
                 </div>
@@ -356,7 +367,7 @@ export default function ComprasPage() {
                   <input
                     type="date" value={form.date}
                     onChange={e => setField('date', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     required
                   />
                 </div>
@@ -372,7 +383,7 @@ export default function ComprasPage() {
                       type="number" min="0.01" step="0.01" value={form.subtotal}
                       onChange={e => setField('subtotal', e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-7 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                      className="w-full pl-7 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-mono tabular-nums bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                       required
                     />
                   </div>
@@ -386,7 +397,7 @@ export default function ComprasPage() {
                   <select
                     value={form.taxRate}
                     onChange={e => setField('taxRate', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                   >
                     {TAX_RATES.map(r => (
                       <option key={r.value} value={r.value}>{r.label}</option>
@@ -404,58 +415,60 @@ export default function ComprasPage() {
                   type="text" value={form.description}
                   onChange={e => setField('description', e.target.value)}
                   placeholder="Ej. Compra de mercadería para reventa"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                 />
               </div>
 
               {/* IVA calculado — readonly */}
-              <div className="grid grid-cols-3 gap-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-5 rounded-2xl bg-gradient-to-br from-csq-mid to-csq-active text-white shadow-soft">
                 <div>
-                  <p className="text-xs text-emerald-600 font-semibold uppercase tracking-wide">Subtotal</p>
-                  <p className="text-lg font-bold text-emerald-900 font-mono">₡ {fmtMoney(subtotalNum)}</p>
+                  <p className="text-[0.68rem] text-blue-200/80 font-bold uppercase tracking-[0.13em]">Subtotal</p>
+                  <p className="text-lg font-extrabold font-mono tabular-nums mt-0.5">₡ {fmtMoney(subtotalNum)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-emerald-600 font-semibold uppercase tracking-wide">
-                    IVA ({(taxRateNum * 100).toFixed(0)}%) — Crédito Fiscal
+                  <p className="text-[0.68rem] text-gold-500 font-bold uppercase tracking-[0.13em]">
+                    IVA ({(taxRateNum * 100).toFixed(0)}%) — Crédito fiscal
                   </p>
-                  <p className="text-lg font-bold text-emerald-700 font-mono">₡ {fmtMoney(taxAmount)}</p>
+                  <p className="text-lg font-extrabold font-mono tabular-nums mt-0.5 cx-count">₡ {fmtMoney(taxAmount)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-emerald-600 font-semibold uppercase tracking-wide">Total factura</p>
-                  <p className="text-lg font-bold text-emerald-900 font-mono">₡ {fmtMoney(total)}</p>
+                  <p className="text-[0.68rem] text-blue-200/80 font-bold uppercase tracking-[0.13em]">Total factura</p>
+                  <p className="text-lg font-extrabold font-mono tabular-nums mt-0.5">₡ {fmtMoney(total)}</p>
                 </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+                  className="cx-press"
                 >
                   Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                >
+                </Button>
+                <Button type="submit" disabled={saving} className="cx-press">
                   {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  {saving ? 'Guardando...' : 'Registrar Factura'}
-                </button>
+                  {saving ? 'Guardando...' : 'Registrar factura'}
+                </Button>
               </div>
             </form>
-          </div>
+          </SectionCard>
         )}
 
         {/* ── Period selector + IVA Summary ─────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-800">Resumen IVA del Período</h2>
+        <SectionCard
+          eyebrow="Liquidación D-104"
+          title="Resumen de IVA del período"
+          icon={FileText}
+          iconTint="#B8860B"
+          flushBody
+          className="cx-pop cx-d1"
+          action={
             <div className="flex items-center gap-2">
               <select
                 value={selectedMonth}
                 onChange={e => setSelectedMonth(Number(e.target.value))}
-                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300"
               >
                 {MONTHS.map((m, i) => (
                   <option key={i + 1} value={i + 1}>{m}</option>
@@ -464,7 +477,7 @@ export default function ComprasPage() {
               <select
                 value={selectedYear}
                 onChange={e => setSelectedYear(Number(e.target.value))}
-                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="border border-gray-200 rounded-xl px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300"
               >
                 {Array.from({ length: 5 }, (_, i) => now.getFullYear() - i).map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -473,70 +486,66 @@ export default function ComprasPage() {
               <button
                 onClick={loadSummary}
                 disabled={loadingSummary}
-                className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                className="p-1.5 text-gray-400 hover:text-blue-700 rounded-lg hover:bg-gray-100 transition-colors cx-press"
+                title="Actualizar resumen"
               >
                 <RefreshCw className={`w-4 h-4 ${loadingSummary ? 'animate-spin' : ''}`} />
               </button>
             </div>
-          </div>
-
+          }
+        >
           {summary ? (
-            <div className="p-5 space-y-4">
+            <div className="p-6 space-y-5">
               {/* Row: Debitos / Creditos / Resultado */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* IVA en ventas */}
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-blue-700" />
-                    <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">IVA en Ventas (Casilla 301)</p>
-                  </div>
-                  <p className="text-2xl font-black text-blue-800 font-mono tabular-nums">
-                    ₡ {fmtMoney(debitoTotal)}
-                  </p>
-                  <p className="text-xs text-blue-700 mt-1">Débito fiscal del período</p>
-                </div>
+                <StatCard
+                  label="IVA en ventas (casilla 301)"
+                  value={`₡ ${fmtMoney(debitoTotal)}`}
+                  hint="Débito fiscal del período"
+                  icon={TrendingUp}
+                  tint="#2563EB"
+                  className="cx-pop cx-d1 cx-lift cx-hop-parent"
+                />
 
                 {/* IVA acreditable */}
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingDown className="w-4 h-4 text-emerald-600" />
-                    <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">IVA Acreditable (Casilla 302)</p>
-                  </div>
-                  <p className="text-2xl font-black text-emerald-800 font-mono">
-                    ₡ {fmtMoney(creditoTotal)}
-                  </p>
-                  <p className="text-xs text-emerald-600 mt-1">Crédito fiscal de compras</p>
-                </div>
+                <StatCard
+                  label="IVA acreditable (casilla 302)"
+                  value={`₡ ${fmtMoney(creditoTotal)}`}
+                  hint="Crédito fiscal de compras"
+                  icon={TrendingDown}
+                  tint="#16A34A"
+                  className="cx-pop cx-d2 cx-lift cx-hop-parent"
+                />
 
                 {/* Resultado */}
                 {ivaAPagar > 0 ? (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-red-600" />
-                      <p className="text-xs font-bold text-red-700 uppercase tracking-wide">IVA a Pagar (Casilla 304)</p>
-                    </div>
-                    <p className="text-2xl font-black text-red-700 font-mono">
-                      ₡ {fmtMoney(ivaAPagar)}
-                    </p>
-                    <p className="text-xs text-red-600 mt-1">A cancelar a Hacienda antes del día 15</p>
-                  </div>
+                  <StatCard
+                    label="IVA a pagar (casilla 304)"
+                    value={`₡ ${fmtMoney(ivaAPagar)}`}
+                    hint="A cancelar a Hacienda antes del día 15"
+                    icon={AlertTriangle}
+                    tint="#EF4444"
+                    className="cx-pop cx-d3 cx-lift cx-hop-parent"
+                  />
                 ) : saldoAFavor > 0 ? (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-100 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                      <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Saldo a Favor (Casilla 305)</p>
-                    </div>
-                    <p className="text-2xl font-black text-emerald-800 font-mono">
-                      ₡ {fmtMoney(saldoAFavor)}
-                    </p>
-                    <p className="text-xs text-emerald-600 mt-1">Se arrastra al siguiente período</p>
-                  </div>
+                  <StatCard
+                    label="Saldo a favor (casilla 305)"
+                    value={`₡ ${fmtMoney(saldoAFavor)}`}
+                    hint="Se arrastra al siguiente período"
+                    icon={CheckCircle2}
+                    tint="#16A34A"
+                    className="cx-pop cx-d3 cx-lift cx-hop-parent"
+                  />
                 ) : (
-                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Resultado</p>
-                    <p className="text-2xl font-black text-gray-400 font-mono">₡ 0.00</p>
-                    <p className="text-xs text-gray-400 mt-1">Sin movimientos en el período</p>
-                  </div>
+                  <StatCard
+                    label="Resultado"
+                    value="₡ 0.00"
+                    hint="Sin movimientos en el período"
+                    icon={Info}
+                    tint="#94A3B8"
+                    className="cx-pop cx-d3 cx-lift cx-hop-parent"
+                  />
                 )}
               </div>
 
@@ -544,15 +553,17 @@ export default function ComprasPage() {
               {(debitoTotal > 0 || creditoTotal > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Ventas por tarifa */}
-                  <div>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Ventas por tarifa</p>
+                  <div className="rounded-2xl border border-gray-200/70 overflow-hidden">
+                    <p className="text-[0.68rem] font-bold text-gold-900 uppercase tracking-[0.13em] px-3 py-2.5 bg-gray-50 border-b border-gray-100">
+                      Ventas por tarifa
+                    </p>
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="bg-gray-50">
-                          <th className="text-left px-2 py-1.5 text-gray-600">Casilla</th>
-                          <th className="text-left px-2 py-1.5 text-gray-600">Tarifa</th>
-                          <th className="text-right px-2 py-1.5 text-gray-600">Base</th>
-                          <th className="text-right px-2 py-1.5 text-gray-600">IVA</th>
+                        <tr className="bg-white border-b border-gray-100">
+                          <th className="text-left px-3 py-2 text-gray-500 font-semibold uppercase tracking-wide text-[10px]">Casilla</th>
+                          <th className="text-left px-3 py-2 text-gray-500 font-semibold uppercase tracking-wide text-[10px]">Tarifa</th>
+                          <th className="text-right px-3 py-2 text-gray-500 font-semibold uppercase tracking-wide text-[10px]">Base</th>
+                          <th className="text-right px-3 py-2 text-gray-500 font-semibold uppercase tracking-wide text-[10px]">IVA</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -564,31 +575,33 @@ export default function ComprasPage() {
                           { cas: '105', ...summary.debitosFiscales.casilla105 },
                           { cas: '106', ...summary.debitosFiscales.casilla106 },
                         ].filter(r => r.base > 0 || r.iva > 0).map(r => (
-                          <tr key={r.cas}>
-                            <td className="px-2 py-1.5 font-mono text-gray-400">{r.cas}</td>
-                            <td className="px-2 py-1.5 text-gray-700">{r.tasa}%</td>
-                            <td className="px-2 py-1.5 text-right font-mono text-gray-800">₡ {fmtMoney(r.base)}</td>
-                            <td className="px-2 py-1.5 text-right font-mono text-blue-700 font-semibold">₡ {fmtMoney(r.iva)}</td>
+                          <tr key={r.cas} className="hover:bg-blue-50/40 transition-colors">
+                            <td className="px-3 py-2 font-mono text-gray-400">{r.cas}</td>
+                            <td className="px-3 py-2 text-gray-700 tabular-nums">{r.tasa}%</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-800">₡ {fmtMoney(r.base)}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-blue-700 font-bold">₡ {fmtMoney(r.iva)}</td>
                           </tr>
                         ))}
-                        <tr className="bg-blue-50 font-bold">
-                          <td colSpan={3} className="px-2 py-1.5 text-blue-700">Cas. 301 — Total débito fiscal</td>
-                          <td className="px-2 py-1.5 text-right font-mono text-blue-800">₡ {fmtMoney(debitoTotal)}</td>
+                        <tr className="bg-blue-50 font-bold border-t border-blue-100">
+                          <td colSpan={3} className="px-3 py-2 text-blue-700">Cas. 301 — Total débito fiscal</td>
+                          <td className="px-3 py-2 text-right font-mono tabular-nums text-blue-800">₡ {fmtMoney(debitoTotal)}</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
 
                   {/* Compras por tarifa */}
-                  <div>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Compras por tarifa (Crédito Fiscal)</p>
+                  <div className="rounded-2xl border border-gray-200/70 overflow-hidden">
+                    <p className="text-[0.68rem] font-bold text-gold-900 uppercase tracking-[0.13em] px-3 py-2.5 bg-gray-50 border-b border-gray-100">
+                      Compras por tarifa (crédito fiscal)
+                    </p>
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="bg-gray-50">
-                          <th className="text-left px-2 py-1.5 text-gray-600">Casilla</th>
-                          <th className="text-left px-2 py-1.5 text-gray-600">Tarifa</th>
-                          <th className="text-right px-2 py-1.5 text-gray-600">Base</th>
-                          <th className="text-right px-2 py-1.5 text-gray-600">IVA</th>
+                        <tr className="bg-white border-b border-gray-100">
+                          <th className="text-left px-3 py-2 text-gray-500 font-semibold uppercase tracking-wide text-[10px]">Casilla</th>
+                          <th className="text-left px-3 py-2 text-gray-500 font-semibold uppercase tracking-wide text-[10px]">Tarifa</th>
+                          <th className="text-right px-3 py-2 text-gray-500 font-semibold uppercase tracking-wide text-[10px]">Base</th>
+                          <th className="text-right px-3 py-2 text-gray-500 font-semibold uppercase tracking-wide text-[10px]">IVA</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -599,16 +612,16 @@ export default function ComprasPage() {
                           { cas: '204', ...summary.creditosFiscales.casilla204 },
                           { cas: '205', ...summary.creditosFiscales.casilla205 },
                         ].filter(r => r.base > 0 || r.iva > 0).map(r => (
-                          <tr key={r.cas}>
-                            <td className="px-2 py-1.5 font-mono text-gray-400">{r.cas}</td>
-                            <td className="px-2 py-1.5 text-gray-700">{r.tasa}%</td>
-                            <td className="px-2 py-1.5 text-right font-mono text-gray-800">₡ {fmtMoney(r.base)}</td>
-                            <td className="px-2 py-1.5 text-right font-mono text-emerald-700 font-semibold">₡ {fmtMoney(r.iva)}</td>
+                          <tr key={r.cas} className="hover:bg-emerald-50/40 transition-colors">
+                            <td className="px-3 py-2 font-mono text-gray-400">{r.cas}</td>
+                            <td className="px-3 py-2 text-gray-700 tabular-nums">{r.tasa}%</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-800">₡ {fmtMoney(r.base)}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-emerald-700 font-bold">₡ {fmtMoney(r.iva)}</td>
                           </tr>
                         ))}
-                        <tr className="bg-emerald-50 font-bold">
-                          <td colSpan={3} className="px-2 py-1.5 text-emerald-700">Cas. 302 — Total crédito fiscal</td>
-                          <td className="px-2 py-1.5 text-right font-mono text-emerald-800">₡ {fmtMoney(creditoTotal)}</td>
+                        <tr className="bg-emerald-50 font-bold border-t border-emerald-100">
+                          <td colSpan={3} className="px-3 py-2 text-emerald-700">Cas. 302 — Total crédito fiscal</td>
+                          <td className="px-3 py-2 text-right font-mono tabular-nums text-emerald-800">₡ {fmtMoney(creditoTotal)}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -618,99 +631,114 @@ export default function ComprasPage() {
 
               {/* Suggested closing journal entry */}
               {summary.asientoCierre && (
-                <div className="border border-amber-200 bg-amber-50 rounded-xl p-4">
-                  <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <div className="border border-gold-100 bg-gold-50 rounded-2xl p-5">
+                  <p className="text-[0.68rem] font-bold text-gold-900 uppercase tracking-[0.13em] mb-2 flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5" />
-                    Asiento de Liquidación D-104 Sugerido
+                    Asiento de liquidación D-104 sugerido
                   </p>
-                  <p className="text-xs text-amber-700 mb-3">{summary.asientoCierre.descripcion}</p>
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-amber-100">
-                        <th className="text-left px-2 py-1.5 text-amber-800">Cuenta</th>
-                        <th className="text-left px-2 py-1.5 text-amber-800">Descripción</th>
-                        <th className="text-right px-2 py-1.5 text-amber-800">Débito</th>
-                        <th className="text-right px-2 py-1.5 text-amber-800">Crédito</th>
+                  <p className="text-xs text-gold-900/80 mb-3">{summary.asientoCierre.descripcion}</p>
+                  <table className="w-full text-xs bg-white rounded-xl overflow-hidden border border-gold-100">
+                    <thead className="bg-gold-50">
+                      <tr>
+                        <th className="text-left px-3 py-2 text-gold-900 font-bold uppercase tracking-wide text-[10px]">Cuenta</th>
+                        <th className="text-left px-3 py-2 text-gold-900 font-bold uppercase tracking-wide text-[10px]">Descripción</th>
+                        <th className="text-right px-3 py-2 text-gold-900 font-bold uppercase tracking-wide text-[10px]">Débito</th>
+                        <th className="text-right px-3 py-2 text-gold-900 font-bold uppercase tracking-wide text-[10px]">Crédito</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-amber-100">
+                    <tbody className="divide-y divide-gray-100">
                       {summary.asientoCierre.lineas.map((l, i) => (
                         <tr key={i}>
-                          <td className="px-2 py-1.5 font-mono text-amber-900">{l.cuenta}</td>
-                          <td className="px-2 py-1.5 text-amber-800">{l.descripcion}</td>
-                          <td className="px-2 py-1.5 text-right font-mono">
-                            {l.tipo === 'debito' ? <span className="text-blue-700 font-semibold">₡ {fmtMoney(l.monto)}</span> : <span className="text-gray-300">—</span>}
+                          <td className="px-3 py-2 font-mono text-gray-800">{l.cuenta}</td>
+                          <td className="px-3 py-2 text-gray-700">{l.descripcion}</td>
+                          <td className="px-3 py-2 text-right font-mono tabular-nums">
+                            {l.tipo === 'debito' ? <span className="text-blue-700 font-bold">₡ {fmtMoney(l.monto)}</span> : <span className="text-gray-300">—</span>}
                           </td>
-                          <td className="px-2 py-1.5 text-right font-mono">
-                            {l.tipo === 'credito' ? <span className="text-emerald-700 font-semibold">₡ {fmtMoney(l.monto)}</span> : <span className="text-gray-300">—</span>}
+                          <td className="px-3 py-2 text-right font-mono tabular-nums">
+                            {l.tipo === 'credito' ? <span className="text-emerald-700 font-bold">₡ {fmtMoney(l.monto)}</span> : <span className="text-gray-300">—</span>}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  <p className="text-xs text-amber-600 mt-2">
+                  <p className="text-xs text-gold-900/70 mt-2.5">
                     * Registra este asiento en el módulo de Diario Contable para completar la liquidación del IVA del período.
                   </p>
                 </div>
               )}
             </div>
           ) : (
-            <div className="p-5 text-center text-gray-400 text-sm">
+            <div className="p-6">
               {loadingSummary ? (
-                <RefreshCw className="w-5 h-5 animate-spin mx-auto" />
+                <div className="py-8 text-center">
+                  <RefreshCw className="w-5 h-5 animate-spin mx-auto text-gray-400" />
+                </div>
               ) : (
-                'No hay datos para el período seleccionado'
+                <EmptyState
+                  illustration={<SceneEmptyBox size={180} className="lp-drift" />}
+                  title="Sin datos en el período"
+                  description="No hay movimientos de IVA para el mes y año seleccionados. Cambia el período o registra una factura de compra."
+                  className="py-8"
+                />
               )}
             </div>
           )}
-        </div>
+        </SectionCard>
 
         {/* ── Invoices table ────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-800">
-              Facturas de Compra Registradas
-              <span className="ml-2 text-xs font-normal text-gray-400">({invoices.length})</span>
-            </h2>
+        <SectionCard
+          eyebrow="Historial"
+          title="Facturas de compra registradas"
+          description={`${invoices.length} ${invoices.length === 1 ? 'factura' : 'facturas'} en el libro de compras.`}
+          icon={ShoppingCart}
+          iconTint="#2563EB"
+          flushBody
+          className="cx-pop cx-d2"
+          action={
             <button
               onClick={loadInvoices}
-              className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 text-gray-400 hover:text-blue-700 rounded-lg hover:bg-gray-100 transition-colors cx-press"
+              title="Actualizar facturas"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-          </div>
-
+          }
+        >
           {loading ? (
             <div className="p-8 text-center">
               <RefreshCw className="w-6 h-6 animate-spin text-gray-400 mx-auto" />
               <p className="text-sm text-gray-400 mt-2">Cargando facturas...</p>
             </div>
           ) : invoices.length === 0 ? (
-            <div className="p-8 text-center">
-              <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-              <p className="text-sm font-medium text-gray-500">Aún no hay facturas de compra registradas</p>
-              <p className="text-xs text-gray-400 mt-1">
-                Haz clic en <strong>Nueva Factura de Compra</strong> para comenzar.
-              </p>
-            </div>
+            <EmptyState
+              illustration={<ArtInvoice size={190} className="lp-drift" />}
+              title="Aún no hay facturas de compra"
+              description="Registra la primera factura que te emitió un proveedor para empezar a acumular crédito fiscal."
+              action={
+                <Button onClick={() => setShowForm(true)} className="cx-press">
+                  <Plus className="w-4 h-4" /> Registra tu primera compra
+                </Button>
+              }
+              className="py-14"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Proveedor</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">N° Factura</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fecha</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subtotal</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tasa</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">IVA (Crédito)</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Proveedor</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">N° Factura</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Fecha</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Subtotal</th>
+                    <th className="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Tasa</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">IVA (Crédito)</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Total</th>
+                    <th className="text-center px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-100">
                   {invoices.map(inv => (
-                    <tr key={inv.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={inv.id} className="hover:bg-blue-50/40 transition-colors">
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900 text-xs">{inv.supplierName}</p>
                         {inv.supplierCedula && (
@@ -719,18 +747,18 @@ export default function ComprasPage() {
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-gray-700">{inv.invoiceNumber}</td>
                       <td className="px-4 py-3 text-xs text-gray-600">{fmtDate(inv.date)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs text-gray-800">
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-xs text-gray-800">
                         ₡ {fmtMoney(inv.subtotal)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-block bg-emerald-50 text-emerald-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                        <span className="inline-block bg-blue-50 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
                           {(Number(inv.taxRate) * 100).toFixed(0)}%
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs font-semibold text-emerald-700">
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-xs font-bold text-emerald-700">
                         ₡ {fmtMoney(inv.taxAmount)}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-xs font-bold text-gray-900">
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-xs font-bold text-gray-900">
                         ₡ {fmtMoney(inv.total)}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -750,7 +778,7 @@ export default function ComprasPage() {
               </table>
             </div>
           )}
-        </div>
+        </SectionCard>
 
       </div>
     </div>

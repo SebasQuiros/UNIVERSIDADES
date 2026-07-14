@@ -5,11 +5,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import {
-  ArrowLeft, AlertTriangle, CheckCircle2, Info, Send,
+  AlertTriangle, CheckCircle2, Info, Send,
   Save, HelpCircle, ChevronRight, ChevronLeft, FileText,
-  ShoppingCart, BarChart3, ClipboardCheck, BookOpen, Copy, Download,
+  ShoppingCart, Receipt, Calculator, BookOpen, Download, ListChecks,
 } from 'lucide-react';
 import Link from 'next/link';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { Button, buttonClasses } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
+import { MoneyPop } from '@/components/ui/MoneyPop';
+import { ArtInvoice } from '@/components/illustrations';
+import { cn, fmtNum } from '@/lib/utils';
 import { AttachmentPanel, Attachment } from '../_components/AttachmentPanel';
 import { PerfilTributario, usePerfilTributario } from '../_components/PerfilTributario';
 import { PreSubmitModal } from '../_components/PreSubmitModal';
@@ -46,8 +52,9 @@ const WIZARD_STEPS = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUB-COMPONENTS
+// SUB-COMPONENTS (presentación)
 // ─────────────────────────────────────────────────────────────────────────────
+
 function Casilla({
   numero, label, hint, value, onChange, readOnly = false, bold = false, children,
 }: {
@@ -55,31 +62,30 @@ function Casilla({
   value: string | number; onChange?: (v: string) => void;
   readOnly?: boolean; bold?: boolean; children?: React.ReactNode;
 }) {
-  const displayVal = typeof value === 'number'
-    ? value.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : value;
-
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
-      <span className="w-16 text-xs font-mono font-bold text-gray-400 flex-shrink-0">{numero}</span>
-      <span className={`flex-1 text-sm ${bold ? 'font-semibold text-gray-800' : 'text-gray-700'}`}>
+    <div className="flex items-center gap-3 border-b border-gray-100 py-2.5 last:border-0">
+      <span className="w-14 flex-shrink-0 rounded-md bg-gray-50 px-1.5 py-0.5 text-center font-mono text-xs font-bold tabular-nums text-gray-500">
+        {numero}
+      </span>
+      <span className={cn('flex-1 text-sm', bold ? 'font-semibold text-gray-800' : 'text-gray-700')}>
         {label}
-        {hint && <span className="ml-1 text-xs text-gray-400 font-normal">({hint})</span>}
+        {hint && <span className="ml-1 text-xs font-normal text-gray-400">({hint})</span>}
       </span>
       {readOnly ? (
-        <span className={`w-40 text-right text-sm font-mono px-3 py-1 rounded-lg ${
-          bold ? 'bg-blue-50 text-blue-700 font-bold' : 'bg-gray-50 text-gray-700'
-        }`}>
-          ₡ {displayVal}
+        <span className={cn(
+          'w-40 rounded-lg px-3 py-1.5 text-right text-sm',
+          bold ? 'bg-blue-50 font-bold text-blue-700' : 'bg-gray-50 text-gray-700',
+        )}>
+          <MoneyPop value={value} />
         </span>
       ) : (
         <div className="relative w-40">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">₡</span>
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">₡</span>
           <input
             type="number" min="0" step="0.01"
             value={value as string}
             onChange={e => onChange?.(e.target.value)}
-            className="w-full pl-7 pr-3 py-1.5 text-sm font-mono text-right border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+            className="w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-7 pr-3 text-right font-mono text-sm tabular-nums transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
             placeholder="0.00"
           />
         </div>
@@ -89,18 +95,12 @@ function Casilla({
   );
 }
 
-function SectionHeader({ number, title, color = 'blue' }: { number: string; title: string; color?: string }) {
-  const colors: Record<string, string> = {
-    blue:   'bg-blue-700 text-white',
-    green:  'bg-emerald-700 text-white',
-    orange: 'bg-orange-600 text-white',
-    gray:   'bg-gray-700 text-white',
-  };
+/** Nota explicativa dentro de una sección del formulario. */
+function Nota({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`flex items-center gap-3 px-4 py-2.5 rounded-t-xl ${colors[color] ?? colors.blue}`}>
-      <span className="text-xs font-bold opacity-70">SECCIÓN</span>
-      <span className="text-lg font-black">{number}</span>
-      <span className="text-sm font-semibold tracking-wide">{title}</span>
+    <div className="mb-2 flex items-start gap-1.5 border-b border-gray-100 py-2 text-xs leading-relaxed text-gray-500">
+      <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-blue-500" />
+      <span>{children}</span>
     </div>
   );
 }
@@ -266,7 +266,7 @@ export default function D104Page() {
   const stepErrors = getStepErrors();
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-100" ref={topRef}>
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8]" ref={topRef}>
       {/* Encabezado TRIBU-CR unificado */}
       <TribuHeader
         code="D-104"
@@ -276,32 +276,40 @@ export default function D104Page() {
         refNo={refNo}
         periodLabel={`${monthName} ${year}`}
         perfil={perfil}
+        description="El IVA que cobras en tus ventas es el débito fiscal; el que pagas en tus compras es el crédito fiscal. La diferencia entre ambos es lo que liquidas cada mes ante Hacienda."
+        illustration={<ArtInvoice size={150} className="lp-drift" />}
       />
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
 
         {/* Wizard stepper */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="rounded-card border border-gray-200/70 bg-white p-5 shadow-card">
           <WizardStepper steps={WIZARD_STEPS} currentStep={step} />
         </div>
 
         {/* ── STEP 0: Información General ─────────────────────────────────── */}
         {step === 0 && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <PerfilTributario disabled={isSubmitted} onChange={p => setPerfil(p)} />
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-700" /> Datos del período fiscal
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SectionCard
+              eyebrow="Paso 1"
+              title="Datos del período fiscal"
+              description="El IVA se declara mes a mes. Elige el período que vas a liquidar."
+              icon={FileText}
+              iconTint="#2563EB"
+              className="cx-pop"
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Período fiscal</label>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Período fiscal
+                  </label>
                   <select
                     value={period}
                     onChange={e => setPeriod(e.target.value)}
                     disabled={isSubmitted}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 disabled:opacity-50"
                   >
                     {Array.from({ length: 24 }, (_, i) => {
                       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -311,322 +319,355 @@ export default function D104Page() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Nombre del declarante</label>
-                  <div className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 bg-gray-50">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Nombre del declarante
+                  </label>
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
                     Estudiante (práctica)
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Estado</label>
-                  <div className={`border rounded-lg px-3 py-2 text-sm font-semibold ${
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Estado
+                  </label>
+                  <div className={cn(
+                    'rounded-xl border px-3 py-2.5 text-sm font-semibold',
                     isSubmitted
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                      : 'border-amber-300 bg-amber-50 text-amber-700'
-                  }`}>
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-gold-100 bg-gold-50 text-gold-900',
+                  )}>
                     {isSubmitted ? 'Presentada (simulación)' : 'Borrador'}
                   </div>
                 </div>
               </div>
               {refNo && (
-                <div className="mt-3 flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span>Número de referencia simulado: <span className="font-mono font-bold text-gray-800">{refNo}</span></span>
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span>
+                    Número de referencia simulado:{' '}
+                    <span className="font-mono font-bold tabular-nums text-gray-800">{refNo}</span>
+                  </span>
                 </div>
               )}
-            </div>
+            </SectionCard>
 
             {/* Info TRIBU flow */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-              <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5" /> Proceso D-104 en Hacienda
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <SectionCard
+              eyebrow="Cómo funciona"
+              title="Proceso D-104 en Hacienda"
+              icon={ListChecks}
+              iconTint="#B8860B"
+              className="cx-pop cx-d2"
+            >
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
                 {[
                   { step: '1', title: 'Emitir facturas', desc: 'Registra ventas y compras con facturas electrónicas en ATV.' },
                   { step: '2', title: 'Ingresar ventas', desc: 'Clasifica las ventas por tarifa de IVA aplicable.' },
                   { step: '3', title: 'Ingresar compras', desc: 'Registra el crédito fiscal de tus compras gravadas.' },
                   { step: '4', title: 'Presentar', desc: 'Paga el impuesto neto antes del día 15 del mes siguiente.' },
-                ].map(({ step, title, desc }) => (
-                  <div key={step} className="flex items-start gap-2">
-                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
-                      {step}
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-blue-800">{title}</p>
-                      <p className="text-xs text-blue-700 leading-relaxed">{desc}</p>
+                ].map(({ step: n, title, desc }) => (
+                  <div key={n} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-[#1B2E6E] text-xs font-black tabular-nums text-white">
+                      {n}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-800">{title}</p>
+                      <p className="text-xs leading-relaxed text-gray-500">{desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </SectionCard>
           </div>
         )}
 
         {/* ── STEP 1: Ventas ──────────────────────────────────────────────── */}
         {step === 1 && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader number="I" title="VENTAS Y DÉBITO FISCAL" color="blue" />
-            <div className="px-5 py-2">
-              <div className="text-xs text-gray-500 py-2 flex items-center gap-1.5 border-b border-gray-100 mb-2">
-                <Info className="w-3.5 h-3.5" />
-                Ingresa la <strong>base imponible</strong> (monto sin IVA) de tus ventas por tarifa. El sistema calcula el IVA cobrado automáticamente.
+          <SectionCard
+            eyebrow="Sección I"
+            title="Ventas y débito fiscal"
+            description="Lo que cobraste de IVA a tus clientes."
+            icon={Receipt}
+            iconTint="#2563EB"
+            className="cx-pop"
+          >
+            <Nota>
+              Ingresa la <strong>base imponible</strong> (monto sin IVA) de tus ventas por tarifa.
+              El sistema calcula el IVA cobrado automáticamente.
+            </Nota>
+
+            <Casilla numero="101" label="Ventas gravadas al 13% (tarifa general)" hint="base sin IVA"
+              value={form.ventas13} onChange={v => setField('ventas13', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="ventas13" lineLabel="Ventas al 13%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="102" label="Ventas gravadas al 8%" hint="medicina privada, seguros"
+              value={form.ventas8} onChange={v => setField('ventas8', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="ventas8" lineLabel="Ventas al 8%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="103" label="Ventas gravadas al 4%" hint="boletos aéreos, espectáculos"
+              value={form.ventas4} onChange={v => setField('ventas4', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="ventas4" lineLabel="Ventas al 4%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="104" label="Ventas gravadas al 2%" hint="canasta básica tributaria"
+              value={form.ventas2} onChange={v => setField('ventas2', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="ventas2" lineLabel="Ventas al 2%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="105" label="Ventas gravadas al 1%" hint="medicamentos, insumos agropecuarios"
+              value={form.ventas1} onChange={v => setField('ventas1', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="ventas1" lineLabel="Ventas al 1%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="106" label="Ventas exentas (0%)" hint="educación privada, servicios exentos"
+              value={form.ventasExentas} onChange={v => setField('ventasExentas', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="ventasExentas" lineLabel="Ventas exentas"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+
+            {/* Débito fiscal */}
+            <div className="mt-4 space-y-1 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-blue-700">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Débito fiscal — IVA cobrado en ventas
               </div>
-
-              <Casilla numero="101" label="Ventas gravadas al 13% (tarifa general)" hint="base sin IVA"
-                value={form.ventas13} onChange={v => setField('ventas13', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="ventas13" lineLabel="Ventas al 13%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="102" label="Ventas gravadas al 8%" hint="medicina privada, seguros"
-                value={form.ventas8} onChange={v => setField('ventas8', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="ventas8" lineLabel="Ventas al 8%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="103" label="Ventas gravadas al 4%" hint="boletos aéreos, espectáculos"
-                value={form.ventas4} onChange={v => setField('ventas4', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="ventas4" lineLabel="Ventas al 4%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="104" label="Ventas gravadas al 2%" hint="canasta básica tributaria"
-                value={form.ventas2} onChange={v => setField('ventas2', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="ventas2" lineLabel="Ventas al 2%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="105" label="Ventas gravadas al 1%" hint="medicamentos, insumos agropecuarios"
-                value={form.ventas1} onChange={v => setField('ventas1', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="ventas1" lineLabel="Ventas al 1%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="106" label="Ventas exentas (0%)" hint="educación privada, servicios exentos"
-                value={form.ventasExentas} onChange={v => setField('ventasExentas', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="ventasExentas" lineLabel="Ventas exentas"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-
-              <div className="mt-3 pt-3 border-t border-blue-100 bg-blue-50 rounded-xl px-3 py-2 space-y-1">
-                <div className="flex items-center gap-2 text-xs text-blue-700 font-semibold mb-2">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> DÉBITO FISCAL (IVA cobrado en ventas)
+              {result?.ivaVentas && [
+                { t: '13%', v: result.ivaVentas.t13 }, { t: '8%', v: result.ivaVentas.t8 },
+                { t: '4%', v: result.ivaVentas.t4 },   { t: '2%', v: result.ivaVentas.t2 },
+                { t: '1%', v: result.ivaVentas.t1 },
+              ].filter(x => x.v > 0).map(({ t, v }) => (
+                <div key={t} className="flex justify-between text-xs text-blue-700">
+                  <span>IVA {t}</span>
+                  <MoneyPop value={v} />
                 </div>
-                {result?.ivaVentas && [
-                  { t: '13%', v: result.ivaVentas.t13 }, { t: '8%', v: result.ivaVentas.t8 },
-                  { t: '4%', v: result.ivaVentas.t4 },   { t: '2%', v: result.ivaVentas.t2 },
-                  { t: '1%', v: result.ivaVentas.t1 },
-                ].filter(x => x.v > 0).map(({ t, v }) => (
-                  <div key={t} className="flex justify-between text-xs text-blue-700">
-                    <span>IVA {t}</span>
-                    <span className="font-mono">₡ {fmtNum(v)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm font-bold text-blue-800 pt-1 border-t border-blue-200">
-                  <span>Casilla 301 — Total débito fiscal</span>
-                  <span className="font-mono">₡ {fmtNum(result?.cas301_debitoFiscal ?? 0)}</span>
-                </div>
+              ))}
+              <div className="flex items-center justify-between border-t border-blue-200 pt-2 text-sm font-bold text-blue-800">
+                <span>Casilla 301 — Total débito fiscal</span>
+                <MoneyPop value={result?.cas301_debitoFiscal ?? 0} className="text-base" />
               </div>
             </div>
-          </div>
+          </SectionCard>
         )}
 
         {/* ── STEP 2: Compras ─────────────────────────────────────────────── */}
         {step === 2 && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader number="II" title="COMPRAS Y CRÉDITO FISCAL" color="green" />
-            <div className="px-5 py-2">
-              <div className="text-xs text-gray-500 py-2 flex items-center gap-1.5 border-b border-gray-100 mb-2">
-                <Info className="w-3.5 h-3.5" />
-                Ingresa la <strong>base imponible</strong> de tus compras gravadas. El IVA pagado se convierte en crédito fiscal.
+          <SectionCard
+            eyebrow="Sección II"
+            title="Compras y crédito fiscal"
+            description="Lo que pagaste de IVA a tus proveedores."
+            icon={ShoppingCart}
+            iconTint="#047857"
+            className="cx-pop"
+          >
+            <Nota>
+              Ingresa la <strong>base imponible</strong> de tus compras gravadas.
+              El IVA pagado se convierte en crédito fiscal.
+            </Nota>
+
+            <Casilla numero="201" label="Compras gravadas al 13%" hint="base sin IVA"
+              value={form.compras13} onChange={v => setField('compras13', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="compras13" lineLabel="Compras al 13%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="202" label="Compras gravadas al 8%"
+              value={form.compras8} onChange={v => setField('compras8', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="compras8" lineLabel="Compras al 8%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="203" label="Compras gravadas al 4%"
+              value={form.compras4} onChange={v => setField('compras4', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="compras4" lineLabel="Compras al 4%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="204" label="Compras gravadas al 2%"
+              value={form.compras2} onChange={v => setField('compras2', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="compras2" lineLabel="Compras al 2%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+            <Casilla numero="205" label="Compras gravadas al 1%"
+              value={form.compras1} onChange={v => setField('compras1', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="compras1" lineLabel="Compras al 1%"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+
+            {/* Crédito fiscal */}
+            <div className="mt-4 space-y-1 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-700">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Crédito fiscal — IVA pagado en compras
               </div>
-
-              <Casilla numero="201" label="Compras gravadas al 13%" hint="base sin IVA"
-                value={form.compras13} onChange={v => setField('compras13', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="compras13" lineLabel="Compras al 13%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="202" label="Compras gravadas al 8%"
-                value={form.compras8} onChange={v => setField('compras8', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="compras8" lineLabel="Compras al 8%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="203" label="Compras gravadas al 4%"
-                value={form.compras4} onChange={v => setField('compras4', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="compras4" lineLabel="Compras al 4%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="204" label="Compras gravadas al 2%"
-                value={form.compras2} onChange={v => setField('compras2', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="compras2" lineLabel="Compras al 2%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-              <Casilla numero="205" label="Compras gravadas al 1%"
-                value={form.compras1} onChange={v => setField('compras1', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="compras1" lineLabel="Compras al 1%"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-
-              <div className="mt-3 pt-3 border-t border-emerald-100 bg-emerald-50 rounded-xl px-3 py-2 space-y-1">
-                <div className="flex items-center gap-2 text-xs text-emerald-700 font-semibold mb-2">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> CRÉDITO FISCAL (IVA pagado en compras)
+              {result?.ivaCompras && [
+                { t: '13%', v: result.ivaCompras.t13 }, { t: '8%', v: result.ivaCompras.t8 },
+                { t: '4%', v: result.ivaCompras.t4 },   { t: '2%', v: result.ivaCompras.t2 },
+                { t: '1%', v: result.ivaCompras.t1 },
+              ].filter(x => x.v > 0).map(({ t, v }) => (
+                <div key={t} className="flex justify-between text-xs text-emerald-700">
+                  <span>Crédito {t}</span>
+                  <MoneyPop value={v} />
                 </div>
-                {result?.ivaCompras && [
-                  { t: '13%', v: result.ivaCompras.t13 }, { t: '8%', v: result.ivaCompras.t8 },
-                  { t: '4%', v: result.ivaCompras.t4 },   { t: '2%', v: result.ivaCompras.t2 },
-                  { t: '1%', v: result.ivaCompras.t1 },
-                ].filter(x => x.v > 0).map(({ t, v }) => (
-                  <div key={t} className="flex justify-between text-xs text-emerald-700">
-                    <span>Crédito {t}</span>
-                    <span className="font-mono">₡ {fmtNum(v)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm font-bold text-emerald-800 pt-1 border-t border-emerald-200">
-                  <span>Casilla 302 — Total crédito fiscal</span>
-                  <span className="font-mono">₡ {fmtNum(result?.cas302_creditoFiscal ?? 0)}</span>
-                </div>
+              ))}
+              <div className="flex items-center justify-between border-t border-emerald-200 pt-2 text-sm font-bold text-emerald-800">
+                <span>Casilla 302 — Total crédito fiscal</span>
+                <MoneyPop value={result?.cas302_creditoFiscal ?? 0} className="text-base" />
               </div>
             </div>
-          </div>
+          </SectionCard>
         )}
 
         {/* ── STEP 3: Resumen ─────────────────────────────────────────────── */}
         {step === 3 && (
-          <div className="space-y-4">
-            {/* Summary table */}
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <SectionHeader number="III" title="RESULTADO DEL PERÍODO" color="gray" />
-              <div className="px-5 py-4 space-y-1">
-                <Casilla numero="301" label="Débito fiscal (IVA cobrado en ventas)" bold
-                  value={result?.cas301_debitoFiscal ?? 0} readOnly />
-                <Casilla numero="302" label="Crédito fiscal (IVA pagado en compras)" bold
-                  value={result?.cas302_creditoFiscal ?? 0} readOnly />
-                <div className="pt-3 border-t border-gray-200 mt-2">
-                  <Casilla numero="303" label="Impuesto neto del período (301 − 302)" bold
-                    value={result?.cas303_impuestoNeto ?? 0} readOnly />
-                </div>
-                <div className="pt-2">
-                  {(result?.cas304_impuestoPagar ?? 0) > 0 ? (
-                    <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-xl mt-2">
+          <div className="space-y-5">
+            {/* Resultado del período */}
+            <SectionCard
+              eyebrow="Sección III"
+              title="Resultado del período"
+              description="Débito menos crédito: el impuesto que se liquida este mes."
+              icon={Calculator}
+              iconTint="#1B2E6E"
+              className="cx-pop"
+            >
+              <Casilla numero="301" label="Débito fiscal (IVA cobrado en ventas)" bold
+                value={result?.cas301_debitoFiscal ?? 0} readOnly />
+              <Casilla numero="302" label="Crédito fiscal (IVA pagado en compras)" bold
+                value={result?.cas302_creditoFiscal ?? 0} readOnly />
+              <div className="mt-2 border-t border-gray-200 pt-3">
+                <Casilla numero="303" label="Impuesto neto del período (301 − 302)" bold
+                  value={result?.cas303_impuestoNeto ?? 0} readOnly />
+              </div>
+
+              <div className="pt-3">
+                {(result?.cas304_impuestoPagar ?? 0) > 0 ? (
+                  <div className="cx-pop flex items-center justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 p-5">
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={Send} tint="#DC2626" size={44} />
                       <div>
-                        <p className="text-xs font-bold text-red-700 uppercase tracking-wide">Casilla 304</p>
+                        <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-red-700">Casilla 304</p>
                         <p className="text-sm font-bold text-red-800">Impuesto a pagar</p>
                         <p className="text-xs text-red-600">Monto a cancelar a Hacienda este período</p>
                       </div>
-                      <span className="text-2xl font-black text-red-700 font-mono">
-                        ₡ {fmtNum(result?.cas304_impuestoPagar ?? 0)}
-                      </span>
                     </div>
-                  ) : (result?.cas305_saldoFavor ?? 0) > 0 ? (
-                    <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl mt-2">
+                    <MoneyPop value={result?.cas304_impuestoPagar ?? 0}
+                      className="text-2xl font-black text-red-700" />
+                  </div>
+                ) : (result?.cas305_saldoFavor ?? 0) > 0 ? (
+                  <div className="cx-pop flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={CheckCircle2} tint="#047857" size={44} />
                       <div>
-                        <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Casilla 305</p>
+                        <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-emerald-700">Casilla 305</p>
                         <p className="text-sm font-bold text-emerald-800">Saldo a favor</p>
                         <p className="text-xs text-emerald-600">Crédito fiscal disponible para el siguiente período</p>
                       </div>
-                      <span className="text-2xl font-black text-emerald-700 font-mono">
-                        ₡ {fmtNum(result?.cas305_saldoFavor ?? 0)}
-                      </span>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl mt-2">
-                      <p className="text-sm text-gray-500">Ingresa valores en pasos anteriores para ver el resultado</p>
-                      <span className="text-2xl font-black text-gray-400 font-mono">₡ 0.00</span>
-                    </div>
-                  )}
-                </div>
+                    <MoneyPop value={result?.cas305_saldoFavor ?? 0}
+                      className="text-2xl font-black text-emerald-700" />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                    <p className="text-sm text-gray-500">Ingresa valores en pasos anteriores para ver el resultado</p>
+                    <span className="font-mono text-2xl font-black tabular-nums text-gray-400">₡ 0.00</span>
+                  </div>
+                )}
               </div>
-            </div>
+            </SectionCard>
 
-            {/* Resumen de ventas/compras */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Resumen de ventas</p>
-                <div className="space-y-1.5">
-                  {[
-                    { label: 'Total base ventas', val: result?.totalVentas ?? 0 },
-                    { label: 'Débito fiscal total', val: result?.cas301_debitoFiscal ?? 0, blue: true },
-                  ].map(({ label, val, blue }) => (
-                    <div key={label} className="flex justify-between text-sm">
-                      <span className={blue ? 'font-semibold text-blue-700' : 'text-gray-600'}>{label}</span>
-                      <span className={`font-mono ${blue ? 'text-blue-700 font-bold' : 'text-gray-800'}`}>₡ {fmtNum(val)}</span>
-                    </div>
-                  ))}
+            {/* Resumen de ventas / compras */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="cx-pop cx-d1 rounded-card border border-gray-200/70 bg-white p-5 shadow-card">
+                <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">
+                  Resumen de ventas
+                </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Total base ventas</span>
+                    <MoneyPop value={result?.totalVentas ?? 0} className="text-gray-800" />
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-semibold text-blue-700">Débito fiscal total</span>
+                    <MoneyPop value={result?.cas301_debitoFiscal ?? 0} className="font-bold text-blue-700" />
+                  </div>
                 </div>
               </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Resumen de compras</p>
-                <div className="space-y-1.5">
-                  {[
-                    { label: 'Total base compras', val: result?.totalCompras ?? 0 },
-                    { label: 'Crédito fiscal total', val: result?.cas302_creditoFiscal ?? 0, green: true },
-                  ].map(({ label, val, green }) => (
-                    <div key={label} className="flex justify-between text-sm">
-                      <span className={green ? 'font-semibold text-emerald-700' : 'text-gray-600'}>{label}</span>
-                      <span className={`font-mono ${green ? 'text-emerald-700 font-bold' : 'text-gray-800'}`}>₡ {fmtNum(val)}</span>
-                    </div>
-                  ))}
+
+              <div className="cx-pop cx-d2 rounded-card border border-gray-200/70 bg-white p-5 shadow-card">
+                <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">
+                  Resumen de compras
+                </p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Total base compras</span>
+                    <MoneyPop value={result?.totalCompras ?? 0} className="text-gray-800" />
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-semibold text-emerald-700">Crédito fiscal total</span>
+                    <MoneyPop value={result?.cas302_creditoFiscal ?? 0} className="font-bold text-emerald-700" />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Validation errors */}
             {stepErrors.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1.5">
-                <p className="text-xs font-bold text-amber-700 uppercase tracking-wide flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4" /> Por favor completa antes de presentar
+              <div className="cx-shake space-y-1.5 rounded-card border border-gold-100 bg-gold-50 p-4">
+                <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gold-900">
+                  <AlertTriangle className="h-4 w-4" /> Por favor completa antes de presentar
                 </p>
                 {stepErrors.map((e, i) => (
-                  <p key={i} className="text-sm text-amber-700">• {e}</p>
+                  <p key={i} className="text-sm text-gold-900">• {e}</p>
                 ))}
               </div>
             )}
 
             {/* ── Asiento de liquidación D-104 ──────────────────────────────── */}
             {result && (result.cas301_debitoFiscal > 0 || result.cas302_creditoFiscal > 0) && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl overflow-hidden">
+              <div className="overflow-hidden rounded-card border border-gold-100 bg-gold-50">
                 <button
                   type="button"
                   onClick={() => setShowJournalEntry(v => !v)}
-                  className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-amber-100 transition-colors"
+                  className="flex w-full items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-gold-100/60"
                 >
-                  <span className="flex items-center gap-2 text-sm font-bold text-amber-800">
-                    <BookOpen className="w-4 h-4" />
+                  <span className="flex items-center gap-2 text-sm font-bold text-gold-900">
+                    <BookOpen className="h-4 w-4" />
                     Generar asiento de liquidación D-104
                   </span>
-                  <span className="text-xs text-amber-600">
+                  <span className="text-xs font-semibold text-gold-700">
                     {showJournalEntry ? 'Ocultar' : 'Ver asiento sugerido'}
                   </span>
                 </button>
 
                 {showJournalEntry && (
-                  <div className="px-5 pb-5 space-y-3">
-                    <p className="text-xs text-amber-700">
+                  <div className="cx-pop space-y-3 px-5 pb-5">
+                    <p className="text-xs leading-relaxed text-gold-900">
                       Este es el asiento contable que corresponde registrar al cierre del período para liquidar el IVA.
                       Cópialo en el módulo de <strong>Diario Contable</strong>.
                     </p>
-                    <div className="bg-white rounded-lg border border-amber-200 overflow-hidden">
+                    <div className="overflow-hidden rounded-xl border border-gold-100 bg-white">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="bg-amber-100">
-                            <th className="text-left px-3 py-2 text-amber-800">Cuenta</th>
-                            <th className="text-left px-3 py-2 text-amber-800">Descripción</th>
-                            <th className="text-right px-3 py-2 text-amber-800">Débito</th>
-                            <th className="text-right px-3 py-2 text-amber-800">Crédito</th>
+                          <tr className="bg-gold-50">
+                            <th className="px-3 py-2 text-left text-gold-900">Cuenta</th>
+                            <th className="px-3 py-2 text-left text-gold-900">Descripción</th>
+                            <th className="px-3 py-2 text-right text-gold-900">Débito</th>
+                            <th className="px-3 py-2 text-right text-gold-900">Crédito</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-amber-50">
+                        <tbody className="divide-y divide-gray-100">
                           {result.cas301_debitoFiscal > 0 && (
                             <tr>
-                              <td className="px-3 py-2 font-mono text-amber-900 font-semibold">2.1.02.01</td>
+                              <td className="px-3 py-2 font-mono font-semibold tabular-nums text-gray-800">2.1.02.01</td>
                               <td className="px-3 py-2 text-gray-700">IVA por Pagar</td>
-                              <td className="px-3 py-2 text-right font-mono text-blue-700 font-semibold">
+                              <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums text-blue-700">
                                 ₡ {fmtNum(result.cas301_debitoFiscal)}
                               </td>
                               <td className="px-3 py-2 text-right text-gray-300">—</td>
@@ -634,44 +675,44 @@ export default function D104Page() {
                           )}
                           {result.cas302_creditoFiscal > 0 && (
                             <tr>
-                              <td className="px-3 py-2 font-mono text-amber-900 font-semibold">1.1.04.01</td>
+                              <td className="px-3 py-2 font-mono font-semibold tabular-nums text-gray-800">1.1.04.01</td>
                               <td className="px-3 py-2 text-gray-700">IVA Crédito Fiscal</td>
                               <td className="px-3 py-2 text-right text-gray-300">—</td>
-                              <td className="px-3 py-2 text-right font-mono text-emerald-700 font-semibold">
+                              <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums text-emerald-700">
                                 ₡ {fmtNum(result.cas302_creditoFiscal)}
                               </td>
                             </tr>
                           )}
                           {result.cas304_impuestoPagar > 0 && (
                             <tr className="bg-red-50">
-                              <td className="px-3 py-2 font-mono text-red-800 font-semibold">2.1.02.03</td>
+                              <td className="px-3 py-2 font-mono font-semibold tabular-nums text-red-800">2.1.02.03</td>
                               <td className="px-3 py-2 text-red-700">IVA a Pagar Hacienda</td>
                               <td className="px-3 py-2 text-right text-gray-300">—</td>
-                              <td className="px-3 py-2 text-right font-mono text-red-700 font-semibold">
+                              <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums text-red-700">
                                 ₡ {fmtNum(result.cas304_impuestoPagar)}
                               </td>
                             </tr>
                           )}
                           {result.cas305_saldoFavor > 0 && (
                             <tr className="bg-emerald-50">
-                              <td className="px-3 py-2 font-mono text-emerald-800 font-semibold">1.1.04.02</td>
+                              <td className="px-3 py-2 font-mono font-semibold tabular-nums text-emerald-800">1.1.04.02</td>
                               <td className="px-3 py-2 text-emerald-700">IVA Saldo a Favor (crédito arrastrado)</td>
-                              <td className="px-3 py-2 text-right font-mono text-emerald-700 font-semibold">
+                              <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums text-emerald-700">
                                 ₡ {fmtNum(result.cas305_saldoFavor)}
                               </td>
                               <td className="px-3 py-2 text-right text-gray-300">—</td>
                             </tr>
                           )}
                           {/* Totals row */}
-                          <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
-                            <td colSpan={2} className="px-3 py-2 text-gray-700 text-right">Totales</td>
-                            <td className="px-3 py-2 text-right font-mono text-blue-800">
+                          <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
+                            <td colSpan={2} className="px-3 py-2 text-right text-gray-700">Totales</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-blue-800">
                               ₡ {fmtNum(
                                 result.cas301_debitoFiscal +
                                 (result.cas305_saldoFavor > 0 ? result.cas305_saldoFavor : 0)
                               )}
                             </td>
-                            <td className="px-3 py-2 text-right font-mono text-emerald-800">
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-emerald-800">
                               ₡ {fmtNum(
                                 result.cas302_creditoFiscal +
                                 (result.cas304_impuestoPagar > 0 ? result.cas304_impuestoPagar : 0)
@@ -681,8 +722,8 @@ export default function D104Page() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="text-xs text-amber-600 flex items-start gap-1.5">
-                      <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <div className="flex items-start gap-1.5 text-xs text-gold-700">
+                      <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                       <span>
                         Fecha del asiento: último día del período fiscal declarado.
                         Descripción sugerida: <em>Liquidación D-104 {monthName} {year}</em>.
@@ -694,9 +735,11 @@ export default function D104Page() {
             )}
 
             {/* Legal note */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700 space-y-1">
-              <p className="font-bold flex items-center gap-1.5"><HelpCircle className="w-4 h-4" /> Notas sobre el IVA en Costa Rica</p>
-              <ul className="list-disc list-inside space-y-0.5 text-blue-700 mt-1">
+            <div className="rounded-card border border-blue-100 bg-blue-50 p-5 text-xs text-blue-700">
+              <p className="flex items-center gap-1.5 font-bold">
+                <HelpCircle className="h-4 w-4" /> Notas sobre el IVA en Costa Rica
+              </p>
+              <ul className="mt-2 list-inside list-disc space-y-1 leading-relaxed">
                 <li>La declaración D-104 se presenta mensualmente, a más tardar el día 15 del mes siguiente.</li>
                 <li>Las tasas vigentes son: 13% (general), 8% (medicina privada y seguros), 4% (boletos y espectáculos), 2% (canasta básica tributaria) y 1% (medicamentos e insumos agropecuarios).</li>
                 <li>Las exportaciones y algunos servicios educativos están exentos (0%).</li>
@@ -708,15 +751,12 @@ export default function D104Page() {
         )}
 
         {/* ── Navigation buttons ───────────────────────────────────────────── */}
-        <div className="flex items-center justify-between pb-8">
+        <div className="flex items-center justify-between gap-3 pb-10">
           {/* Left: Back */}
           {step > 0 && !isSubmitted ? (
-            <button
-              onClick={goPrev}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" /> Anterior
-            </button>
+            <Button variant="secondary" onClick={goPrev} className="cx-press">
+              <ChevronLeft className="h-4 w-4" /> Anterior
+            </Button>
           ) : (
             <div />
           )}
@@ -724,40 +764,31 @@ export default function D104Page() {
           {/* Right: Save draft + Next / Submit */}
           <div className="flex items-center gap-3">
             {!isSubmitted && (
-              <button
-                onClick={handleSaveDraft}
-                disabled={saving}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
+              <Button variant="secondary" onClick={handleSaveDraft} loading={saving} className="cx-press">
+                {!saving && <Save className="h-4 w-4" />}
                 {saving ? 'Guardando...' : 'Guardar borrador'}
-              </button>
+              </Button>
             )}
 
             {step < WIZARD_STEPS.length - 1 && !isSubmitted && (
-              <button
-                onClick={goNext}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-700 rounded-xl transition-colors"
-              >
-                Siguiente <ChevronRight className="w-4 h-4" />
-              </button>
+              <Button variant="primary" onClick={goNext} className="cx-press">
+                Siguiente <ChevronRight className="h-4 w-4" />
+              </Button>
             )}
 
             {step === WIZARD_STEPS.length - 1 && !isSubmitted && (
-              <button
+              <Button
+                variant="gold"
                 onClick={() => setShowConfirm(true)}
                 disabled={stepErrors.length > 0}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="cx-press"
               >
-                <Send className="w-4 h-4" /> Presentar declaración
-              </button>
+                <Send className="h-4 w-4" /> Presentar declaración
+              </Button>
             )}
 
             {isSubmitted && (
-              <Link
-                href="/estudiante/impuestos"
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors"
-              >
+              <Link href="/estudiante/impuestos" className={buttonClasses({ variant: 'primary', className: 'cx-press' })}>
                 Volver al historial
               </Link>
             )}
@@ -782,31 +813,32 @@ export default function D104Page() {
 
       {/* Success receipt modal */}
       {showResult && status === 'SUBMITTED' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div className="text-center mb-5">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-csq-dark/70 p-4 backdrop-blur-sm">
+          <div className="cx-pop w-full max-w-md rounded-card bg-white p-6 shadow-soft">
+            <div className="mb-5 text-center">
+              <div className="cx-tada mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-black text-gray-900">¡Declaración presentada!</h3>
-              <p className="text-sm text-gray-500 mt-1">Simulación educativa completada</p>
+              <h3 className="text-xl font-black tracking-tight text-gray-900">¡Declaración presentada!</h3>
+              <p className="mt-1 text-sm text-gray-500">Simulación educativa completada</p>
             </div>
 
             {/* TRIBU-style receipt */}
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5 font-mono text-xs space-y-1">
-              <div className="text-center font-bold text-gray-700 mb-3 text-sm">MINISTERIO DE HACIENDA — TRIBU CR</div>
+            <div className="mb-5 space-y-1 rounded-2xl border border-gray-200 bg-gray-50 p-4 font-mono text-xs tabular-nums">
+              <div className="mb-3 text-center text-sm font-bold text-gray-700">MINISTERIO DE HACIENDA — TRIBU CR</div>
               <div className="flex justify-between"><span>Formulario:</span><span className="font-bold">D-104</span></div>
               <div className="flex justify-between"><span>Período:</span><span>{monthName} {year}</span></div>
               <div className="flex justify-between"><span>Número de referencia:</span><span className="font-bold text-blue-700">{refNo}</span></div>
-              <div className="flex justify-between border-t border-gray-300 pt-2 mt-2">
+              <div className="mt-2 flex justify-between border-t border-gray-300 pt-2">
                 <span className="font-bold">Débito fiscal:</span><span>₡ {fmtNum(result?.cas301_debitoFiscal ?? 0)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-bold">Crédito fiscal:</span><span>₡ {fmtNum(result?.cas302_creditoFiscal ?? 0)}</span>
               </div>
-              <div className={`flex justify-between border-t border-gray-300 pt-2 mt-2 font-black ${
-                (result?.cas304_impuestoPagar ?? 0) > 0 ? 'text-red-700' : 'text-emerald-700'
-              }`}>
+              <div className={cn(
+                'mt-2 flex justify-between border-t border-gray-300 pt-2 font-black',
+                (result?.cas304_impuestoPagar ?? 0) > 0 ? 'text-red-700' : 'text-emerald-700',
+              )}>
                 <span>{(result?.cas304_impuestoPagar ?? 0) > 0 ? 'IMPUESTO A PAGAR:' : 'SALDO A FAVOR:'}</span>
                 <span>₡ {fmtNum(
                   (result?.cas304_impuestoPagar ?? 0) > 0
@@ -814,13 +846,14 @@ export default function D104Page() {
                     : (result?.cas305_saldoFavor ?? 0)
                 )}</span>
               </div>
-              <div className="text-center text-gray-400 text-xs mt-3 pt-2 border-t border-gray-200">
+              <div className="mt-3 border-t border-gray-200 pt-2 text-center text-xs text-gray-400">
                 ** SIMULACIÓN EDUCATIVA — NO TIENE VALIDEZ LEGAL **
               </div>
             </div>
 
             <div className="space-y-2">
-              <button
+              <Button
+                variant="primary"
                 onClick={async () => {
                   if (!declId) return;
                   try {
@@ -828,23 +861,17 @@ export default function D104Page() {
                   } catch { toast.error('No se pudo descargar el PDF'); }
                 }}
                 disabled={!declId}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50"
+                className="w-full cx-press"
               >
-                <Download className="w-4 h-4" /> Descargar comprobante PDF
-              </button>
+                <Download className="h-4 w-4" /> Descargar comprobante PDF
+              </Button>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowResult(false)}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-                >
+                <Button variant="secondary" onClick={() => setShowResult(false)} className="flex-1 cx-press">
                   Ver declaración
-                </button>
-                <button
-                  onClick={() => router.push('/estudiante/impuestos')}
-                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors"
-                >
+                </Button>
+                <Button variant="gold" onClick={() => router.push('/estudiante/impuestos')} className="flex-1 cx-press">
                   Ir al historial
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -860,8 +887,4 @@ function toNumeric(form: D104Form) {
     out[k] = parseFloat(form[k] || '0') || 0;
   });
   return out;
-}
-
-function fmtNum(n: number) {
-  return Number(n).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

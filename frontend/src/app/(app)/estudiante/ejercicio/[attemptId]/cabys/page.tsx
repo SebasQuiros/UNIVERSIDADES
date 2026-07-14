@@ -3,9 +3,14 @@
 import { useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, ArrowLeft, Loader2, Info, Copy, CheckCircle } from 'lucide-react';
+import { Search, ArrowLeft, Loader2, Copy, CheckCircle, Barcode, Receipt } from 'lucide-react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { Card } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtInvoice, SceneSearchEmpty } from '@/components/illustrations';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,10 +58,13 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors cx-press"
       title="Copiar código"
+      aria-label="Copiar código CABYS"
     >
-      {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+      {copied
+        ? <CheckCircle className="w-4 h-4 text-emerald-500 cx-tada" />
+        : <Copy className="w-4 h-4" />}
     </button>
   );
 }
@@ -112,41 +120,47 @@ export default function CabysPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <Link
-            href={`/estudiante/ejercicio/${params.attemptId}`}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Catálogo CABYS</h1>
-            <p className="text-xs text-gray-500">Ministerio de Hacienda de Costa Rica</p>
-          </div>
-        </div>
-      </div>
+    <div className="flex-1 overflow-y-auto bg-gray-50/60">
+      <div className="max-w-4xl mx-auto px-6 lg:px-10 py-8 space-y-7">
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Volver */}
+        <Link
+          href={`/estudiante/ejercicio/${params.attemptId}`}
+          className="inline-flex items-center gap-2 -ml-1 text-sm font-medium text-gray-500 hover:text-blue-700 transition-colors cx-press"
+        >
+          <ArrowLeft className="w-4 h-4" /> Volver al ejercicio
+        </Link>
 
-        {/* Informational banner */}
-        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex gap-3">
-          <Info className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800 space-y-1">
-            <p className="font-semibold">¿Qué es el código CABYS?</p>
-            <p>
-              El <strong>Catálogo de Bienes y Servicios (CABYS)</strong> es obligatorio en todas las
-              facturas electrónicas de Costa Rica según el Ministerio de Hacienda. Cada línea de
-              factura debe tener un código CABYS de 13 dígitos que identifica el producto o servicio
-              y determina la tasa de IVA aplicable.
-            </p>
+        {/* Encabezado */}
+        <PageHeader
+          eyebrow="Facturación electrónica"
+          title="Catálogo CABYS"
+          subtitle="Ministerio de Hacienda de Costa Rica — códigos de bienes y servicios."
+          icon={Barcode}
+          iconTint="#1B2E6E"
+          className="lp-in"
+        />
+
+        {/* Banda del módulo */}
+        <Card variant="onDark" className="cx-pop">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+                ¿Qué es el código CABYS?
+              </p>
+              <h2 className="text-lg font-bold leading-snug">Sin código CABYS no hay factura electrónica.</h2>
+              <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+                El <strong className="text-white">Catálogo de Bienes y Servicios</strong> es obligatorio en toda factura
+                electrónica de Costa Rica. Cada línea lleva un código de 13 dígitos que identifica el producto o
+                servicio y determina la tasa de IVA aplicable.
+              </p>
+            </div>
+            <ArtInvoice size={140} className="lp-drift flex-shrink-0" />
           </div>
-        </div>
+        </Card>
 
         {/* Search form */}
-        <form onSubmit={handleSubmit} className="relative">
+        <form onSubmit={handleSubmit} className="relative cx-pop cx-d1">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
             <input
@@ -154,7 +168,7 @@ export default function CabysPage() {
               value={query}
               onChange={handleChange}
               placeholder="Buscar por nombre de producto o servicio... (ej: computadora, servicio consultoría)"
-              className="w-full pl-12 pr-14 py-3.5 rounded-xl border border-gray-300 bg-white text-gray-900 text-sm placeholder-gray-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-12 pr-14 py-3.5 rounded-2xl border border-gray-200 bg-white text-gray-900 text-sm placeholder-gray-400 shadow-card focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
               autoFocus
             />
             {loading && (
@@ -168,16 +182,16 @@ export default function CabysPage() {
 
         {/* Error state */}
         {apiError && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <p className="font-semibold">Servicio CABYS no disponible</p>
-            <p className="text-xs mt-1">
+          <div className="rounded-2xl border border-gold-100 bg-gold-50 px-5 py-4 text-sm text-gold-900 cx-shake">
+            <p className="font-bold">Servicio CABYS no disponible</p>
+            <p className="text-xs mt-1 text-gold-900/80">
               La API de Hacienda no está disponible en este momento. Puede consultar el catálogo
               directamente en{' '}
               <a
                 href="https://tribunet.hacienda.go.cr/ATV/CABYSCatalogos"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline font-medium"
+                className="underline font-semibold"
               >
                 tribunet.hacienda.go.cr
               </a>
@@ -187,38 +201,40 @@ export default function CabysPage() {
 
         {/* Results table */}
         {searched && !apiError && (
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <p className="text-sm font-semibold text-gray-700">
-                {results.length > 0
-                  ? `${results.length} resultado${results.length !== 1 ? 's' : ''} para "${query}"`
-                  : `Sin resultados para "${query}"`}
-              </p>
-              {results.length > 0 && (
-                <p className="text-xs text-gray-400">Haga clic en el ícono para copiar el código</p>
-              )}
-            </div>
-
+          <SectionCard
+            eyebrow="Resultados"
+            title={
+              results.length > 0
+                ? `${results.length} resultado${results.length !== 1 ? 's' : ''} para "${query}"`
+                : `Sin resultados para "${query}"`
+            }
+            description={results.length > 0 ? 'Haz clic en el ícono para copiar el código.' : undefined}
+            icon={Search}
+            iconTint="#2563EB"
+            flushBody
+            className="cx-pop"
+          >
             {results.length === 0 ? (
-              <div className="py-10 text-center">
-                <Search className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">No se encontraron productos o servicios</p>
-                <p className="text-gray-400 text-xs mt-1">Pruebe con palabras más generales</p>
-              </div>
+              <EmptyState
+                illustration={<SceneSearchEmpty size={200} className="lp-drift" />}
+                title="No se encontraron productos o servicios"
+                description="Prueba con palabras más generales, por ejemplo “servicio” o “equipo”."
+                className="py-10"
+              />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50">
-                      <th className="text-left px-4 py-3 font-medium">Código</th>
-                      <th className="text-left px-4 py-3 font-medium">Descripción</th>
-                      <th className="text-center px-4 py-3 font-medium">Tasa IVA</th>
+                    <tr className="text-[10px] text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
+                      <th className="text-left px-4 py-3 font-semibold">Código</th>
+                      <th className="text-left px-4 py-3 font-semibold">Descripción</th>
+                      <th className="text-center px-4 py-3 font-semibold">Tasa IVA</th>
                       <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-100">
                     {results.map((item) => (
-                      <tr key={item.codigo} className="hover:bg-blue-50 transition-colors group">
+                      <tr key={item.codigo} className="hover:bg-blue-50/40 transition-colors group">
                         <td className="px-4 py-3">
                           <span className="font-mono text-xs font-bold text-gray-800 tracking-wider">
                             {item.codigo}
@@ -241,21 +257,28 @@ export default function CabysPage() {
                 </table>
               </div>
             )}
-          </div>
+          </SectionCard>
         )}
 
         {/* Initial empty state */}
         {!searched && !loading && (
-          <div className="text-center py-12">
-            <Search className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-400 text-sm">Ingrese un término para buscar en el catálogo CABYS</p>
-          </div>
+          <EmptyState
+            illustration={<SceneSearchEmpty size={220} className="lp-drift" />}
+            title="Busca un bien o servicio"
+            description="Escribe el nombre del producto o servicio que vas a facturar y obtené su código CABYS con la tasa de IVA correspondiente."
+            className="py-8"
+          />
         )}
 
         {/* IVA rates reference card */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
-          <p className="text-sm font-semibold text-gray-700 mb-3">Tasas de IVA en Costa Rica</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+        <SectionCard
+          eyebrow="Referencia"
+          title="Tasas de IVA en Costa Rica"
+          icon={Receipt}
+          iconTint="#B8860B"
+          className="cx-pop cx-d2"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs">
             {[
               { rate: 0,  label: 'Exento',                    desc: 'Canasta básica, medicamentos' },
               { rate: 1,  label: 'Tarifa reducida 1%',        desc: 'Servicios médicos privados' },
@@ -264,16 +287,16 @@ export default function CabysPage() {
               { rate: 8,  label: 'Tarifa reducida 8%',        desc: 'Comidas en restaurantes' },
               { rate: 13, label: 'Tarifa general 13%',        desc: 'Mayoría de bienes y servicios' },
             ].map((item) => (
-              <div key={item.rate} className="flex items-start gap-2 p-2 rounded-lg bg-gray-50">
+              <div key={item.rate} className="flex items-start gap-2.5 p-3 rounded-xl bg-gray-50 border border-gray-100 cx-lift">
                 <IvaBadge rate={item.rate} />
-                <div>
-                  <p className="font-medium text-gray-700">{item.label}</p>
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-700">{item.label}</p>
                   <p className="text-gray-400 mt-0.5">{item.desc}</p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </SectionCard>
 
       </div>
     </div>

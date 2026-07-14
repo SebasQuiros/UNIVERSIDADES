@@ -3,9 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import { Spinner } from '@/components/ui/Spinner';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ArtReport, SceneEmptyBox } from '@/components/illustrations';
 import {
-  Award, TrendingUp, AlertTriangle, BookOpen, Target, Download, GraduationCap,
+  Award, AlertTriangle, BookOpen, Target, Download, GraduationCap,
 } from 'lucide-react';
 
 interface CompetencyRow {
@@ -32,6 +38,12 @@ const AREA_LABEL: Record<string, string> = {
   COSTOS: 'Costos', AUDITORIA: 'Auditoría', DATOS: 'Datos', GESTION: 'Gestión',
 };
 
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
+
 function masteryColor(pct: number | null) {
   if (pct == null) return '#CBD5E1';
   if (pct >= 80) return '#1D4ED8';
@@ -54,8 +66,6 @@ export default function CompetenciasInstitucionalPage() {
       .finally(() => setLoading(false));
   }, [user?.universityId]);
 
-  if (loading) return <div className="flex-1 flex items-center justify-center py-32"><Spinner size="lg" /></div>;
-
   function exportCsv() {
     if (!data) return;
     const rows = [
@@ -63,7 +73,7 @@ export default function CompetenciasInstitucionalPage() {
       ...data.competencies.map(c => [c.code + ' ' + c.name, AREA_LABEL[c.area] ?? c.area, c.masteryPct ?? '', c.evidenceCount, c.studentsAssessed]),
     ];
     const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'evidencia-competencias.csv';
@@ -71,112 +81,184 @@ export default function CompetenciasInstitucionalPage() {
   }
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white"
-            style={{ background: '#03080F' }}>
-            <Award className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Evidencia de competencias</h1>
-            <p className="text-sm text-gray-500">Dominio por competencia y por cohorte — soporte para acreditación</p>
-          </div>
-        </div>
-        {data && (
-          <button onClick={exportCsv}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
-            <Download className="w-4 h-4" /> Exportar CSV
-          </button>
-        )}
-      </div>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      <PageHeader
+        eyebrow="Administración"
+        title="Evidencia de competencias"
+        subtitle="Dominio por competencia y por cohorte — soporte documental para acreditación."
+        icon={Award}
+        iconTint="#B8860B"
+        className="mb-8"
+        actions={
+          data && (
+            <Button variant="secondary" onClick={exportCsv} className="cx-press">
+              <Download className="w-4 h-4" /> Exportar CSV
+            </Button>
+          )
+        }
+      />
 
-      {error && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800 text-sm">{error}</div>
+      {loading && (
+        <>
+          <Skeleton className="h-48 w-full rounded-card mb-8" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 rounded-card" />
+            ))}
+          </div>
+          <Skeleton className="h-72 w-full rounded-card" />
+        </>
       )}
 
-      {data && (
+      {!loading && error && (
+        <SectionCard icon={AlertTriangle} iconTint="#B8860B" eyebrow="Aviso" title="No se puede mostrar la evidencia">
+          <p className="text-sm text-gray-600">{error}</p>
+        </SectionCard>
+      )}
+
+      {!loading && data && (
         <>
+          {/* Banda hero — dominio institucional */}
+          <div className="relative overflow-hidden rounded-card shadow-soft mb-8 lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+            <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+            <div aria-hidden className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 hidden xl:block opacity-95">
+              <ArtReport size={170} className="lp-drift" />
+            </div>
+            <div className="relative p-6 lg:p-8">
+              <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500 mb-2">
+                Resultados de aprendizaje
+              </p>
+              <h2 className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
+                Dominio institucional
+              </h2>
+              <p className="text-sm text-blue-200/80 mt-1.5 max-w-lg">
+                Calculado a partir de los intentos calificados en ejercicios vinculados a cada competencia.
+              </p>
+            </div>
+          </div>
+
           {/* KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Kpi icon={<Target className="w-4 h-4" />} label="Dominio general"
+            <StatCard
+              key={`om-${data.summary.overallMastery ?? 'na'}`}
+              label="Dominio general"
               value={data.summary.overallMastery != null ? `${data.summary.overallMastery}%` : '—'}
-              color={masteryColor(data.summary.overallMastery)} />
-            <Kpi icon={<Award className="w-4 h-4" />} label="Competencias con evidencia"
-              value={`${data.summary.competenciesEvidenced}/${data.summary.totalCompetencies}`} color="#2563EB" />
-            <Kpi icon={<BookOpen className="w-4 h-4" />} label="Cursos"
-              value={`${data.summary.totalCourses}`} color="#7C3AED" />
-            <Kpi icon={<AlertTriangle className="w-4 h-4" />} label="Estudiantes en riesgo"
-              value={`${data.summary.atRiskCount}`} color={data.summary.atRiskCount > 0 ? '#DC2626' : '#059669'} />
+              icon={Target}
+              tint={masteryColor(data.summary.overallMastery)}
+              className="cx-count"
+            />
+            <StatCard
+              key={`ce-${data.summary.competenciesEvidenced}`}
+              label="Competencias con evidencia"
+              value={`${data.summary.competenciesEvidenced}/${data.summary.totalCompetencies}`}
+              icon={Award}
+              tint="#2563EB"
+              className="cx-count"
+            />
+            <StatCard
+              key={`tc-${data.summary.totalCourses}`}
+              label="Cursos"
+              value={String(data.summary.totalCourses)}
+              icon={BookOpen}
+              tint="#1B2E6E"
+              hint={`${data.summary.totalExercises} ejercicios`}
+              className="cx-count"
+            />
+            <StatCard
+              key={`ar-${data.summary.atRiskCount}`}
+              label="Estudiantes en riesgo"
+              value={String(data.summary.atRiskCount)}
+              icon={AlertTriangle}
+              tint={data.summary.atRiskCount > 0 ? '#DC2626' : '#059669'}
+              className="cx-count"
+            />
           </div>
 
           {/* Dominio por competencia */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
-            <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-              <Award className="w-4 h-4 text-blue-700" /> Dominio por competencia
-            </h2>
+          <SectionCard
+            icon={Award}
+            iconTint="#2563EB"
+            eyebrow="Por competencia"
+            title="Dominio alcanzado"
+            className="mb-6"
+          >
             {data.competencies.length === 0 ? (
               <EmptyHint />
             ) : (
-              <div className="space-y-3">
-                {data.competencies.map(c => (
-                  <div key={c.id}>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-medium text-gray-700">
-                        <span className="font-mono text-gray-400 mr-1.5">{c.code}</span>{c.name}
-                        <span className="ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{AREA_LABEL[c.area] ?? c.area}</span>
+              <div className="space-y-4">
+                {data.competencies.map((c, i) => (
+                  <div key={c.id} className={`cx-pop ${i < 6 ? `cx-d${i + 1}` : ''}`}>
+                    <div className="flex items-center justify-between gap-3 text-xs mb-1.5">
+                      <span className="font-medium text-gray-700 min-w-0">
+                        <span className="font-mono text-gray-400 mr-1.5">{c.code}</span>
+                        {c.name}
+                        <span className="ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                          {AREA_LABEL[c.area] ?? c.area}
+                        </span>
                       </span>
-                      <span className="font-bold" style={{ color: masteryColor(c.masteryPct) }}>
+                      <span
+                        className="font-bold tabular-nums flex-shrink-0"
+                        style={{ color: masteryColor(c.masteryPct) }}
+                      >
                         {c.masteryPct != null ? `${c.masteryPct}%` : 'Sin evidencia'}
                       </span>
                     </div>
                     <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${c.masteryPct ?? 0}%`, background: masteryColor(c.masteryPct) }} />
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${c.masteryPct ?? 0}%`, background: masteryColor(c.masteryPct) }}
+                      />
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{c.evidenceCount} evidencias · {c.studentsAssessed} estudiantes</p>
+                    <p className="text-[10px] text-gray-400 mt-1 font-mono tabular-nums">
+                      {c.evidenceCount} evidencias · {c.studentsAssessed} estudiantes
+                    </p>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </SectionCard>
 
           {/* Cohortes / cursos */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5">
-            <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-blue-700" /> Cohortes (cursos)
-            </h2>
+          <SectionCard
+            icon={GraduationCap}
+            iconTint="#059669"
+            eyebrow="Cohortes"
+            title="Desempeño por curso"
+            flushBody
+          >
             {data.courses.length === 0 ? (
               <EmptyHint />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                      <th className="py-2 pr-3 font-medium">Curso</th>
-                      <th className="py-2 px-3 font-medium">Período</th>
-                      <th className="py-2 px-3 font-medium text-center">Ejercicios</th>
-                      <th className="py-2 px-3 font-medium text-center">Evaluados</th>
-                      <th className="py-2 px-3 font-medium text-center">Competencias</th>
-                      <th className="py-2 px-3 font-medium text-center">En riesgo</th>
-                      <th className="py-2 pl-3 font-medium text-right">Dominio</th>
+                    <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
+                      <th className="text-left px-6 py-3 font-semibold">Curso</th>
+                      <th className="text-left px-3 py-3 font-semibold">Período</th>
+                      <th className="text-center px-3 py-3 font-semibold">Ejercicios</th>
+                      <th className="text-center px-3 py-3 font-semibold">Evaluados</th>
+                      <th className="text-center px-3 py-3 font-semibold">Competencias</th>
+                      <th className="text-center px-3 py-3 font-semibold">En riesgo</th>
+                      <th className="text-right px-6 py-3 font-semibold">Dominio</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {data.courses.map(c => (
-                      <tr key={c.courseId} className="border-b border-gray-50 last:border-0">
-                        <td className="py-2.5 pr-3 font-medium text-gray-800">{c.name}</td>
-                        <td className="py-2.5 px-3 text-gray-500">{c.period ?? '—'}</td>
-                        <td className="py-2.5 px-3 text-center text-gray-600">{c.exercises}</td>
-                        <td className="py-2.5 px-3 text-center text-gray-600">{c.studentsAssessed}</td>
-                        <td className="py-2.5 px-3 text-center text-gray-600">{c.competenciesCovered}</td>
-                        <td className="py-2.5 px-3 text-center">
+                  <tbody className="divide-y divide-gray-100">
+                    {data.courses.map((c) => (
+                      <tr key={c.courseId} className="hover:bg-blue-50/40 transition-colors">
+                        <td className="px-6 py-3 font-semibold text-gray-800">{c.name}</td>
+                        <td className="px-3 py-3 text-gray-500">{c.period ?? '—'}</td>
+                        <td className="px-3 py-3 text-center text-gray-600 font-mono tabular-nums">{c.exercises}</td>
+                        <td className="px-3 py-3 text-center text-gray-600 font-mono tabular-nums">{c.studentsAssessed}</td>
+                        <td className="px-3 py-3 text-center text-gray-600 font-mono tabular-nums">{c.competenciesCovered}</td>
+                        <td className="px-3 py-3 text-center font-mono tabular-nums">
                           {c.atRiskCount > 0
-                            ? <span className="text-red-600 font-semibold">{c.atRiskCount}</span>
+                            ? <span className="text-red-600 font-bold">{c.atRiskCount}</span>
                             : <span className="text-gray-400">0</span>}
                         </td>
-                        <td className="py-2.5 pl-3 text-right font-bold" style={{ color: masteryColor(c.avgMastery) }}>
+                        <td
+                          className="px-6 py-3 text-right font-bold tabular-nums"
+                          style={{ color: masteryColor(c.avgMastery) }}
+                        >
                           {c.avgMastery != null ? `${c.avgMastery}%` : '—'}
                         </td>
                       </tr>
@@ -185,10 +267,10 @@ export default function CompetenciasInstitucionalPage() {
                 </table>
               </div>
             )}
-          </div>
+          </SectionCard>
 
           <p className="text-xs text-gray-400 mt-4">
-            Generado {new Date(data.generatedAt).toLocaleString('es-CR')}. El dominio se calcula a partir de los
+            Generado el {new Date(data.generatedAt).toLocaleString('es-CR')}. El dominio se calcula a partir de los
             intentos calificados en ejercicios vinculados a cada competencia.
           </p>
         </>
@@ -197,22 +279,13 @@ export default function CompetenciasInstitucionalPage() {
   );
 }
 
-function Kpi({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string; color: string }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4">
-      <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
-        <span style={{ color }}>{icon}</span> {label}
-      </div>
-      <p className="text-2xl font-black" style={{ color }}>{value}</p>
-    </div>
-  );
-}
-
 function EmptyHint() {
   return (
-    <div className="text-center py-8 text-gray-400">
-      <TrendingUp className="w-8 h-8 mx-auto text-gray-200 mb-2" />
-      <p className="text-sm">Aún no hay evidencia. Vincula competencias a los ejercicios y califica intentos.</p>
-    </div>
+    <EmptyState
+      illustration={<SceneEmptyBox size={180} className="lp-drift" />}
+      title="Aún no hay evidencia"
+      description="Vincula competencias a los ejercicios y califica intentos: el dominio aparecerá aquí automáticamente."
+      className="py-6"
+    />
   );
 }

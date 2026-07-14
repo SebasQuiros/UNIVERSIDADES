@@ -94,7 +94,7 @@ export default function SimuladorPage() {
       <div className="flex items-start gap-3.5 pt-4 border-t border-gray-100">
         <IconTile icon={TrendingUp} tint="#2563EB" size={46} className="mt-0.5" />
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-700 mb-0.5">Mercado bursátil</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-900 mb-0.5">Mercado bursátil</p>
           <h2 className="text-lg font-bold text-gray-900 leading-tight">Simulación bursátil de tus empresas</h2>
           <p className="text-gray-500 text-sm mt-1 max-w-prose">
             Valoración de acción, gerente financiero IA y eventos económicos de las empresas que creaste en tus ejercicios.

@@ -1,12 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { ElementType } from 'react';
 import { api } from '@/lib/api';
-import { Spinner } from '@/components/ui/Spinner';
+import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Card } from '@/components/ui/Card';
+import { IconTile } from '@/components/ui/IconTile';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ArtGrowth, SceneEmptyBox } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
-  TrendingUp, Award, Clock, BookOpen, Target, Star,
-  Trophy, Zap, Medal, Crown, GraduationCap, Compass,
+  TrendingUp, Award, Clock, Target, Star,
+  Trophy, Zap, Medal, Crown, GraduationCap, Compass, Sparkles, ListChecks,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis,
@@ -46,6 +55,12 @@ interface Gamification {
   }>;
 }
 
+// Textura de puntos sutil para las bandas hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
+
 function diffColor(pct: number) {
   if (pct >= 80) return '#10b981';
   if (pct >= 60) return '#f59e0b';
@@ -53,10 +68,16 @@ function diffColor(pct: number) {
 }
 
 function rankStyle(rank: number) {
-  if (rank === 1) return { bg: 'linear-gradient(135deg,#FBBF24,#F59E0B)', icon: Crown,  color: '#fff' };
+  if (rank === 1) return { bg: 'linear-gradient(135deg,#FBBF24,#B8860B)', icon: Crown,  color: '#fff' };
   if (rank === 2) return { bg: 'linear-gradient(135deg,#CBD5E1,#94A3B8)', icon: Medal,  color: '#fff' };
-  if (rank === 3) return { bg: 'linear-gradient(135deg,#D97706,#B45309)', icon: Medal,  color: '#fff' };
+  if (rank === 3) return { bg: 'linear-gradient(135deg,#D4A017,#8A6608)', icon: Medal,  color: '#fff' };
   return { bg: '#F1F5F9', icon: Trophy, color: '#64748B' };
+}
+
+// Iconos de nivel (sin emojis): escalan con el índice del nivel del backend.
+const LEVEL_ICONS: ElementType[] = [Sparkles, Star, Award, Medal, Trophy, Crown];
+function levelIcon(index: number): ElementType {
+  return LEVEL_ICONS[Math.min(Math.max(index, 0), LEVEL_ICONS.length - 1)];
 }
 
 // ─── Mentor IA ─────────────────────────────────────────────────────────────
@@ -82,21 +103,19 @@ function MentorNote() {
   if (!mentor?.message) return null;
 
   return (
-    <div className="rounded-2xl p-6 text-white relative overflow-hidden mb-6"
-      style={{ background: 'linear-gradient(135deg,#4F46E5,#7C3AED)' }}>
-      <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20"
-        style={{ background: 'radial-gradient(circle,#fff,transparent 70%)', transform: 'translate(30%,-30%)' }} />
-      <div className="relative flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-          style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
-          <GraduationCap className="w-6 h-6" />
-        </div>
+    <div className="relative overflow-hidden rounded-card shadow-soft mb-6 cx-pop bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+      <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+      <div className="relative flex items-start gap-4 p-6">
+        <IconTile icon={GraduationCap} size={48} onDark className="cx-bounce" />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#C7D2FE' }}>Mentor IA</p>
-          <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap">{mentor.message}</p>
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500">
+            Mentor IA
+          </p>
+          <p className="text-sm text-blue-100 mt-1.5 leading-relaxed whitespace-pre-wrap">
+            {mentor.message}
+          </p>
           {mentor.suggestedFocus && (
-            <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
+            <div className="mt-3 inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full text-gold-100 bg-white/10 border border-white/15">
               <Compass className="w-3.5 h-3.5" /> Enfoque sugerido: {mentor.suggestedFocus}
             </div>
           )}
@@ -106,20 +125,15 @@ function MentorNote() {
   );
 }
 
-function StatCard({ label, value, sub, icon: Icon, color }: {
-  label: string; value: string | number; sub?: string;
-  icon: React.ElementType; color: string;
-}) {
+// ─── Skeleton de carga ──────────────────────────────────────────────────────
+function ProgresoSkeleton() {
   return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
-        <Icon className="w-5 h-5" />
+    <div className="space-y-8">
+      <Skeleton className="h-44 rounded-card" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-card" />)}
       </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{value}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-        {sub && <p className="text-xs text-gray-400">{sub}</p>}
-      </div>
+      <Skeleton className="h-72 rounded-card" />
     </div>
   );
 }
@@ -139,8 +153,8 @@ export default function ProgresoPage() {
   }, []);
 
   if (loading) return (
-    <div className="flex-1 flex items-center justify-center">
-      <Spinner size="lg" />
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      <ProgresoSkeleton />
     </div>
   );
 
@@ -158,70 +172,82 @@ export default function ProgresoPage() {
     return 'F';
   };
 
+  const LevelIcon = game ? levelIcon(game.level.index) : Sparkles;
+
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <TrendingUp className="w-6 h-6 text-blue-700" />
-          Mi Progreso
-        </h2>
-        <p className="text-gray-500 text-sm mt-1">
-          Evolución académica y estadísticas de rendimiento
-        </p>
-      </div>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+
+      {/* Cabecera */}
+      <PageHeader
+        eyebrow="Seguimiento académico"
+        title="Mi progreso"
+        subtitle="Tu evolución ejercicio a ejercicio: notas, tiempo dedicado y competencias en construcción."
+        icon={TrendingUp}
+        className="mb-6"
+      />
 
       {/* ── Gamificación: nivel + ranking ── */}
       {game && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
           {/* Tarjeta de nivel (XP) */}
-          <div className="lg:col-span-2 rounded-2xl p-6 text-white relative overflow-hidden"
-            style={{ background: '#03080F' }}>
-            <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20"
-              style={{ background: 'radial-gradient(circle,#FBBF24,transparent 70%)', transform: 'translate(30%,-30%)' }} />
-            <div className="relative flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-                style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
-                {game.level.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(251,191,36,0.2)', color: '#FDE68A' }}>
-                    Nivel {game.level.index + 1}
-                  </span>
-                  <h3 className="text-xl font-black">{game.level.name}</h3>
-                </div>
-                <div className="flex items-center gap-1.5 mt-1 text-sm" style={{ color: '#60A5FA' }}>
-                  <Zap className="w-4 h-4" style={{ color: '#FBBF24' }} />
-                  <span className="font-bold text-white font-mono tabular-nums">{game.xp.toLocaleString('es-CR')}</span> XP acumulado
-                </div>
-              </div>
+          <div className="lg:col-span-2 relative overflow-hidden rounded-card shadow-soft cx-pop bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+            <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+            <div aria-hidden className="pointer-events-none absolute -right-2 bottom-0 hidden sm:block opacity-90">
+              <ArtGrowth size={150} className="cx-float" />
             </div>
-
-            {/* Barra de progreso al siguiente nivel */}
-            <div className="relative mt-5">
-              <div className="flex justify-between text-xs mb-1.5" style={{ color: '#60A5FA' }}>
-                <span>{game.nextLevel ? `Progreso a ${game.nextLevel.name}` : '¡Nivel máximo alcanzado! 👑'}</span>
-                {game.nextLevel && <span>Faltan {game.nextLevel.xpRemaining.toLocaleString('es-CR')} XP</span>}
+            <div className="relative p-6">
+              <div className="flex items-center gap-4">
+                <IconTile icon={LevelIcon} size={60} onDark className="cx-bounce" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[0.68rem] font-bold uppercase tracking-[0.13em] px-2 py-0.5 rounded-full bg-gold-500/20 text-gold-100 border border-gold-500/30">
+                      Nivel {game.level.index + 1}
+                    </span>
+                    <h3 className="text-xl font-extrabold text-white tracking-tight">{game.level.name}</h3>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1.5 text-sm text-blue-200/80">
+                    <Zap className="w-4 h-4 text-gold-500" />
+                    <span className="font-bold text-white font-mono tabular-nums cx-count">
+                      {game.xp.toLocaleString('es-CR')}
+                    </span>
+                    XP acumulado
+                  </div>
+                </div>
               </div>
-              <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                <div className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${game.levelPct}%`, background: 'linear-gradient(90deg,#FBBF24,#FDE68A)' }} />
+
+              {/* Barra de progreso al siguiente nivel */}
+              <div className="relative mt-6 max-w-xl">
+                <div className="flex justify-between text-xs mb-1.5 text-blue-200/80">
+                  <span className="flex items-center gap-1.5">
+                    {game.nextLevel
+                      ? `Progreso hacia ${game.nextLevel.name}`
+                      : <><Crown className="w-3.5 h-3.5 text-gold-500" /> ¡Nivel máximo alcanzado!</>}
+                  </span>
+                  {game.nextLevel && (
+                    <span className="font-mono tabular-nums">
+                      Faltan {game.nextLevel.xpRemaining.toLocaleString('es-CR')} XP
+                    </span>
+                  )}
+                </div>
+                <div className="h-2.5 rounded-full overflow-hidden bg-white/15">
+                  <div
+                    className="h-full rounded-full transition-[width] duration-700 ease-out"
+                    style={{ width: `${game.levelPct}%`, background: 'linear-gradient(90deg,#B8860B,#FBBF24,#FDE68A)' }}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Tarjeta de ranking */}
-          <div className="rounded-2xl p-6 bg-white border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3"
-              style={{ background: 'linear-gradient(135deg,#FBBF24,#F59E0B)' }}>
-              <Trophy className="w-7 h-7 text-white" />
+          <div className="rounded-card p-6 bg-white border border-gray-200/70 shadow-card hover:shadow-card-hover flex flex-col items-center justify-center text-center cx-lift cx-pop cx-d2 cx-hop-parent">
+            <div className="mb-3 cx-hop">
+              <IconTile icon={Trophy} tint="#B8860B" size={56} />
             </div>
-            <p className="text-4xl font-black text-gray-900 leading-none font-mono tabular-nums">
+            <p className="text-4xl font-extrabold text-gray-900 leading-none font-mono tabular-nums cx-count">
               {game.rank ? `#${game.rank}` : '—'}
             </p>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 mt-1.5">
               de {game.totalStudents} estudiante{game.totalStudents !== 1 ? 's' : ''}
             </p>
             <p className="text-xs text-gray-400 mt-2">Ranking de tu universidad</p>
@@ -229,117 +255,148 @@ export default function ProgresoPage() {
         </div>
       )}
 
-      {/* ── Leaderboard ── */}
+      {/* ── Tabla de líderes ── */}
       {game && game.leaderboard.length > 1 && (
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-8">
-          <div className="p-5 border-b border-gray-200 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <h3 className="font-semibold text-gray-900">Tabla de líderes</h3>
-            <span className="text-xs text-gray-400 ml-auto">Top {Math.min(10, game.leaderboard.length)}</span>
-          </div>
+        <SectionCard
+          eyebrow="Comunidad"
+          title="Tabla de líderes"
+          icon={Trophy}
+          iconTint="#B8860B"
+          className="mb-8"
+          flushBody
+          action={
+            <span className="text-xs text-gray-400 font-mono">
+              Top {Math.min(10, game.leaderboard.length)}
+            </span>
+          }
+        >
           <div className="divide-y divide-gray-100">
-            {game.leaderboard.map((r) => {
+            {game.leaderboard.map((r, i) => {
               const rs = rankStyle(r.rank);
               const RankIcon = rs.icon;
               return (
-                <div key={r.id}
-                  className="flex items-center gap-3 px-5 py-3"
-                  style={r.isMe ? { background: 'rgba(37,99,235,0.07)' } : undefined}>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm"
-                    style={{ background: rs.bg, color: rs.color }}>
+                <div
+                  key={r.id}
+                  className={cn(
+                    'flex items-center gap-3 px-6 lg:px-7 py-3 transition-colors cx-pop',
+                    i < 6 ? `cx-d${i + 1}` : undefined,
+                    r.isMe ? 'bg-blue-50/70' : 'hover:bg-gray-50',
+                  )}
+                >
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-sm font-mono tabular-nums"
+                    style={{ background: rs.bg, color: rs.color }}
+                  >
                     {r.rank <= 3 ? <RankIcon className="w-4 h-4" /> : r.rank}
                   </div>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                    style={{ background: '#2563EB' }}>
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0 overflow-hidden"
+                    style={{ background: '#1B2E6E' }}
+                  >
                     {r.avatarUrl
                       ? <img src={r.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
                       : r.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
-                      {r.name}{r.isMe && <span className="text-blue-700 font-semibold"> (tú)</span>}
+                      {r.name}{r.isMe && <span className="text-blue-700 font-bold"> (tú)</span>}
                     </p>
-                    <p className="text-xs text-gray-400">{r.completed} ejercicio{r.completed !== 1 ? 's' : ''} calificado{r.completed !== 1 ? 's' : ''}</p>
+                    <p className="text-xs text-gray-400">
+                      {r.completed} ejercicio{r.completed !== 1 ? 's' : ''} calificado{r.completed !== 1 ? 's' : ''}
+                    </p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <Zap className="w-3.5 h-3.5 text-amber-500" />
-                    <span className="text-sm font-bold text-gray-900 font-mono tabular-nums">{r.xp.toLocaleString('es-CR')}</span>
+                    <Zap className="w-3.5 h-3.5 text-gold-600" />
+                    <span className="text-sm font-bold text-gray-900 font-mono tabular-nums">
+                      {r.xp.toLocaleString('es-CR')}
+                    </span>
                     <span className="text-xs text-gray-400">XP</span>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </SectionCard>
       )}
 
-      {/* Summary stats */}
+      {/* Resumen de rendimiento */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           label="Nota promedio"
           value={stats.avgPct > 0 ? `${stats.avgPct}%` : '—'}
-          sub={stats.avgPct > 0 ? `Letra: ${letterGrade(stats.avgPct)}` : undefined}
+          hint={stats.avgPct > 0 ? `Letra ${letterGrade(stats.avgPct)}` : undefined}
           icon={Target}
-          color="bg-blue-50 text-blue-700"
+          tint="#2563EB"
+          className="cx-pop cx-d1"
         />
         <StatCard
           label="Mejor nota"
           value={stats.bestScore > 0 ? `${stats.bestScore}%` : '—'}
           icon={Star}
-          color="bg-amber-50 text-amber-600"
+          tint="#B8860B"
+          className="cx-pop cx-d2"
         />
         <StatCard
-          label="Ejercicios calificados"
+          label="Calificados"
           value={`${stats.graded}/${stats.total}`}
+          hint="Ejercicios con nota"
           icon={Award}
-          color="bg-emerald-50 text-emerald-600"
+          tint="#059669"
+          className="cx-pop cx-d3"
         />
         <StatCard
           label="Tiempo total"
           value={stats.totalTimeMin > 0 ? timeStr : '—'}
           icon={Clock}
-          color="bg-slate-100 text-slate-600"
+          tint="#475569"
+          className="cx-pop cx-d4"
         />
       </div>
 
-      {/* Status breakdown */}
-      <div className="grid grid-cols-4 gap-3 mb-8">
+      {/* Desglose por estado */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {[
-          { label: 'Sin iniciar', value: stats.notStarted, color: 'bg-gray-100 text-gray-600 border-gray-200' },
+          { label: 'Sin iniciar', value: stats.notStarted, color: 'bg-gray-50 text-gray-600 border-gray-200' },
           { label: 'En progreso', value: stats.inProgress, color: 'bg-blue-50 text-blue-700 border-blue-200' },
           { label: 'Entregados',  value: stats.submitted,  color: 'bg-amber-50 text-amber-700 border-amber-200' },
           { label: 'Calificados', value: stats.graded,     color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className={`border rounded-xl p-3 text-center ${color}`}>
-            <p className="text-xl font-bold font-mono tabular-nums">{value}</p>
-            <p className="text-xs mt-0.5">{label}</p>
+        ].map(({ label, value, color }, i) => (
+          <div
+            key={label}
+            className={cn('border rounded-2xl p-3.5 text-center cx-pop', color, `cx-d${i + 1}`)}
+          >
+            <p className="text-xl font-extrabold font-mono tabular-nums">{value}</p>
+            <p className="text-xs mt-0.5 font-medium">{label}</p>
           </div>
         ))}
       </div>
 
       {stats.scoreHistory.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center">
-          <BookOpen className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-          <h3 className="font-semibold text-gray-700 mb-1">Sin calificaciones aún</h3>
-          <p className="text-gray-500 text-sm">
-            Completa y entrega ejercicios para ver tu evolución aquí.
-          </p>
-        </div>
+        <Card>
+          <EmptyState
+            illustration={<SceneEmptyBox size={200} className="cx-float" />}
+            title="Todavía no hay calificaciones"
+            description="Completa y entrega tus ejercicios: cuando tu profesor los califique, verás aquí tu evolución, tus mejores notas y el tiempo invertido."
+          />
+        </Card>
       ) : (
         <>
-          {/* Score history line chart */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-blue-700" />
-              Evolución de notas
-            </h3>
+          {/* Evolución de notas */}
+          <SectionCard
+            eyebrow="Tendencia"
+            title="Evolución de notas"
+            description="Cada punto es un ejercicio calificado, en orden cronológico."
+            icon={TrendingUp}
+            iconTint="#2563EB"
+            className="mb-6"
+          >
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={stats.scoreHistory} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="title" tick={{ fontSize: 10 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                 <Tooltip
-                  formatter={(v: any) => [`${v}%`, 'Nota']}
+                  formatter={(v) => [`${v}%`, 'Nota']}
                   contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '13px' }}
                 />
                 <Line
@@ -352,21 +409,27 @@ export default function ProgresoPage() {
                 />
               </LineChart>
             </ResponsiveContainer>
-          </div>
+          </SectionCard>
 
-          {/* By difficulty */}
+          {/* Rendimiento por dificultad */}
           {stats.difficultyData.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Target className="w-4 h-4 text-slate-600" />
-                Rendimiento por dificultad
-              </h3>
+            <SectionCard
+              eyebrow="Dominio"
+              title="Rendimiento por dificultad"
+              description="Dónde te sostienes con soltura y dónde conviene reforzar."
+              icon={Target}
+              iconTint="#475569"
+              className="mb-6"
+            >
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={stats.difficultyData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                  <Tooltip formatter={(v: any) => [`${v}%`, 'Promedio']} />
+                  <Tooltip
+                    formatter={(v) => [`${v}%`, 'Promedio']}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', fontSize: '13px' }}
+                  />
                   <Bar dataKey="avgPct" radius={[6, 6, 0, 0]} name="Promedio">
                     {stats.difficultyData.map((entry, i) => (
                       <Cell key={i} fill={diffColor(entry.avgPct)} />
@@ -374,43 +437,49 @@ export default function ProgresoPage() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </SectionCard>
           )}
 
-          {/* Recent grades table */}
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <div className="p-5 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900">Historial de calificaciones</h3>
-            </div>
+          {/* Historial de calificaciones */}
+          <SectionCard
+            eyebrow="Bitácora"
+            title="Historial de calificaciones"
+            icon={ListChecks}
+            iconTint="#1B2E6E"
+            flushBody
+          >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
                   <tr>
-                    <th className="text-left px-4 py-3">Ejercicio</th>
-                    <th className="text-center px-4 py-3">Nota</th>
-                    <th className="text-center px-4 py-3">Puntaje</th>
-                    <th className="text-center px-4 py-3">Dificultad</th>
+                    <th className="text-left px-6 py-3 font-semibold">Ejercicio</th>
+                    <th className="text-center px-4 py-3 font-semibold">Nota</th>
+                    <th className="text-center px-4 py-3 font-semibold">Puntaje</th>
+                    <th className="text-center px-6 py-3 font-semibold">Dificultad</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {[...stats.scoreHistory].reverse().map((h, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-800">{h.title}</td>
+                    <tr key={i} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-3 font-medium text-gray-800">{h.title}</td>
                       <td className="px-4 py-3 text-center">
                         <span
-                          className="font-bold text-base"
+                          className="font-bold text-base font-mono tabular-nums"
                           style={{ color: diffColor(h.pct) }}
                         >
                           {h.pct}%
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-600">{h.score}/{h.maxScore}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          h.difficulty === 'BASIC'        ? 'bg-green-50 text-green-700' :
-                          h.difficulty === 'INTERMEDIATE' ? 'bg-yellow-50 text-yellow-700' :
-                                                            'bg-red-50 text-red-700'
-                        }`}>
+                      <td className="px-4 py-3 text-center text-gray-600 font-mono tabular-nums">
+                        {h.score}/{h.maxScore}
+                      </td>
+                      <td className="px-6 py-3 text-center">
+                        <span className={cn(
+                          'text-xs font-medium px-2 py-0.5 rounded-full border',
+                          h.difficulty === 'BASIC'        ? 'bg-green-50 text-green-700 border-green-200' :
+                          h.difficulty === 'INTERMEDIATE' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                            'bg-red-50 text-red-700 border-red-200',
+                        )}>
                           {h.difficulty === 'BASIC' ? 'Básico' : h.difficulty === 'INTERMEDIATE' ? 'Intermedio' : 'Avanzado'}
                         </span>
                       </td>
@@ -419,17 +488,22 @@ export default function ProgresoPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </SectionCard>
         </>
       )}
 
       {/* ── Perfil de aprendizaje + Mentor IA (evidencia SINAES) ── */}
-      <div className="mt-8">
-        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-1">
-          <GraduationCap className="w-5 h-5 text-indigo-600" />
-          Perfil de aprendizaje
-        </h3>
-        <p className="text-gray-500 text-sm mb-4">
+      <div className="mt-10">
+        <div className="flex items-center gap-3 mb-4">
+          <IconTile icon={GraduationCap} tint="#1B2E6E" size={40} />
+          <div>
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">
+              Criterio contable
+            </p>
+            <h3 className="text-base font-bold tracking-tight text-gray-900">Perfil de aprendizaje</h3>
+          </div>
+        </div>
+        <p className="text-sm text-gray-500 mb-5 max-w-prose">
           Cómo vas construyendo criterio contable: dominio por competencia, fortalezas y errores a repasar.
         </p>
         <MentorNote />

@@ -2,12 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Users, FileText, CheckCircle, ArrowRight, X, Sparkles } from 'lucide-react';
+import { BookOpen, Users, FileText, ArrowRight, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
+import { SceneWelcome } from '@/components/illustrations';
+import { cn } from '@/lib/utils';
 
 interface Step {
   icon: React.ElementType;
-  color: string;
+  /** Tinte del IconTile (hex de marca). */
+  tint: string;
   title: string;
   description: string;
   action: string;
@@ -17,7 +21,7 @@ interface Step {
 const STEPS: Step[] = [
   {
     icon:        BookOpen,
-    color:       'bg-blue-50 text-blue-700',
+    tint:        '#2563EB',
     title:       'Crea tu primer curso',
     description: 'Organiza tus clases por curso y período. Puedes tener cursos en distintas universidades.',
     action:      'Ir a Mis Cursos',
@@ -25,7 +29,7 @@ const STEPS: Step[] = [
   },
   {
     icon:        Users,
-    color:       'bg-emerald-50 text-emerald-600',
+    tint:        '#059669',
     title:       'Inscribe estudiantes',
     description: 'Abre el curso que creaste y usa el botón "Inscribir estudiante" para añadir alumnos.',
     action:      'Ver mis cursos',
@@ -33,13 +37,37 @@ const STEPS: Step[] = [
   },
   {
     icon:        FileText,
-    color:       'bg-slate-50 text-slate-600',
+    tint:        '#B8860B',
     title:       'Crea y publica un ejercicio',
     description: 'Diseña ejercicios con rúbricas de evaluación. Al publicar, los estudiantes reciben notificación automática.',
     action:      'Crear ejercicio',
     href:        '/profesor/ejercicios/nuevo',
   },
 ];
+
+// Textura de puntos sutil para la cabecera (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '18px 18px',
+};
+
+// Check dibujado (trazo animado con cx-draw) para los pasos ya completados.
+function DrawnCheck() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="10" fill="#ECFDF5" stroke="#34D399" strokeWidth="1.5" />
+      <path
+        d="M7.5 12.4l3 3 6-6.6"
+        pathLength={1}
+        className="cx-draw"
+        stroke="#059669"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export function OnboardingWizard({ userId, onComplete }: { userId: string; onComplete: () => void }) {
   const router  = useRouter();
@@ -59,78 +87,119 @@ export function OnboardingWizard({ userId, onComplete }: { userId: string; onCom
 
   const current = STEPS[step];
   const Icon    = current.icon;
+  const isLast  = step === STEPS.length - 1;
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${closing ? 'opacity-0' : 'opacity-100'}`}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={dismiss} />
+      <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={dismiss} />
 
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
-        {/* Header */}
-        <div className="bg-[#2563EB] px-6 pt-6 pb-8 text-white">
-          <div className="flex items-start justify-between mb-4">
+      <div className="relative w-full max-w-md rounded-card border border-gray-200/70 bg-white shadow-2xl overflow-hidden cx-pop">
+
+        {/* Cabecera — azul noche con la escena de bienvenida */}
+        <div className="relative overflow-hidden px-6 pt-6 pb-10 text-white bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+          <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+          <div aria-hidden className="pointer-events-none absolute -right-3 -bottom-3 opacity-95">
+            <SceneWelcome size={132} className={isLast ? 'cx-tada' : 'cx-float'} key={isLast ? 'final' : 'walk'} />
+          </div>
+
+          <div className="relative flex items-start justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-200" />
-              <span className="text-sm font-medium text-blue-100">Bienvenido a ContaSJ</span>
+              <Sparkles className="w-4 h-4 text-gold-500 cx-wiggle-loop" />
+              <span className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500">
+                Bienvenido a ContaSJ
+              </span>
             </div>
-            <button onClick={dismiss} className="text-blue-200 hover:text-white transition-colors">
+            <button
+              onClick={dismiss}
+              aria-label="Cerrar tutorial"
+              className="text-blue-200 hover:text-white transition-colors cx-press"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
-          <h2 className="text-xl font-bold">Empieza en 3 pasos</h2>
-          <p className="text-blue-100 text-sm mt-1">Configura tu espacio en menos de 5 minutos</p>
+
+          <div className="relative max-w-[62%]">
+            <h2 className="text-xl font-extrabold tracking-tight">Empieza en 3 pasos</h2>
+            <p className="text-blue-200/80 text-sm mt-1.5 leading-relaxed">
+              Deja tu espacio listo en menos de 5 minutos.
+            </p>
+          </div>
         </div>
 
-        {/* Steps indicator */}
-        <div className="flex items-center gap-2 px-6 -mt-4 mb-1">
-          {STEPS.map((_, i) => (
+        {/* Indicador de pasos */}
+        <div className="relative flex items-center gap-2 px-6 -mt-5 mb-1">
+          {STEPS.map((s, i) => (
             <button
-              key={i}
+              key={s.title}
               onClick={() => setStep(i)}
-              className={`flex-1 h-1.5 rounded-full transition-all ${i <= step ? 'bg-blue-600' : 'bg-gray-200'}`}
+              aria-label={`Ir al paso ${i + 1}: ${s.title}`}
+              className={cn(
+                'flex-1 h-1.5 rounded-full transition-all duration-500',
+                i <= step
+                  ? 'bg-gradient-to-r from-gold-600 to-gold-500 shadow-[0_0_0_1px_rgba(184,134,11,0.25)]'
+                  : 'bg-white/25',
+              )}
             />
           ))}
         </div>
 
-        {/* Step content */}
-        <div className="px-6 pt-4 pb-6">
-          <div className="flex items-start gap-4 mb-6">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${current.color}`}>
-              <Icon className="w-6 h-6" />
+        {/* Contenido del paso */}
+        <div className="px-6 pt-6 pb-6">
+          <div key={step} className="flex items-start gap-4 mb-6 cx-pop cx-hop-parent">
+            <div className="cx-hop">
+              <IconTile icon={Icon} tint={current.tint} size={52} />
             </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Paso {step + 1} de {STEPS.length}</span>
-              </div>
-              <h3 className="font-bold text-gray-900 text-lg leading-tight">{current.title}</h3>
-              <p className="text-gray-500 text-sm mt-1 leading-relaxed">{current.description}</p>
+            <div className="min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900 mb-1">
+                Paso {step + 1} de {STEPS.length}
+              </p>
+              <h3 className="font-bold text-gray-900 text-lg leading-tight tracking-tight">{current.title}</h3>
+              <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">{current.description}</p>
             </div>
           </div>
 
-          {/* Checklist of completed steps */}
-          <div className="space-y-2 mb-6">
+          {/* Lista de pasos con su estado */}
+          <div className="space-y-2 mb-6 rounded-2xl border border-gray-100 bg-gray-50/70 p-3.5">
             {STEPS.map((s, i) => (
-              <div key={i} className={`flex items-center gap-3 text-sm ${i < step ? 'text-emerald-600' : i === step ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
+              <div
+                key={s.title}
+                className={cn(
+                  'flex items-center gap-3 text-sm cx-pop',
+                  `cx-d${i + 1}`,
+                  i < step
+                    ? 'text-emerald-700'
+                    : i === step
+                      ? 'text-gray-900 font-semibold'
+                      : 'text-gray-400',
+                )}
+              >
                 {i < step ? (
-                  <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <DrawnCheck />
                 ) : (
-                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${i === step ? 'border-blue-600' : 'border-gray-300'}`} />
+                  <div
+                    className={cn(
+                      'w-4 h-4 rounded-full border-2 flex-shrink-0',
+                      i === step ? 'border-blue-600 bg-blue-50' : 'border-gray-300',
+                    )}
+                  />
                 )}
                 {s.title}
               </div>
             ))}
           </div>
 
-          {/* Actions */}
+          {/* Acciones */}
           <div className="flex gap-3">
             <Button
-              variant="secondary"
-              className="flex-1 text-sm"
+              variant="ghost"
+              className="flex-1 text-sm cx-press"
               onClick={dismiss}
             >
               Saltar tutorial
             </Button>
             <Button
-              className="flex-1 text-sm"
+              variant={isLast ? 'gold' : 'primary'}
+              className="flex-1 text-sm cx-press"
               onClick={() => {
                 if (step < STEPS.length - 1) {
                   setStep((s) => s + 1);

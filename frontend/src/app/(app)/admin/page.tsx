@@ -166,7 +166,7 @@ export default function AdminDashboard() {
       <div className="flex items-center gap-3 mb-4">
         <IconTile icon={Settings} tint="#1B2E6E" size={40} />
         <div>
-          <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-700">Administración</p>
+          <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">Administración</p>
           <h3 className="text-base font-bold tracking-tight text-gray-900">Gestión</h3>
         </div>
       </div>

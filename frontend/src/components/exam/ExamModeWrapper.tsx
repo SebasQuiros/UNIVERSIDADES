@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Lock } from 'lucide-react';
+import { Eye, Lock, Loader2 } from 'lucide-react';
 import { ExamTimer } from './ExamTimer';
 import { TabSwitchDetector } from './TabSwitchDetector';
 
@@ -45,10 +45,10 @@ export function ExamModeWrapper({
 
   return (
     <>
-      {/* ── Tab-switch detector (invisible) ─────────────────────────────── */}
+      {/* ── Detector de cambio de pestaña (invisible) ─────────────────────── */}
       <TabSwitchDetector attemptId={attemptId} onSwitch={setTabSwitchCount} />
 
-      {/* ── Fixed countdown timer ────────────────────────────────────────── */}
+      {/* ── Temporizador fijo ─────────────────────────────────────────────── */}
       {timeLimitMinutes != null && timeLimitMinutes > 0 && (
         <ExamTimer
           attemptId={attemptId}
@@ -57,44 +57,58 @@ export function ExamModeWrapper({
         />
       )}
 
-      {/* ── Top banner ────────────────────────────────────────────────────── */}
-      <div className="w-full bg-gray-900 text-white px-4 py-2 flex items-center justify-between text-sm font-medium z-30">
-        <div className="flex items-center gap-2">
-          <Lock className="w-4 h-4 text-red-400" />
-          <span className="font-bold tracking-wide text-red-300">MODO EXAMEN</span>
-          <span className="text-gray-400">—</span>
-          <span className="text-gray-200 truncate max-w-xs">{studentName}</span>
+      {/* ── Banda superior de modo examen ─────────────────────────────────── */}
+      <div className="z-30 flex w-full items-center justify-between gap-4 border-b border-white/10 bg-gradient-to-r from-csq-dark via-csq-dark-2 to-csq-mid px-4 py-2.5 text-sm">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-red-400/30 bg-red-500/15">
+            <Lock className="w-3.5 h-3.5 text-red-300" />
+          </span>
+          <span className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-red-300">
+            Modo examen
+          </span>
+          <span className="text-blue-200/40">·</span>
+          <span className="max-w-xs truncate font-semibold text-blue-100">{studentName}</span>
         </div>
-        <div className="flex items-center gap-4 text-xs text-gray-400">
+        <div className="flex flex-shrink-0 items-center gap-4 text-xs">
           {tabSwitchCount > 0 && (
-            <span className={tabSwitchCount > 3 ? 'text-amber-400 font-semibold' : 'text-gray-400'}>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold tabular-nums ${
+                tabSwitchCount > 3
+                  ? 'border border-gold-100/30 bg-gold-500/15 text-gold-500'
+                  : 'border border-white/10 bg-white/5 text-blue-200/80'
+              }`}
+            >
+              <Eye className="w-3 h-3" />
               Cambios de pestaña: {tabSwitchCount}
             </span>
           )}
-          <span className="truncate max-w-xs hidden sm:inline">{exerciseName}</span>
+          <span className="hidden max-w-xs truncate text-blue-200/70 sm:inline">{exerciseName}</span>
         </div>
       </div>
 
-      {/* ── Page content ─────────────────────────────────────────────────── */}
+      {/* ── Contenido de la página ────────────────────────────────────────── */}
       {children}
 
-      {/* ── Time's up overlay ────────────────────────────────────────────── */}
+      {/* ── Overlay de tiempo agotado ─────────────────────────────────────── */}
       {timeUp && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl p-10 text-center max-w-sm w-full mx-4 border border-red-200">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-csq-dark/80 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-card border border-red-200 bg-white p-10 text-center shadow-card-hover cx-pop">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-200 bg-red-50">
               <Lock className="w-8 h-8 text-red-600" />
             </div>
-            <h2 className="text-3xl font-black text-red-600 mb-2 tracking-tight">
-              TIEMPO AGOTADO
+            <p className="mb-1 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-900">
+              Modo examen
+            </p>
+            <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-red-600">
+              Tiempo agotado
             </h2>
-            <p className="text-gray-600 text-sm mb-6">
+            <p className="mb-6 text-sm text-gray-600">
               {submitting
-                ? 'Enviando tu ejercicio automáticamente...'
-                : 'Tu ejercicio ha sido enviado para calificación.'}
+                ? 'Enviando tu ejercicio automáticamente…'
+                : 'Tu ejercicio fue enviado para calificación.'}
             </p>
             {submitting && (
-              <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto" />
+              <Loader2 className="mx-auto w-8 h-8 animate-spin text-red-600" />
             )}
           </div>
         </div>

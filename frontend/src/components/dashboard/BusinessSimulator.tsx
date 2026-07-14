@@ -385,7 +385,7 @@ function ResultsPanel({ result, analyzing }: { result: AnalyzeResult; analyzing:
         <div className="flex items-center gap-2.5 mb-3">
           <IconTile icon={Target} tint="#475569" size={38} />
           <div>
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-700">Sensibilidad</p>
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">Sensibilidad</p>
             <h3 className="font-bold text-gray-900 text-sm leading-tight">Escenarios</h3>
           </div>
         </div>

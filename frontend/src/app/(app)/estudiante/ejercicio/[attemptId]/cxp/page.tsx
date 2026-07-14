@@ -5,8 +5,13 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
-import { Card, KPICard } from '@/components/ui/Card';
+import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtCoins, SceneEmptyBox } from '@/components/illustrations';
 import {
   PaymentStatusPill,
   derivePaymentStatus,
@@ -15,7 +20,7 @@ import {
 import { KPICardSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 import {
   ArrowLeft, Search, X, FileText, ChevronRight, Truck,
-  AlertTriangle, Clock, CircleDollarSign, ReceiptText, Inbox, Sparkles,
+  AlertTriangle, Clock, CircleDollarSign, ReceiptText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -95,22 +100,25 @@ function PaySupplierModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md ring-1 ring-gray-900/5 animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-csq-dark/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-card shadow-card-hover w-full max-w-md ring-1 ring-gray-900/5 cx-pop">
         <div className="flex items-center justify-between px-7 pt-6 pb-5 border-b border-gray-100">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900 tracking-tight">Registrar pago</h3>
-            <p className="text-sm text-gray-500 mt-1">{bill.invoiceNumber} · {bill.supplierName}</p>
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900 mb-0.5">Proveedores</p>
+            <h3 className="text-base font-bold text-gray-900 tracking-tight">Registrar pago</h3>
+            <p className="text-sm text-gray-500 mt-1 truncate">
+              <span className="font-mono">{bill.invoiceNumber}</span> · {bill.supplierName}
+            </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cx-press">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={submit} className="px-7 py-6 space-y-5">
-          <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-xl px-5 py-4 flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wider text-gray-500">Saldo pendiente</span>
-            <span className="text-lg font-bold text-gray-900 tabular-nums">{fmtCRC(bill.balance)}</span>
+          <div className="bg-gradient-to-br from-csq-mid to-csq-active text-white rounded-2xl px-5 py-4 flex items-center justify-between shadow-soft">
+            <span className="text-xs font-semibold uppercase tracking-wider text-blue-200/80">Saldo pendiente</span>
+            <span className="text-lg font-extrabold tabular-nums">{fmtCRC(bill.balance)}</span>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
@@ -152,8 +160,8 @@ function PaySupplierModal({
           </label>
 
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-            <Button type="submit" loading={saving} className="flex-1">Registrar pago</Button>
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1 cx-press">Cancelar</Button>
+            <Button type="submit" loading={saving} className="flex-1 cx-press">Registrar pago</Button>
           </div>
         </form>
       </div>
@@ -252,21 +260,41 @@ export default function CxPPage() {
         />
       )}
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8 lg:py-10 space-y-8">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/estudiante/ejercicio/${attemptId}`}
-            className="p-2 -ml-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            aria-label="Volver"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Cuentas por pagar</h1>
-            <p className="text-sm text-gray-500 mt-1">Facturas de proveedores y pagos efectuados.</p>
+      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8 lg:py-10 space-y-7">
+        {/* Volver */}
+        <Link
+          href={`/estudiante/ejercicio/${attemptId}`}
+          className="inline-flex items-center gap-2 -ml-1 text-sm font-medium text-gray-500 hover:text-blue-700 transition-colors cx-press"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Volver al ejercicio
+        </Link>
+
+        {/* Encabezado */}
+        <PageHeader
+          eyebrow="Obligaciones"
+          title="Cuentas por pagar"
+          subtitle="Facturas de proveedores y pagos efectuados."
+          icon={Truck}
+          iconTint="#1B2E6E"
+          className="lp-in"
+        />
+
+        {/* Banda del módulo */}
+        <Card variant="onDark" className="cx-pop">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+                Ciclo de pago
+              </p>
+              <h2 className="text-lg font-bold leading-snug">Lo que debes también es parte de tu contabilidad.</h2>
+              <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+                Controla los vencimientos con tus proveedores: cada pago reduce el pasivo y sale de tus cuentas de efectivo.
+              </p>
+            </div>
+            <ArtCoins size={140} className="lp-drift flex-shrink-0" />
           </div>
-        </div>
+        </Card>
 
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -279,49 +307,61 @@ export default function CxPPage() {
             </>
           ) : (
             <>
-              <KPICard
+              <StatCard
                 label="Total por pagar"
                 value={fmtCRC(kpi?.totalOutstanding ?? 0)}
                 hint={`${kpi?.supplierCount ?? 0} ${kpi?.supplierCount === 1 ? 'proveedor' : 'proveedores'}`}
                 icon={CircleDollarSign}
-                tone="gray"
+                tint="#1B2E6E"
+                className="cx-pop cx-d1 cx-lift cx-hop-parent"
               />
-              <KPICard
+              <StatCard
                 label="Vencido"
                 value={fmtCRC(kpi?.overdueAmount ?? 0)}
                 hint="Requiere acción"
                 icon={AlertTriangle}
-                tone="red"
+                tint="#EF4444"
+                className="cx-pop cx-d2 cx-lift cx-hop-parent"
               />
-              <KPICard
+              <StatCard
                 label="Pendiente vigente"
                 value={fmtCRC(kpi?.currentAmount ?? 0)}
                 hint="Aún dentro del plazo"
                 icon={Clock}
-                tone="amber"
+                tint="#B8860B"
+                className="cx-pop cx-d3 cx-lift cx-hop-parent"
               />
-              <KPICard
+              <StatCard
                 label="Pagado este mes"
                 value={fmtCRC(paidThisMonth)}
                 hint={new Date().toLocaleDateString('es-CR', { month: 'long', year: 'numeric' })}
                 icon={ReceiptText}
-                tone="emerald"
-                trend={paidTrend != null ? `${paidTrend > 0 ? '+' : ''}${paidTrend.toFixed(1)}%` : undefined}
-                trendDirection={paidTrend == null ? 'neutral' : paidTrend >= 0 ? 'up' : 'down'}
+                tint="#2563EB"
+                delta={paidTrend != null ? `${paidTrend > 0 ? '+' : ''}${paidTrend.toFixed(1)}%` : undefined}
+                deltaDirection={paidTrend == null ? 'neutral' : paidTrend >= 0 ? 'up' : 'down'}
+                className="cx-pop cx-d4 cx-lift cx-hop-parent"
               />
             </>
           )}
         </div>
 
-        {/* Toolbar + Table */}
-        <Card>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-6 lg:px-8 py-5 border-b border-gray-100">
+        {/* Toolbar + Tabla */}
+        <SectionCard
+          eyebrow="Detalle"
+          title="Facturas de proveedores"
+          description="Registra los pagos conforme cancelas a tus proveedores."
+          icon={FileText}
+          iconTint="#2563EB"
+          flushBody
+          className="cx-pop cx-d5"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-6 lg:px-7 py-5 border-b border-gray-100">
             <div className="relative flex-1 max-w-md">
               <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar proveedor o número…"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 bg-white transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 bg-white transition-colors"
               />
             </div>
             <div className="flex items-center gap-1 bg-gray-100/80 rounded-xl p-1">
@@ -329,10 +369,10 @@ export default function CxPPage() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cx-press ${
                     filter === f
-                      ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-200/70'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'text-white bg-gradient-to-br from-blue-600 to-csq-mid shadow-[0_6px_20px_rgba(27,46,110,0.28)]'
+                      : 'text-gray-500 hover:text-blue-700 hover:bg-white'
                   }`}
                 >
                   {f === 'ALL'     ? 'Todas'      :
@@ -347,21 +387,27 @@ export default function CxPPage() {
           {loading ? (
             <TableSkeleton rows={6} cols={7} />
           ) : rows.length === 0 ? (
-            <div className="py-20 px-8 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 mb-4">
-                {filter === 'OVERDUE'
-                  ? <Sparkles className="w-7 h-7 text-emerald-500" />
-                  : <Truck className="w-7 h-7 text-gray-400" />}
-              </div>
-              <p className="text-base font-medium text-gray-900">
-                {filter === 'OVERDUE' ? 'Todo bajo control' : 'No hay facturas registradas'}
-              </p>
-              <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
-                {filter === 'OVERDUE'
+            <EmptyState
+              illustration={
+                filter === 'OVERDUE'
+                  ? <ArtCoins size={190} className="lp-drift" />
+                  : <SceneEmptyBox size={200} className="lp-drift" />
+              }
+              title={filter === 'OVERDUE' ? 'Todo bajo control' : 'No hay facturas registradas'}
+              description={
+                filter === 'OVERDUE'
                   ? 'Sin facturas vencidas. No tienes pagos atrasados con tus proveedores.'
-                  : 'Cambia los filtros o registra una nueva factura de compra.'}
-              </p>
-            </div>
+                  : 'Cambia los filtros o registra una nueva factura de compra.'
+              }
+              action={
+                filter !== 'ALL' ? (
+                  <Button variant="outline" onClick={() => setFilter('ALL')} className="cx-press">
+                    Ver todas las facturas
+                  </Button>
+                ) : undefined
+              }
+              className="py-16"
+            />
           ) : (
             <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-22rem)]">
               <table className="w-full text-sm">
@@ -379,7 +425,7 @@ export default function CxPPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {rows.map((r) => (
-                    <tr key={r.id} className="group hover:bg-gray-50/70 transition-colors">
+                    <tr key={r.id} className="group cx-hop-parent hover:bg-blue-50/40 transition-colors">
                       <td className="px-8 py-4">
                         <div className="font-medium text-gray-900 truncate max-w-[220px]" title={r.supplierName}>
                           {r.supplierName}
@@ -392,7 +438,7 @@ export default function CxPPage() {
                       <td className="px-4 py-4 text-gray-600">{fmtDate(r.date)}</td>
                       <td className="px-4 py-4 text-gray-600">{fmtDate(r.dueDate)}</td>
                       <td className="px-4 py-4 text-right tabular-nums text-gray-700">{fmtCRC(Number(r.total))}</td>
-                      <td className="px-4 py-4 text-right tabular-nums font-semibold text-gray-900">
+                      <td className="px-4 py-4 text-right tabular-nums font-bold text-gray-900">
                         {fmtCRC(r.balance)}
                       </td>
                       <td className="px-4 py-4"><PaymentStatusPill status={r.paymentStatus} /></td>
@@ -401,18 +447,18 @@ export default function CxPPage() {
                           {r.balance > 0 && (
                             <button
                               onClick={() => setTarget(r)}
-                              className="px-3 py-1.5 text-xs font-semibold rounded-lg text-gray-700 hover:text-gray-900 hover:bg-white ring-1 ring-gray-200 hover:ring-gray-300 transition-all"
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg text-blue-700 hover:text-white hover:bg-blue-600 ring-1 ring-blue-200 hover:ring-blue-600 bg-white transition-all cx-press"
                             >
                               Registrar pago
                             </button>
                           )}
                           <button
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-700 hover:bg-white transition-colors cx-press"
                             title="Ver factura"
                           >
                             <FileText className="w-4 h-4" />
                           </button>
-                          <ChevronRight className="w-4 h-4 text-gray-300" />
+                          <ChevronRight className="w-4 h-4 text-gray-300 cx-hop" />
                         </div>
                       </td>
                     </tr>
@@ -421,7 +467,7 @@ export default function CxPPage() {
               </table>
             </div>
           )}
-        </Card>
+        </SectionCard>
       </div>
     </div>
   );

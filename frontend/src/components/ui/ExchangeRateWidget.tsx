@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, AlertCircle, TrendingUp } from 'lucide-react';
+import { RefreshCw, AlertCircle, ArrowRightLeft } from 'lucide-react';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { ArtCoins } from '@/components/illustrations';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -86,26 +88,27 @@ export function ExchangeRateWidget({ onRateLoaded, compact = false }: ExchangeRa
   // ── Compact inline version ──────────────────────────────────────────────────
   if (compact) {
     return (
-      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
-        <span className="text-sm">💱</span>
+      <div className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 cx-wiggle-parent">
+        <ArrowRightLeft className="w-3.5 h-3.5 text-blue-600 shrink-0 cx-wiggle" strokeWidth={1.75} />
         {loading ? (
           <RefreshCw className="w-3 h-3 animate-spin text-blue-600" />
         ) : error && !rate ? (
-          <span className="text-xs text-amber-600">TC no disponible</span>
+          <span className="text-xs font-medium text-gold-700">TC no disponible</span>
         ) : rate ? (
           <>
-            <span className="text-xs font-semibold font-mono tabular-nums">₡{rate.venta.toFixed(2)} / $1</span>
-            <span className="text-xs text-blue-700">({rate.source})</span>
+            <span className="text-xs font-bold font-mono tabular-nums">₡{rate.venta.toFixed(2)} / $1</span>
+            <span className="text-xs text-blue-600">({rate.source})</span>
           </>
         ) : null}
         <button
           type="button"
           onClick={() => fetchRate(true)}
-          className="text-blue-500 hover:text-blue-700 ml-0.5"
+          className="text-blue-500 hover:text-blue-700 ml-0.5 transition-colors cx-press"
           title="Actualizar tipo de cambio"
+          aria-label="Actualizar tipo de cambio"
           disabled={loading}
         >
-          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn('w-3 h-3', loading && 'animate-spin')} />
         </button>
       </div>
     );
@@ -113,29 +116,40 @@ export function ExchangeRateWidget({ onRateLoaded, compact = false }: ExchangeRa
 
   // ── Card version ───────────────────────────────────────────────────────────
   return (
-    <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-      <div className="flex items-center justify-between gap-3">
-        {/* Left: icon + label */}
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-blue-700 shrink-0" />
-          <span className="text-sm font-medium text-blue-800">Tipo de cambio BCCR</span>
+    <div className="relative overflow-hidden rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3.5">
+      <div aria-hidden className="pointer-events-none absolute -right-3 -bottom-4 opacity-30">
+        <ArtCoins size={92} className="cx-float" />
+      </div>
+
+      <div className="relative flex items-center justify-between gap-3">
+        {/* Izquierda: icono + etiqueta */}
+        <div className="flex items-center gap-2.5">
+          <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-white border border-blue-100 shrink-0">
+            <ArrowRightLeft className="w-4 h-4 text-blue-700" strokeWidth={1.75} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-gold-900">
+              Tipo de cambio
+            </p>
+            <p className="text-sm font-semibold text-blue-900 leading-tight">Dólar BCCR</p>
+          </div>
         </div>
 
-        {/* Right: rate value + refresh */}
+        {/* Derecha: valor + refrescar */}
         <div className="flex items-center gap-2">
           {loading ? (
             <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
           ) : error && !rate ? (
-            <div className="flex items-center gap-1.5 text-amber-600">
+            <div className="flex items-center gap-1.5 text-gold-700">
               <AlertCircle className="w-4 h-4" />
-              <span className="text-xs">No disponible</span>
+              <span className="text-xs font-medium">No disponible</span>
             </div>
           ) : rate ? (
             <div className="text-right">
-              <p className="text-base font-bold font-mono tabular-nums text-blue-900">
+              <p className="text-base font-extrabold font-mono tabular-nums text-blue-900 cx-count">
                 ₡{rate.venta.toFixed(2)} / $1
               </p>
-              <p className="text-xs text-blue-600">
+              <p className="text-xs text-blue-600 font-mono tabular-nums">
                 Compra: ₡{rate.compra.toFixed(2)}
               </p>
             </div>
@@ -144,31 +158,33 @@ export function ExchangeRateWidget({ onRateLoaded, compact = false }: ExchangeRa
           <button
             type="button"
             onClick={() => fetchRate(true)}
-            className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-100 transition-colors"
+            className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-white transition-colors cx-press"
             title="Actualizar tipo de cambio"
+            aria-label="Actualizar tipo de cambio"
             disabled={loading}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
           </button>
         </div>
       </div>
 
-      {/* Error warning when showing stale data */}
+      {/* Aviso cuando mostramos un valor en caché (servicio caído) */}
       {error && rate && (
-        <p className="mt-2 text-xs text-amber-600 flex items-center gap-1">
-          <AlertCircle className="w-3 h-3 shrink-0" />
-          Servicio BCCR no disponible. Puede ingresar el tipo de cambio manualmente.
+        <p className="relative mt-2.5 text-xs text-gold-700 flex items-start gap-1.5">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+          Servicio BCCR no disponible. Puedes ingresar el tipo de cambio manualmente.
         </p>
       )}
 
-      {/* Footer: last updated + source */}
+      {/* Pie: última actualización + fuente */}
       {lastUpdated && !error && (
-        <p className="mt-1.5 text-xs text-blue-500">
-          Actualizado a las {formatTime(lastUpdated)} · Fuente: {rate?.source ?? 'BCCR'}
+        <p className="relative mt-2 text-xs text-blue-500">
+          Actualizado a las <span className="font-mono tabular-nums">{formatTime(lastUpdated)}</span>
+          {' · '}Fuente: {rate?.source ?? 'BCCR'}
         </p>
       )}
 
-      {/* Manual override input shown when API is down */}
+      {/* Entrada manual cuando la API no responde */}
       {error && !rate && (
         <ManualRateInput onSubmit={(v) => {
           const fallback: UsdRate = {
@@ -197,7 +213,7 @@ function ManualRateInput({ onSubmit }: { onSubmit: (venta: number) => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 flex gap-2">
+    <form onSubmit={handleSubmit} className="relative mt-2.5 flex gap-2">
       <input
         type="number"
         value={val}
@@ -205,12 +221,13 @@ function ManualRateInput({ onSubmit }: { onSubmit: (venta: number) => void }) {
         placeholder="Ej: 530.00"
         min="1"
         step="0.01"
-        className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-amber-300 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+        aria-label="Tipo de cambio manual"
+        className="flex-1 px-3 py-1.5 text-xs font-mono tabular-nums rounded-lg border border-gold-100 bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
       />
       <button
         type="submit"
         disabled={!val || parseFloat(val) <= 0}
-        className="px-3 py-1.5 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-40"
+        className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg bg-gradient-to-br from-gold-600 to-gold-700 shadow-[0_4px_12px_rgba(184,134,11,0.28)] transition-all hover:shadow-[0_8px_20px_rgba(184,134,11,0.38)] disabled:opacity-40 disabled:shadow-none cx-press"
       >
         Usar este TC
       </button>

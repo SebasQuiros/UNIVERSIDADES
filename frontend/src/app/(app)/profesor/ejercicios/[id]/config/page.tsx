@@ -10,14 +10,17 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Lock, Save, Users, BookOpen, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, Lock, Save, Users, BookOpen, ShieldCheck, Boxes, Settings2 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SceneSearchEmpty } from '@/components/illustrations';
 import { getErrorMessage } from '@/lib/utils';
 import { GroupsPanel } from './GroupsPanel';
 
@@ -55,26 +58,26 @@ function Toggle({
   hint?: string;
 }) {
   return (
-    <label className={`flex items-start gap-3 py-2.5 cursor-pointer ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+    <label className={`flex items-start gap-3 py-3 ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 flex-shrink-0 mt-0.5 items-center rounded-full transition-colors ${
-          checked ? 'bg-blue-600' : 'bg-gray-300'
+        className={`relative mt-0.5 inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors cx-press ${
+          checked ? 'bg-gradient-to-br from-blue-600 to-[#1B2E6E]' : 'bg-gray-300'
         } ${disabled ? 'cursor-not-allowed' : ''}`}
       >
         <span
-          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
             checked ? 'translate-x-5' : 'translate-x-1'
           }`}
         />
       </button>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-900">{label}</div>
-        {hint && <div className="text-xs text-gray-500 mt-0.5">{hint}</div>}
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold text-gray-900">{label}</div>
+        {hint && <div className="mt-0.5 text-xs text-gray-500">{hint}</div>}
       </div>
     </label>
   );
@@ -84,7 +87,6 @@ export default function ExerciseConfigPage() {
   const { id }       = useParams<{ id: string }>();
   const search       = useSearchParams();
   const cursoId      = search.get('cursoId') ?? '';
-  const router       = useRouter();
 
   const [config,   setConfig]   = useState<ExerciseConfig | null>(null);
   const [exercise, setExercise] = useState<ExerciseLite | null>(null);
@@ -102,7 +104,7 @@ export default function ExerciseConfigPage() {
           api.get<ExerciseConfig>(`/api/v1/exercises/${id}/config`),
           cursoId
             ? api.get<ExerciseLite>(`/api/v1/courses/${cursoId}/exercises/${id}`)
-            : Promise.resolve({ data: null } as any),
+            : Promise.resolve({ data: null as ExerciseLite | null }),
         ]);
         if (cancelled) return;
         setConfig(cfgRes.data);
@@ -188,10 +190,20 @@ export default function ExerciseConfigPage() {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-20"><Spinner /></div>;
+    return <div className="flex-1 flex justify-center bg-[#F4F6F8] py-20"><Spinner size="lg" /></div>;
   }
   if (!config) {
-    return <div className="p-6 text-center text-gray-500">No se encontró la configuración.</div>;
+    return (
+      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+        <div className="mx-auto max-w-3xl rounded-card border border-gray-200/70 bg-white shadow-card">
+          <EmptyState
+            illustration={<SceneSearchEmpty size={190} className="cx-float" />}
+            title="No se encontró la configuración"
+            description="Vuelve al ejercicio e inténtalo de nuevo."
+          />
+        </div>
+      </div>
+    );
   }
 
   const backHref = cursoId
@@ -199,175 +211,171 @@ export default function ExerciseConfigPage() {
     : `/profesor/ejercicios/${id}`;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Link href={backHref} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
-          <ArrowLeft className="w-4 h-4" /> Volver al ejercicio
-        </Link>
-        {!isLocked && (
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Guardando…' : 'Guardar configuración'}
-          </Button>
-        )}
-      </div>
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl space-y-6">
 
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configuración del ejercicio</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {exercise?.title ?? '—'}
-        </p>
-      </div>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Link href={backHref} className="flex items-center gap-1 transition-colors hover:text-gray-700">
+            <ArrowLeft className="w-3.5 h-3.5" /> Volver al ejercicio
+          </Link>
+          <span className="text-gray-300">/</span>
+          <span className="font-medium text-gray-700">Configuración</span>
+        </div>
 
-      {/* Banner: bloqueado si publicado */}
-      {isLocked && (
-        <div className="flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900">
-          <Lock className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <strong>Configuración bloqueada.</strong>{' '}
-            El ejercicio ya fue publicado, por lo que la configuración quedó congelada
-            para garantizar consistencia entre estudiantes.
-            Para modificarla, despublicá el ejercicio primero.
+        <PageHeader
+          eyebrow="Configuración"
+          title="Configuración del ejercicio"
+          subtitle={exercise?.title ?? '—'}
+          icon={Settings2}
+          actions={
+            !isLocked ? (
+              <Button onClick={handleSave} disabled={saving} loading={saving} className="cx-press">
+                <Save className="w-4 h-4" />
+                {saving ? 'Guardando…' : 'Guardar configuración'}
+              </Button>
+            ) : undefined
+          }
+        />
+
+        {/* Banner: bloqueado si publicado */}
+        {isLocked && (
+          <div className="flex items-start gap-3 rounded-card border border-gold-100 bg-gold-50 px-5 py-4 text-gold-900 cx-pop">
+            <Lock className="mt-0.5 w-5 h-5 flex-shrink-0 text-gold-700" />
+            <div className="text-sm">
+              <strong>Configuración bloqueada.</strong>{' '}
+              El ejercicio ya fue publicado, por lo que la configuración quedó congelada
+              para garantizar consistencia entre estudiantes.
+              Para modificarla, despublicá el ejercicio primero.
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Modo empresa */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Users className="w-4 h-4 text-blue-700" />
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-            Modo de empresa
-          </h2>
-        </div>
-        <p className="text-xs text-gray-500 mb-4">
-          Definí si cada estudiante tiene su propia empresa (individual) o si los
-          estudiantes se agrupan en empresas compartidas (grupal).
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {(['INDIVIDUAL', 'GROUP'] as const).map(mode => {
-            const active = config.companyMode === mode;
-            return (
-              <button
-                key={mode}
-                type="button"
-                disabled={isLocked}
-                onClick={() => changeCompanyMode(mode)}
-                className={`text-left p-4 rounded-xl border-2 transition ${
-                  active
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                } ${isLocked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <div className="font-semibold text-sm text-gray-900">
-                  {mode === 'INDIVIDUAL' ? 'Individual' : 'Grupal'}
-                </div>
-                <div className="text-xs text-gray-600 mt-1 leading-relaxed">
-                  {mode === 'INDIVIDUAL'
-                    ? 'Cada estudiante recibe una empresa propia (una empresa = un estudiante).'
-                    : 'Varios estudiantes comparten la misma empresa (proyectos en equipo).'}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </Card>
+        {/* Modo empresa */}
+        <SectionCard
+          icon={Users}
+          iconTint="#2563EB"
+          eyebrow="Estructura"
+          title="Modo de empresa"
+          description="Definí si cada estudiante tiene su propia empresa (individual) o si los estudiantes se agrupan en empresas compartidas (grupal)."
+          className="cx-pop cx-d1"
+        >
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {(['INDIVIDUAL', 'GROUP'] as const).map(mode => {
+              const active = config.companyMode === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  disabled={isLocked}
+                  onClick={() => changeCompanyMode(mode)}
+                  className={`rounded-xl border-2 p-4 text-left transition cx-press ${
+                    active
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  } ${isLocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                >
+                  <div className="text-sm font-bold text-gray-900">
+                    {mode === 'INDIVIDUAL' ? 'Individual' : 'Grupal'}
+                  </div>
+                  <div className="mt-1 text-xs leading-relaxed text-gray-600">
+                    {mode === 'INDIVIDUAL'
+                      ? 'Cada estudiante recibe una empresa propia (una empresa = un estudiante).'
+                      : 'Varios estudiantes comparten la misma empresa (proyectos en equipo).'}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </SectionCard>
 
-      {/* Empresas grupales — solo cuando companyMode === GROUP */}
-      {config.companyMode === 'GROUP' && (
-        <GroupsPanel exerciseId={String(id)} locked={isLocked} />
-      )}
+        {/* Empresas grupales — solo cuando companyMode === GROUP */}
+        {config.companyMode === 'GROUP' && (
+          <GroupsPanel exerciseId={String(id)} locked={isLocked} />
+        )}
 
-      {/* Automatización contable */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <BookOpen className="w-4 h-4 text-emerald-700" />
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-            Automatización contable
-          </h2>
-        </div>
-        <p className="text-xs text-gray-500 mb-2">
-          Si está activado, el sistema genera automáticamente los registros al
-          ocurrir un hecho contable. Si está desactivado, el estudiante debe
-          crearlos manualmente.
-        </p>
-        <div className="divide-y divide-gray-100">
-          <Toggle
-            disabled={isLocked}
-            checked={config.autoJournal}
-            onChange={v => patch('autoJournal', v)}
-            label="Asientos automáticos en el diario"
-            hint="Cada venta/compra genera la partida doble correspondiente."
-          />
-          <Toggle
-            disabled={isLocked}
-            checked={config.autoLedger}
-            onChange={v => patch('autoLedger', v)}
-            label="Mayor automático"
-            hint="Las cuentas se actualizan al guardar asientos."
-          />
-          <Toggle
-            disabled={isLocked}
-            checked={config.autoTrialBalance}
-            onChange={v => patch('autoTrialBalance', v)}
-            label="Balance de comprobación automático"
-            hint="Se recalcula al cierre del período."
-          />
-          <Toggle
-            disabled={isLocked}
-            checked={config.autoAR}
-            onChange={v => patch('autoAR', v)}
-            label="Cuentas por Cobrar automáticas"
-            hint="Toda factura crea su saldo en el auxiliar de clientes."
-          />
-          <Toggle
-            disabled={isLocked}
-            checked={config.autoAP}
-            onChange={v => patch('autoAP', v)}
-            label="Cuentas por Pagar automáticas"
-            hint="Toda compra crea su saldo en el auxiliar de proveedores."
-          />
-        </div>
-      </Card>
+        {/* Automatización contable */}
+        <SectionCard
+          icon={BookOpen}
+          iconTint="#059669"
+          eyebrow="Motor contable"
+          title="Automatización contable"
+          description="Si está activado, el sistema genera automáticamente los registros al ocurrir un hecho contable. Si está desactivado, el estudiante debe crearlos manualmente."
+          className="cx-pop cx-d2"
+        >
+          <div className="divide-y divide-gray-100">
+            <Toggle
+              disabled={isLocked}
+              checked={config.autoJournal}
+              onChange={v => patch('autoJournal', v)}
+              label="Asientos automáticos en el diario"
+              hint="Cada venta/compra genera la partida doble correspondiente."
+            />
+            <Toggle
+              disabled={isLocked}
+              checked={config.autoLedger}
+              onChange={v => patch('autoLedger', v)}
+              label="Mayor automático"
+              hint="Las cuentas se actualizan al guardar asientos."
+            />
+            <Toggle
+              disabled={isLocked}
+              checked={config.autoTrialBalance}
+              onChange={v => patch('autoTrialBalance', v)}
+              label="Balance de comprobación automático"
+              hint="Se recalcula al cierre del período."
+            />
+            <Toggle
+              disabled={isLocked}
+              checked={config.autoAR}
+              onChange={v => patch('autoAR', v)}
+              label="Cuentas por Cobrar automáticas"
+              hint="Toda factura crea su saldo en el auxiliar de clientes."
+            />
+            <Toggle
+              disabled={isLocked}
+              checked={config.autoAP}
+              onChange={v => patch('autoAP', v)}
+              label="Cuentas por Pagar automáticas"
+              hint="Toda compra crea su saldo en el auxiliar de proveedores."
+            />
+          </div>
+        </SectionCard>
 
-      {/* Inventario y triangulación */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-4 h-4 text-slate-700" />
-          <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-            Inventario y triangulación
-          </h2>
-        </div>
-        <div className="divide-y divide-gray-100">
-          <Toggle
-            disabled={isLocked}
-            checked={config.autoInventory}
-            onChange={v => patch('autoInventory', v)}
-            label="Inventario automático (FIFO)"
-            hint="Las compras crean lotes; las ventas consumen el más antiguo y registran COGS."
-          />
-          <Toggle
-            disabled={isLocked}
-            checked={config.autoTransactionsBetweenCompanies}
-            onChange={v => patch('autoTransactionsBetweenCompanies', v)}
-            label="Transacciones automáticas entre empresas"
-            hint="Cuando una empresa del ejercicio le vende a otra, se crean las contrapartidas en ambas."
-          />
-        </div>
-      </Card>
+        {/* Inventario y triangulación */}
+        <SectionCard
+          icon={Boxes}
+          iconTint="#B8860B"
+          eyebrow="Operaciones"
+          title="Inventario y triangulación"
+          className="cx-pop cx-d3"
+        >
+          <div className="divide-y divide-gray-100">
+            <Toggle
+              disabled={isLocked}
+              checked={config.autoInventory}
+              onChange={v => patch('autoInventory', v)}
+              label="Inventario automático (FIFO)"
+              hint="Las compras crean lotes; las ventas consumen el más antiguo y registran COGS."
+            />
+            <Toggle
+              disabled={isLocked}
+              checked={config.autoTransactionsBetweenCompanies}
+              onChange={v => patch('autoTransactionsBetweenCompanies', v)}
+              label="Transacciones automáticas entre empresas"
+              hint="Cuando una empresa del ejercicio le vende a otra, se crean las contrapartidas en ambas."
+            />
+          </div>
+        </SectionCard>
 
-      {/* Footer: aviso de scope */}
-      <div className="flex items-start gap-2 text-xs text-gray-500 px-1">
-        <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-        <span>
-          Esta configuración aplica a <strong>todas</strong> las empresas y a
-          todos los intentos derivados de este ejercicio.
-        </span>
+        {/* Aviso de alcance */}
+        <div className="flex items-start gap-2 px-1 pb-8 text-xs text-gray-500">
+          <ShieldCheck className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+          <span>
+            Esta configuración aplica a <strong>todas</strong> las empresas y a
+            todos los intentos derivados de este ejercicio.
+          </span>
+        </div>
       </div>
     </div>
   );

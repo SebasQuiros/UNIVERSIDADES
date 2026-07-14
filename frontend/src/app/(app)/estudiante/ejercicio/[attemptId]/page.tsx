@@ -7,22 +7,30 @@ import { api } from '@/lib/api';
 import { formatDate, getErrorMessage, esc } from '@/lib/utils';
 import { exportToExcel } from '@/lib/excel';
 import { DifficultyBadge, StatusBadge, Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, buttonClasses } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { Card } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { IconTile } from '@/components/ui/IconTile';
+import { ArtBalance, SceneStudentDesk, SceneEmptyBox } from '@/components/illustrations';
 import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
 import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import { ExamModeWrapper } from '@/components/exam';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
+import type { ElementType } from 'react';
 import {
   ArrowLeft, Building2, Users, Package, FileText, FileSpreadsheet,
   BookOpen, BarChart2, CheckCircle2, Send, Plus, Trash2,
-  Clock, TrendingUp, X, RefreshCw, ChevronRight, AlertCircle, Truck,
+  Clock, TrendingUp, X, RefreshCw, ChevronRight, Truck,
   Printer, Landmark, Award, Star, Zap, Circle, History, Upload,
   Scale, ClipboardList, ClipboardCheck, Lock, Download, MessageCircle,
   Lightbulb, ShoppingCart, Search, LineChart, Inbox, GraduationCap,
+  Trophy, PlayCircle, Receipt, FolderOpen, XCircle, Target,
 } from 'lucide-react';
 import { PurchaseProposalsInbox } from '@/components/business/PurchaseProposalsInbox';
 import { ProcurementOrders } from '@/components/business/ProcurementOrders';
@@ -109,36 +117,40 @@ function StudentJourney({ companyId, attemptId, prog, status }: {
   const current = currentIdx === -1 ? null : steps[currentIdx];
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 lg:p-5" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
-      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide font-mono">Tu recorrido</h3>
-        {current && current.href && (
-          <Link href={current.href}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-lg"
-            style={{ background: '#2563EB' }}>
-            Siguiente: {current.hint} <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
-        )}
-      </div>
+    <SectionCard
+      eyebrow="Tu recorrido"
+      title="De constituir la empresa a analizar sus resultados"
+      icon={Target}
+      iconTint="#1B2E6E"
+      className="cx-pop"
+      action={current && current.href ? (
+        <Link
+          href={current.href}
+          className={buttonClasses({ size: 'sm', className: 'cx-press' })}
+        >
+          Siguiente: {current.hint} <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      ) : undefined}
+    >
       <div className="flex items-center">
         {steps.map((s, i) => {
           const Icon = s.icon;
           const isCurrent = current?.key === s.key;
           const color = s.done ? '#2563EB' : isCurrent ? '#03080F' : '#CBD5E1';
           const body = (
-            <div className="flex flex-col items-center gap-1.5 flex-shrink-0" style={{ minWidth: 64 }}>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-white transition-all"
+            <div className="flex flex-col items-center gap-1.5 flex-shrink-0 cx-hop-parent" style={{ minWidth: 64 }}>
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white transition-all cx-hop"
                 style={{ background: color, boxShadow: isCurrent ? '0 0 0 4px rgba(37,99,235,0.15)' : 'none' }}>
-                {s.done ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4.5 h-4.5" />}
+                {s.done ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
               </div>
-              <span className="text-[11px] font-medium text-center" style={{ color: s.done || isCurrent ? '#334155' : '#94A3B8' }}>
+              <span className="text-[11px] font-semibold text-center" style={{ color: s.done || isCurrent ? '#334155' : '#94A3B8' }}>
                 {s.label}
               </span>
             </div>
           );
           return (
             <div key={s.key} className="flex items-center flex-1 last:flex-none">
-              {s.href ? <Link href={s.href}>{body}</Link> : body}
+              {s.href ? <Link href={s.href} className="cx-press">{body}</Link> : body}
               {i < steps.length - 1 && (
                 <div className="flex-1 h-0.5 mx-1 rounded" style={{ background: s.done ? '#2563EB' : '#E2E8F0', minWidth: 16 }} />
               )}
@@ -146,7 +158,7 @@ function StudentJourney({ companyId, attemptId, prog, status }: {
           );
         })}
       </div>
-    </div>
+    </SectionCard>
   );
 }
 
@@ -199,14 +211,14 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
   ];
   const level = [...LEVELS].reverse().find(l => progressPct >= l.min) ?? LEVELS[0];
   const nextLevel = LEVELS[LEVELS.findIndex(l => l.label === level.label) + 1];
-  const ACHIEVEMENTS = [
-    { id: 'company',  label: 'Empresa creada',   desc: 'Creaste tu empresa',      unlocked: true },
-    { id: 'client',   label: 'Primer cliente',   desc: '1 cliente registrado',     unlocked: (prog?.clientsCount  ?? 0) >= 1 },
-    { id: 'product',  label: 'Primer producto',  desc: '1 producto en catálogo',   unlocked: (prog?.productsCount ?? 0) >= 1 },
-    { id: 'invoice',  label: 'Primera venta',    desc: '1 factura emitida',        unlocked: (prog?.invoicesCount ?? 0) >= 1 },
-    { id: 'journal',  label: 'Diario activo',    desc: '1 asiento contable',       unlocked: (prog?.entriesCount  ?? 0) >= 1 },
-    { id: 'ledger',   label: 'Libro Mayor',      desc: 'Revisaste el libro mayor', unlocked: ledger.length > 0 },
-    { id: 'complete', label: 'Misión cumplida',  desc: 'Todas las rúbricas al día',unlocked: progressPct >= 100 },
+  const ACHIEVEMENTS: Array<{ id: string; label: string; desc: string; unlocked: boolean; icon: ElementType }> = [
+    { id: 'company',  label: 'Empresa creada',   desc: 'Creaste tu empresa',      unlocked: true, icon: Building2 },
+    { id: 'client',   label: 'Primer cliente',   desc: '1 cliente registrado',     unlocked: (prog?.clientsCount  ?? 0) >= 1, icon: Users },
+    { id: 'product',  label: 'Primer producto',  desc: '1 producto en catálogo',   unlocked: (prog?.productsCount ?? 0) >= 1, icon: Package },
+    { id: 'invoice',  label: 'Primera venta',    desc: '1 factura emitida',        unlocked: (prog?.invoicesCount ?? 0) >= 1, icon: Receipt },
+    { id: 'journal',  label: 'Diario activo',    desc: '1 asiento contable',       unlocked: (prog?.entriesCount  ?? 0) >= 1, icon: BookOpen },
+    { id: 'ledger',   label: 'Libro Mayor',      desc: 'Revisaste el libro mayor', unlocked: ledger.length > 0, icon: BarChart2 },
+    { id: 'complete', label: 'Misión cumplida',  desc: 'Todas las rúbricas al día',unlocked: progressPct >= 100, icon: Trophy },
   ];
   const unlockedCount = ACHIEVEMENTS.filter(a => a.unlocked).length;
   // SVG ring
@@ -215,28 +227,47 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
 
   return (
     <div className="space-y-6">
+      {/* ── Banda del ejercicio ─────────────────────────────────────────────── */}
+      <Card variant="onDark" className="cx-pop">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+              Tu empresa en marcha
+            </p>
+            <h2 className="text-lg font-bold leading-snug">Opera, registra y cuadra: el ciclo contable completo.</h2>
+            <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+              Cada factura, compra y cobro genera asientos en el diario. Confírmalos, mayoriza y llega a los
+              estados financieros de tu propia empresa.
+            </p>
+          </div>
+          <ArtBalance size={150} className="lp-drift flex-shrink-0" />
+        </div>
+      </Card>
+
       <StudentJourney companyId={companyId} attemptId={attempt.id} prog={prog} status={attempt.status} />
       {executivePanel}
 
       {/* Acceso al Simulador Financiero (sección propia) */}
       <Link href="/estudiante/simulador"
-        className="flex items-center gap-4 rounded-xl px-5 py-4 text-white transition-colors"
-        style={{ background: '#03080F' }}>
-        <div className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
-          style={{ background: '#2563EB' }}>
-          <LineChart className="w-5 h-5" />
-        </div>
+        className="group cx-hop-parent cx-press flex items-center gap-4 rounded-card px-5 py-4 text-white transition-all bg-gradient-to-br from-csq-mid to-csq-active border border-white/10 shadow-soft hover:shadow-card-hover">
+        <IconTile icon={LineChart} size={44} onDark className="cx-hop" />
         <div className="min-w-0 flex-1">
           <p className="font-bold text-sm">Simulador Financiero</p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
+          <p className="text-xs text-blue-200/80">
             Precio de acción, indicadores macro, gerente financiero IA y eventos económicos de tu empresa.
           </p>
         </div>
-        <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: '#60A5FA' }} />
+        <ChevronRight className="w-5 h-5 flex-shrink-0 text-csq-accent-bright" />
       </Link>
 
       {/* ── Gamification card ───────────────────────────────────────────────── */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
+      <SectionCard
+        eyebrow="Progreso"
+        title="Tu nivel en el ejercicio"
+        icon={Award}
+        iconTint="#B8860B"
+        className="cx-pop cx-d1"
+      >
         <div className="flex items-center gap-5 flex-wrap">
           {/* Progress ring */}
           <div className="flex-shrink-0">
@@ -258,8 +289,9 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
               </span>
               <span className="text-xs text-gray-400">{unlockedCount}/{ACHIEVEMENTS.length} logros</span>
             </div>
-            <p className="text-sm font-semibold text-gray-800 mb-2">
-              {progressPct >= 100 ? '¡Ejercicio completado! 🎉' : nextLevel ? `Faltan ${nextLevel.min - progressPct}% para nivel ${nextLevel.label}` : 'En progreso...'}
+            <p className={`text-sm font-semibold text-gray-800 mb-2 flex items-center gap-1.5 ${progressPct >= 100 ? 'cx-tada' : ''}`}>
+              {progressPct >= 100 && <Trophy className="w-4 h-4 text-gold-600" />}
+              {progressPct >= 100 ? '¡Ejercicio completado!' : nextLevel ? `Faltan ${nextLevel.min - progressPct}% para nivel ${nextLevel.label}` : 'En progreso...'}
             </p>
             {/* Progress bar */}
             <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
@@ -270,45 +302,59 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
         </div>
 
         {/* Achievements */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {ACHIEVEMENTS.map((a) => (
-            <div key={a.id} className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs transition-all ${
-              a.unlocked ? 'bg-white border-emerald-200 text-gray-700' : 'bg-white/50 border-gray-200 text-gray-400'
-            }`}>
-              <span className={`text-base ${a.unlocked ? '' : 'grayscale opacity-40'}`}>
-                {a.id === 'company' ? '🏢' : a.id === 'client' ? '👤' : a.id === 'product' ? '📦'
-                  : a.id === 'invoice' ? '📄' : a.id === 'journal' ? '📒' : a.id === 'ledger' ? '📊' : '🏆'}
-              </span>
-              <div className="min-w-0">
-                <p className={`font-medium leading-tight truncate ${a.unlocked ? 'text-gray-800' : 'text-gray-400'}`}>{a.label}</p>
-                <p className="text-gray-400 text-xs leading-tight">{a.desc}</p>
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {ACHIEVEMENTS.map((a) => {
+            const AIcon = a.icon;
+            return (
+              <div key={a.id} className={`cx-hop-parent flex items-center gap-2.5 p-2.5 rounded-xl border text-xs transition-all ${
+                a.unlocked ? 'bg-white border-emerald-200 text-gray-700 shadow-card' : 'bg-gray-50/60 border-gray-200 text-gray-400'
+              }`}>
+                <span className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center cx-hop ${
+                  a.unlocked ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-300'
+                }`}>
+                  <AIcon className="w-4 h-4" />
+                </span>
+                <div className="min-w-0">
+                  <p className={`font-semibold leading-tight truncate ${a.unlocked ? 'text-gray-800' : 'text-gray-400'}`}>{a.label}</p>
+                  <p className="text-gray-400 text-xs leading-tight">{a.desc}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </div>
+      </SectionCard>
 
       {/* Progress */}
       {prog && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Clientes',  value: prog.clientsCount ?? 0,  color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200' },
-            { label: 'Productos', value: prog.productsCount ?? 0, color: 'text-slate-600',  bg: 'bg-slate-50 border-slate-200' },
-            { label: 'Facturas',  value: prog.invoicesCount ?? 0, color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200' },
-            { label: 'Asientos',  value: prog.entriesCount ?? 0,  color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-          ].map((s) => (
-            <div key={s.label} className={`rounded-xl p-4 text-center border ${s.bg}`}>
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-            </div>
+            { label: 'Clientes',  value: prog.clientsCount ?? 0,  icon: Users,      tint: '#B8860B' },
+            { label: 'Productos', value: prog.productsCount ?? 0, icon: Package,    tint: '#1B2E6E' },
+            { label: 'Facturas',  value: prog.invoicesCount ?? 0, icon: FileText,   tint: '#2563EB' },
+            { label: 'Asientos',  value: prog.entriesCount ?? 0,  icon: BookOpen,   tint: '#16A34A' },
+          ].map((s, i) => (
+            <StatCard
+              key={s.label}
+              label={s.label}
+              value={String(s.value)}
+              icon={s.icon}
+              tint={s.tint}
+              className={`cx-pop cx-d${i + 1} cx-lift cx-hop-parent`}
+            />
           ))}
         </div>
       )}
 
       {/* Rubrics checklist */}
       {attempt.exercise?.rubrics && attempt.exercise.rubrics.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Rúbricas del ejercicio</p>
+        <SectionCard
+          eyebrow="Evaluación"
+          title="Rúbricas del ejercicio"
+          description="Criterios que tu profesor califica automáticamente."
+          icon={ClipboardCheck}
+          iconTint="#1B2E6E"
+          className="cx-pop cx-d2"
+        >
           <div className="space-y-2">
             {attempt.exercise.rubrics.map((r) => {
               const expected = r.expectedValue ? Number(r.expectedValue) : null;
@@ -321,45 +367,51 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
               }
               const met = expected != null ? current >= expected : false;
               return (
-                <div key={r.id} className={`flex items-center gap-3 p-3 rounded-xl border ${met ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200 bg-gray-50'}`}>
-                  <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${met ? 'text-emerald-600' : 'text-gray-300'}`} />
-                  <div className="flex-1">
+                <div key={r.id} className={`cx-hop-parent flex items-center gap-3 p-3.5 rounded-xl border transition-colors ${met ? 'border-emerald-200 bg-emerald-50' : 'border-gray-200 bg-gray-50'}`}>
+                  <CheckCircle2 className={`w-4 h-4 flex-shrink-0 cx-hop ${met ? 'text-emerald-600' : 'text-gray-300'}`} />
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-700">{r.description}</p>
                     {expected != null && (
-                      <p className="text-xs text-gray-500 mt-0.5">{current} / {expected} {met ? '✓' : ''}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 tabular-nums">{current} / {expected}</p>
                     )}
                   </div>
-                  <span className="text-xs text-gray-500">{r.points} pts</span>
+                  <span className="text-xs font-semibold text-gray-500 tabular-nums">{r.points} pts</span>
                 </div>
               );
             })}
           </div>
-        </div>
+        </SectionCard>
       )}
 
       {/* Finance summary */}
       {dash?.totals && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Facturas emitidas', value: dash.totals.invoices,       color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200',     isNum: false },
-            { label: 'Clientes activos',  value: dash.totals.clients,        color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200',   isNum: false },
-            { label: 'Productos',         value: dash.totals.products,       color: 'text-slate-600',  bg: 'bg-slate-50 border-slate-200', isNum: false },
-            { label: 'Asientos',          value: dash.totals.journalEntries, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', isNum: false },
-          ].map((s) => (
-            <div key={s.label} className={`rounded-xl p-4 text-center border ${s.bg}`}>
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-            </div>
+            { label: 'Facturas emitidas', value: dash.totals.invoices,       icon: FileText, tint: '#2563EB' },
+            { label: 'Clientes activos',  value: dash.totals.clients,        icon: Users,    tint: '#B8860B' },
+            { label: 'Productos',         value: dash.totals.products,       icon: Package,  tint: '#1B2E6E' },
+            { label: 'Asientos',          value: dash.totals.journalEntries, icon: BookOpen, tint: '#16A34A' },
+          ].map((s, i) => (
+            <StatCard
+              key={s.label}
+              label={s.label}
+              value={String(s.value)}
+              icon={s.icon}
+              tint={s.tint}
+              className={`cx-pop cx-d${i + 1} cx-lift cx-hop-parent`}
+            />
           ))}
         </div>
       )}
       {dash?.totals?.totalSales != null && (
-        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-          <p className="text-xs text-gray-500 mb-1">Ventas aceptadas</p>
-          <p className="text-xl font-bold text-emerald-700">
-            ₡{Number(dash.totals.totalSales).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
+        <StatCard
+          variant="dark"
+          label="Ventas aceptadas"
+          value={`₡${Number(dash.totals.totalSales).toLocaleString('es-CR', { minimumFractionDigits: 2 })}`}
+          hint="Facturas electrónicas aceptadas por Hacienda"
+          icon={TrendingUp}
+          className="cx-pop"
+        />
       )}
 
       {/* Feature 4: Comparación con solución esperada */}
@@ -382,20 +434,28 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
         ].filter(Boolean) as { label: string; met: boolean; actual: string; expected: string }[];
         if (criteria.length === 0) return null;
         return (
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Comparación con solución esperada</p>
+          <SectionCard
+            eyebrow="Autoevaluación"
+            title="Comparación con la solución esperada"
+            description="Contrasta tus cifras con los valores que definió el profesor."
+            icon={Scale}
+            iconTint="#1B2E6E"
+            className="cx-pop cx-d3"
+          >
             <div className="space-y-2">
               {criteria.map((c) => (
-                <div key={c.label} className={`flex items-start gap-3 p-3 rounded-xl border ${c.met ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                  <span className="text-base flex-shrink-0">{c.met ? '✅' : '❌'}</span>
+                <div key={c.label} className={`cx-hop-parent flex items-start gap-3 p-3.5 rounded-xl border ${c.met ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                  {c.met
+                    ? <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-600 cx-hop" />
+                    : <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-600 cx-hop" />}
                   <div className="flex-1 text-sm">
-                    <span className={`font-medium ${c.met ? 'text-emerald-800' : 'text-red-800'}`}>{c.label}</span>
-                    <span className="text-gray-500 ml-2">(actual: {c.actual}{!c.met ? `, esperado: ${c.expected}` : ''})</span>
+                    <span className={`font-semibold ${c.met ? 'text-emerald-800' : 'text-red-800'}`}>{c.label}</span>
+                    <span className="text-gray-500 ml-2 tabular-nums">(actual: {c.actual}{!c.met ? `, esperado: ${c.expected}` : ''})</span>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </SectionCard>
         );
       })()}
 
@@ -419,14 +479,20 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
           type,
         }));
         return (
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-4">Balance por tipo de cuenta</p>
+          <SectionCard
+            eyebrow="Ecuación contable"
+            title="Balance por tipo de cuenta"
+            description="Activo = Pasivo + Patrimonio. Los ingresos y gastos alimentan el resultado."
+            icon={Scale}
+            iconTint="#2563EB"
+            className="cx-pop cx-d4"
+          >
             <div className="flex items-end gap-3 h-40 pt-4">
               {(() => {
                 const maxVal = Math.max(...chartData.map(d => d.balance), 1);
                 return chartData.map((entry) => (
                   <div key={entry.type} className="flex flex-col items-center flex-1 h-full justify-end gap-1">
-                    <p className="text-xs font-mono text-gray-600 text-center">{`₡${Math.round(entry.balance / 1000)}k`}</p>
+                    <p className="text-xs font-mono tabular-nums text-gray-600 text-center">{`₡${Math.round(entry.balance / 1000)}k`}</p>
                     <div
                       className="w-full rounded-t-lg transition-all"
                       style={{
@@ -440,30 +506,31 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
                 ));
               })()}
             </div>
-          </div>
+          </SectionCard>
         );
       })()}
 
       {/* ── Acceso rápido — Facturas de Compra (IVA Crédito Fiscal) ─── */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold text-emerald-800 flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4" /> Facturas de Compra — Crédito Fiscal IVA
-            </p>
-            <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
-              Registra las facturas recibidas de tus proveedores. El IVA pagado se convierte en
-              crédito fiscal que deduce el IVA a pagar en la declaración D-104.
-            </p>
-          </div>
+      <SectionCard
+        eyebrow="Crédito fiscal"
+        title="Facturas de compra — IVA acreditable"
+        description="Registra las facturas recibidas de tus proveedores. El IVA pagado se convierte en crédito fiscal que deduce el IVA a pagar en la declaración D-104."
+        icon={ShoppingCart}
+        iconTint="#16A34A"
+        className="cx-pop cx-d5"
+        action={
           <Link
             href={`/estudiante/ejercicio/${attempt.id}/compras`}
-            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors whitespace-nowrap"
+            className={buttonClasses({ size: 'sm', className: 'cx-press whitespace-nowrap' })}
           >
             <Plus className="w-3.5 h-3.5" /> Gestionar compras
           </Link>
-        </div>
-      </div>
+        }
+      >
+        <p className="text-sm text-gray-500">
+          Solo el IVA de facturas electrónicas aceptadas por Hacienda puede acreditarse.
+        </p>
+      </SectionCard>
     </div>
   );
 }
@@ -491,16 +558,16 @@ interface ActivityResponse {
   submittedAt: string | null;
 }
 
-const EVENT_META: Record<string, { label: string; color: string; icon: string; short: string }> = {
-  EXERCISE_OPENED:      { label: 'Ejercicio abierto',      color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: '📂', short: 'Apertura'  },
-  EXERCISE_RESUMED:     { label: 'Ejercicio reanudado',    color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: '▶️', short: 'Reanudado' },
-  CLIENT_CREATED:       { label: 'Cliente creado',         color: 'bg-amber-100 text-amber-700 border-amber-200',    icon: '👤', short: 'Cliente'   },
-  PRODUCT_CREATED:      { label: 'Producto creado',        color: 'bg-slate-100 text-slate-700 border-slate-200', icon: '📦', short: 'Producto'  },
-  INVOICE_CREATED:      { label: 'Factura creada',         color: 'bg-slate-100 text-slate-700 border-slate-200', icon: '📄', short: 'Factura'   },
-  INVOICE_ISSUED:       { label: 'Factura emitida',        color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: '✅', short: 'Emitida' },
-  JOURNAL_ENTRY_SAVED:  { label: 'Asiento registrado',     color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: '📒', short: 'Asiento'   },
-  REPORT_VIEWED:        { label: 'Reporte visualizado',    color: 'bg-gray-100 text-gray-700 border-gray-200',       icon: '📊', short: 'Reporte'   },
-  EXERCISE_SUBMITTED:   { label: 'Ejercicio enviado',      color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: '🏆', short: 'Entrega' },
+const EVENT_META: Record<string, { label: string; color: string; icon: ElementType; short: string }> = {
+  EXERCISE_OPENED:      { label: 'Ejercicio abierto',      color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: FolderOpen,  short: 'Apertura'  },
+  EXERCISE_RESUMED:     { label: 'Ejercicio reanudado',    color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: PlayCircle,  short: 'Reanudado' },
+  CLIENT_CREATED:       { label: 'Cliente creado',         color: 'bg-gold-50 text-gold-900 border-gold-100',        icon: Users,       short: 'Cliente'   },
+  PRODUCT_CREATED:      { label: 'Producto creado',        color: 'bg-slate-100 text-slate-700 border-slate-200',    icon: Package,     short: 'Producto'  },
+  INVOICE_CREATED:      { label: 'Factura creada',         color: 'bg-slate-100 text-slate-700 border-slate-200',    icon: FileText,    short: 'Factura'   },
+  INVOICE_ISSUED:       { label: 'Factura emitida',        color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2, short: 'Emitida' },
+  JOURNAL_ENTRY_SAVED:  { label: 'Asiento registrado',     color: 'bg-blue-100 text-blue-700 border-blue-200',       icon: BookOpen,    short: 'Asiento'   },
+  REPORT_VIEWED:        { label: 'Reporte visualizado',    color: 'bg-gray-100 text-gray-700 border-gray-200',       icon: BarChart2,   short: 'Reporte'   },
+  EXERCISE_SUBMITTED:   { label: 'Ejercicio enviado',      color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: Trophy,    short: 'Entrega' },
 };
 
 function ActivityTab({ attemptId }: { attemptId: string }) {
@@ -524,11 +591,14 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
   if (events.length === 0) return (
-    <div className="text-center py-10">
-      <History className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-      <p className="text-gray-500 text-sm">No hay actividad registrada aún</p>
-      <p className="text-gray-400 text-xs mt-1">Las acciones que realices se registrarán automáticamente</p>
-    </div>
+    <Card className="cx-pop">
+      <EmptyState
+        illustration={<SceneEmptyBox size={200} className="lp-drift" />}
+        title="No hay actividad registrada aún"
+        description="Las acciones que realices en el ejercicio (crear clientes, emitir facturas, registrar asientos) quedarán aquí en orden cronológico."
+        className="py-12"
+      />
+    </Card>
   );
 
   // ── Build cumulative chart data ────────────────────────────────────────────
@@ -585,24 +655,33 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
     <div className="space-y-6">
 
       {/* ── Summary stats ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Total eventos',      value: events.length,          color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200'     },
-          { label: 'Duración sesión',    value: durationMin != null ? `${durationMin}m` : '—', color: 'text-slate-600', bg: 'bg-slate-50 border-slate-200' },
-          { label: 'Pico 10 min',        value: `${busiestCount} acc.`, color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200'   },
-          { label: 'Tipos distintos',    value: Object.keys(distMap).length, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-        ].map(s => (
-          <div key={s.label} className={`rounded-xl border p-3 text-center ${s.bg}`}>
-            <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-          </div>
+          { label: 'Total eventos',   value: String(events.length),                          icon: History,     tint: '#2563EB' },
+          { label: 'Duración sesión', value: durationMin != null ? `${durationMin}m` : '—',  icon: Clock,       tint: '#1B2E6E' },
+          { label: 'Pico 10 min',     value: `${busiestCount} acc.`,                        icon: Zap,         tint: '#B8860B' },
+          { label: 'Tipos distintos', value: String(Object.keys(distMap).length),            icon: Lightbulb,   tint: '#16A34A' },
+        ].map((s, i) => (
+          <StatCard
+            key={s.label}
+            label={s.label}
+            value={s.value}
+            icon={s.icon}
+            tint={s.tint}
+            className={`cx-pop cx-d${i + 1} cx-lift cx-hop-parent`}
+          />
         ))}
       </div>
 
       {/* ── Cumulative progress chart ── */}
       {chartPoints.length >= 2 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-4">Progreso acumulado en el tiempo</p>
+        <SectionCard
+          eyebrow="Trazabilidad"
+          title="Progreso acumulado en el tiempo"
+          icon={TrendingUp}
+          iconTint="#2563EB"
+          className="cx-pop cx-d2"
+        >
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={chartPoints} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
               <defs>
@@ -633,45 +712,54 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
             </AreaChart>
           </ResponsiveContainer>
           <p className="text-xs text-gray-400 text-center mt-1">Minutos desde el inicio del ejercicio</p>
-        </div>
+        </SectionCard>
       )}
 
       {/* ── Event distribution ── */}
       {distData.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-4">Distribución de acciones</p>
+        <SectionCard
+          eyebrow="Hábitos de trabajo"
+          title="Distribución de acciones"
+          icon={BarChart2}
+          iconTint="#1B2E6E"
+          className="cx-pop cx-d3"
+        >
           <ResponsiveContainer width="100%" height={160}>
             <RBarChart data={distData} margin={{ top: 0, right: 8, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
-              <Bar dataKey="count" name="Acciones" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Bar dataKey="count" name="Acciones" fill="#2563EB" radius={[4, 4, 0, 0]} maxBarSize={40} />
             </RBarChart>
           </ResponsiveContainer>
-        </div>
+        </SectionCard>
       )}
 
       {/* ── Timeline list ── */}
-      <div>
-        <p className="text-sm font-semibold text-gray-700 mb-3">
-          Historial de eventos
-          <span className="text-gray-400 font-normal ml-2">({events.length} total)</span>
-        </p>
+      <SectionCard
+        eyebrow="Bitácora"
+        title="Historial de eventos"
+        description={`${events.length} ${events.length === 1 ? 'evento registrado' : 'eventos registrados'} en este ejercicio.`}
+        icon={History}
+        iconTint="#B8860B"
+        className="cx-pop cx-d4"
+      >
         <div className="relative">
           <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" />
           <div className="space-y-2">
             {displayEvents.map((ev) => {
-              const meta = EVENT_META[ev.event] ?? { label: ev.event, color: 'bg-gray-100 text-gray-700 border-gray-200', icon: '•', short: ev.event };
+              const meta = EVENT_META[ev.event] ?? { label: ev.event, color: 'bg-gray-100 text-gray-700 border-gray-200', icon: Circle, short: ev.event };
+              const EvIcon = meta.icon;
               return (
-                <div key={ev.id} className="flex items-start gap-4 pl-10 relative">
-                  <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center text-sm z-10 shadow-sm">
-                    {meta.icon}
+                <div key={ev.id} className="cx-hop-parent flex items-start gap-4 pl-10 relative">
+                  <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center z-10 shadow-sm cx-hop">
+                    <EvIcon className="w-4 h-4 text-gray-500" />
                   </div>
-                  <div className={`flex-1 p-2.5 rounded-xl border ${meta.color}`}>
+                  <div className={`flex-1 p-3 rounded-xl border ${meta.color}`}>
                     <div className="flex items-center justify-between flex-wrap gap-1">
-                      <span className="text-sm font-medium">{meta.label}</span>
-                      <span className="text-xs opacity-60">
+                      <span className="text-sm font-semibold">{meta.label}</span>
+                      <span className="text-xs opacity-60 tabular-nums">
                         {new Date(ev.createdAt).toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' })}
                       </span>
                     </div>
@@ -687,14 +775,15 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
           </div>
         </div>
         {events.length > 20 && (
-          <button
+          <Button
+            variant="outline"
             onClick={() => setShowAll(s => !s)}
-            className="mt-4 w-full py-2 text-xs font-medium text-blue-700 border border-blue-200 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+            className="mt-4 w-full cx-press"
           >
             {showAll ? 'Mostrar menos' : `Ver todos (${events.length} eventos)`}
-          </button>
+          </Button>
         )}
-      </div>
+      </SectionCard>
     </div>
   );
 }
@@ -729,30 +818,35 @@ function AiAssistant({ activeTab, companyName }: { activeTab: string; companyNam
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+        className="cx-press cx-bounce fixed bottom-6 right-6 z-40 w-14 h-14 text-white rounded-full shadow-[0_10px_30px_rgba(27,46,110,0.35)] flex items-center justify-center transition-all bg-gradient-to-br from-blue-600 to-csq-mid hover:shadow-card-hover"
         title="Asistente IA">
         <MessageCircle className="w-6 h-6" />
       </button>
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 bg-white border border-gray-200 rounded-xl shadow-2xl flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between p-4 bg-blue-600 text-white">
-            <p className="font-semibold text-sm">Asistente Contable IA</p>
-            <button onClick={() => setOpen(false)}><X className="w-4 h-4" /></button>
+        <div className="fixed bottom-24 right-6 z-50 w-80 bg-white border border-gray-200/70 rounded-card shadow-card-hover flex flex-col overflow-hidden cx-pop">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-br from-csq-mid to-csq-active text-white">
+            <div>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500">Aprendizaje</p>
+              <p className="font-bold text-sm">Asistente Contable IA</p>
+            </div>
+            <button onClick={() => setOpen(false)} className="cx-press text-blue-200/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
           </div>
           <div className="p-4 flex-1">
             {answer && (
-              <div className="mb-3 p-3 bg-gray-50 rounded-xl text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">{answer}</div>
+              <div className="mb-3 p-3 bg-gray-50 rounded-xl text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto cx-pop">{answer}</div>
             )}
             <form onSubmit={handleAsk} className="space-y-2">
               <textarea
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 placeholder="¿Tienes alguna pregunta contable?"
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 resize-none transition-colors"
                 rows={3}
                 maxLength={500}
               />
-              <Button type="submit" loading={loading} className="w-full">Preguntar</Button>
+              <Button type="submit" loading={loading} className="w-full cx-press">Preguntar</Button>
             </form>
           </div>
         </div>
@@ -791,16 +885,32 @@ function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: 
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 lg:p-8 flex items-start justify-center">
-      <div className="w-full max-w-lg py-2">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-xl bg-blue-50 flex items-center justify-center mx-auto mb-4">
-            <Building2 className="w-8 h-8 text-blue-700" />
+    <div className="flex-1 overflow-y-auto p-6 lg:p-8 flex items-start justify-center bg-gray-50/60">
+      <div className="w-full max-w-2xl py-2 space-y-6">
+        {/* Banda de bienvenida */}
+        <Card variant="onDark" className="cx-pop">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+                Paso 1 · Constituir
+              </p>
+              <h2 className="text-lg font-bold leading-snug">Toda contabilidad empieza con una empresa.</h2>
+              <p className="mt-1.5 text-sm text-blue-200/80 max-w-md">
+                Estos datos aparecerán en tus facturas electrónicas y en tus estados financieros.
+              </p>
+            </div>
+            <SceneStudentDesk size={170} className="lp-drift flex-shrink-0" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900">Configura tu empresa</h3>
-          <p className="text-gray-500 text-sm mt-1">Datos que aparecerán en tus facturas electrónicas</p>
-        </div>
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
+        </Card>
+
+        <SectionCard
+          eyebrow="Datos de la empresa"
+          title="Configura tu empresa"
+          description="Campos obligatorios para emitir facturas electrónicas (Hacienda v4.3)."
+          icon={Building2}
+          iconTint="#1B2E6E"
+          className="cx-pop cx-d1"
+        >
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Nombre de la empresa *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Ej: Consultores CR S.A." icon={<Building2 className="w-4 h-4" />} />
@@ -808,7 +918,7 @@ function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: 
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-gray-700">Tipo de cédula *</label>
                 <select value={form.legalIdType} onChange={(e) => setForm({ ...form, legalIdType: e.target.value })}
-                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors">
                   <option value="01">01 — Física</option>
                   <option value="02">02 — Jurídica</option>
                   <option value="03">03 — DIMEX</option>
@@ -828,11 +938,11 @@ function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: 
             </div>
             <Input label="Dirección" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
               placeholder="San José, Costa Rica" />
-            <Button type="submit" loading={saving} className="w-full" size="lg">
+            <Button type="submit" loading={saving} className="w-full cx-press" size="lg">
               <Building2 className="w-4 h-4" /> Crear empresa
             </Button>
           </form>
-        </div>
+        </SectionCard>
       </div>
     </div>
   );
@@ -965,11 +1075,13 @@ export default function ExerciseWorkspacePage() {
     <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
 
       {/* Header */}
-      <div className="border-b border-gray-200 px-6 py-4 flex items-center gap-4 flex-wrap bg-white shadow-sm">
-        <Link href="/estudiante">
-          <button className="text-gray-400 hover:text-gray-700 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+      <div className="border-b border-gray-200 px-6 py-4 flex items-center gap-4 flex-wrap bg-white shadow-card">
+        <Link
+          href="/estudiante"
+          aria-label="Volver al panel"
+          className="text-gray-400 transition-colors hover:text-blue-700 cx-press"
+        >
+          <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
@@ -977,10 +1089,10 @@ export default function ExerciseWorkspacePage() {
             <Badge variant="slate">{TYPE_LABELS[exercise.type] ?? exercise.type}</Badge>
             <StatusBadge status={attempt.status} />
           </div>
-          <h2 className="text-base font-semibold text-gray-900 truncate">{exercise.title}</h2>
+          <h2 className="text-base font-bold text-gray-900 truncate tracking-tight">{exercise.title}</h2>
         </div>
         {company && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-xl border border-gray-200">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-200">
             <Building2 className="w-3.5 h-3.5 text-gray-500" />
             <span className="text-sm text-gray-700">{company.name}</span>
           </div>
@@ -989,33 +1101,33 @@ export default function ExerciseWorkspacePage() {
           <div className="flex items-center gap-1.5 ml-2">
             <Link
               href={`/estudiante/ejercicio/${attemptId}/cxc`}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors ring-1 ring-emerald-200/60"
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-600 hover:text-blue-700 hover:border-blue-300 transition-colors border border-gray-200 cx-press"
             >
               Cuentas por cobrar
             </Link>
             <Link
               href={`/estudiante/ejercicio/${attemptId}/cxp`}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors ring-1 ring-amber-200/60"
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-600 hover:text-blue-700 hover:border-blue-300 transition-colors border border-gray-200 cx-press"
             >
               Cuentas por pagar
             </Link>
             <Link
               href={`/estudiante/ejercicio/${attemptId}/diario`}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors ring-1 ring-blue-200/60"
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors ring-1 ring-blue-200/60 cx-press"
             >
               Libro diario
             </Link>
           </div>
         )}
         {attempt.status === 'IN_PROGRESS' && company && (
-          <Button onClick={handleSubmit} loading={submitting} size="sm">
+          <Button onClick={handleSubmit} loading={submitting} size="sm" className="cx-press">
             <Send className="w-4 h-4" /> Enviar para calificar
           </Button>
         )}
         {attempt.status === 'GRADED' && attempt.score != null && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl">
+          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl cx-tada">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span className="text-sm font-bold text-emerald-700">
+            <span className="text-sm font-bold text-emerald-700 tabular-nums">
               {attempt.score} / {attempt.maxScore} pts
             </span>
           </div>
@@ -1031,23 +1143,26 @@ export default function ExerciseWorkspacePage() {
       {!showSetup && company && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Encabezado de sección — la navegación es el menú lateral izquierdo */}
-          <div className="flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 bg-white">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="cx-hop-parent flex items-center justify-between gap-3 px-6 py-3 border-b border-gray-200 bg-white">
+            <div className="flex items-center gap-3 min-w-0">
               {(() => {
                 const t = tabs.find((x) => x.id === activeTab);
-                const I: any = t?.icon;
+                const I = t?.icon;
                 return (
                   <>
-                    {I && <I className="w-4 h-4 text-blue-700 flex-shrink-0" />}
-                    <span className="text-sm font-semibold text-gray-800 truncate">{t?.label ?? 'Resumen'}</span>
+                    {I && <IconTile icon={I} tint="#1B2E6E" size={32} className="cx-hop" />}
+                    <div className="min-w-0">
+                      <p className="text-[0.6rem] font-bold uppercase tracking-[0.13em] text-gold-900">Sección</p>
+                      <span className="text-sm font-bold text-gray-800 truncate block">{t?.label ?? 'Resumen'}</span>
+                    </div>
                   </>
                 );
               })()}
             </div>
             {activeTab !== 'dashboard' && (
               <button onClick={() => setActiveTab('dashboard')}
-                className="text-xs font-semibold text-blue-700 hover:underline flex-shrink-0">
-                ← Resumen del ejercicio
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-800 flex-shrink-0 cx-press">
+                <ArrowLeft className="w-3.5 h-3.5" /> Resumen del ejercicio
               </button>
             )}
           </div>
@@ -1081,17 +1196,29 @@ export default function ExerciseWorkspacePage() {
 
       {/* Submitted / not started messages */}
       {!showSetup && !company && attempt.status === 'NOT_STARTED' && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Inicia el ejercicio desde el panel principal.</p>
-            <Link href="/estudiante"><Button variant="secondary" className="mt-4">Volver al panel</Button></Link>
-          </div>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <EmptyState
+            illustration={<SceneStudentDesk size={220} className="lp-drift" />}
+            title="Este ejercicio aún no ha comenzado"
+            description="Inicia el ejercicio desde el panel principal para crear tu empresa y empezar a registrar operaciones."
+            action={
+              <Link
+                href="/estudiante"
+                className={buttonClasses({ variant: 'primary', className: 'cx-press' })}
+              >
+                <ArrowLeft className="w-4 h-4" /> Volver al panel
+              </Link>
+            }
+          />
         </div>
       )}
       {attempt.status === 'SUBMITTED' && !company && (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500">Ejercicio enviado, esperando calificación.</p>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <EmptyState
+            illustration={<SceneEmptyBox size={200} className="lp-drift" />}
+            title="Ejercicio enviado"
+            description="Tu trabajo está en manos del profesor. Recibirás la calificación y la retroalimentación aquí mismo."
+          />
         </div>
       )}
 
@@ -1110,11 +1237,13 @@ export default function ExerciseWorkspacePage() {
         if (!feedbackText && rubricEntries.length === 0) return null;
         return (
           <div className="px-6 pb-4">
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
-              <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Retroalimentación del profesor</p>
-              {feedbackText && <p className="text-sm text-gray-700">{feedbackText}</p>}
+            <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-card space-y-3 cx-pop">
+              <p className="text-[0.68rem] font-bold text-emerald-700 uppercase tracking-[0.13em] flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5" /> Retroalimentación del profesor
+              </p>
+              {feedbackText && <p className="text-sm text-gray-700 leading-relaxed">{feedbackText}</p>}
               {rubricEntries.length > 0 && (
-                <div className="space-y-1.5 pt-1 border-t border-emerald-200">
+                <div className="space-y-1.5 pt-2 border-t border-emerald-200">
                   {rubricEntries.map(([rubricId, comment]) => {
                     const rubric = rubrics.find(r => r.id === rubricId);
                     return (

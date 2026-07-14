@@ -532,6 +532,131 @@ body {
   .lp-creator-card { padding: 30px 22px; }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   MICRO-ANIMACIONES "CARTOON" (prefijo cx-)
+   Sutiles pero con personalidad: rebote, squash & stretch y overshoot.
+   Suman a la UX (feedback claro) sin volverse ruidosas. Todas se desactivan
+   con prefers-reduced-motion (bloque al final).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Easing con rebote (back-out): el "sello" cartoon de la casa. */
+:root {
+  --cx-bounce: cubic-bezier(.34, 1.56, .64, 1);
+}
+
+/* 1 · Entrada con rebote — tarjetas, modales, paneles */
+@keyframes cx-pop-in {
+  0%   { opacity: 0; transform: scale(.92) translateY(8px); }
+  60%  { opacity: 1; transform: scale(1.02) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.cx-pop { animation: cx-pop-in .45s var(--cx-bounce) both; }
+.cx-d1  { animation-delay: .06s; }
+.cx-d2  { animation-delay: .12s; }
+.cx-d3  { animation-delay: .18s; }
+.cx-d4  { animation-delay: .24s; }
+.cx-d5  { animation-delay: .30s; }
+.cx-d6  { animation-delay: .36s; }
+
+/* 2 · Rebote suave en reposo — ilustraciones e iconos protagonistas */
+@keyframes cx-bounce-soft {
+  0%, 100% { transform: translateY(0)     scaleY(1);    }
+  30%       { transform: translateY(-6px) scaleY(1.03); }
+  55%       { transform: translateY(0)    scaleY(.97);  }
+  75%       { transform: translateY(-2px) scaleY(1.01); }
+}
+.cx-bounce { animation: cx-bounce-soft 3.2s ease-in-out infinite; }
+
+/* 3 · Flotado lento — spot-art de fondo */
+@keyframes cx-float-slow {
+  0%, 100% { transform: translateY(0)     rotate(0deg);    }
+  50%       { transform: translateY(-8px) rotate(1.2deg);  }
+}
+.cx-float { animation: cx-float-slow 6s ease-in-out infinite; }
+
+/* 4 · Squash al pulsar — botones y filas clicables (feedback táctil) */
+.cx-press { transition: transform .12s var(--cx-bounce); }
+.cx-press:active { transform: scale(.955); }
+
+/* 5 · Elevación juguetona al hover — tarjetas */
+.cx-lift { transition: transform .28s var(--cx-bounce), box-shadow .28s ease; }
+.cx-lift:hover { transform: translateY(-5px) scale(1.012); }
+
+/* 6 · Icono que "salta" cuando se pasa el ratón por su fila/tarjeta padre */
+.cx-hop-parent .cx-hop { transition: transform .32s var(--cx-bounce); }
+.cx-hop-parent:hover .cx-hop { transform: translateY(-3px) scale(1.12); }
+
+/* 7 · Wiggle — llamada de atención amable (iconos, badges) */
+@keyframes cx-wiggle-kf {
+  0%, 100% { transform: rotate(0deg);   }
+  25%       { transform: rotate(-7deg); }
+  50%       { transform: rotate(6deg);  }
+  75%       { transform: rotate(-3deg); }
+}
+.cx-wiggle-parent:hover .cx-wiggle { animation: cx-wiggle-kf .5s ease-in-out; }
+.cx-wiggle-loop { animation: cx-wiggle-kf 2.6s ease-in-out infinite; }
+
+/* 8 · Shake — error de validación */
+@keyframes cx-shake-kf {
+  0%, 100% { transform: translateX(0);    }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(5px);  }
+  60%       { transform: translateX(-3px); }
+  80%       { transform: translateX(2px);  }
+}
+.cx-shake { animation: cx-shake-kf .4s ease-in-out; }
+
+/* 9 · Celebración — éxito (asiento cuadrado, declaración enviada) */
+@keyframes cx-tada-kf {
+  0%        { transform: scale(1) rotate(0);        }
+  15%       { transform: scale(.94) rotate(-4deg);  }
+  35%       { transform: scale(1.08) rotate(4deg);  }
+  55%       { transform: scale(1.02) rotate(-2deg); }
+  100%      { transform: scale(1) rotate(0);        }
+}
+.cx-tada { animation: cx-tada-kf .7s var(--cx-bounce); }
+
+/* 10 · Trazo del check — confirmaciones en SVG (usar en <path> con pathLength="1") */
+@keyframes cx-draw-kf { to { stroke-dashoffset: 0; } }
+.cx-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: cx-draw-kf .5s .1s ease-out forwards;
+}
+
+/* 11 · Punto de atención — notificaciones/pendientes */
+@keyframes cx-ping-kf {
+  0%   { transform: scale(.85); opacity: .9; }
+  70%  { transform: scale(1.9); opacity: 0;  }
+  100% { transform: scale(1.9); opacity: 0;  }
+}
+.cx-ping { animation: cx-ping-kf 1.8s cubic-bezier(0, 0, .2, 1) infinite; }
+
+/* 12 · Shimmer de carga — skeletons */
+@keyframes cx-shimmer-kf {
+  0%   { background-position: -300% 0; }
+  100% { background-position:  300% 0; }
+}
+.cx-shimmer {
+  background-image: linear-gradient(90deg, transparent 20%, rgba(147,197,253,.22) 50%, transparent 80%);
+  background-size: 300% 100%;
+  animation: cx-shimmer-kf 1.5s linear infinite;
+}
+
+/* 12.b · Límite de repeticiones — para animaciones de bucle en contextos donde
+   el movimiento perpetuo es hostil (p. ej. durante un examen cronometrado).
+   Se combinan con la clase de animación: `class="cx-bounce cx-iter-3"`. */
+.cx-iter-2 { animation-iteration-count: 2; }
+.cx-iter-3 { animation-iteration-count: 3; }
+
+/* 13 · Pop del número al cambiar de valor — KPIs y contadores */
+@keyframes cx-count-kf {
+  0%   { transform: scale(1);    }
+  40%  { transform: scale(1.14); }
+  100% { transform: scale(1);    }
+}
+.cx-count { animation: cx-count-kf .42s var(--cx-bounce); }
+
 /* Respeta usuarios con preferencia de menos movimiento */
 @media (prefers-reduced-motion: reduce) {
   .lp-slide-left, .lp-slide-right, .lp-zoom, .lp-pop,
@@ -541,11 +666,20 @@ body {
   .lp-in, .lp-float,
   .lp-drift, .lp-drift-2,
   .lp-blob-bg::before, .lp-blob-bg::after,
-  .lp-drawer, .lp-drawer-overlay, .lp-drawer.open .lp-drawer-item {
+  .lp-drawer, .lp-drawer-overlay, .lp-drawer.open .lp-drawer-item,
+  /* cartoon */
+  .cx-pop, .cx-bounce, .cx-float, .cx-press, .cx-lift,
+  .cx-hop-parent .cx-hop, .cx-wiggle-loop, .cx-shake, .cx-tada,
+  .cx-draw, .cx-ping, .cx-shimmer, .cx-count,
+  .cx-wiggle-parent:hover .cx-wiggle {
     animation: none !important;
     transition: none !important;
   }
   .lp-card-pro:hover { transform: none !important; }
+  .cx-lift:hover,
+  .cx-press:active,
+  .cx-hop-parent:hover .cx-hop { transform: none !important; }
+  .cx-draw { stroke-dashoffset: 0 !important; }
   .lp-text-flow {
     background: none !important;
     -webkit-text-fill-color: #60A5FA !important;

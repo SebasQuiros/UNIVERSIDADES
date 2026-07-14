@@ -7,14 +7,24 @@ import { api } from '@/lib/api';
 import { formatDate, getErrorMessage } from '@/lib/utils';
 import { DifficultyBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { IconTile } from '@/components/ui/IconTile';
+import { SceneEmptyBox } from '@/components/illustrations';
 import type { Course, Exercise } from '@/types';
 import toast from 'react-hot-toast';
-import { FileText, Plus, Globe, Lock, ChevronRight, BookOpen, Users, Trash2, AlertTriangle, X } from 'lucide-react';
+import {
+  FileText, Plus, Globe, Lock, ChevronRight, BookOpen, Users,
+  Trash2, AlertTriangle, X, ClipboardList,
+} from 'lucide-react';
 
 interface ExerciseWithCourse extends Exercise {
   courseId: string;
   courseName: string;
+  _count?: { attempts: number };
 }
 
 function DeleteModal({
@@ -30,29 +40,26 @@ function DeleteModal({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+      <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-card border border-gray-200/70 bg-white p-6 shadow-card-hover cx-pop">
+        <button onClick={onClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600" aria-label="Cerrar">
           <X className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-          </div>
-          <h3 className="font-bold text-gray-900">Eliminar ejercicio</h3>
+        <div className="mb-4 flex items-center gap-3">
+          <IconTile icon={AlertTriangle} tint="#DC2626" size={44} />
+          <h3 className="font-bold tracking-tight text-gray-900">Eliminar ejercicio</h3>
         </div>
-        <p className="text-sm text-gray-600 mb-2">
-          ¿Estás seguro de que deseas eliminar <strong>"{exercise.title}"</strong>?
+        <p className="mb-2 text-sm text-gray-600">
+          ¿Seguro que deseas eliminar <strong>{exercise.title}</strong>?
         </p>
-        <p className="text-xs text-red-500 mb-6">
+        <p className="mb-6 text-xs text-red-600">
           Esta acción eliminará el ejercicio y todos sus intentos. No se puede deshacer.
         </p>
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1" disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={onConfirm} loading={loading}
-            className="flex-1 !bg-red-600 hover:!bg-red-700 border-red-600">
+          <Button variant="danger" onClick={onConfirm} loading={loading} className="flex-1 cx-press">
             Eliminar
           </Button>
         </div>
@@ -104,44 +111,51 @@ export default function EjerciciosPage() {
 
   const published = exercises.filter((e) => e.isPublished);
   const drafts    = exercises.filter((e) => !e.isPublished);
+  const totalAttempts = exercises.reduce((s, e) => s + (e._count?.attempts ?? 0), 0);
 
   function ExerciseRow({ ex }: { ex: ExerciseWithCourse }) {
     return (
-      <div className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 group">
+      <div className="group flex items-center gap-4 border-b border-gray-100 p-4 transition-colors last:border-0 hover:bg-blue-50/50 cx-hop-parent">
+        <IconTile
+          icon={ex.isPublished ? Globe : Lock}
+          tint={ex.isPublished ? '#059669' : '#94A3B8'}
+          size={40}
+          className="cx-hop"
+        />
         <Link
           href={`/profesor/ejercicios/${ex.id}?cursoId=${ex.courseId}`}
-          className="flex-1 min-w-0"
+          className="min-w-0 flex-1 cx-press"
         >
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
             <DifficultyBadge difficulty={ex.difficulty} />
             {ex.isPublished
-              ? <span className="flex items-center gap-1 text-xs text-emerald-600"><Globe className="w-3 h-3" />Publicado</span>
-              : <span className="flex items-center gap-1 text-xs text-gray-400"><Lock className="w-3 h-3" />Borrador</span>}
+              ? <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><Globe className="w-3 h-3" />Publicado</span>
+              : <span className="flex items-center gap-1 text-xs font-semibold text-gray-400"><Lock className="w-3 h-3" />Borrador</span>}
           </div>
-          <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">{ex.title}</p>
-          <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+          <p className="truncate text-sm font-semibold text-gray-800 group-hover:text-gray-900">{ex.title}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400">
             <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{ex.courseName}</span>
-            <span className="flex items-center gap-1"><Users className="w-3 h-3" />{(ex as any)._count?.attempts ?? 0} intentos</span>
+            <span className="flex items-center gap-1 tabular-nums"><Users className="w-3 h-3" />{ex._count?.attempts ?? 0} intentos</span>
             {ex.dueDate && <span>Vence: {formatDate(ex.dueDate)}</span>}
           </div>
         </Link>
-        <div className="text-xs text-gray-400 flex-shrink-0 hidden sm:block">{formatDate(ex.createdAt)}</div>
+        <div className="hidden flex-shrink-0 text-xs text-gray-400 sm:block">{formatDate(ex.createdAt)}</div>
         <button
           onClick={(e) => { e.preventDefault(); setToDelete(ex); }}
-          className="p-2 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0"
+          className="flex-shrink-0 rounded-lg p-2 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-500 cx-press"
           title="Eliminar ejercicio"
         >
           <Trash2 className="w-4 h-4" />
         </button>
         <Link href={`/profesor/ejercicios/${ex.id}?cursoId=${ex.courseId}`} className="flex-shrink-0">
-          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-500" />
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
       {toDelete && (
         <DeleteModal
           exercise={toDelete}
@@ -151,50 +165,106 @@ export default function EjerciciosPage() {
         />
       )}
 
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Mis Ejercicios</h2>
-          <p className="text-gray-500 text-sm mt-1">{exercises.length} ejercicio{exercises.length !== 1 ? 's' : ''} en total</p>
-        </div>
-        <Link href="/profesor/ejercicios/nuevo">
-          <Button><Plus className="w-4 h-4" /> Nuevo ejercicio</Button>
-        </Link>
+      <PageHeader
+        eyebrow="Portal profesor"
+        title="Mis ejercicios"
+        subtitle={`${exercises.length} ejercicio${exercises.length !== 1 ? 's' : ''} en total`}
+        icon={ClipboardList}
+        className="mb-6"
+        actions={
+          <Link href="/profesor/ejercicios/nuevo">
+            <Button className="cx-press"><Plus className="w-4 h-4" /> Nuevo ejercicio</Button>
+          </Link>
+        }
+      />
+
+      {/* KPIs */}
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-28 rounded-card border border-gray-200/70 bg-white shadow-card">
+              <div className="space-y-2.5 p-5">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-8 w-16" />
+              </div>
+            </div>
+          ))
+        ) : (
+          <>
+            <StatCard
+              label="Publicados" value={String(published.length)} icon={Globe} tint="#059669"
+              hint="Visibles para estudiantes" className="cx-pop cx-d1"
+            />
+            <StatCard
+              label="Borradores" value={String(drafts.length)} icon={Lock} tint="#B8860B"
+              hint="Sin publicar" className="cx-pop cx-d2"
+            />
+            <StatCard
+              label="Intentos" value={String(totalAttempts)} icon={Users} tint="#2563EB"
+              hint="Acumulados en todos los cursos" className="cx-pop cx-d3"
+            />
+          </>
+        )}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-      ) : exercises.length === 0 ? (
-        <div className="flex flex-col items-center py-20 text-center">
-          <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
-            <FileText className="w-8 h-8 text-gray-400" />
+        <SectionCard title="Ejercicios" icon={FileText} flushBody>
+          <div className="divide-y divide-gray-100">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-4">
+                <Skeleton className="h-10 w-10 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-4 w-56" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+                <Skeleton className="h-4 w-20" />
+              </div>
+            ))}
           </div>
-          <h3 className="text-gray-700 font-semibold">Sin ejercicios aún</h3>
-          <p className="text-gray-500 text-sm mt-1 mb-4">Crea tu primer ejercicio para tus estudiantes</p>
-          <Link href="/profesor/ejercicios/nuevo">
-            <Button><Plus className="w-4 h-4" /> Crear ejercicio</Button>
-          </Link>
-        </div>
+        </SectionCard>
+      ) : exercises.length === 0 ? (
+        <SectionCard title="Ejercicios" icon={FileText}>
+          <EmptyState
+            illustration={<SceneEmptyBox size={200} className="cx-float" />}
+            title="Sin ejercicios aún"
+            description="Crea tu primer ejercicio para que tus estudiantes empiecen a practicar el ciclo contable."
+            action={
+              <Link href="/profesor/ejercicios/nuevo">
+                <Button className="cx-press"><Plus className="w-4 h-4" /> Crear ejercicio</Button>
+              </Link>
+            }
+          />
+        </SectionCard>
       ) : (
         <div className="space-y-6">
           {published.length > 0 && (
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-emerald-600" /> Publicados ({published.length})
-              </h3>
-              <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+            <SectionCard
+              icon={Globe}
+              iconTint="#059669"
+              eyebrow="Visibles para estudiantes"
+              title={`Publicados (${published.length})`}
+              flushBody
+              className="cx-pop"
+            >
+              <div className="divide-y divide-gray-100">
                 {published.map((ex) => <ExerciseRow key={ex.id} ex={ex} />)}
               </div>
-            </section>
+            </SectionCard>
           )}
           {drafts.length > 0 && (
-            <section>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-gray-400" /> Borradores ({drafts.length})
-              </h3>
-              <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+            <SectionCard
+              icon={Lock}
+              iconTint="#B8860B"
+              eyebrow="Aún sin publicar"
+              title={`Borradores (${drafts.length})`}
+              flushBody
+              className="cx-pop cx-d2"
+            >
+              <div className="divide-y divide-gray-100">
                 {drafts.map((ex) => <ExerciseRow key={ex.id} ex={ex} />)}
               </div>
-            </section>
+            </SectionCard>
           )}
         </div>
       )}

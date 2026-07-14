@@ -153,7 +153,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-6">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-700 mb-1">Acceso institucional</p>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-900 mb-1">Acceso institucional</p>
             <h2 className="text-3xl font-extrabold tracking-tight text-gray-900">Bienvenido</h2>
             <p className="text-gray-500 text-sm mt-1.5">Ingresa con tu correo institucional para continuar.</p>
           </div>

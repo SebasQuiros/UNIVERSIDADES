@@ -3,14 +3,23 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
+import { Button, buttonClasses } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import {
   FileText, ShoppingCart, Package, Landmark, BookOpen, Coins,
   ClipboardList, Tag, Warehouse, Scale, RefreshCw, Building2,
   BarChart2, Inbox, FolderTree, Search, Filter, Plus, ChevronLeft,
-  ChevronRight, Layers, Users, Truck, FileMinus, FilePlus, Receipt,
+  ChevronRight, Layers, Users, Truck, FileMinus, FilePlus, Hammer,
+  Info,
 } from 'lucide-react';
 
-// ── Config de cada sección (base estilo Alegra) ────────────────
+// ── Config de cada sección ─────────────────────────────────────
 interface SectionCfg {
   title: string;
   desc: string;
@@ -205,6 +214,16 @@ const AREA_OF: Record<string, string> = {
   'balance-comprobacion': 'Reportes', 'estados-financieros': 'Reportes',
 };
 
+// Tinte del área (acentos de marca; sin teal).
+const AREA_TINT: Record<string, string> = {
+  Ingresos:     '#2563EB',
+  Gastos:       '#B8860B',
+  Inventario:   '#6D28D9',
+  Bancos:       '#059669',
+  Contabilidad: '#1B2E6E',
+  Reportes:     '#0369A1',
+};
+
 export default function ModuloPage() {
   const params = useParams();
   const slug = String(params.slug ?? '');
@@ -212,11 +231,23 @@ export default function ModuloPage() {
 
   if (!cfg) {
     return (
-      <div className="flex-1 p-8" style={{ background: '#F4F6F8' }}>
-        <div className="max-w-md mx-auto text-center py-20">
-          <Package className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-          <h1 className="text-lg font-bold text-gray-800">Sección no encontrada</h1>
-          <Link href="/estudiante" className="text-blue-700 text-sm font-semibold">Volver al inicio</Link>
+      <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F4F6F8]">
+        <div className="max-w-lg mx-auto mt-10">
+          <Card>
+            <EmptyState
+              illustration={<SceneSearchEmpty size={200} className="cx-float" />}
+              title="No encontramos esta sección"
+              description="La dirección no corresponde a ninguna sección disponible. Vuelve al inicio y elige un módulo del menú."
+              action={
+                <Link
+                  href="/estudiante"
+                  className={buttonClasses({ variant: 'primary', className: 'cx-press' })}
+                >
+                  Volver al inicio
+                </Link>
+              }
+            />
+          </Card>
         </div>
       </div>
     );
@@ -224,53 +255,64 @@ export default function ModuloPage() {
 
   const Icon = cfg.icon;
   const area = AREA_OF[slug];
-  const soon = () => toast('Esta sección está en construcción — pronto podrás crear aquí.', { icon: '🛠️' });
+  const tint = (area && AREA_TINT[area]) ?? '#1B2E6E';
+  const soon = () => toast('Esta sección está en construcción — pronto podrás crear aquí.', {
+    icon: <Hammer className="w-5 h-5 text-gold-700" />,
+  });
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 lg:p-8" style={{ background: '#F4F6F8' }}>
+    <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F4F6F8]">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#2563EB18' }}>
-              <Icon className="w-5 h-5" style={{ color: '#2563EB' }} />
-            </div>
-            <div>
-              {area && <p className="text-[11px] font-mono font-semibold uppercase tracking-wide text-gray-400">{area}</p>}
-              <h1 className="text-xl font-bold text-gray-900 leading-tight">{cfg.title}</h1>
-              <p className="text-sm text-gray-500 mt-0.5 max-w-xl">{cfg.desc}</p>
-            </div>
-          </div>
-          {cfg.create && (
-            <button onClick={soon}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg text-sm font-semibold text-white"
-              style={{ background: '#2563EB' }}>
-              <Plus className="w-4 h-4" /> {cfg.create}
-            </button>
-          )}
-        </div>
+
+        {/* Cabecera */}
+        <PageHeader
+          eyebrow={area}
+          title={cfg.title}
+          subtitle={cfg.desc}
+          icon={Icon}
+          iconTint={tint}
+          className="mb-6"
+          actions={
+            cfg.create ? (
+              <Button onClick={soon} className="cx-press">
+                <Plus className="w-4 h-4" /> {cfg.create}
+              </Button>
+            ) : undefined
+          }
+        />
 
         {/* KPIs en cero (si aplica) */}
         {cfg.kpis && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {cfg.kpis.map((k) => (
-              <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
-                <p className="text-[11px] font-mono font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
-                <p className="mt-3 text-2xl font-bold text-gray-900 font-mono tabular-nums">{k.value ?? '₡0,00'}</p>
-              </div>
+            {cfg.kpis.map((k, i) => (
+              <StatCard
+                key={k.label}
+                label={k.label}
+                value={k.value ?? '₡0,00'}
+                icon={Icon}
+                tint={tint}
+                className={cn('cx-pop', `cx-d${i + 1}`)}
+              />
             ))}
           </div>
         )}
 
-        {/* Card con toolbar + tabla vacía (estilo Alegra) */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
+        {/* Tarjeta con toolbar + tabla vacía */}
+        <SectionCard flushBody className="cx-pop cx-d2">
           {/* Toolbar */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 flex-wrap">
-            <div className="flex items-center gap-2 px-3 h-9 rounded-lg flex-1 min-w-[180px] max-w-sm" style={{ background: '#F1F5F4', border: '1px solid #E1E7EA' }}>
+            <div className="flex items-center gap-2 px-3 h-9 rounded-xl flex-1 min-w-[180px] max-w-sm bg-gray-50 border border-gray-200">
               <Search className="w-4 h-4 text-gray-400" />
-              <input placeholder="Buscar por nombre o código" className="bg-transparent outline-none text-sm text-gray-600 w-full placeholder:text-gray-400" />
+              <input
+                placeholder="Buscar por nombre o código"
+                aria-label="Buscar en la sección"
+                className="bg-transparent outline-none text-sm text-gray-700 w-full placeholder:text-gray-400"
+              />
             </div>
-            <button onClick={soon} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50">
+            <button
+              onClick={soon}
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-sm font-semibold text-gray-600 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 transition-colors cx-press"
+            >
               <Filter className="w-4 h-4" /> Filtrar
             </button>
           </div>
@@ -279,46 +321,59 @@ export default function ModuloPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-[11px] font-mono uppercase tracking-wide text-gray-400 border-b border-gray-100">
+                <tr className="text-left text-[11px] uppercase tracking-wider text-gray-500 bg-gray-50 border-b border-gray-100">
                   {cfg.cols.map((c) => <th key={c} className="px-4 py-2.5 font-semibold">{c}</th>)}
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td colSpan={cfg.cols.length} className="px-4">
-                    <div className="flex flex-col items-center justify-center text-center py-16">
-                      <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-                        style={{ background: 'linear-gradient(135deg,#F0FDFA,#F1F5F9)', boxShadow: '0 0 0 1px rgba(37,99,235,0.12), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
-                        <div className="absolute inset-0 rounded-2xl" style={{ background: 'radial-gradient(circle at 50% 30%, rgba(37,99,235,0.14), transparent 70%)' }} />
-                        <Icon className="relative w-7 h-7" style={{ color: '#2563EB' }} />
-                      </div>
-                      <h3 className="text-gray-700 font-semibold">{cfg.emptyTitle}</h3>
-                      <p className="text-gray-400 text-sm mt-1 max-w-sm">{cfg.emptyHint}</p>
-                      {cfg.create && (
-                        <button onClick={soon} className="mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-semibold text-white" style={{ background: '#2563EB' }}>
-                          <Plus className="w-4 h-4" /> {cfg.create}
-                        </button>
-                      )}
-                    </div>
+                    <EmptyState
+                      illustration={<SceneEmptyBox size={180} className="cx-float" />}
+                      title={cfg.emptyTitle}
+                      description={cfg.emptyHint}
+                      action={
+                        cfg.create ? (
+                          <Button onClick={soon} variant="primary" className="cx-press">
+                            <Plus className="w-4 h-4" /> {cfg.create}
+                          </Button>
+                        ) : undefined
+                      }
+                    />
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          {/* Footer paginación */}
+          {/* Pie de paginación */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-xs text-gray-400 flex-wrap gap-2">
-            <span className="flex items-center gap-2 font-mono">Resultados por página: <span className="px-2 py-0.5 rounded border border-gray-200 bg-white text-gray-500">10</span></span>
+            <span className="flex items-center gap-2">
+              Resultados por página
+              <span className="px-2 py-0.5 rounded-lg border border-gray-200 bg-white text-gray-600 font-mono tabular-nums">10</span>
+            </span>
             <span className="font-mono tabular-nums">0 de 0</span>
             <div className="flex items-center gap-1">
-              <button className="w-7 h-7 rounded border border-gray-200 flex items-center justify-center text-gray-300"><ChevronLeft className="w-4 h-4" /></button>
-              <button className="w-7 h-7 rounded border border-gray-200 flex items-center justify-center text-gray-300"><ChevronRight className="w-4 h-4" /></button>
+              <button
+                aria-label="Página anterior"
+                disabled
+                className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-300 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                aria-label="Página siguiente"
+                disabled
+                className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-300 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
-        </div>
+        </SectionCard>
 
-        <p className="text-[11px] text-gray-400 mt-4 flex items-center gap-1.5">
-          <Receipt className="w-3.5 h-3.5" />
+        <p className="text-xs text-gray-400 mt-4 flex items-center gap-1.5">
+          <Info className="w-3.5 h-3.5" />
           Base de la sección lista. La creación y la lógica contable se conectan en las próximas iteraciones.
         </p>
       </div>

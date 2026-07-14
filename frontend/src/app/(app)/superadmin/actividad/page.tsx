@@ -2,9 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { Spinner } from '@/components/ui/Spinner';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ArtGrowth, SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
-import { Activity, Search, RefreshCw } from 'lucide-react';
+import { Activity, Search, RefreshCw, X, Users, Building2, ListChecks } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -15,7 +21,7 @@ interface ActivityEntry {
   action:         string;
   entity:         string | null;
   entityId:       string | null;
-  details:        any;
+  details:        unknown;
   createdAt:      string;
   user:           { id: string; name: string; email: string; role: string };
   universityName: string | null;
@@ -34,10 +40,16 @@ const ROLE_LABELS: Record<string, string> = {
   STUDENT: 'Est', TEACHER: 'Prof', ADMIN: 'Admin', SUPERADMIN: 'SA',
 };
 
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatFull(dateStr: string) {
-  return new Date(dateStr).toLocaleString('es', {
+  return new Date(dateStr).toLocaleString('es-CR', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
@@ -55,9 +67,9 @@ function formatRelative(dateStr: string) {
 
 function ActivityRow({ entry }: { entry: ActivityEntry }) {
   return (
-    <div className="flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors">
+    <div className="flex items-start gap-4 px-6 lg:px-7 py-4 hover:bg-blue-50/40 transition-colors cx-hop-parent">
       {/* Avatar */}
-      <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0 mt-0.5">
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-100 flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0 mt-0.5 cx-hop">
         {entry.user.name.charAt(0).toUpperCase()}
       </div>
 
@@ -74,7 +86,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
         </div>
         <p className="text-sm text-gray-600">{entry.action}</p>
         {entry.entity && (
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-400 mt-0.5 font-mono">
             {entry.entity}{entry.entityId ? ` · ${entry.entityId.slice(0, 8)}…` : ''}
           </p>
         )}
@@ -83,7 +95,7 @@ function ActivityRow({ entry }: { entry: ActivityEntry }) {
 
       {/* Time */}
       <div className="flex-shrink-0 text-right">
-        <p className="text-xs text-gray-500">{formatRelative(entry.createdAt)}</p>
+        <p className="text-xs font-medium text-gray-500">{formatRelative(entry.createdAt)}</p>
         <p className="text-xs text-gray-400 mt-0.5">{formatFull(entry.createdAt)}</p>
       </div>
     </div>
@@ -132,116 +144,197 @@ export default function ActividadPage() {
     );
   });
 
+  const distinctUsers = new Set(filtered.map((e) => e.user.id)).size;
+  const distinctUnis  = new Set(
+    filtered.map((e) => e.universityName).filter((n): n is string => Boolean(n)),
+  ).size;
+  const hasFilters = Boolean(search || uniFilter);
+
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Actividad</h2>
-          <p className="text-gray-500 text-sm mt-1">
-            Registro de acciones en la plataforma
-          </p>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      <PageHeader
+        eyebrow="Superadmin"
+        title="Actividad"
+        subtitle="Bitácora de acciones registradas en toda la plataforma."
+        icon={Activity}
+        className="mb-8"
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => load()}
+            disabled={loading}
+            className="cx-press"
+            title="Recargar"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Recargar
+          </Button>
+        }
+      />
+
+      {/* Banda hero — pulso de la plataforma */}
+      <div className="relative overflow-hidden rounded-card shadow-soft mb-8 lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+        <div aria-hidden className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 hidden xl:block opacity-95">
+          <ArtGrowth size={175} className="lp-drift" />
         </div>
-        <button
-          onClick={() => load()}
-          disabled={loading}
-          className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50 transition-colors disabled:opacity-50"
-          title="Recargar"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="relative p-6 lg:p-8">
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500 mb-2">
+            Pulso de la plataforma
+          </p>
+          <h2 className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
+            Qué está pasando ahora
+          </h2>
+          <p className="text-sm text-blue-200/80 mt-1.5 max-w-md">
+            Eventos visibles según los filtros seleccionados.
+          </p>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 xl:max-w-3xl">
+            <StatCard
+              key={`ev-${filtered.length}`}
+              variant="dark"
+              label="Eventos"
+              value={String(filtered.length)}
+              icon={ListChecks}
+              className="cx-count"
+            />
+            <StatCard
+              key={`us-${distinctUsers}`}
+              variant="dark"
+              label="Usuarios distintos"
+              value={String(distinctUsers)}
+              icon={Users}
+              className="cx-count"
+            />
+            <StatCard
+              key={`un-${distinctUnis}`}
+              variant="dark"
+              label="Universidades"
+              value={String(distinctUnis)}
+              icon={Building2}
+              className="cx-count"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por usuario, acción..."
-            className="w-full rounded-xl bg-white border border-gray-300 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <select
-          value={uniFilter}
-          onChange={(e) => { setUniFilter(e.target.value); }}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        >
-          <option value="">Todas las universidades</option>
-          {universities.map((u) => (
-            <option key={u.id} value={u.id}>{u.shortName ?? u.name}</option>
-          ))}
-        </select>
-        <select
-          value={String(limit)}
-          onChange={(e) => setLimit(Number(e.target.value))}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        >
-          <option value="20">Últimas 20</option>
-          <option value="50">Últimas 50</option>
-          <option value="100">Últimas 100</option>
-          <option value="200">Últimas 200</option>
-        </select>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center py-16 text-center">
-          <Activity className="w-8 h-8 text-gray-300 mb-3" />
-          <p className="text-gray-500">
-            {search || uniFilter ? 'Sin resultados para los filtros aplicados' : 'No hay actividad registrada'}
-          </p>
-          {!search && !uniFilter && (
-            <p className="text-xs text-gray-400 mt-1">
-              Las acciones de los usuarios en la plataforma se registran automáticamente.
-            </p>
+      {/* Bitácora */}
+      <SectionCard
+        icon={Activity}
+        iconTint="#B8860B"
+        eyebrow="Bitácora"
+        title="Registro de eventos"
+        description={`${filtered.length} evento${filtered.length !== 1 ? 's' : ''} en pantalla`}
+        flushBody
+      >
+        {/* Filtros */}
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 px-6 lg:px-7 py-4 border-b border-gray-100 bg-gray-50/60">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por usuario, acción o entidad…"
+              className="w-full rounded-xl bg-white border border-gray-300 pl-9 pr-4 py-2.5 text-sm transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+            />
+          </div>
+          <select
+            value={uniFilter}
+            onChange={(e) => { setUniFilter(e.target.value); }}
+            className="rounded-xl bg-white border border-gray-300 px-3 py-2.5 text-sm text-gray-700 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+          >
+            <option value="">Todas las universidades</option>
+            {universities.map((u) => (
+              <option key={u.id} value={u.id}>{u.shortName ?? u.name}</option>
+            ))}
+          </select>
+          <select
+            value={String(limit)}
+            onChange={(e) => setLimit(Number(e.target.value))}
+            className="rounded-xl bg-white border border-gray-300 px-3 py-2.5 text-sm text-gray-700 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+          >
+            <option value="20">Últimas 20</option>
+            <option value="50">Últimas 50</option>
+            <option value="100">Últimas 100</option>
+            <option value="200">Últimas 200</option>
+          </select>
+          {hasFilters && (
+            <button
+              onClick={() => { setSearch(''); setUniFilter(''); }}
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors cx-press"
+            >
+              <X className="w-3.5 h-3.5" /> Limpiar
+            </button>
           )}
         </div>
-      ) : (
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-          {/* Header row */}
-          <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              {filtered.length} evento{filtered.length !== 1 ? 's' : ''}
-            </span>
-          </div>
 
-          {/* Timeline */}
+        {loading ? (
           <div className="divide-y divide-gray-100">
-            {filtered.map((entry, i) => {
-              const prev = filtered[i - 1];
-              const currDate = new Date(entry.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' });
-              const prevDate = prev ? new Date(prev.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' }) : null;
-              const showDivider = currDate !== prevDate;
-
-              return (
-                <div key={entry.id}>
-                  {showDivider && (
-                    <div className="px-5 py-2 bg-gray-50 border-b border-gray-100">
-                      <span className="text-xs font-semibold text-gray-500">{currDate}</span>
-                    </div>
-                  )}
-                  <ActivityRow entry={entry} />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-start gap-4 px-6 lg:px-7 py-4">
+                <Skeleton className="w-9 h-9 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3.5 w-40" />
+                  <Skeleton className="h-3 w-64" />
+                  <Skeleton className="h-3 w-32" />
                 </div>
-              );
-            })}
+                <Skeleton className="h-3 w-24" />
+              </div>
+            ))}
           </div>
+        ) : filtered.length === 0 ? (
+          hasFilters ? (
+            <EmptyState
+              illustration={<SceneSearchEmpty size={190} className="lp-drift" />}
+              title="Sin resultados"
+              description="Ningún evento coincide con los filtros aplicados. Prueba a ampliar el rango o limpiar la búsqueda."
+              action={
+                <Button variant="secondary" onClick={() => { setSearch(''); setUniFilter(''); }} className="cx-press">
+                  Limpiar filtros
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              illustration={<SceneEmptyBox size={200} className="lp-drift" />}
+              title="Sin actividad registrada"
+              description="Las acciones de los usuarios en la plataforma se registran automáticamente y aparecerán aquí."
+            />
+          )
+        ) : (
+          <>
+            {/* Timeline */}
+            <div className="divide-y divide-gray-100">
+              {filtered.map((entry, i) => {
+                const prev = filtered[i - 1];
+                const currDate = new Date(entry.createdAt).toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' });
+                const prevDate = prev ? new Date(prev.createdAt).toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' }) : null;
+                const showDivider = currDate !== prevDate;
 
-          {/* Load more */}
-          {filtered.length >= limit && (
-            <div className="px-5 py-4 border-t border-gray-100 text-center">
-              <button
-                onClick={() => setLimit((l) => l + 50)}
-                className="text-sm text-blue-700 hover:text-blue-800 font-medium"
-              >
-                Cargar más
-              </button>
+                return (
+                  <div key={entry.id}>
+                    {showDivider && (
+                      <div className="px-6 lg:px-7 py-2 bg-gray-50 border-b border-gray-100">
+                        <span className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gray-500">
+                          {currDate}
+                        </span>
+                      </div>
+                    )}
+                    <ActivityRow entry={entry} />
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Cargar más */}
+            {filtered.length >= limit && (
+              <div className="px-6 lg:px-7 py-4 border-t border-gray-100 text-center">
+                <Button variant="secondary" onClick={() => setLimit((l) => l + 50)} className="cx-press">
+                  Cargar más eventos
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </SectionCard>
     </div>
   );
 }

@@ -7,12 +7,18 @@ import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase/client';
 import { formatDate, getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { IconTile } from '@/components/ui/IconTile';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ArtLedger, SceneEmptyBox } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   Building2, Users, BookOpen, ArrowLeft, Globe,
   ToggleLeft, ToggleRight, GraduationCap, ShieldCheck,
-  KeyRound, UserX, UserCheck, CreditCard, Activity, Edit2, X, Check,
+  KeyRound, UserX, UserCheck, CreditCard, Activity, Edit2, X,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -56,6 +62,30 @@ const ROLE_COLORS: Record<string, string> = {
 
 type Tab = 'cursos' | 'usuarios' | 'actividad';
 
+const TAB_LABELS: Record<Tab, string> = {
+  cursos: 'Cursos', usuarios: 'Usuarios', actividad: 'Actividad',
+};
+
+// Campos de texto editables de la universidad.
+type EditableField = 'name' | 'shortName' | 'country' | 'website';
+
+const EDIT_FIELDS: Array<{ label: string; key: EditableField; placeholder: string }> = [
+  { label: 'Nombre completo *', key: 'name',      placeholder: 'Nombre oficial de la institución' },
+  { label: 'Nombre corto',      key: 'shortName', placeholder: 'Siglas' },
+  { label: 'País',              key: 'country',   placeholder: 'Costa Rica' },
+  { label: 'Sitio web',         key: 'website',   placeholder: 'https://institucion.ac.cr' },
+];
+
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
+
+const MODAL_INPUT =
+  'w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm transition-colors ' +
+  'hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500';
+
 // ── Reset Password Modal ──────────────────────────────────────────────────────
 
 function ResetPwdModal({ user, onClose }: { user: UserItem; onClose: () => void }) {
@@ -81,18 +111,24 @@ function ResetPwdModal({ user, onClose }: { user: UserItem; onClose: () => void 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 rounded-xl w-full max-w-sm shadow-xl p-6">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-        <KeyRound className="w-8 h-8 text-amber-500 mb-3" />
-        <h3 className="font-semibold text-gray-900 mb-1">Resetear contraseña</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Se enviará un email de recuperación a <strong>{user.email}</strong> para que{' '}
-          {user.name} establezca una nueva contraseña.
+      <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-sm shadow-card-hover p-6 cx-pop">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cx-press"
+          aria-label="Cerrar"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <IconTile icon={KeyRound} tint="#B8860B" size={46} className="mb-3" />
+        <h3 className="font-bold text-gray-900 mb-1">Restablecer contraseña</h3>
+        <p className="text-sm text-gray-500 mb-5">
+          Se enviará un email de recuperación a <strong className="text-gray-700">{user.email}</strong> para
+          que {user.name} establezca una nueva contraseña.
         </p>
         <div className="flex gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-          <Button loading={loading} onClick={handleReset} className="flex-1">Enviar email</Button>
+          <Button type="button" variant="secondary" onClick={onClose} className="flex-1 cx-press">Cancelar</Button>
+          <Button loading={loading} onClick={handleReset} className="flex-1 cx-press">Enviar email</Button>
         </div>
       </div>
     </div>
@@ -141,26 +177,33 @@ function EditUniversityModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 rounded-xl w-full max-w-md shadow-xl">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-900">Editar universidad</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+      <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-md shadow-card-hover cx-pop">
+        <div className="flex items-center justify-between gap-3 p-5 border-b border-gray-100">
+          <div className="flex items-center gap-3 min-w-0">
+            <IconTile icon={Edit2} tint="#1B2E6E" size={42} />
+            <div className="min-w-0">
+              <p className="text-[0.66rem] font-bold uppercase tracking-[0.13em] text-gold-900">Superadmin</p>
+              <h3 className="font-bold text-gray-900 truncate">Editar universidad</h3>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cx-press"
+            aria-label="Cerrar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          {[
-            { label: 'Nombre completo *', key: 'name', placeholder: 'Universidad ...' },
-            { label: 'Nombre corto',      key: 'shortName', placeholder: 'UTN' },
-            { label: 'País',              key: 'country', placeholder: 'Costa Rica' },
-            { label: 'Sitio web',         key: 'website', placeholder: 'https://...' },
-          ].map(({ label, key, placeholder }) => (
+          {EDIT_FIELDS.map(({ label, key, placeholder }) => (
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
               <input
-                value={(form as any)[key]}
+                value={form[key]}
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                 placeholder={placeholder}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={MODAL_INPUT}
               />
             </div>
           ))}
@@ -170,15 +213,33 @@ function EditUniversityModal({
               type="number" min={10}
               value={form.maxStudents}
               onChange={(e) => setForm({ ...form, maxStudents: e.target.value })}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`${MODAL_INPUT} font-mono tabular-nums`}
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-            <Button type="submit" loading={saving} className="flex-1">Guardar</Button>
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1 cx-press">Cancelar</Button>
+            <Button type="submit" loading={saving} className="flex-1 cx-press">Guardar</Button>
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+function DetailSkeleton() {
+  return (
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      <Skeleton className="h-4 w-56 mb-6" />
+      <Skeleton className="h-24 w-full rounded-card mb-8" />
+      <Skeleton className="h-44 w-full rounded-card mb-8" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 rounded-card" />
+        ))}
+      </div>
+      <Skeleton className="h-80 w-full rounded-card" />
     </div>
   );
 }
@@ -253,14 +314,14 @@ export default function UniversidadDetailPage() {
     }
   }
 
-  if (loading) return <div className="flex-1 flex items-center justify-center"><Spinner size="lg" /></div>;
+  if (loading) return <DetailSkeleton />;
   if (!university) return null;
 
   const users   = university.users   ?? [];
   const courses = university.courses ?? [];
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
       {resetUser && (
         <ResetPwdModal user={resetUser} onClose={() => setResetUser(null)} />
       )}
@@ -274,46 +335,25 @@ export default function UniversidadDetailPage() {
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/superadmin/universidades" className="hover:text-gray-700 flex items-center gap-1">
+        <Link href="/superadmin/universidades" className="hover:text-gray-800 flex items-center gap-1 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" /> Universidades
         </Link>
-        <span>/</span>
+        <span className="text-gray-300">/</span>
         <span className="text-gray-700 font-medium truncate max-w-xs">{university.name}</span>
       </div>
 
-      {/* Header card */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${university.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                {university.isActive ? 'Activa' : 'Inactiva'}
-              </span>
-              {university.plan && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium flex items-center gap-1">
-                  <CreditCard className="w-3 h-3" /> {university.plan.name}
-                </span>
-              )}
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">{university.name}</h2>
-            {university.shortName && <p className="text-gray-500 text-sm mt-0.5">{university.shortName}</p>}
-            <div className="flex items-center gap-4 mt-3 text-sm text-gray-500 flex-wrap">
-              <span className="flex items-center gap-1"><Globe className="w-3.5 h-3.5" /> {university.country}</span>
-              {university.website && (
-                <a href={university.website} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-blue-700 hover:text-blue-800">
-                  {university.website}
-                </a>
-              )}
-              <span>Creada: {formatDate(university.createdAt)}</span>
-              <span>Máx. {university.maxStudents} est.</span>
-            </div>
-          </div>
-          <div className="flex gap-2">
+      <PageHeader
+        eyebrow="Ficha institucional"
+        title={university.name}
+        subtitle={university.shortName ?? undefined}
+        icon={Building2}
+        className="mb-6"
+        actions={
+          <>
             <button
               onClick={() => setShowEdit(true)}
-              className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50 transition-colors"
-              title="Editar"
+              className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-500 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50 transition-colors cx-press"
+              title="Editar universidad"
             >
               <Edit2 className="w-4 h-4" />
             </button>
@@ -321,65 +361,115 @@ export default function UniversidadDetailPage() {
               onClick={handleToggleActive}
               loading={toggling}
               variant={university.isActive ? 'danger' : 'primary'}
+              className="cx-press"
             >
               {university.isActive
                 ? <><ToggleLeft className="w-4 h-4" /> Desactivar</>
                 : <><ToggleRight className="w-4 h-4" /> Activar</>}
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        {/* Quick stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-gray-100">
-          {[
-            { label: 'Cursos',      value: university.stats.totalCourses,   icon: BookOpen,      color: 'text-blue-600',    bg: 'bg-blue-50' },
-            { label: 'Estudiantes', value: university.stats.totalStudents,  icon: GraduationCap, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'Profesores',  value: university.stats.totalTeachers,  icon: Users,         color: 'text-slate-600',  bg: 'bg-slate-100' },
-            { label: 'Admins',      value: university.stats.totalAdmins,    icon: ShieldCheck,   color: 'text-amber-600',   bg: 'bg-amber-50' },
-          ].map((s) => (
-            <div key={s.label} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
-              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center flex-shrink-0`}>
-                <s.icon className={`w-4 h-4 ${s.color}`} />
-              </div>
-              <div>
-                <p className={`text-lg font-bold font-mono tabular-nums ${s.color}`}>{s.value}</p>
-                <p className="text-xs text-gray-500">{s.label}</p>
-              </div>
-            </div>
-          ))}
+      {/* Banda hero — identidad + metadatos */}
+      <div className="relative overflow-hidden rounded-card shadow-soft mb-8 lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+        <div aria-hidden className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 hidden xl:block opacity-95">
+          <ArtLedger size={150} className="lp-drift" />
+        </div>
+        <div className="relative p-6 lg:p-8">
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
+              university.isActive
+                ? 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30'
+                : 'bg-red-500/15 text-red-200 border-red-400/30'
+            }`}>
+              {university.isActive ? 'Activa' : 'Inactiva'}
+            </span>
+            {university.plan && (
+              <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 text-blue-100 border border-white/15 font-semibold flex items-center gap-1.5">
+                <CreditCard className="w-3 h-3" /> {university.plan.name}
+              </span>
+            )}
+          </div>
+          <h2 className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
+            {university.name}
+          </h2>
+          <div className="flex items-center gap-x-5 gap-y-2 mt-3 text-sm text-blue-200/80 flex-wrap">
+            <span className="flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" /> {university.country}</span>
+            {university.website && (
+              <a
+                href={university.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-300 hover:text-white transition-colors underline underline-offset-2"
+              >
+                {university.website}
+              </a>
+            )}
+            <span>Creada el {formatDate(university.createdAt)}</span>
+            <span className="font-mono tabular-nums">Máx. {university.maxStudents} estudiantes</span>
+          </div>
         </div>
       </div>
 
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard
+          key={`c-${university.stats.totalCourses}`}
+          label="Cursos" value={String(university.stats.totalCourses)}
+          icon={BookOpen} tint="#2563EB" className="cx-count"
+        />
+        <StatCard
+          key={`s-${university.stats.totalStudents}`}
+          label="Estudiantes" value={String(university.stats.totalStudents)}
+          icon={GraduationCap} tint="#059669" className="cx-count"
+        />
+        <StatCard
+          key={`t-${university.stats.totalTeachers}`}
+          label="Profesores" value={String(university.stats.totalTeachers)}
+          icon={Users} tint="#475569" className="cx-count"
+        />
+        <StatCard
+          key={`a-${university.stats.totalAdmins}`}
+          label="Admins" value={String(university.stats.totalAdmins)}
+          icon={ShieldCheck} tint="#B8860B" className="cx-count"
+        />
+      </div>
+
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-4 w-fit">
+      <div className="flex gap-1 bg-white border border-gray-200/70 shadow-card p-1 rounded-xl mb-5 w-fit">
         {(['cursos', 'usuarios', 'actividad'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
-              tab === t ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all cx-press ${
+              tab === t
+                ? 'bg-gradient-to-br from-blue-600 to-[#1B2E6E] text-white shadow-[0_6px_16px_rgba(27,46,110,0.25)]'
+                : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
             }`}
           >
-            {t === 'cursos'    ? `Cursos (${courses.length})`   :
-             t === 'usuarios'  ? `Usuarios (${users.length})`   :
-             'Actividad'}
+            {t === 'cursos'   ? `${TAB_LABELS[t]} (${courses.length})` :
+             t === 'usuarios' ? `${TAB_LABELS[t]} (${users.length})`   :
+             TAB_LABELS[t]}
           </button>
         ))}
       </div>
 
       {/* Cursos tab */}
       {tab === 'cursos' && (
-        courses.length === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center">
-            <BookOpen className="w-8 h-8 text-gray-300 mb-3" />
-            <p className="text-gray-500">No hay cursos en esta universidad</p>
-          </div>
-        ) : (
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+        <SectionCard icon={BookOpen} eyebrow="Docencia" title="Cursos de la institución" flushBody>
+          {courses.length === 0 ? (
+            <EmptyState
+              illustration={<SceneEmptyBox size={190} className="lp-drift" />}
+              title="Todavía no hay cursos"
+              description="Cuando el equipo docente cree cursos en esta universidad, los verás aquí."
+            />
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-200">
+                  <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
                     <th className="text-left p-4">Curso</th>
                     <th className="text-left p-4">Profesor</th>
                     <th className="text-right p-4">Matriculados</th>
@@ -389,17 +479,17 @@ export default function UniversidadDetailPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {courses.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={c.id} className="hover:bg-blue-50/40 transition-colors">
                       <td className="p-4">
-                        <p className="font-medium text-gray-700">{c.name}</p>
+                        <p className="font-semibold text-gray-800">{c.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           {c.code   && <span className="text-xs text-gray-400 font-mono">{c.code}</span>}
                           {c.period && <span className="text-xs text-gray-400">{c.period}</span>}
                         </div>
                       </td>
                       <td className="p-4 text-gray-500 text-xs">{c.teacher?.name ?? '—'}</td>
-                      <td className="p-4 text-right text-gray-500">{c._count?.enrollments ?? 0}</td>
-                      <td className="p-4 text-right text-gray-500">{c._count?.exercises ?? 0}</td>
+                      <td className="p-4 text-right text-gray-600 font-mono tabular-nums">{c._count?.enrollments ?? 0}</td>
+                      <td className="p-4 text-right text-gray-600 font-mono tabular-nums">{c._count?.exercises ?? 0}</td>
                       <td className="p-4">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${c.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                           {c.isActive ? 'Activo' : 'Inactivo'}
@@ -410,23 +500,24 @@ export default function UniversidadDetailPage() {
                 </tbody>
               </table>
             </div>
-          </div>
-        )
+          )}
+        </SectionCard>
       )}
 
       {/* Usuarios tab */}
       {tab === 'usuarios' && (
-        users.length === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center">
-            <Users className="w-8 h-8 text-gray-300 mb-3" />
-            <p className="text-gray-500">No hay usuarios en esta universidad</p>
-          </div>
-        ) : (
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+        <SectionCard icon={Users} iconTint="#475569" eyebrow="Comunidad" title="Usuarios de la institución" flushBody>
+          {users.length === 0 ? (
+            <EmptyState
+              illustration={<SceneEmptyBox size={190} className="lp-drift" />}
+              title="Todavía no hay usuarios"
+              description="Los profesores, estudiantes y admins de esta universidad aparecerán en esta lista."
+            />
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-200">
+                  <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
                     <th className="text-left p-4">Usuario</th>
                     <th className="text-left p-4">Rol</th>
                     <th className="text-left p-4">Estado</th>
@@ -436,15 +527,15 @@ export default function UniversidadDetailPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={u.id} className="hover:bg-blue-50/40 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600 flex-shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-100 flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">
                             {u.name.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-700">{u.name}</p>
-                            <p className="text-xs text-gray-400">{u.email}</p>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-800 truncate">{u.name}</p>
+                            <p className="text-xs text-gray-400 truncate">{u.email}</p>
                           </div>
                         </div>
                       </td>
@@ -465,15 +556,15 @@ export default function UniversidadDetailPage() {
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setResetUser(u)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                            title="Resetear contraseña"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-gold-700 hover:bg-gold-50 transition-colors cx-press"
+                            title="Restablecer contraseña"
                           >
                             <KeyRound className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleToggleUser(u)}
                             disabled={togglingUser === u.id}
-                            className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 ${
+                            className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 cx-press ${
                               u.isActive
                                 ? 'text-gray-400 hover:text-red-500 hover:bg-red-50'
                                 : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
@@ -489,41 +580,44 @@ export default function UniversidadDetailPage() {
                 </tbody>
               </table>
             </div>
-          </div>
-        )
+          )}
+        </SectionCard>
       )}
 
       {/* Actividad tab */}
       {tab === 'actividad' && (
-        activity.length === 0 ? (
-          <div className="flex flex-col items-center py-16 text-center">
-            <Activity className="w-8 h-8 text-gray-300 mb-3" />
-            <p className="text-gray-500">Sin actividad registrada</p>
-          </div>
-        ) : (
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden divide-y divide-gray-100">
-            {activity.map((entry) => (
-              <div key={entry.id} className="px-5 py-4 flex items-start gap-3 hover:bg-gray-50 transition-colors">
-                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0 mt-0.5">
-                  {entry.user.name.charAt(0).toUpperCase()}
+        <SectionCard icon={Activity} iconTint="#B8860B" eyebrow="Bitácora" title="Actividad reciente" flushBody>
+          {activity.length === 0 ? (
+            <EmptyState
+              illustration={<SceneEmptyBox size={190} className="lp-drift" />}
+              title="Sin actividad registrada"
+              description="Las acciones de los usuarios de esta universidad se registran automáticamente."
+            />
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {activity.map((entry) => (
+                <div key={entry.id} className="px-6 lg:px-7 py-4 flex items-start gap-3 hover:bg-blue-50/40 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0 mt-0.5">
+                    {entry.user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800">{entry.user.name}</p>
+                    <p className="text-xs text-gray-500">{entry.action}</p>
+                    {entry.entity && (
+                      <p className="text-xs text-gray-400 mt-0.5 font-mono">{entry.entity}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[entry.user.role] ?? 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
+                      {ROLE_LABELS[entry.user.role] ?? entry.user.role}
+                    </span>
+                    <span className="text-xs text-gray-400">{formatDate(entry.createdAt)}</span>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{entry.user.name}</p>
-                  <p className="text-xs text-gray-500">{entry.action}</p>
-                  {entry.entity && (
-                    <p className="text-xs text-gray-400 mt-0.5">{entry.entity}</p>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium ${ROLE_COLORS[entry.user.role] ?? 'bg-gray-50 text-gray-500 border-gray-200'}`}>
-                    {ROLE_LABELS[entry.user.role] ?? entry.user.role}
-                  </span>
-                  <span className="text-xs text-gray-400">{formatDate(entry.createdAt)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
+              ))}
+            </div>
+          )}
+        </SectionCard>
       )}
     </div>
   );

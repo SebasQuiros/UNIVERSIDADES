@@ -19,9 +19,16 @@ import toast from 'react-hot-toast';
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, Info,
   Calendar, Plus, RefreshCw, Clock, Building2,
-  TrendingUp, TrendingDown, FileText, DollarSign,
+  TrendingUp, TrendingDown, FileText, DollarSign, Landmark,
 } from 'lucide-react';
 import Link from 'next/link';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtFiscalCalendar, ArtReport, SceneEmptyBox } from '@/components/illustrations';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -113,50 +120,31 @@ function isPast(iso: string): boolean {
 // SUB-COMPONENTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden ${className}`}>
-      {children}
-    </div>
-  );
-}
+// Tintes de marca por semántica (solo presentación: no altera ningún cálculo).
+const TINT: Record<string, string> = {
+  gray:   '#94A3B8',
+  green:  '#16A34A',
+  red:    '#EF4444',
+  blue:   '#2563EB',
+  navy:   '#1B2E6E',
+  gold:   '#B8860B',
+  orange: '#D4A017',
+};
 
-function SectionTitle({ icon: Icon, title, color = 'emerald' }: {
-  icon: any; title: string; color?: string;
-}) {
-  const colors: Record<string, string> = {
-    emerald: 'bg-emerald-700 text-white',
-    blue:    'bg-blue-700 text-white',
-    purple:  'bg-slate-700 text-white',
-    orange:  'bg-orange-600 text-white',
-    red:     'bg-red-700 text-white',
-    gray:    'bg-gray-700 text-white',
-  };
-  return (
-    <div className={`flex items-center gap-3 px-5 py-3 ${colors[color] ?? colors.emerald}`}>
-      <Icon className="w-4 h-4 opacity-80" />
-      <span className="text-sm font-bold uppercase tracking-wide">{title}</span>
-    </div>
-  );
-}
-
-function StatBox({ label, value, sub, color = 'gray' }: {
+/** Caja de cifra del formulario D-101 (etiqueta + monto en ₡ + nota). */
+function StatBox({ label, value, sub, color = 'gray', icon, className }: {
   label: string; value: string; sub?: string; color?: string;
+  icon?: React.ElementType; className?: string;
 }) {
-  const colors: Record<string, string> = {
-    gray:    'bg-gray-50  border-gray-200  text-gray-800',
-    green:   'bg-emerald-50 border-emerald-200 text-emerald-800',
-    red:     'bg-red-50   border-red-200   text-red-800',
-    blue:    'bg-blue-50  border-blue-200  text-blue-800',
-    purple:  'bg-slate-50 border-slate-200 text-slate-800',
-    orange:  'bg-orange-50 border-orange-200 text-orange-800',
-  };
   return (
-    <div className={`rounded-xl border p-4 ${colors[color]}`}>
-      <p className="text-xs font-semibold uppercase tracking-wide opacity-60 mb-1">{label}</p>
-      <p className="text-xl font-black font-mono tabular-nums">₡ {value}</p>
-      {sub && <p className="text-xs opacity-70 mt-1">{sub}</p>}
-    </div>
+    <StatCard
+      label={label}
+      value={`₡ ${value}`}
+      hint={sub}
+      icon={icon}
+      tint={TINT[color] ?? TINT.gray}
+      className={className}
+    />
   );
 }
 
@@ -308,9 +296,9 @@ export default function RentaPage() {
   // ─────────────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50/60 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
+          <RefreshCw className="w-8 h-8 text-blue-600 animate-spin" />
           <p className="text-sm text-gray-500">Cargando datos fiscales...</p>
         </div>
       </div>
@@ -318,61 +306,65 @@ export default function RentaPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-100">
+    <div className="flex-1 overflow-y-auto bg-gray-50/60">
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="bg-emerald-900 text-white">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href={`/estudiante/ejercicio/${attemptId}`}
-              className="text-emerald-300 hover:text-white transition-colors"
+      <div className="max-w-5xl mx-auto px-6 lg:px-10 py-8 space-y-7">
+
+        {/* Volver */}
+        <Link
+          href={`/estudiante/ejercicio/${attemptId}`}
+          className="inline-flex items-center gap-2 -ml-1 text-sm font-medium text-gray-500 hover:text-blue-700 transition-colors cx-press"
+        >
+          <ArrowLeft className="w-4 h-4" /> Volver al ejercicio
+        </Link>
+
+        {/* ── Encabezado ────────────────────────────────────────────────── */}
+        <PageHeader
+          eyebrow="Tributación · TRIBU-CR"
+          title="D-101 — Impuesto sobre la Renta"
+          subtitle={`Personas jurídicas — Régimen tradicional — Período fiscal ${fiscalYear}`}
+          icon={Landmark}
+          iconTint="#1B2E6E"
+          className="lp-in"
+          actions={
+            <select
+              value={fiscalYear}
+              onChange={e => setFiscalYear(parseInt(e.target.value, 10))}
+              className="text-sm font-semibold bg-white border border-gray-200 text-gray-700 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300"
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-300">
-                  Ministerio de Hacienda
-                </span>
-                <span className="text-emerald-600">|</span>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-300">
-                  TRIBU CR
-                </span>
-              </div>
-              <h1 className="text-lg font-black">D-101 — Declaración del Impuesto sobre la Renta</h1>
-              <p className="text-xs text-emerald-300">
-                Personas Jurídicas — Régimen Tradicional — Período fiscal {fiscalYear}
+              {[CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2].map(y => (
+                <option key={y} value={y}>Año {y}</option>
+              ))}
+            </select>
+          }
+        />
+
+        {/* ── Banda del módulo + aviso de simulación educativa ──────────── */}
+        <Card variant="onDark" className="cx-pop">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+                Declaración anual
+              </p>
+              <h2 className="text-lg font-bold leading-snug">La renta neta nace de tu contabilidad, no de una estimación.</h2>
+              <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+                Ingresos gravables menos gastos deducibles: el resultado se grava por tramos progresivos.
+                Los pagos parciales y las retenciones se acreditan contra el impuesto determinado.
               </p>
             </div>
+            <ArtFiscalCalendar size={140} className="lp-drift flex-shrink-0" />
           </div>
-
-          {/* Year selector */}
-          <select
-            value={fiscalYear}
-            onChange={e => setFiscalYear(parseInt(e.target.value, 10))}
-            className="text-sm font-semibold bg-emerald-800 border border-emerald-600 text-white rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-          >
-            {[CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2].map(y => (
-              <option key={y} value={y}>Año {y}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Educational banner */}
-      <div className="bg-amber-400 text-amber-900">
-        <div className="max-w-5xl mx-auto px-4 py-2 flex items-center gap-2 text-xs font-bold">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          SIMULACIÓN EDUCATIVA — Los cálculos son con fines académicos. Tasas 2026: PYME 5%–25%, grandes 30%.
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+          <div className="flex items-start gap-2 px-6 lg:px-7 py-3 border-t border-white/10 text-xs font-semibold text-gold-500">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-px" />
+            <span>
+              SIMULACIÓN EDUCATIVA — Los cálculos son con fines académicos. Tasas 2026: PYME 5%–25%, grandes 30%.
+            </span>
+          </div>
+        </Card>
 
         {/* ── No journal data warning ──────────────────────────────────── */}
         {result && !result.hasJournalData && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3 cx-pop">
             <Info className="w-5 h-5 text-blue-700 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-bold text-blue-800">Sin asientos contables para este período</p>
@@ -385,78 +377,93 @@ export default function RentaPage() {
         )}
 
         {/* ── SECCIÓN 1: Resumen del año fiscal ───────────────────────── */}
-        <Card>
-          <SectionTitle icon={FileText} title="Sección I — Resumen del Año Fiscal" color="emerald" />
-          <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SectionCard
+          eyebrow="Sección I"
+          title="Resumen del año fiscal"
+          icon={FileText}
+          iconTint="#1B2E6E"
+          className="cx-pop cx-d1"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatBox
               label="Ingresos gravables"
               value={fmt(result?.ingresosGravables ?? 0)}
               sub="Cuentas de ingresos (4.x.x)"
               color={result && result.ingresosGravables > 0 ? 'green' : 'gray'}
+              icon={TrendingUp}
+              className="cx-lift cx-hop-parent"
             />
             <StatBox
               label="Gastos deducibles"
               value={fmt(result?.gastosDeducibles ?? 0)}
               sub="Cuentas de gastos (5.x.x)"
               color={result && result.gastosDeducibles > 0 ? 'orange' : 'gray'}
+              icon={TrendingDown}
+              className="cx-lift cx-hop-parent"
             />
             <StatBox
               label="Renta neta imponible"
               value={fmt(result?.rentaNetaImponible ?? 0)}
               sub="Ingresos − Gastos"
               color={result && result.rentaNetaImponible > 0 ? 'blue' : 'gray'}
+              icon={DollarSign}
+              className="cx-lift cx-hop-parent"
             />
           </div>
 
           {result && (
-            <div className="px-5 pb-4">
-              <div className={`flex items-center gap-2 text-xs rounded-lg px-3 py-2 ${
-                result.isSmallCompany
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : 'bg-slate-50 text-slate-700 border border-slate-200'
-              }`}>
-                <Building2 className="w-4 h-4 flex-shrink-0" />
-                {result.isSmallCompany
-                  ? `Empresa PYME — Ingresos brutos ≤ ₡${fmt(119_024_000)} — Aplican tramos progresivos`
-                  : `Empresa grande — Ingresos brutos > ₡${fmt(119_024_000)} — Tarifa plana 30%`}
-              </div>
+            <div className={`mt-4 flex items-center gap-2 text-xs rounded-xl px-3.5 py-2.5 ${
+              result.isSmallCompany
+                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                : 'bg-gold-50 text-gold-900 border border-gold-100'
+            }`}>
+              <Building2 className="w-4 h-4 flex-shrink-0" />
+              {result.isSmallCompany
+                ? `Empresa PYME — Ingresos brutos ≤ ₡${fmt(119_024_000)} — Aplican tramos progresivos`
+                : `Empresa grande — Ingresos brutos > ₡${fmt(119_024_000)} — Tarifa plana 30%`}
             </div>
           )}
-        </Card>
+        </SectionCard>
 
         {/* ── SECCIÓN 2: Cálculo del impuesto ─────────────────────────── */}
-        <Card>
-          <SectionTitle icon={TrendingUp} title="Sección II — Cálculo del Impuesto" color="purple" />
-          <div className="p-5">
+        <SectionCard
+          eyebrow="Sección II"
+          title="Cálculo del impuesto"
+          description="Tramos progresivos aplicados sobre la renta neta imponible."
+          icon={TrendingUp}
+          iconTint="#2563EB"
+          className="cx-pop cx-d2"
+        >
+          <div>
             {result && result.rentaNetaImponible > 0 && result.taxBrackets.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
-                      <th className="text-left py-2 pr-4">Tramo</th>
-                      <th className="text-right py-2 px-4">Monto gravable</th>
-                      <th className="text-right py-2 px-4">Tasa</th>
-                      <th className="text-right py-2 pl-4">Impuesto</th>
+                    <tr className="border-b-2 border-gray-200 text-[10px] text-gray-500 uppercase tracking-wide">
+                      <th className="text-left py-2.5 pr-4 font-semibold">Tramo</th>
+                      <th className="text-right py-2.5 px-4 font-semibold">Monto gravable</th>
+                      <th className="text-right py-2.5 px-4 font-semibold">Tasa</th>
+                      <th className="text-right py-2.5 pl-4 font-semibold">Impuesto</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.taxBrackets.map((b, i) => (
-                      <tr key={i} className="border-b border-gray-100">
+                      <tr key={i} className="border-b border-gray-100 hover:bg-blue-50/40 transition-colors">
                         <td className="py-2.5 pr-4 text-gray-600 text-xs">{b.label}</td>
-                        <td className="py-2.5 px-4 font-mono text-right text-gray-800">₡ {fmt(b.taxableAmount)}</td>
-                        <td className="py-2.5 px-4 text-right font-bold text-slate-700">
+                        <td className="py-2.5 px-4 font-mono tabular-nums text-right text-gray-800">₡ {fmt(b.taxableAmount)}</td>
+                        <td className="py-2.5 px-4 text-right font-bold tabular-nums text-blue-700">
                           {(b.rate * 100).toFixed(0)}%
                         </td>
-                        <td className="py-2.5 pl-4 font-mono text-right font-semibold">₡ {fmt(b.tax)}</td>
+                        <td className="py-2.5 pl-4 font-mono tabular-nums text-right font-bold">₡ {fmt(b.tax)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
-                      <td className="py-3 pr-4 text-slate-800" colSpan={3}>
+                    <tr className="bg-blue-50 border-t-2 border-blue-100 font-bold">
+                      <td className="py-3 pr-4 pl-3 text-blue-800" colSpan={3}>
                         Impuesto determinado (tasa efectiva {result.effectiveRate}%)
                       </td>
-                      <td className="py-3 pl-4 font-mono text-right text-slate-800 text-base">
+                      <td className="py-3 pl-4 pr-3 font-mono tabular-nums text-right text-blue-800 text-base">
                         ₡ {fmt(result.impuestoDeterminado)}
                       </td>
                     </tr>
@@ -464,34 +471,42 @@ export default function RentaPage() {
                 </table>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-400">
-                <TrendingUp className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Registra ingresos y gastos para ver el cálculo del impuesto</p>
-              </div>
+              <EmptyState
+                illustration={<ArtReport size={180} className="lp-drift" />}
+                title="Aún no hay impuesto que calcular"
+                description="Registra ingresos y gastos en el diario para ver el cálculo por tramos progresivos."
+                className="py-8"
+              />
             )}
           </div>
-        </Card>
+        </SectionCard>
 
         {/* ── SECCIÓN 3: Créditos y resultado final ────────────────────── */}
-        <Card>
-          <SectionTitle icon={DollarSign} title="Sección III — Créditos y Resultado Final" color="gray" />
-          <div className="p-5 space-y-3">
+        <SectionCard
+          eyebrow="Sección III"
+          title="Créditos y resultado final"
+          description="Del impuesto determinado se restan los pagos parciales y las retenciones recibidas."
+          icon={DollarSign}
+          iconTint="#1B2E6E"
+          className="cx-pop cx-d3"
+        >
+          <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-200">
                 <p className="text-xs text-gray-500 mb-1">Impuesto determinado</p>
-                <p className="font-mono font-bold text-gray-800">₡ {fmt(result?.impuestoDeterminado ?? 0)}</p>
+                <p className="font-mono tabular-nums font-bold text-gray-800">₡ {fmt(result?.impuestoDeterminado ?? 0)}</p>
               </div>
-              <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+              <div className="bg-emerald-50 rounded-xl p-3.5 border border-emerald-200">
                 <p className="text-xs text-emerald-600 mb-1">(-) Pagos parciales</p>
-                <p className="font-mono font-bold text-emerald-700">₡ {fmt(result?.pagosParciales ?? 0)}</p>
+                <p className="font-mono tabular-nums font-bold text-emerald-700">₡ {fmt(result?.pagosParciales ?? 0)}</p>
               </div>
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+              <div className="bg-blue-50 rounded-xl p-3.5 border border-blue-200">
                 <p className="text-xs text-blue-700 mb-1">(-) Retenciones recibidas</p>
-                <p className="font-mono font-bold text-blue-700">₡ {fmt(result?.retencionesRecibidas ?? 0)}</p>
+                <p className="font-mono tabular-nums font-bold text-blue-700">₡ {fmt(result?.retencionesRecibidas ?? 0)}</p>
               </div>
             </div>
 
-            <div className={`flex items-center justify-between rounded-xl p-4 border-2 ${
+            <div className={`flex items-center justify-between rounded-2xl p-4 border-2 ${
               (result?.impuestoAPagar ?? 0) > 0
                 ? 'bg-red-50 border-red-300'
                 : (result?.saldoAFavor ?? 0) > 0
@@ -513,7 +528,7 @@ export default function RentaPage() {
                   <p className="text-xs text-gray-500">Resultado del período</p>
                 )}
               </div>
-              <span className={`text-2xl font-black font-mono ${
+              <span className={`text-2xl font-extrabold font-mono tabular-nums cx-count ${
                 (result?.impuestoAPagar ?? 0) > 0
                   ? 'text-red-700'
                   : (result?.saldoAFavor ?? 0) > 0
@@ -528,15 +543,21 @@ export default function RentaPage() {
               </span>
             </div>
           </div>
-        </Card>
+        </SectionCard>
 
         {/* ── SECCIÓN 4: Pagos parciales trimestrales ──────────────────── */}
-        <Card>
-          <SectionTitle icon={Calendar} title="Sección IV — Pagos Parciales Trimestrales" color="blue" />
-          <div className="p-5 space-y-4">
+        <SectionCard
+          eyebrow="Sección IV"
+          title="Pagos parciales trimestrales"
+          description="Anticipos del impuesto: 25% del estimado en cada trimestre (Art. 22 LISR)."
+          icon={Calendar}
+          iconTint="#2563EB"
+          className="cx-pop cx-d4"
+        >
+          <div className="space-y-4">
 
             {/* Educational note */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 flex items-start gap-2">
               <Info className="w-4 h-4 text-blue-700 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-blue-700">
                 Las empresas deben realizar <strong>4 pagos parciales</strong> durante el año fiscal: 25% del impuesto estimado en
@@ -560,19 +581,19 @@ export default function RentaPage() {
                       value={estimatedTax}
                       onChange={e => setEstimatedTax(e.target.value)}
                       placeholder="0.00"
-                      className="w-full pl-7 pr-3 py-2 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      className="w-full pl-7 pr-3 py-2.5 text-sm font-mono tabular-nums bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     />
                   </div>
                   {estimatedTax && parseFloat(estimatedTax) > 0 && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Cada trimestre: ₡ {fmt(parseFloat(estimatedTax) / 4)}
+                      Cada trimestre: <span className="font-mono tabular-nums">₡ {fmt(parseFloat(estimatedTax) / 4)}</span>
                     </p>
                   )}
                 </div>
-                <button
+                <Button
                   onClick={handleSchedulePayments}
                   disabled={scheduling || !estimatedTax}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
+                  className="cx-press"
                 >
                   {scheduling ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -580,7 +601,7 @@ export default function RentaPage() {
                     <Plus className="w-4 h-4" />
                   )}
                   Programar pagos
-                </button>
+                </Button>
               </div>
             )}
 
@@ -589,16 +610,16 @@ export default function RentaPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
-                      <th className="text-left py-2 pr-4">Trimestre</th>
-                      <th className="text-left py-2 px-4">Fecha límite</th>
-                      <th className="text-right py-2 px-4">Monto</th>
-                      <th className="text-center py-2 pl-4">Estado</th>
+                    <tr className="border-b-2 border-gray-200 text-[10px] text-gray-500 uppercase tracking-wide">
+                      <th className="text-left py-2.5 pr-4 font-semibold">Trimestre</th>
+                      <th className="text-left py-2.5 px-4 font-semibold">Fecha límite</th>
+                      <th className="text-right py-2.5 px-4 font-semibold">Monto</th>
+                      <th className="text-center py-2.5 pl-4 font-semibold">Estado</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.partialPayments.map(p => (
-                      <tr key={p.id} className="border-b border-gray-100">
+                      <tr key={p.id} className="border-b border-gray-100 hover:bg-blue-50/40 transition-colors">
                         <td className="py-3 pr-4 font-semibold text-gray-700">
                           {QUARTER_NAMES[p.quarter]}
                         </td>
@@ -610,7 +631,7 @@ export default function RentaPage() {
                             <span className="ml-1 text-red-500">• Vencido</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 font-mono text-right font-semibold">
+                        <td className="py-3 px-4 font-mono tabular-nums text-right font-bold">
                           ₡ {fmt(p.amount)}
                         </td>
                         <td className="py-3 pl-4 text-center">
@@ -622,7 +643,7 @@ export default function RentaPage() {
                           ) : (
                             <button
                               onClick={() => handleMarkPaid(p.id)}
-                              className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-100 text-amber-700 hover:bg-amber-200 px-2.5 py-1 rounded-full transition-colors"
+                              className="inline-flex items-center gap-1 text-xs font-semibold bg-gold-50 text-gold-900 border border-gold-100 hover:bg-gold-100 px-2.5 py-1 rounded-full transition-colors cx-press"
                             >
                               <Clock className="w-3 h-3" />
                               Pendiente
@@ -634,11 +655,11 @@ export default function RentaPage() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-gray-200 font-bold bg-gray-50">
-                      <td className="py-2 pr-4 text-gray-700" colSpan={2}>Total pagos parciales</td>
-                      <td className="py-2 px-4 font-mono text-right text-gray-800">
+                      <td className="py-2.5 pr-4 pl-3 text-gray-700" colSpan={2}>Total pagos parciales</td>
+                      <td className="py-2.5 px-4 font-mono tabular-nums text-right text-gray-800">
                         ₡ {fmt(result.partialPayments.reduce((s, p) => s + Number(p.amount), 0))}
                       </td>
-                      <td className="py-2 pl-4 text-center text-xs text-gray-500">
+                      <td className="py-2.5 pl-4 pr-3 text-center text-xs text-gray-500">
                         {result.partialPayments.filter(p => p.isPaid).length}/{result.partialPayments.length} pagados
                       </td>
                     </tr>
@@ -646,33 +667,42 @@ export default function RentaPage() {
                 </table>
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-400">
-                <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Ingresa el impuesto estimado y programa los pagos trimestrales</p>
-              </div>
+              <EmptyState
+                illustration={<ArtFiscalCalendar size={170} className="lp-drift" />}
+                title="Sin pagos parciales programados"
+                description="Ingresa el impuesto estimado del año y programa los cuatro anticipos trimestrales."
+                className="py-6"
+              />
             )}
           </div>
-        </Card>
+        </SectionCard>
 
         {/* ── SECCIÓN 5: Retenciones realizadas ───────────────────────── */}
-        <Card>
-          <div className="flex items-center justify-between">
-            <SectionTitle icon={TrendingDown} title="Sección V — Retenciones en la Fuente Realizadas" color="orange" />
-            <button
+        <SectionCard
+          eyebrow="Sección V"
+          title="Retenciones en la fuente realizadas"
+          description="Lo que retienes al pagar servicios y remites a Hacienda."
+          icon={TrendingDown}
+          iconTint="#B8860B"
+          className="cx-pop cx-d5"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowRetForm(!showRetForm)}
-              className="flex items-center gap-2 mr-4 text-xs font-semibold text-orange-700 hover:text-orange-800 transition-colors"
+              className="cx-press"
             >
               <Plus className="w-4 h-4" />
               {showRetForm ? 'Cancelar' : 'Registrar retención'}
-            </button>
-          </div>
-
-          <div className="p-5 space-y-4">
+            </Button>
+          }
+        >
+          <div className="space-y-4">
 
             {/* Educational note */}
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-start gap-2">
-              <Info className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-orange-700">
+            <div className="bg-gold-50 border border-gold-100 rounded-xl p-3.5 flex items-start gap-2">
+              <Info className="w-4 h-4 text-gold-700 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-gold-900">
                 Al pagar servicios, la empresa debe <strong>retener y remitir a Hacienda</strong> un porcentaje del pago.
                 El proveedor recibe el neto y la retención es un crédito para él.
                 Tasas: Servicios profesionales 2% · Alquiler 15% · Dividendos 15% · Transporte 1%.
@@ -681,8 +711,8 @@ export default function RentaPage() {
 
             {/* Add retencion form */}
             {showRetForm && (
-              <form onSubmit={handleCreateRetencion} className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-4">
-                <p className="text-sm font-bold text-orange-800">Nueva retención en la fuente</p>
+              <form onSubmit={handleCreateRetencion} className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-4 cx-pop">
+                <p className="text-sm font-bold text-gray-900">Nueva retención en la fuente</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
@@ -690,7 +720,7 @@ export default function RentaPage() {
                     <select
                       value={retForm.type}
                       onChange={e => setRetForm(f => ({ ...f, type: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     >
                       {Object.entries(RETENCION_TYPES).map(([k, v]) => (
                         <option key={k} value={k}>{v.label} ({(v.rate * 100).toFixed(0)}%)</option>
@@ -706,7 +736,7 @@ export default function RentaPage() {
                       value={retForm.supplierName}
                       onChange={e => setRetForm(f => ({ ...f, supplierName: e.target.value }))}
                       placeholder="Ej. Consultora ABC S.A."
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     />
                   </div>
 
@@ -717,7 +747,7 @@ export default function RentaPage() {
                       value={retForm.supplierCedula}
                       onChange={e => setRetForm(f => ({ ...f, supplierCedula: e.target.value }))}
                       placeholder="Ej. 3-101-123456"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     />
                   </div>
 
@@ -733,7 +763,7 @@ export default function RentaPage() {
                         value={retForm.grossAmount}
                         onChange={e => setRetForm(f => ({ ...f, grossAmount: e.target.value }))}
                         placeholder="0.00"
-                        className="w-full pl-7 pr-3 py-2 text-sm font-mono border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        className="w-full pl-7 pr-3 py-2.5 text-sm font-mono tabular-nums bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                       />
                     </div>
                   </div>
@@ -745,7 +775,7 @@ export default function RentaPage() {
                       required
                       value={retForm.date}
                       onChange={e => setRetForm(f => ({ ...f, date: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     />
                   </div>
 
@@ -756,45 +786,42 @@ export default function RentaPage() {
                       value={retForm.description}
                       onChange={e => setRetForm(f => ({ ...f, description: e.target.value }))}
                       placeholder="Ej. Honorarios enero 2026"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
                     />
                   </div>
                 </div>
 
                 {/* Preview */}
                 {retGross > 0 && (
-                  <div className="grid grid-cols-3 gap-3 text-center bg-white rounded-lg p-3 border border-orange-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center rounded-2xl p-4 bg-gradient-to-br from-csq-mid to-csq-active text-white shadow-soft">
                     <div>
-                      <p className="text-xs text-gray-500">Monto bruto</p>
-                      <p className="font-mono font-bold text-gray-800">₡ {fmt(retGross)}</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.13em] font-bold text-blue-200/80">Monto bruto</p>
+                      <p className="font-mono tabular-nums font-extrabold mt-0.5">₡ {fmt(retGross)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-red-500">Retención ({(retRate * 100).toFixed(0)}%)</p>
-                      <p className="font-mono font-bold text-red-700">₡ {fmt(retAmount)}</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.13em] font-bold text-gold-500">Retención ({(retRate * 100).toFixed(0)}%)</p>
+                      <p className="font-mono tabular-nums font-extrabold mt-0.5 cx-count">₡ {fmt(retAmount)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-emerald-600">Pago neto al proveedor</p>
-                      <p className="font-mono font-bold text-emerald-700">₡ {fmt(retNet)}</p>
+                      <p className="text-[0.68rem] uppercase tracking-[0.13em] font-bold text-blue-200/80">Pago neto al proveedor</p>
+                      <p className="font-mono tabular-nums font-extrabold mt-0.5">₡ {fmt(retNet)}</p>
                     </div>
                   </div>
                 )}
 
                 <div className="flex gap-3 justify-end">
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={() => setShowRetForm(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="cx-press"
                   >
                     Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={addingRet}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors disabled:opacity-50"
-                  >
+                  </Button>
+                  <Button type="submit" disabled={addingRet} className="cx-press">
                     {addingRet ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                     Registrar retención
-                  </button>
+                  </Button>
                 </div>
               </form>
             )}
@@ -804,42 +831,42 @@ export default function RentaPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
-                      <th className="text-left py-2 pr-4">Fecha</th>
-                      <th className="text-left py-2 px-4">Proveedor</th>
-                      <th className="text-left py-2 px-4">Tipo</th>
-                      <th className="text-right py-2 px-4">Bruto</th>
-                      <th className="text-right py-2 px-4">Tasa</th>
-                      <th className="text-right py-2 pl-4">Retención</th>
+                    <tr className="border-b-2 border-gray-200 text-[10px] text-gray-500 uppercase tracking-wide">
+                      <th className="text-left py-2.5 pr-4 font-semibold">Fecha</th>
+                      <th className="text-left py-2.5 px-4 font-semibold">Proveedor</th>
+                      <th className="text-left py-2.5 px-4 font-semibold">Tipo</th>
+                      <th className="text-right py-2.5 px-4 font-semibold">Bruto</th>
+                      <th className="text-right py-2.5 px-4 font-semibold">Tasa</th>
+                      <th className="text-right py-2.5 pl-4 font-semibold">Retención</th>
                     </tr>
                   </thead>
                   <tbody>
                     {result.retenciones.map(r => (
-                      <tr key={r.id} className="border-b border-gray-100">
+                      <tr key={r.id} className="border-b border-gray-100 hover:bg-blue-50/40 transition-colors">
                         <td className="py-2.5 pr-4 text-xs text-gray-500">{fmtDate(r.date)}</td>
                         <td className="py-2.5 px-4">
                           <p className="font-semibold text-gray-800">{r.supplierName}</p>
                           {r.supplierCedula && (
-                            <p className="text-xs text-gray-400">{r.supplierCedula}</p>
+                            <p className="text-xs text-gray-400 font-mono">{r.supplierCedula}</p>
                           )}
                         </td>
                         <td className="py-2.5 px-4 text-xs text-gray-600">
                           {RETENCION_TYPES[r.type]?.label ?? r.type}
                         </td>
-                        <td className="py-2.5 px-4 font-mono text-right text-gray-700">₡ {fmt(r.grossAmount)}</td>
-                        <td className="py-2.5 px-4 text-right font-semibold text-orange-700">
+                        <td className="py-2.5 px-4 font-mono tabular-nums text-right text-gray-700">₡ {fmt(r.grossAmount)}</td>
+                        <td className="py-2.5 px-4 text-right font-bold tabular-nums text-gold-700">
                           {(Number(r.retentionRate) * 100).toFixed(0)}%
                         </td>
-                        <td className="py-2.5 pl-4 font-mono text-right font-bold text-orange-700">
+                        <td className="py-2.5 pl-4 font-mono tabular-nums text-right font-bold text-gold-900">
                           ₡ {fmt(r.retentionAmount)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t-2 border-gray-200 font-bold bg-orange-50">
-                      <td className="py-2 pr-4 text-orange-800" colSpan={5}>Total retenciones realizadas</td>
-                      <td className="py-2 pl-4 font-mono text-right text-orange-800">
+                    <tr className="border-t-2 border-gray-200 font-bold bg-gold-50">
+                      <td className="py-2.5 pr-4 pl-3 text-gold-900" colSpan={5}>Total retenciones realizadas</td>
+                      <td className="py-2.5 pl-4 pr-3 font-mono tabular-nums text-right text-gold-900">
                         ₡ {fmt(result.retenciones.reduce((s, r) => s + Number(r.retentionAmount), 0))}
                       </td>
                     </tr>
@@ -847,20 +874,29 @@ export default function RentaPage() {
                 </table>
               </div>
             ) : (
-              <div className="text-center py-6 text-gray-400">
-                <TrendingDown className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No hay retenciones registradas para el año {fiscalYear}</p>
-              </div>
+              <EmptyState
+                illustration={<SceneEmptyBox size={180} className="lp-drift" />}
+                title={`Sin retenciones en ${fiscalYear}`}
+                description="Registra la primera retención que le practicaste a un proveedor de servicios."
+                action={
+                  !showRetForm ? (
+                    <Button variant="outline" onClick={() => setShowRetForm(true)} className="cx-press">
+                      <Plus className="w-4 h-4" /> Registrar retención
+                    </Button>
+                  ) : undefined
+                }
+                className="py-6"
+              />
             )}
           </div>
-        </Card>
+        </SectionCard>
 
         {/* ── Legal reference ──────────────────────────────────────────── */}
-        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
-          <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5" /> Marco legal — Ley del Impuesto sobre la Renta N° 7092
+        <div className="bg-gold-50 border border-gold-100 rounded-2xl p-5 cx-pop cx-d6">
+          <p className="text-[0.68rem] font-bold text-gold-900 uppercase tracking-[0.13em] mb-2.5 flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5" /> Marco legal — Ley del Impuesto sobre la Renta N.° 7092
           </p>
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-1 list-disc list-inside text-xs text-emerald-600 space-y-0.5">
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-1 list-disc list-inside text-xs text-gold-900/80 space-y-0.5">
             <li>Período fiscal: <strong>1 enero al 31 diciembre</strong> (art. 4 LISR).</li>
             <li>Declaración D-101 debe presentarse antes del <strong>15 de marzo</strong>.</li>
             <li>PYME: ingresos brutos ≤ ₡119.024.000 → tramos 5%, 10%, 15%, 20%, 25%.</li>
@@ -872,14 +908,15 @@ export default function RentaPage() {
 
         {/* Recalculate button */}
         <div className="flex justify-center pb-4">
-          <button
+          <Button
             onClick={calculateD101}
             disabled={calculating || !companyId}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition-colors disabled:opacity-50"
+            size="lg"
+            className="cx-press"
           >
             <RefreshCw className={`w-4 h-4 ${calculating ? 'animate-spin' : ''}`} />
             {calculating ? 'Calculando...' : 'Recalcular desde contabilidad'}
-          </button>
+          </Button>
         </div>
 
       </div>

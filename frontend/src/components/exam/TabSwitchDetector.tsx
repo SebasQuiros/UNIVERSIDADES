@@ -29,15 +29,15 @@ export function TabSwitchDetector({ attemptId, onSwitch }: TabSwitchDetectorProp
         setCount(newCount);
         onSwitch?.(newCount);
 
-        // Show warning toast
+        // Aviso al estudiante
         toast(
           `Salida detectada (${newCount} vez${newCount !== 1 ? 'es' : ''}). El profesor puede ver esto.`,
           {
-            icon: '⚠️',
+            icon: <AlertTriangle className="w-4 h-4" />,
             duration: 5000,
             style: {
-              background: '#fef3c7',
-              color: '#92400e',
+              background: '#FDF6E3',
+              color: '#8A6608',
               fontWeight: 600,
             },
           },
@@ -65,10 +65,12 @@ export function TabSwitchDetector({ attemptId, onSwitch }: TabSwitchDetectorProp
   if (count <= 3) return null;
 
   return (
-    <div className="sticky top-0 z-40 w-full bg-amber-50 border-b border-amber-300 px-4 py-2 flex items-center gap-2 text-sm text-amber-800 font-medium">
-      <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-600" />
+    <div className="sticky top-0 z-40 flex w-full items-center gap-2.5 border-b border-gold-100 bg-gold-50 px-4 py-2.5 text-sm font-medium text-gold-900 cx-pop">
+      {/* Wiggle limitado a 2 repeticiones: el banner es persistente y un icono en
+          movimiento perpetuo durante el examen distrae más de lo que avisa. */}
+      <AlertTriangle className="w-4 h-4 flex-shrink-0 text-gold-700 cx-wiggle-loop cx-iter-2" />
       <span>
-        Has salido de esta pestaña <strong>{count} veces</strong>. El profesor puede revisar este registro.
+        Has salido de esta pestaña <strong className="tabular-nums">{count} veces</strong>. El profesor puede revisar este registro.
       </span>
     </div>
   );

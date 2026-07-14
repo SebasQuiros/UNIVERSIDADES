@@ -9,15 +9,20 @@ import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
 import type { Course, Exercise } from '@/types';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Plus, Trash2, GripVertical, BookOpen } from 'lucide-react';
+import {
+  ArrowLeft, Plus, Trash2, GripVertical, BookOpen, Info,
+  ListChecks, Settings2, Timer, Lightbulb, Target, FileText,
+} from 'lucide-react';
 
 interface Rubric { criterion: string; description: string; expectedValue: string; points: string; }
 
 const DIFFICULTIES = [
-  { value: 'BASIC',        label: 'Básico',       color: 'text-green-600' },
-  { value: 'INTERMEDIATE', label: 'Intermedio',   color: 'text-amber-600' },
+  { value: 'BASIC',        label: 'Básico',       color: 'text-emerald-600' },
+  { value: 'INTERMEDIATE', label: 'Intermedio',   color: 'text-gold-700' },
   { value: 'ADVANCED',     label: 'Avanzado',     color: 'text-red-600' },
 ];
 
@@ -77,17 +82,17 @@ export default function NuevoEjercicioPage() {
   const [rubrics, setRubrics] = useState<Rubric[]>(DEFAULT_RUBRICS);
   const [errors, setErrors]   = useState<Record<string, string>>({});
 
-  // Feature 2: Exam mode settings
+  // Modo examen
   const [examMode, setExamMode] = useState(false);
   const [timeLimit, setTimeLimit] = useState('60');
   const [allowHints, setAllowHints] = useState(true);
   const [examStartsAt, setExamStartsAt] = useState('');
   const [examEndsAt, setExamEndsAt] = useState('');
 
-  // Feature 3: Hints
+  // Pistas por paso
   const [hints, setHints] = useState({ journal: '', ledger: '', 'balance-comprobacion': '', reports: '' });
 
-  // Feature 4: Expected values
+  // Valores esperados
   const [expectedValues, setExpectedValues] = useState({ minAssets: '', minRevenue: '', minExpenses: '', balancedSheet: false });
 
   useEffect(() => {
@@ -131,7 +136,7 @@ export default function NuevoEjercicioPage() {
     try {
       const hintsObj: Record<string, string> = {};
       Object.entries(hints).forEach(([k, v]) => { if (v.trim()) hintsObj[k] = v.trim(); });
-      const evObj: Record<string, any> = {};
+      const evObj: Record<string, number | boolean> = {};
       if (expectedValues.minAssets) evObj.minAssets = Number(expectedValues.minAssets);
       if (expectedValues.minRevenue) evObj.minRevenue = Number(expectedValues.minRevenue);
       if (expectedValues.minExpenses) evObj.minExpenses = Number(expectedValues.minExpenses);
@@ -171,309 +176,371 @@ export default function NuevoEjercicioPage() {
     }
   }
 
-  if (loadingCourses) return <div className="flex-1 flex items-center justify-center"><Spinner size="lg" /></div>;
+  if (loadingCourses) return <div className="flex-1 flex items-center justify-center bg-[#F4F6F8]"><Spinner size="lg" /></div>;
+
+  const totalPoints = rubrics.reduce((s, r) => s + (Number(r.points) || 0), 0);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      <div className="max-w-3xl mx-auto">
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl">
 
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <Link href="/profesor/ejercicios">
-            <Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4" /></Button>
-          </Link>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Nuevo Ejercicio</h2>
-            <p className="text-gray-500 text-sm mt-0.5">Se guardará como borrador hasta que lo publiques</p>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Portal profesor"
+          title="Nuevo ejercicio"
+          subtitle="Se guardará como borrador hasta que lo publiques"
+          icon={FileText}
+          className="mb-6"
+          actions={
+            <Link href="/profesor/ejercicios">
+              <Button variant="secondary" size="sm" className="cx-press">
+                <ArrowLeft className="w-4 h-4" /> Volver
+              </Button>
+            </Link>
+          }
+        />
 
         <form onSubmit={handleSubmit} className="space-y-6">
 
-          {/* Basic info */}
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">Información general</h3>
-
-            {/* Course selector */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Curso *</label>
-              <select
-                value={form.courseId}
-                onChange={(e) => setForm({ ...form, courseId: e.target.value })}
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecciona un curso...</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}{c.period ? ` (${c.period})` : ''}</option>
-                ))}
-              </select>
-              {errors.courseId && <p className="text-xs text-red-600">{errors.courseId}</p>}
-            </div>
-
-            <Input
-              label="Título *"
-              placeholder="Ej: Ejercicio 1 — Ciclo Contable Básico"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              error={errors.title}
-              icon={<BookOpen className="w-4 h-4" />}
-            />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Descripción</label>
-              <textarea
-                placeholder="Descripción breve del ejercicio..."
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={2}
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Instrucciones completas</label>
-              <textarea
-                placeholder="Instrucciones detalladas para el estudiante..."
-                value={form.instructions}
-                onChange={(e) => setForm({ ...form, instructions: e.target.value })}
-                rows={4}
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              />
-            </div>
-          </div>
-
-          {/* Config */}
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">Configuración</h3>
-            <div className="grid grid-cols-2 gap-4">
+          {/* Información general */}
+          <SectionCard
+            icon={BookOpen}
+            iconTint="#1B2E6E"
+            eyebrow="Paso 1"
+            title="Información general"
+            className="cx-pop cx-d1"
+          >
+            <div className="space-y-4">
+              {/* Curso */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">Dificultad</label>
-                <div className="flex flex-col gap-2">
-                  {DIFFICULTIES.map((d) => (
-                    <label key={d.value} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${form.difficulty === d.value ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <input type="radio" name="difficulty" value={d.value} checked={form.difficulty === d.value} onChange={(e) => setForm({ ...form, difficulty: e.target.value })} className="sr-only" />
-                      <span className={`text-sm font-medium ${d.color}`}>{d.label}</span>
-                    </label>
+                <label className="text-sm font-medium text-gray-700">Curso *</label>
+                <select
+                  value={form.courseId}
+                  onChange={(e) => setForm({ ...form, courseId: e.target.value })}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                >
+                  <option value="">Selecciona un curso…</option>
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}{c.period ? ` (${c.period})` : ''}</option>
                   ))}
-                </div>
+                </select>
+                {errors.courseId && <p className="text-xs text-red-600 cx-shake">{errors.courseId}</p>}
+              </div>
+
+              <Input
+                label="Título *"
+                placeholder="Ej: Ejercicio 1 — Ciclo Contable Básico"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                error={errors.title}
+                icon={<BookOpen className="w-4 h-4" />}
+              />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-gray-700">Descripción</label>
+                <textarea
+                  placeholder="Descripción breve del ejercicio…"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={2}
+                  className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">Tipo de ejercicio</label>
-                <div className="flex flex-col gap-2">
-                  {TYPES.map((t) => (
-                    <label key={t.value} className={`flex flex-col gap-0.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${form.type === t.value ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                      <input type="radio" name="type" value={t.value} checked={form.type === t.value} onChange={(e) => setForm({ ...form, type: e.target.value })} className="sr-only" />
-                      <span className="text-sm font-medium text-gray-900">{t.label}</span>
-                      <span className="text-xs text-gray-500 leading-snug">{t.desc}</span>
-                    </label>
-                  ))}
+                <label className="text-sm font-medium text-gray-700">Instrucciones completas</label>
+                <textarea
+                  placeholder="Instrucciones detalladas para el estudiante…"
+                  value={form.instructions}
+                  onChange={(e) => setForm({ ...form, instructions: e.target.value })}
+                  rows={4}
+                  className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                />
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Configuración */}
+          <SectionCard
+            icon={Settings2}
+            iconTint="#2563EB"
+            eyebrow="Paso 2"
+            title="Configuración"
+            className="cx-pop cx-d2"
+          >
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Dificultad</label>
+                  <div className="flex flex-col gap-2">
+                    {DIFFICULTIES.map((d) => (
+                      <label
+                        key={d.value}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-2.5 transition-colors cx-press ${
+                          form.difficulty === d.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input type="radio" name="difficulty" value={d.value} checked={form.difficulty === d.value} onChange={(e) => setForm({ ...form, difficulty: e.target.value })} className="sr-only" />
+                        <span className={`text-sm font-semibold ${d.color}`}>{d.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Tipo de ejercicio</label>
+                  <div className="flex flex-col gap-2">
+                    {TYPES.map((t) => (
+                      <label
+                        key={t.value}
+                        className={`flex cursor-pointer flex-col gap-0.5 rounded-xl border p-2.5 transition-colors cx-press ${
+                          form.type === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <input type="radio" name="type" value={t.value} checked={form.type === t.value} onChange={(e) => setForm({ ...form, type: e.target.value })} className="sr-only" />
+                        <span className="text-sm font-semibold text-gray-900">{t.label}</span>
+                        <span className="text-xs leading-snug text-gray-500">{t.desc}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Puntaje máximo"
-                type="number"
-                min="1" max="1000"
-                value={form.maxScore}
-                onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
-                error={errors.maxScore}
-              />
-              <Input
-                label="Fecha límite"
-                type="datetime-local"
-                value={form.dueDate}
-                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Rubrics */}
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">Rúbricas de evaluación</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Define los criterios para medir el progreso del estudiante</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Puntaje máximo"
+                  type="number"
+                  min="1" max="1000"
+                  value={form.maxScore}
+                  onChange={(e) => setForm({ ...form, maxScore: e.target.value })}
+                  error={errors.maxScore}
+                  className="tabular-nums"
+                />
+                <Input
+                  label="Fecha límite"
+                  type="datetime-local"
+                  value={form.dueDate}
+                  onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                />
               </div>
-              <Button type="button" variant="secondary" size="sm" onClick={addRubric}>
+            </div>
+          </SectionCard>
+
+          {/* Rúbricas */}
+          <SectionCard
+            icon={ListChecks}
+            iconTint="#B8860B"
+            eyebrow="Paso 3"
+            title="Rúbricas de evaluación"
+            description="Define los criterios con los que se medirá el progreso del estudiante."
+            className="cx-pop cx-d3"
+            action={
+              <Button type="button" variant="secondary" size="sm" onClick={addRubric} className="cx-press">
                 <Plus className="w-4 h-4" /> Agregar
               </Button>
-            </div>
-            {errors.rubrics && <p className="text-xs text-red-600">{errors.rubrics}</p>}
+            }
+          >
+            <div className="space-y-4">
+              {errors.rubrics && <p className="text-xs text-red-600 cx-shake">{errors.rubrics}</p>}
 
-            {/* Criteria reference */}
-            <details className="bg-blue-50 border border-blue-200 rounded-xl text-xs">
-              <summary className="px-4 py-2.5 cursor-pointer font-semibold text-blue-700 select-none">
-                ℹ️ Criterios disponibles para auto-calificación
-              </summary>
-              <div className="px-4 pb-4 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-600">
-                {CRITERIA_OPTIONS.filter(c => c.value).map(c => (
-                  <div key={c.value} className="flex items-start gap-1.5">
-                    <code className="text-blue-700 font-mono shrink-0">{c.value}</code>
-                    <span className="text-gray-500">— {c.hint}</span>
+              {/* Referencia de criterios */}
+              <details className="rounded-xl border border-blue-200 bg-blue-50 text-xs">
+                <summary className="flex cursor-pointer select-none items-center gap-2 px-4 py-2.5 font-semibold text-blue-700">
+                  <Info className="w-3.5 h-3.5" />
+                  Criterios disponibles para auto-calificación
+                </summary>
+                <div className="grid grid-cols-1 gap-x-6 gap-y-1 px-4 pb-4 pt-2 text-gray-600 sm:grid-cols-2">
+                  {CRITERIA_OPTIONS.filter(c => c.value).map(c => (
+                    <div key={c.value} className="flex items-start gap-1.5">
+                      <code className="shrink-0 font-mono text-blue-700">{c.value}</code>
+                      <span className="text-gray-500">— {c.hint}</span>
+                    </div>
+                  ))}
+                </div>
+              </details>
+
+              <div className="space-y-3">
+                {rubrics.map((r, i) => (
+                  <div key={i} className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <GripVertical className="mt-2.5 w-4 h-4 flex-shrink-0 text-gray-300" />
+                    <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div>
+                        <select
+                          value={r.criterion}
+                          onChange={e => {
+                            const opt = CRITERIA_OPTIONS.find(c => c.value === e.target.value);
+                            updateRubric(i, 'criterion', e.target.value);
+                            if (opt?.defaultExpected !== undefined && !r.expectedValue)
+                              updateRubric(i, 'expectedValue', opt.defaultExpected);
+                          }}
+                          className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                        >
+                          {CRITERIA_OPTIONS.map(c => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <Input
+                        placeholder="Descripción del criterio"
+                        value={r.description}
+                        onChange={(e) => updateRubric(i, 'description', e.target.value)}
+                      />
+                      <Input
+                        placeholder={CRITERIA_OPTIONS.find(c => c.value === r.criterion)?.expectedHint ?? 'Valor esperado'}
+                        value={r.expectedValue}
+                        onChange={(e) => updateRubric(i, 'expectedValue', e.target.value)}
+                      />
+                      <Input
+                        placeholder="Puntos (ej: 25)"
+                        type="number" min="0"
+                        value={r.points}
+                        onChange={(e) => updateRubric(i, 'points', e.target.value)}
+                        className="tabular-nums"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeRubric(i)}
+                      className="mt-2 flex-shrink-0 rounded-lg p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 cx-press"
+                      title="Quitar rúbrica"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
               </div>
-            </details>
 
-            <div className="space-y-3">
-              {rubrics.map((r, i) => (
-                <div key={i} className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <GripVertical className="w-4 h-4 text-gray-300 mt-2.5 flex-shrink-0" />
-                  <div className="flex-1 grid grid-cols-2 gap-3">
-                    <div>
-                      <select
-                        value={r.criterion}
-                        onChange={e => {
-                          const opt = CRITERIA_OPTIONS.find(c => c.value === e.target.value);
-                          updateRubric(i, 'criterion', e.target.value);
-                          if (opt?.defaultExpected !== undefined && !r.expectedValue)
-                            updateRubric(i, 'expectedValue', opt.defaultExpected);
-                        }}
-                        className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        {CRITERIA_OPTIONS.map(c => (
-                          <option key={c.value} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
+              <div className="flex items-center justify-between rounded-xl border border-gold-100 bg-gold-50 px-4 py-2.5 text-sm">
+                <span className="font-medium text-gold-900">Total de puntos de las rúbricas</span>
+                <span className="text-lg font-extrabold text-gold-900 tabular-nums cx-count">{totalPoints}</span>
+              </div>
+            </div>
+          </SectionCard>
+
+          {/* Modo examen */}
+          <SectionCard
+            icon={Timer}
+            iconTint="#DC2626"
+            eyebrow="Paso 4"
+            title="Modo examen"
+            description="Temporizador visible, detección de cambios de pestaña y envío automático al agotar el tiempo."
+            className="cx-pop cx-d4"
+          >
+            <div className="space-y-4">
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 p-3 transition-colors hover:border-blue-300 hover:bg-blue-50 cx-press">
+                <input
+                  type="checkbox"
+                  checked={examMode}
+                  onChange={e => setExamMode(e.target.checked)}
+                  className="h-4 w-4 rounded accent-blue-600"
+                />
+                <div>
+                  <span className="text-sm font-semibold text-gray-800">Activar modo examen</span>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    Cuenta regresiva + detección de salidas de pestaña + envío automático
+                  </p>
+                </div>
+              </label>
+
+              {examMode && (
+                <div className="space-y-4 border-l-2 border-blue-200 pl-4 cx-pop">
+                  <Input
+                    label="Tiempo límite (minutos) *"
+                    type="number"
+                    min="5"
+                    max="300"
+                    value={timeLimit}
+                    onChange={e => setTimeLimit(e.target.value)}
+                    placeholder="60"
+                    className="tabular-nums"
+                  />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium text-gray-700">Fecha/hora de inicio (opcional)</label>
+                      <input
+                        type="datetime-local"
+                        value={examStartsAt}
+                        onChange={e => setExamStartsAt(e.target.value)}
+                        className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                      />
+                      <p className="text-xs text-gray-400">Cuando el examen estará disponible</p>
                     </div>
-                    <Input
-                      placeholder="Descripción del criterio"
-                      value={r.description}
-                      onChange={(e) => updateRubric(i, 'description', e.target.value)}
-                    />
-                    <Input
-                      placeholder={CRITERIA_OPTIONS.find(c => c.value === r.criterion)?.expectedHint ?? 'Valor esperado'}
-                      value={r.expectedValue}
-                      onChange={(e) => updateRubric(i, 'expectedValue', e.target.value)}
-                    />
-                    <Input
-                      placeholder="Puntos (ej: 25)"
-                      type="number" min="0"
-                      value={r.points}
-                      onChange={(e) => updateRubric(i, 'points', e.target.value)}
-                    />
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-sm font-medium text-gray-700">Fecha/hora de cierre (opcional)</label>
+                      <input
+                        type="datetime-local"
+                        value={examEndsAt}
+                        onChange={e => setExamEndsAt(e.target.value)}
+                        className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                      />
+                      <p className="text-xs text-gray-400">Fecha límite para comenzar</p>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => removeRubric(i)} className="mt-2 text-gray-400 hover:text-red-600 transition-colors flex-shrink-0">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                </div>
+              )}
+
+              <label className="flex cursor-pointer items-center gap-3">
+                <input type="checkbox" checked={allowHints} onChange={e => setAllowHints(e.target.checked)} className="h-4 w-4 rounded accent-blue-600" />
+                <span className="flex items-center gap-1.5 text-sm text-gray-700">
+                  <Lightbulb className="w-3.5 h-3.5 text-gold-600" />
+                  Permitir pistas (botón de pista en cada paso)
+                </span>
+              </label>
+            </div>
+          </SectionCard>
+
+          {/* Pistas por paso */}
+          <SectionCard
+            icon={Lightbulb}
+            iconTint="#B8860B"
+            eyebrow="Opcional"
+            title="Pistas por paso"
+            description="Configura una pista para cada sección del ciclo contable."
+            className="cx-pop cx-d5"
+          >
+            <div className="space-y-4">
+              {([
+                { key: 'journal', label: 'Libro Diario' },
+                { key: 'ledger', label: 'Libro Mayor' },
+                { key: 'balance-comprobacion', label: 'Balanza de Comprobación' },
+                { key: 'reports', label: 'Estados Financieros' },
+              ] as { key: keyof typeof hints; label: string }[]).map(({ key, label }) => (
+                <div key={key} className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">{label}</label>
+                  <textarea value={hints[key]} onChange={e => setHints({ ...hints, [key]: e.target.value })}
+                    placeholder={`Pista para ${label}…`} rows={2}
+                    className="w-full resize-none rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60" />
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Total puntos: <span className="text-gray-700 font-medium">
-                {rubrics.reduce((s, r) => s + (Number(r.points) || 0), 0)}
-              </span></span>
+          </SectionCard>
+
+          {/* Valores esperados */}
+          <SectionCard
+            icon={Target}
+            iconTint="#059669"
+            eyebrow="Opcional"
+            title="Valores esperados"
+            description="Criterios financieros mínimos que debe cumplir la empresa del estudiante."
+            className="cx-pop cx-d6"
+          >
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Input label="Activos mínimos (₡)" type="number" min="0" value={expectedValues.minAssets}
+                  onChange={e => setExpectedValues({ ...expectedValues, minAssets: e.target.value })} placeholder="0" className="tabular-nums" />
+                <Input label="Ingresos mínimos (₡)" type="number" min="0" value={expectedValues.minRevenue}
+                  onChange={e => setExpectedValues({ ...expectedValues, minRevenue: e.target.value })} placeholder="0" className="tabular-nums" />
+                <Input label="Gastos mínimos (₡)" type="number" min="0" value={expectedValues.minExpenses}
+                  onChange={e => setExpectedValues({ ...expectedValues, minExpenses: e.target.value })} placeholder="0" className="tabular-nums" />
+              </div>
+              <label className="flex cursor-pointer items-center gap-3">
+                <input type="checkbox" checked={expectedValues.balancedSheet} onChange={e => setExpectedValues({ ...expectedValues, balancedSheet: e.target.checked })} className="h-4 w-4 rounded accent-blue-600" />
+                <span className="text-sm text-gray-700">El balance general debe cuadrar</span>
+              </label>
             </div>
-          </div>
+          </SectionCard>
 
-          {/* Feature 2: Exam Mode */}
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">Modo Examen</h3>
-            <p className="text-xs text-gray-500">
-              Activa temporizador visible, detección de cambios de pestaña y envío automático al agotar el tiempo.
-            </p>
-
-            {/* Exam mode toggle */}
-            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors">
-              <input
-                type="checkbox"
-                checked={examMode}
-                onChange={e => setExamMode(e.target.checked)}
-                className="rounded w-4 h-4 accent-blue-600"
-              />
-              <div>
-                <span className="text-sm font-medium text-gray-800">Activar Modo Examen</span>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Temporizador de cuenta regresiva + detección de salidas + envío automático
-                </p>
-              </div>
-            </label>
-
-            {examMode && (
-              <div className="space-y-4 pl-4 border-l-2 border-blue-200">
-                <Input
-                  label="Tiempo límite (minutos) *"
-                  type="number"
-                  min="5"
-                  max="300"
-                  value={timeLimit}
-                  onChange={e => setTimeLimit(e.target.value)}
-                  placeholder="60"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-gray-700">Fecha/hora de inicio (opcional)</label>
-                    <input
-                      type="datetime-local"
-                      value={examStartsAt}
-                      onChange={e => setExamStartsAt(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-xs text-gray-400">Cuando el examen estará disponible</p>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-gray-700">Fecha/hora de cierre (opcional)</label>
-                    <input
-                      type="datetime-local"
-                      value={examEndsAt}
-                      onChange={e => setExamEndsAt(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-xs text-gray-400">Fecha límite para comenzar</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Hints toggle */}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={allowHints} onChange={e => setAllowHints(e.target.checked)} className="rounded w-4 h-4" />
-              <span className="text-sm text-gray-700">Permitir pistas (botón 💡 en cada paso)</span>
-            </label>
-          </div>
-
-          {/* Feature 3: Hints */}
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">Pistas por paso</h3>
-            <p className="text-xs text-gray-500">Opcional: configura una pista para cada sección del ciclo contable</p>
-            {([
-              { key: 'journal', label: 'Libro Diario' },
-              { key: 'ledger', label: 'Libro Mayor' },
-              { key: 'balance-comprobacion', label: 'Balanza de Comprobación' },
-              { key: 'reports', label: 'Estados Financieros' },
-            ] as { key: keyof typeof hints; label: string }[]).map(({ key, label }) => (
-              <div key={key} className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">{label}</label>
-                <textarea value={hints[key]} onChange={e => setHints({ ...hints, [key]: e.target.value })}
-                  placeholder={`Pista para ${label}...`} rows={2}
-                  className="w-full rounded-xl border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
-              </div>
-            ))}
-          </div>
-
-          {/* Feature 4: Expected Values */}
-          <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 space-y-4">
-            <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">Valores esperados</h3>
-            <p className="text-xs text-gray-500">Define los criterios financieros mínimos que debe cumplir la empresa del estudiante</p>
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Activos mínimos (₡)" type="number" min="0" value={expectedValues.minAssets}
-                onChange={e => setExpectedValues({ ...expectedValues, minAssets: e.target.value })} placeholder="0" />
-              <Input label="Ingresos mínimos (₡)" type="number" min="0" value={expectedValues.minRevenue}
-                onChange={e => setExpectedValues({ ...expectedValues, minRevenue: e.target.value })} placeholder="0" />
-              <Input label="Gastos mínimos (₡)" type="number" min="0" value={expectedValues.minExpenses}
-                onChange={e => setExpectedValues({ ...expectedValues, minExpenses: e.target.value })} placeholder="0" />
-            </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={expectedValues.balancedSheet} onChange={e => setExpectedValues({ ...expectedValues, balancedSheet: e.target.checked })} className="rounded w-4 h-4" />
-              <span className="text-sm text-gray-700">Balance general debe cuadrar</span>
-            </label>
-          </div>
-
-          {/* Submit */}
+          {/* Enviar */}
           <div className="flex gap-3 pb-8">
             <Link href="/profesor/ejercicios" className="flex-1">
               <Button type="button" variant="secondary" className="w-full">Cancelar</Button>
             </Link>
-            <Button type="submit" loading={saving} size="lg" className="flex-1">
+            <Button type="submit" loading={saving} size="lg" className="flex-1 cx-press">
               Guardar borrador
             </Button>
           </div>

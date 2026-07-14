@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, User, Pencil, Check, X, ChevronDown } from 'lucide-react';
+import { Building2, User, Pencil, Check, X, ChevronDown, Search } from 'lucide-react';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
+import { cn } from '@/lib/utils';
 
 export interface PerfilTributarioData {
   tipoPersona: 'JURIDICA' | 'FISICA';
@@ -78,6 +83,16 @@ interface Props {
   onChange?: (perfil: PerfilTributarioData) => void;
 }
 
+/** Fila de dato del perfil (etiqueta + valor). */
+function Dato({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-2">
+      <span className="w-28 flex-shrink-0 text-xs text-gray-400">{label}</span>
+      <span className="min-w-0 text-xs">{children}</span>
+    </div>
+  );
+}
+
 export function PerfilTributario({ disabled = false, onChange }: Props) {
   const [perfil, setPerfil] = useState<PerfilTributarioData>(DEFAULT_PERFIL);
   const [editing, setEditing] = useState(false);
@@ -127,168 +142,183 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
 
   const isComplete = !!(perfil.cedula && perfil.razonSocial && perfil.actividadCodigo);
 
+  // ── Vista de lectura ───────────────────────────────────────────────────────
   if (!editing) {
     return (
-      <div className={`bg-white border ${isComplete ? 'border-gray-200' : 'border-amber-300'} rounded-xl p-4`}>
-        <div className="flex items-center justify-between mb-3">
+      <SectionCard
+        eyebrow="Contribuyente"
+        title="Datos del contribuyente"
+        icon={perfil.tipoPersona === 'JURIDICA' ? Building2 : User}
+        iconTint={isComplete ? '#1B2E6E' : '#B8860B'}
+        className={cn('cx-pop', !isComplete && 'border-gold-100')}
+        action={
           <div className="flex items-center gap-2">
-            {perfil.tipoPersona === 'JURIDICA'
-              ? <Building2 className="w-4 h-4 text-blue-600" />
-              : <User className="w-4 h-4 text-slate-600" />}
-            <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">Datos del Contribuyente</span>
-            {!isComplete && (
-              <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">
-                Incompleto
-              </span>
+            {!isComplete && <Badge variant="gold">Incompleto</Badge>}
+            {!disabled && (
+              <Button variant="ghost" size="sm" onClick={handleEdit} className="cx-press">
+                <Pencil className="h-3.5 w-3.5" /> Editar
+              </Button>
             )}
           </div>
-          {!disabled && (
-            <button onClick={handleEdit}
-              className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors">
-              <Pencil className="w-3 h-3" /> Editar
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-sm">
-          <div className="flex gap-2">
-            <span className="text-xs text-gray-400 w-28 flex-shrink-0">Tipo persona</span>
-            <span className="text-xs font-medium text-gray-700">
+        }
+      >
+        <div className="grid grid-cols-1 gap-x-8 gap-y-2 md:grid-cols-2">
+          <Dato label="Tipo persona">
+            <span className="font-medium text-gray-700">
               {perfil.tipoPersona === 'JURIDICA' ? 'Jurídica (empresa)' : 'Física (profesional)'}
             </span>
+          </Dato>
+
+          <Dato label={perfil.tipoPersona === 'JURIDICA' ? 'Cédula jurídica' : 'Número de cédula'}>
+            {perfil.cedula
+              ? <span className="font-mono font-semibold tabular-nums text-gray-800">{perfil.cedula}</span>
+              : <span className="italic text-gold-700">No ingresada</span>}
+          </Dato>
+
+          <div className="md:col-span-2">
+            <Dato label="Razón social">
+              {perfil.razonSocial
+                ? <span className="font-semibold uppercase text-gray-800">{perfil.razonSocial}</span>
+                : <span className="italic text-gold-700">No ingresada</span>}
+            </Dato>
           </div>
-          <div className="flex gap-2">
-            <span className="text-xs text-gray-400 w-28 flex-shrink-0">
-              {perfil.tipoPersona === 'JURIDICA' ? 'Cédula jurídica' : 'Número de cédula'}
-            </span>
-            <span className="text-xs font-mono font-semibold text-gray-800">
-              {perfil.cedula || <span className="text-amber-600 italic">No ingresada</span>}
-            </span>
-          </div>
-          <div className="flex gap-2 md:col-span-2">
-            <span className="text-xs text-gray-400 w-28 flex-shrink-0">Razón social</span>
-            <span className="text-xs font-semibold text-gray-800 uppercase">
-              {perfil.razonSocial || <span className="text-amber-600 italic">No ingresada</span>}
-            </span>
-          </div>
-          <div className="flex gap-2 md:col-span-2">
-            <span className="text-xs text-gray-400 w-28 flex-shrink-0">Actividad econ.</span>
-            <span className="text-xs font-medium text-blue-700">
+
+          <div className="md:col-span-2">
+            <Dato label="Actividad econ.">
               {perfil.actividadCodigo
-                ? <><span className="font-mono font-bold">{perfil.actividadCodigo}</span> — {perfil.actividadNombre}</>
-                : <span className="text-amber-600 italic">No seleccionada</span>}
-            </span>
+                ? (
+                  <span className="font-medium text-blue-700">
+                    <span className="font-mono font-bold tabular-nums">{perfil.actividadCodigo}</span>
+                    {' — '}{perfil.actividadNombre}
+                  </span>
+                )
+                : <span className="italic text-gold-700">No seleccionada</span>}
+            </Dato>
           </div>
+
           {perfil.correoTributario && (
-            <div className="flex gap-2 md:col-span-2">
-              <span className="text-xs text-gray-400 w-28 flex-shrink-0">Correo tributario</span>
-              <span className="text-xs text-gray-600">{perfil.correoTributario}</span>
+            <div className="md:col-span-2">
+              <Dato label="Correo tributario">
+                <span className="text-gray-600">{perfil.correoTributario}</span>
+              </Dato>
             </div>
           )}
         </div>
-      </div>
+      </SectionCard>
     );
   }
 
-  // Edit form
+  // ── Formulario de edición ──────────────────────────────────────────────────
   return (
-    <div className="bg-white border border-blue-300 rounded-xl p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Building2 className="w-4 h-4 text-blue-600" />
-          <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Datos del Contribuyente</span>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        {/* Tipo persona */}
+    <SectionCard
+      eyebrow="Contribuyente"
+      title="Datos del contribuyente"
+      description="Se usan para identificar la declaración, igual que en el sistema de Hacienda."
+      icon={Building2}
+      iconTint="#1B2E6E"
+      className="cx-pop"
+    >
+      <div className="space-y-4">
+        {/* Tipo de persona */}
         <div>
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Tipo de persona</label>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Tipo de persona
+          </label>
           <div className="flex gap-2">
-            {(['JURIDICA', 'FISICA'] as const).map(tipo => (
-              <button key={tipo} type="button"
-                onClick={() => setDraft(d => ({ ...d, tipoPersona: tipo }))}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg border-2 transition-all ${
-                  draft.tipoPersona === tipo
-                    ? 'border-blue-600 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                }`}>
-                {tipo === 'JURIDICA' ? '🏢 Persona Jurídica' : '👤 Persona Física'}
-              </button>
-            ))}
+            {(['JURIDICA', 'FISICA'] as const).map(tipo => {
+              const TipoIcon = tipo === 'JURIDICA' ? Building2 : User;
+              const selected = draft.tipoPersona === tipo;
+              return (
+                <button
+                  key={tipo}
+                  type="button"
+                  onClick={() => setDraft(d => ({ ...d, tipoPersona: tipo }))}
+                  className={cn(
+                    'cx-press flex flex-1 items-center justify-center gap-2 rounded-xl border-2 py-2.5 text-xs font-semibold transition-all',
+                    selected
+                      ? 'border-blue-600 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50',
+                  )}
+                >
+                  <TipoIcon className="h-4 w-4" />
+                  {tipo === 'JURIDICA' ? 'Persona jurídica' : 'Persona física'}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Cédula y razón social */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">
-              {draft.tipoPersona === 'JURIDICA' ? 'Cédula jurídica' : 'Número de cédula'}
-            </label>
-            <input
-              type="text"
-              value={draft.cedula}
-              onChange={e => setDraft(d => ({ ...d, cedula: e.target.value }))}
-              placeholder={draft.tipoPersona === 'JURIDICA' ? '3-101-999999' : '1-1234-5678'}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Correo tributario</label>
-            <input
-              type="email"
-              value={draft.correoTributario}
-              onChange={e => setDraft(d => ({ ...d, correoTributario: e.target.value }))}
-              placeholder="empresa@demo.cr"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Razón social / Nombre del contribuyente</label>
-          <input
-            type="text"
-            value={draft.razonSocial}
-            onChange={e => setDraft(d => ({ ...d, razonSocial: e.target.value.toUpperCase() }))}
-            placeholder="EMPRESA DEMO S.A."
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm uppercase font-semibold focus:outline-none focus:ring-2 focus:ring-blue-300"
+        {/* Cédula y correo */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <Input
+            label={draft.tipoPersona === 'JURIDICA' ? 'Cédula jurídica' : 'Número de cédula'}
+            value={draft.cedula}
+            onChange={e => setDraft(d => ({ ...d, cedula: e.target.value }))}
+            placeholder={draft.tipoPersona === 'JURIDICA' ? '3-101-999999' : '1-1234-5678'}
+            className="font-mono tabular-nums"
+          />
+          <Input
+            label="Correo tributario"
+            type="email"
+            value={draft.correoTributario}
+            onChange={e => setDraft(d => ({ ...d, correoTributario: e.target.value }))}
+            placeholder="empresa@demo.cr"
           />
         </div>
 
+        <Input
+          label="Razón social / Nombre del contribuyente"
+          value={draft.razonSocial}
+          onChange={e => setDraft(d => ({ ...d, razonSocial: e.target.value.toUpperCase() }))}
+          placeholder="EMPRESA DEMO S.A."
+          className="font-semibold uppercase"
+        />
+
         {/* Actividad económica */}
         <div>
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">
-            Actividad Económica (CIIU Rev.4)
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Actividad económica (CIIU Rev.4)
           </label>
+
           {draft.actividadCodigo && (
-            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-              <span className="font-mono font-bold">{draft.actividadCodigo}</span>
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+              <span className="font-mono font-bold tabular-nums">{draft.actividadCodigo}</span>
               <span className="flex-1">{draft.actividadNombre}</span>
-              <button type="button" onClick={() => setDraft(d => ({ ...d, actividadCodigo: '', actividadNombre: '' }))}
-                className="text-blue-500 hover:text-blue-700">
-                <X className="w-3 h-3" />
+              <button
+                type="button"
+                aria-label="Quitar actividad seleccionada"
+                onClick={() => setDraft(d => ({ ...d, actividadCodigo: '', actividadNombre: '' }))}
+                className="cx-press rounded-md p-0.5 text-blue-500 transition-colors hover:bg-blue-100 hover:text-blue-700"
+              >
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
+
           <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={actSearch}
               onChange={e => setActSearch(e.target.value)}
               placeholder="Buscar actividad por código o descripción..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-10 pr-9 text-sm text-gray-900 transition-colors placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
             />
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           </div>
+
           {actSearch.length > 0 && (
-            <div className="mt-1 border border-gray-200 rounded-lg overflow-hidden shadow-lg max-h-52 overflow-y-auto bg-white">
+            <div className="cx-pop mt-1.5 max-h-52 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-card">
               {filteredActs.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-gray-400">Sin resultados</div>
+                <div className="px-3 py-2.5 text-xs text-gray-400">Sin resultados</div>
               ) : filteredActs.map(act => (
-                <button key={act.codigo} type="button"
+                <button
+                  key={act.codigo}
+                  type="button"
                   onClick={() => selectActividad(act)}
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 flex items-center gap-2 border-b border-gray-50 last:border-0">
-                  <span className="font-mono font-bold text-blue-700 w-12 flex-shrink-0">{act.codigo}</span>
+                  className="flex w-full items-center gap-2 border-b border-gray-50 px-3 py-2.5 text-left text-xs transition-colors last:border-0 hover:bg-blue-50"
+                >
+                  <span className="w-12 flex-shrink-0 font-mono font-bold tabular-nums text-blue-700">{act.codigo}</span>
                   <span className="text-gray-700">{act.nombre}</span>
                 </button>
               ))}
@@ -297,17 +327,15 @@ export function PerfilTributario({ disabled = false, onChange }: Props) {
         </div>
       </div>
 
-      <div className="flex gap-2 mt-4">
-        <button type="button" onClick={handleCancel}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
-          <X className="w-3.5 h-3.5" /> Cancelar
-        </button>
-        <button type="button" onClick={handleSave}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
-          <Check className="w-3.5 h-3.5" /> Guardar datos
-        </button>
+      <div className="mt-5 flex gap-2">
+        <Button type="button" variant="secondary" size="sm" onClick={handleCancel} className="cx-press">
+          <X className="h-3.5 w-3.5" /> Cancelar
+        </Button>
+        <Button type="button" variant="primary" size="sm" onClick={handleSave} className="cx-press">
+          <Check className="h-3.5 w-3.5" /> Guardar datos
+        </Button>
       </div>
-    </div>
+    </SectionCard>
   );
 }
 

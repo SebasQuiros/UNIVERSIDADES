@@ -4,10 +4,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase/client';
 import { getErrorMessage, formatDate } from '@/lib/utils';
-import { Spinner } from '@/components/ui/Spinner';
+import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { IconTile } from '@/components/ui/IconTile';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   Users, Search, X, UserCheck, UserX, KeyRound, Trash2, AlertTriangle,
+  GraduationCap, BookOpen, ShieldCheck,
 } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -67,26 +75,28 @@ function ResetPwdModal({ user, onClose }: { user: UserItem; onClose: () => void 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 rounded-xl w-full max-w-sm shadow-xl p-6">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+      <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-sm shadow-card-hover p-6 cx-pop">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cx-press"
+          aria-label="Cerrar"
+        >
           <X className="w-4 h-4" />
         </button>
-        <KeyRound className="w-8 h-8 text-amber-500 mb-3" />
-        <h3 className="font-semibold text-gray-900 mb-1">Resetear contraseña</h3>
-        <p className="text-sm text-gray-500 mb-4">
-          Se enviará un email de recuperación a <strong>{user.email}</strong> para que{' '}
-          {user.name} establezca una nueva contraseña.
+        <IconTile icon={KeyRound} tint="#B8860B" size={46} className="mb-3" />
+        <h3 className="font-bold text-gray-900 mb-1">Restablecer contraseña</h3>
+        <p className="text-sm text-gray-500 mb-5">
+          Se enviará un email de recuperación a <strong className="text-gray-700">{user.email}</strong> para
+          que {user.name} establezca una nueva contraseña.
         </p>
         <div className="flex gap-3">
-          <button onClick={onClose} disabled={loading}
-            className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={loading} className="flex-1 cx-press">
             Cancelar
-          </button>
-          <button onClick={handleReset} disabled={loading}
-            className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50">
-            {loading ? 'Enviando...' : 'Enviar email'}
-          </button>
+          </Button>
+          <Button onClick={handleReset} loading={loading} className="flex-1 cx-press">
+            Enviar email
+          </Button>
         </div>
       </div>
     </div>
@@ -121,30 +131,30 @@ function DeleteModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 rounded-xl w-full max-w-sm shadow-xl p-6">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+      <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-sm shadow-card-hover p-6 cx-pop">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cx-press"
+          aria-label="Cerrar"
+        >
           <X className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-          </div>
+          <IconTile icon={AlertTriangle} tint="#DC2626" size={46} />
           <h3 className="font-bold text-gray-900">Eliminar usuario</h3>
         </div>
         <p className="text-sm text-gray-600 mb-1">
-          ¿Estás seguro de que deseas eliminar a <strong>{user.name}</strong>?
+          ¿Seguro que deseas eliminar a <strong className="text-gray-800">{user.name}</strong>?
         </p>
-        <p className="text-xs text-red-500 mb-5">Esta acción no se puede deshacer.</p>
+        <p className="text-xs text-red-600 mb-5">Esta acción no se puede deshacer.</p>
         <div className="flex gap-3">
-          <button onClick={onClose} disabled={loading}
-            className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={loading} className="flex-1 cx-press">
             Cancelar
-          </button>
-          <button onClick={handleDelete} disabled={loading}
-            className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-50">
-            {loading ? 'Eliminando...' : 'Eliminar'}
-          </button>
+          </Button>
+          <Button variant="danger" onClick={handleDelete} loading={loading} className="flex-1 cx-press">
+            Eliminar
+          </Button>
         </div>
       </div>
     </div>
@@ -203,8 +213,15 @@ export default function UsuariosPage() {
     return matchSearch && matchRole && matchUni;
   });
 
+  const counts = {
+    students: users.filter((u) => u.role === 'STUDENT').length,
+    teachers: users.filter((u) => u.role === 'TEACHER').length,
+    admins:   users.filter((u) => u.role === 'ADMIN' || u.role === 'SUPERADMIN').length,
+  };
+  const hasFilters = Boolean(search || roleFilter || uniFilter);
+
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
       {resetUser && (
         <ResetPwdModal user={resetUser} onClose={() => setResetUser(null)} />
       )}
@@ -219,69 +236,117 @@ export default function UsuariosPage() {
         />
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Usuarios</h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {users.length} usuario{users.length !== 1 ? 's' : ''} en la plataforma
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Superadmin"
+        title="Usuarios"
+        subtitle="Todas las personas con acceso a la plataforma, en cualquier universidad."
+        icon={Users}
+        iconTint="#475569"
+        className="mb-8"
+      />
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard
+          key={`tot-${users.length}`}
+          label="Usuarios totales" value={String(users.length)}
+          icon={Users} tint="#1B2E6E" className="cx-count"
+        />
+        <StatCard
+          key={`stu-${counts.students}`}
+          label="Estudiantes" value={String(counts.students)}
+          icon={GraduationCap} tint="#2563EB" className="cx-count"
+        />
+        <StatCard
+          key={`tea-${counts.teachers}`}
+          label="Profesores" value={String(counts.teachers)}
+          icon={BookOpen} tint="#059669" className="cx-count"
+        />
+        <StatCard
+          key={`adm-${counts.admins}`}
+          label="Administración" value={String(counts.admins)}
+          icon={ShieldCheck} tint="#B8860B" className="cx-count"
+        />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o correo..."
-            className="w-full rounded-xl bg-white border border-gray-300 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      {/* Listado */}
+      <SectionCard
+        icon={Users}
+        iconTint="#475569"
+        eyebrow="Directorio global"
+        title="Listado de usuarios"
+        description={`Mostrando ${filtered.length} de ${users.length} usuario${users.length !== 1 ? 's' : ''}`}
+        flushBody
+      >
+        {/* Filtros */}
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 px-6 lg:px-7 py-4 border-b border-gray-100 bg-gray-50/60">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre o correo…"
+              className="w-full rounded-xl bg-white border border-gray-300 pl-9 pr-4 py-2.5 text-sm transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+            />
+          </div>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="rounded-xl bg-white border border-gray-300 px-3 py-2.5 text-sm text-gray-700 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+          >
+            <option value="">Todos los roles</option>
+            {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+          <select
+            value={uniFilter}
+            onChange={(e) => setUniFilter(e.target.value)}
+            className="rounded-xl bg-white border border-gray-300 px-3 py-2.5 text-sm text-gray-700 transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+          >
+            <option value="">Todas las universidades</option>
+            {universities.map((u) => (
+              <option key={u.id} value={u.id}>{u.shortName ?? u.name}</option>
+            ))}
+          </select>
+          {hasFilters && (
+            <button
+              onClick={() => { setSearch(''); setRoleFilter(''); setUniFilter(''); }}
+              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors cx-press"
+            >
+              <X className="w-3.5 h-3.5" /> Limpiar
+            </button>
+          )}
         </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        >
-          <option value="">Todos los roles</option>
-          {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-        </select>
-        <select
-          value={uniFilter}
-          onChange={(e) => setUniFilter(e.target.value)}
-          className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        >
-          <option value="">Todas las universidades</option>
-          {universities.map((u) => (
-            <option key={u.id} value={u.id}>{u.shortName ?? u.name}</option>
-          ))}
-        </select>
-      </div>
 
-      {/* Results summary */}
-      {(search || roleFilter || uniFilter) && (
-        <p className="text-xs text-gray-500 mb-3">
-          Mostrando {filtered.length} de {users.length} usuarios
-        </p>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center py-16 text-center">
-          <Users className="w-8 h-8 text-gray-300 mb-3" />
-          <p className="text-gray-500">
-            {search || roleFilter || uniFilter ? 'Sin resultados para los filtros aplicados' : 'No hay usuarios registrados'}
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
+        {loading ? (
+          <TableSkeleton rows={6} cols={6} />
+        ) : filtered.length === 0 ? (
+          hasFilters ? (
+            <EmptyState
+              illustration={<SceneSearchEmpty size={190} className="lp-drift" />}
+              title="Sin resultados"
+              description="Ningún usuario coincide con los filtros aplicados. Ajusta la búsqueda para seguir explorando."
+              action={
+                <Button
+                  variant="secondary"
+                  onClick={() => { setSearch(''); setRoleFilter(''); setUniFilter(''); }}
+                  className="cx-press"
+                >
+                  Limpiar filtros
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              illustration={<SceneEmptyBox size={200} className="lp-drift" />}
+              title="Aún no hay usuarios"
+              description="Cuando las universidades registren a su gente, la verás aquí."
+            />
+          )
+        ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-200">
+                <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
                   <th className="text-left p-4">Usuario</th>
                   <th className="text-left p-4">Rol</th>
                   <th className="text-left p-4">Universidad</th>
@@ -292,15 +357,15 @@ export default function UsuariosPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filtered.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={u.id} className="hover:bg-blue-50/40 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
                           {u.name.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-800">{u.name}</p>
-                          <p className="text-xs text-gray-400">{u.email}</p>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-800 truncate">{u.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{u.email}</p>
                         </div>
                       </div>
                     </td>
@@ -311,11 +376,12 @@ export default function UsuariosPage() {
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="p-4">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
                         u.isActive
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : 'bg-red-50 text-red-700 border-red-200'
                       }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
                         {u.isActive ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
@@ -326,8 +392,8 @@ export default function UsuariosPage() {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => setResetUser(u)}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                          title="Resetear contraseña"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-gold-700 hover:bg-gold-50 transition-colors cx-press"
+                          title="Restablecer contraseña"
                         >
                           <KeyRound className="w-4 h-4" />
                         </button>
@@ -335,7 +401,7 @@ export default function UsuariosPage() {
                           onClick={() => handleToggle(u)}
                           disabled={toggling === u.id}
                           title={u.isActive ? 'Desactivar' : 'Activar'}
-                          className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 ${
+                          className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 cx-press ${
                             u.isActive
                               ? 'text-gray-400 hover:text-red-500 hover:bg-red-50'
                               : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
@@ -346,7 +412,7 @@ export default function UsuariosPage() {
                         {u.role !== 'SUPERADMIN' && (
                           <button
                             onClick={() => setDeleteUser(u)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors cx-press"
                             title="Eliminar usuario"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -359,8 +425,8 @@ export default function UsuariosPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </SectionCard>
     </div>
   );
 }

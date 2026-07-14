@@ -5,10 +5,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import {
-  ArrowLeft, AlertTriangle, CheckCircle2, Info, Send,
-  Save, HelpCircle, ChevronRight, ChevronLeft, FileText, Download,
+  CheckCircle2, Info, Send, Save, HelpCircle,
+  ChevronRight, ChevronLeft, FileText, Download,
+  Coins, Receipt, Calculator, ListChecks,
 } from 'lucide-react';
 import Link from 'next/link';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { Button, buttonClasses } from '@/components/ui/Button';
+import { IconTile } from '@/components/ui/IconTile';
+import { MoneyPop } from '@/components/ui/MoneyPop';
+import { ArtCoins } from '@/components/illustrations';
+import { cn, fmtNum } from '@/lib/utils';
 import { AttachmentPanel, Attachment } from '../_components/AttachmentPanel';
 import { PerfilTributario, usePerfilTributario } from '../_components/PerfilTributario';
 import { PreSubmitModal } from '../_components/PreSubmitModal';
@@ -41,8 +48,9 @@ const WIZARD_STEPS = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUB-COMPONENTS
+// SUB-COMPONENTS (presentación)
 // ─────────────────────────────────────────────────────────────────────────────
+
 function Casilla({
   numero, label, hint, value, onChange, readOnly = false, bold = false, children,
 }: {
@@ -50,28 +58,30 @@ function Casilla({
   value: string | number; onChange?: (v: string) => void;
   readOnly?: boolean; bold?: boolean; children?: React.ReactNode;
 }) {
-  const displayVal = typeof value === 'number'
-    ? value.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : value;
   return (
-    <div className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
-      <span className="w-16 text-xs font-mono font-bold text-gray-400 flex-shrink-0">{numero}</span>
-      <span className={`flex-1 text-sm ${bold ? 'font-semibold text-gray-800' : 'text-gray-700'}`}>
+    <div className="flex items-center gap-3 border-b border-gray-100 py-2.5 last:border-0">
+      <span className="w-14 flex-shrink-0 rounded-md bg-gray-50 px-1.5 py-0.5 text-center font-mono text-xs font-bold tabular-nums text-gray-500">
+        {numero}
+      </span>
+      <span className={cn('flex-1 text-sm', bold ? 'font-semibold text-gray-800' : 'text-gray-700')}>
         {label}
-        {hint && <span className="ml-1 text-xs text-gray-400 font-normal">({hint})</span>}
+        {hint && <span className="ml-1 text-xs font-normal text-gray-400">({hint})</span>}
       </span>
       {readOnly ? (
-        <span className={`w-40 text-right text-sm font-mono px-3 py-1 rounded-lg ${bold ? 'bg-orange-50 text-orange-700 font-bold' : 'bg-gray-50 text-gray-700'}`}>
-          ₡ {displayVal}
+        <span className={cn(
+          'w-40 rounded-lg px-3 py-1.5 text-right text-sm',
+          bold ? 'bg-orange-50 font-bold text-orange-700' : 'bg-gray-50 text-gray-700',
+        )}>
+          <MoneyPop value={value} />
         </span>
       ) : (
         <div className="relative w-40">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">₡</span>
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">₡</span>
           <input
             type="number" min="0" step="0.01"
             value={value as string}
             onChange={e => onChange?.(e.target.value)}
-            className="w-full pl-7 pr-3 py-1.5 text-sm font-mono text-right border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+            className="w-full rounded-lg border border-gray-300 bg-white py-1.5 pl-7 pr-3 text-right font-mono text-sm tabular-nums transition-colors hover:border-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
             placeholder="0.00"
           />
         </div>
@@ -81,15 +91,12 @@ function Casilla({
   );
 }
 
-function SectionHeader({ title, color = 'orange' }: { title: string; color?: string }) {
-  const colors: Record<string, string> = {
-    orange: 'bg-orange-600 text-white',
-    gray:   'bg-gray-700 text-white',
-    blue:   'bg-blue-700 text-white',
-  };
+/** Nota explicativa dentro de una sección del formulario. */
+function Nota({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`flex items-center gap-3 px-4 py-2.5 rounded-t-xl ${colors[color] ?? colors.orange}`}>
-      <span className="text-sm font-semibold tracking-wide">{title}</span>
+    <div className="mb-2 flex items-start gap-1.5 border-b border-gray-100 py-2 text-xs leading-relaxed text-gray-500">
+      <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-500" />
+      <span>{children}</span>
     </div>
   );
 }
@@ -218,7 +225,7 @@ export default function D103Page() {
   const isSubmitted = status === 'SUBMITTED';
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-100" ref={topRef}>
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8]" ref={topRef}>
       {/* Encabezado TRIBU-CR unificado */}
       <TribuHeader
         code="D-103"
@@ -228,29 +235,41 @@ export default function D103Page() {
         refNo={refNo}
         periodLabel={`${monthName} ${year}`}
         perfil={perfil}
+        description="Cuando le pagas a un proveedor, retienes una parte del pago y la entregas a Hacienda a nombre de él. Aquí declaras y liquidas las retenciones del mes."
+        illustration={<ArtCoins size={140} className="lp-drift" />}
       />
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
 
         {/* Wizard */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="rounded-card border border-gray-200/70 bg-white p-5 shadow-card">
           <WizardStepper steps={WIZARD_STEPS} currentStep={step} />
         </div>
 
         {/* ── STEP 0: Información General ─────────────────────────────────── */}
         {step === 0 && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <PerfilTributario disabled={isSubmitted} onChange={p => setPerfil(p)} />
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-4 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-orange-600" /> Datos del período fiscal
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SectionCard
+              eyebrow="Paso 1"
+              title="Datos del período fiscal"
+              description="Las retenciones se declaran mes a mes."
+              icon={FileText}
+              iconTint="#C2410C"
+              className="cx-pop"
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Período</label>
-                  <select value={period} onChange={e => setPeriod(e.target.value)} disabled={isSubmitted}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Período
+                  </label>
+                  <select
+                    value={period}
+                    onChange={e => setPeriod(e.target.value)}
+                    disabled={isSubmitted}
+                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm transition-colors hover:border-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 disabled:opacity-50"
+                  >
                     {Array.from({ length: 24 }, (_, i) => {
                       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
                       const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -259,170 +278,202 @@ export default function D103Page() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Formulario</label>
-                  <div className="border border-orange-200 bg-orange-50 rounded-lg px-3 py-2 text-sm font-semibold text-orange-700">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Formulario
+                  </label>
+                  <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm font-semibold text-orange-700">
                     D-103 — Retención en la Fuente
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">Estado</label>
-                  <div className={`border rounded-lg px-3 py-2 text-sm font-semibold ${
-                    isSubmitted ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-amber-50 text-amber-700'
-                  }`}>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Estado
+                  </label>
+                  <div className={cn(
+                    'rounded-xl border px-3 py-2.5 text-sm font-semibold',
+                    isSubmitted
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-gold-100 bg-gold-50 text-gold-900',
+                  )}>
                     {isSubmitted ? 'Presentada (simulación)' : 'Borrador'}
                   </div>
                 </div>
               </div>
               {refNo && (
-                <div className="mt-3 flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                  <span>Número de referencia simulado: <span className="font-mono font-bold text-gray-800">{refNo}</span></span>
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span>
+                    Número de referencia simulado:{' '}
+                    <span className="font-mono font-bold tabular-nums text-gray-800">{refNo}</span>
+                  </span>
                 </div>
               )}
-            </div>
+            </SectionCard>
 
             {/* Explanation */}
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
-              <p className="text-xs font-bold text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5" /> ¿Qué es la retención en la fuente?
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <SectionCard
+              eyebrow="Cómo funciona"
+              title="¿Qué es la retención en la fuente?"
+              icon={ListChecks}
+              iconTint="#B8860B"
+              className="cx-pop cx-d2"
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {[
                   { step: '1', title: '¿Quién retiene?', desc: 'El agente de retención (comprador) cuando paga a un proveedor/prestador de servicios.' },
                   { step: '2', title: 'Tasas', desc: '3% sobre compras de bienes. 8% sobre pagos por servicios profesionales o técnicos.' },
                   { step: '3', title: 'Declarar y pagar', desc: 'Se presenta mensualmente antes del día 15 del mes siguiente y se paga la retención acumulada.' },
-                ].map(({ step, title, desc }) => (
-                  <div key={step} className="flex items-start gap-2">
-                    <div className="w-6 h-6 rounded-full bg-orange-600 text-white flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">{step}</div>
-                    <div>
-                      <p className="text-xs font-bold text-orange-800">{title}</p>
-                      <p className="text-xs text-orange-600 leading-relaxed">{desc}</p>
+                ].map(({ step: n, title, desc }) => (
+                  <div key={n} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-700 text-xs font-black tabular-nums text-white">
+                      {n}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-800">{title}</p>
+                      <p className="text-xs leading-relaxed text-gray-500">{desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </SectionCard>
           </div>
         )}
 
         {/* ── STEP 1: Bienes y Servicios ──────────────────────────────────── */}
         {step === 1 && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader title="SECCIÓN I — RETENCIONES EFECTUADAS" color="orange" />
-            <div className="px-5 py-2">
-              <div className="text-xs text-gray-500 py-2 flex items-center gap-1.5 border-b border-gray-100 mb-2">
-                <Info className="w-3.5 h-3.5" />
-                Ingresa la <strong>base imponible</strong> (monto pagado al proveedor, sin incluir la retención). El sistema calcula la retención automáticamente.
-              </div>
+          <SectionCard
+            eyebrow="Sección I"
+            title="Retenciones efectuadas"
+            description="Lo que retuviste al pagarle a tus proveedores."
+            icon={Coins}
+            iconTint="#C2410C"
+            className="cx-pop"
+          >
+            <Nota>
+              Ingresa la <strong>base imponible</strong> (monto pagado al proveedor, sin incluir la retención).
+              El sistema calcula la retención automáticamente.
+            </Nota>
 
-              <Casilla numero="101" label="Compras de bienes a proveedores locales" hint="retención 3%"
-                value={form.bienes3} onChange={v => setField('bienes3', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="bienes3" lineLabel="Compras bienes (3%)"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
+            <Casilla numero="101" label="Compras de bienes a proveedores locales" hint="retención 3%"
+              value={form.bienes3} onChange={v => setField('bienes3', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="bienes3" lineLabel="Compras bienes (3%)"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
 
-              <Casilla numero="102" label="Pagos por servicios profesionales y técnicos" hint="retención 8%"
-                value={form.servicios8} onChange={v => setField('servicios8', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="servicios8" lineLabel="Servicios (8%)"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
+            <Casilla numero="102" label="Pagos por servicios profesionales y técnicos" hint="retención 8%"
+              value={form.servicios8} onChange={v => setField('servicios8', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="servicios8" lineLabel="Servicios (8%)"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
 
-              {/* Live preview */}
-              {result && (
-                <div className="mt-3 pt-3 border-t border-orange-100 bg-orange-50 rounded-xl px-3 py-3 space-y-1.5">
-                  <p className="text-xs font-bold text-orange-700 mb-2">CÁLCULO AUTOMÁTICO DE RETENCIONES</p>
-                  {result.retencionBienes > 0 && (
-                    <div className="flex justify-between text-sm text-orange-700">
-                      <span>Retención bienes (3%)</span>
-                      <span className="font-mono font-semibold">₡ {fmtNum(result.retencionBienes)}</span>
-                    </div>
-                  )}
-                  {result.retencionServicios > 0 && (
-                    <div className="flex justify-between text-sm text-orange-700">
-                      <span>Retención servicios (8%)</span>
-                      <span className="font-mono font-semibold">₡ {fmtNum(result.retencionServicios)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm font-bold text-orange-800 pt-1 border-t border-orange-200">
-                    <span>Casilla 301 — Total retenciones</span>
-                    <span className="font-mono">₡ {fmtNum(result.cas301_totalRetencion)}</span>
+            {/* Live preview */}
+            {result && (
+              <div className="mt-4 space-y-1.5 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-orange-700">
+                  Cálculo automático de retenciones
+                </p>
+                {result.retencionBienes > 0 && (
+                  <div className="flex justify-between text-sm text-orange-700">
+                    <span>Retención bienes (3%)</span>
+                    <MoneyPop value={result.retencionBienes} className="font-semibold" />
                   </div>
+                )}
+                {result.retencionServicios > 0 && (
+                  <div className="flex justify-between text-sm text-orange-700">
+                    <span>Retención servicios (8%)</span>
+                    <MoneyPop value={result.retencionServicios} className="font-semibold" />
+                  </div>
+                )}
+                <div className="flex items-center justify-between border-t border-orange-200 pt-2 text-sm font-bold text-orange-800">
+                  <span>Casilla 301 — Total retenciones</span>
+                  <MoneyPop value={result.cas301_totalRetencion} className="text-base" />
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            )}
+          </SectionCard>
         )}
 
         {/* ── STEP 2: Créditos ────────────────────────────────────────────── */}
         {step === 2 && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <SectionHeader title="SECCIÓN II — CRÉDITOS Y CERTIFICADOS" color="gray" />
-            <div className="px-5 py-2">
-              <div className="text-xs text-gray-500 py-2 flex items-center gap-1.5 border-b border-gray-100 mb-2">
-                <Info className="w-3.5 h-3.5" />
-                Si tienes certificados de retención recibidos de tus clientes, puedes deducirlos del total a pagar.
-              </div>
-              <Casilla numero="302" label="Certificados de retención recibidos" hint="retenciones que te han aplicado"
-                value={form.creditosCertificados} onChange={v => setField('creditosCertificados', v)}>
-                <AttachmentPanel declarationId={declId} lineKey="creditosCertificados" lineLabel="Certificados retención"
-                  attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
-                  onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
-              </Casilla>
-            </div>
-          </div>
+          <SectionCard
+            eyebrow="Sección II"
+            title="Créditos y certificados"
+            description="Retenciones que tus clientes te aplicaron a ti."
+            icon={Receipt}
+            iconTint="#475569"
+            className="cx-pop"
+          >
+            <Nota>
+              Si tienes certificados de retención recibidos de tus clientes, puedes deducirlos del total a pagar.
+            </Nota>
+            <Casilla numero="302" label="Certificados de retención recibidos" hint="retenciones que te han aplicado"
+              value={form.creditosCertificados} onChange={v => setField('creditosCertificados', v)}>
+              <AttachmentPanel declarationId={declId} lineKey="creditosCertificados" lineLabel="Certificados retención"
+                attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
+                onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
+            </Casilla>
+          </SectionCard>
         )}
 
         {/* ── STEP 3: Resumen ─────────────────────────────────────────────── */}
         {step === 3 && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <SectionHeader title="SECCIÓN III — RESULTADO DEL PERÍODO" color="gray" />
-              <div className="px-5 py-4 space-y-1">
-                <Casilla numero="301" label="Total retenciones efectuadas" bold value={result?.cas301_totalRetencion ?? 0} readOnly />
-                <Casilla numero="302" label="Certificados de retención recibidos" bold value={result?.cas302_creditosCertificados ?? 0} readOnly />
-                <div className="pt-3 border-t border-gray-200 mt-2">
-                  <Casilla numero="303" label="Impuesto neto del período (301 − 302)" bold value={result?.cas303_impuestoNeto ?? 0} readOnly />
-                </div>
+          <div className="space-y-5">
+            <SectionCard
+              eyebrow="Sección III"
+              title="Resultado del período"
+              description="Retenciones efectuadas menos los créditos que tenías."
+              icon={Calculator}
+              iconTint="#1B2E6E"
+              className="cx-pop"
+            >
+              <Casilla numero="301" label="Total retenciones efectuadas" bold value={result?.cas301_totalRetencion ?? 0} readOnly />
+              <Casilla numero="302" label="Certificados de retención recibidos" bold value={result?.cas302_creditosCertificados ?? 0} readOnly />
+              <div className="mt-2 border-t border-gray-200 pt-3">
+                <Casilla numero="303" label="Impuesto neto del período (301 − 302)" bold value={result?.cas303_impuestoNeto ?? 0} readOnly />
+              </div>
 
-                <div className="pt-2">
-                  {(result?.cas304_impuestoPagar ?? 0) > 0 ? (
-                    <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-xl mt-2">
+              <div className="pt-3">
+                {(result?.cas304_impuestoPagar ?? 0) > 0 ? (
+                  <div className="cx-pop flex items-center justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 p-5">
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={Send} tint="#DC2626" size={44} />
                       <div>
-                        <p className="text-xs font-bold text-red-700 uppercase tracking-wide">Casilla 304</p>
+                        <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-red-700">Casilla 304</p>
                         <p className="text-sm font-bold text-red-800">Retención a pagar a Hacienda</p>
                         <p className="text-xs text-red-600">Vence el día 15 del mes siguiente</p>
                       </div>
-                      <span className="text-2xl font-black text-red-700 font-mono">
-                        ₡ {fmtNum(result?.cas304_impuestoPagar ?? 0)}
-                      </span>
                     </div>
-                  ) : (result?.cas305_saldoFavor ?? 0) > 0 ? (
-                    <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl mt-2">
+                    <MoneyPop value={result?.cas304_impuestoPagar ?? 0} className="text-2xl font-black text-red-700" />
+                  </div>
+                ) : (result?.cas305_saldoFavor ?? 0) > 0 ? (
+                  <div className="cx-pop flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={CheckCircle2} tint="#047857" size={44} />
                       <div>
-                        <p className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Casilla 305</p>
+                        <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-emerald-700">Casilla 305</p>
                         <p className="text-sm font-bold text-emerald-800">Saldo a favor</p>
                         <p className="text-xs text-emerald-600">Se imputa al siguiente período</p>
                       </div>
-                      <span className="text-2xl font-black text-emerald-700 font-mono">
-                        ₡ {fmtNum(result?.cas305_saldoFavor ?? 0)}
-                      </span>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl mt-2">
-                      <p className="text-sm text-gray-500">Ingresa los montos para ver el resultado</p>
-                      <span className="text-2xl font-black text-gray-400 font-mono">₡ 0.00</span>
-                    </div>
-                  )}
-                </div>
+                    <MoneyPop value={result?.cas305_saldoFavor ?? 0} className="text-2xl font-black text-emerald-700" />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                    <p className="text-sm text-gray-500">Ingresa los montos para ver el resultado</p>
+                    <span className="font-mono text-2xl font-black tabular-nums text-gray-400">₡ 0.00</span>
+                  </div>
+                )}
               </div>
-            </div>
+            </SectionCard>
 
             {/* Legal note */}
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 text-xs text-orange-700 space-y-1">
-              <p className="font-bold flex items-center gap-1.5"><HelpCircle className="w-4 h-4" /> Notas — Retención en la Fuente CR</p>
-              <ul className="list-disc list-inside space-y-0.5 text-orange-600 mt-1">
+            <div className="rounded-card border border-orange-100 bg-orange-50 p-5 text-xs text-orange-700">
+              <p className="flex items-center gap-1.5 font-bold">
+                <HelpCircle className="h-4 w-4" /> Notas — Retención en la Fuente CR
+              </p>
+              <ul className="mt-2 list-inside list-disc space-y-1 leading-relaxed">
                 <li>El agente retenedor descuenta la retención del pago al proveedor y la entrega a Hacienda.</li>
                 <li>Tasa del <strong>3%</strong> sobre compras de bienes a personas físicas o jurídicas.</li>
                 <li>Tasa del <strong>8%</strong> sobre honorarios y servicios profesionales o técnicos.</li>
@@ -435,36 +486,32 @@ export default function D103Page() {
         )}
 
         {/* ── Navigation ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between pb-8">
+        <div className="flex items-center justify-between gap-3 pb-10">
           {step > 0 && !isSubmitted ? (
-            <button onClick={goPrev}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-              <ChevronLeft className="w-4 h-4" /> Anterior
-            </button>
+            <Button variant="secondary" onClick={goPrev} className="cx-press">
+              <ChevronLeft className="h-4 w-4" /> Anterior
+            </Button>
           ) : <div />}
 
           <div className="flex items-center gap-3">
             {!isSubmitted && (
-              <button onClick={handleSaveDraft} disabled={saving}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50">
-                <Save className="w-4 h-4" />{saving ? 'Guardando...' : 'Guardar borrador'}
-              </button>
+              <Button variant="secondary" onClick={handleSaveDraft} loading={saving} className="cx-press">
+                {!saving && <Save className="h-4 w-4" />}
+                {saving ? 'Guardando...' : 'Guardar borrador'}
+              </Button>
             )}
             {step < WIZARD_STEPS.length - 1 && !isSubmitted && (
-              <button onClick={goNext}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-colors">
-                Siguiente <ChevronRight className="w-4 h-4" />
-              </button>
+              <Button variant="primary" onClick={goNext} className="cx-press">
+                Siguiente <ChevronRight className="h-4 w-4" />
+              </Button>
             )}
             {step === WIZARD_STEPS.length - 1 && !isSubmitted && (
-              <button onClick={() => setShowConfirm(true)}
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-xl transition-colors">
-                <Send className="w-4 h-4" /> Presentar declaración
-              </button>
+              <Button variant="gold" onClick={() => setShowConfirm(true)} className="cx-press">
+                <Send className="h-4 w-4" /> Presentar declaración
+              </Button>
             )}
             {isSubmitted && (
-              <Link href="/estudiante/impuestos"
-                className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">
+              <Link href="/estudiante/impuestos" className={buttonClasses({ variant: 'primary', className: 'cx-press' })}>
                 Volver al historial
               </Link>
             )}
@@ -473,38 +520,46 @@ export default function D103Page() {
       </div>
 
       {showConfirm && (
-        <PreSubmitModal type={'D103_RETENCION' as any} period={`${monthName} ${year}`} form={form}
+        <PreSubmitModal type="D103_RETENCION" period={`${monthName} ${year}`} form={form}
           attachments={attachments} perfil={perfil} result={result}
           onConfirm={handleSubmit} onCancel={() => setShowConfirm(false)} submitting={submitting} />
       )}
 
       {showResult && isSubmitted && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <div className="text-center mb-5">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-csq-dark/70 p-4 backdrop-blur-sm">
+          <div className="cx-pop w-full max-w-md rounded-card bg-white p-6 shadow-soft">
+            <div className="mb-5 text-center">
+              <div className="cx-tada mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-black text-gray-900">¡Declaración presentada!</h3>
-              <p className="text-sm text-gray-500 mt-1">Simulación educativa completada</p>
+              <h3 className="text-xl font-black tracking-tight text-gray-900">¡Declaración presentada!</h3>
+              <p className="mt-1 text-sm text-gray-500">Simulación educativa completada</p>
             </div>
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-5 font-mono text-xs space-y-1">
-              <div className="text-center font-bold text-gray-700 mb-3 text-sm">MINISTERIO DE HACIENDA — TRIBU CR</div>
+
+            <div className="mb-5 space-y-1 rounded-2xl border border-gray-200 bg-gray-50 p-4 font-mono text-xs tabular-nums">
+              <div className="mb-3 text-center text-sm font-bold text-gray-700">MINISTERIO DE HACIENDA — TRIBU CR</div>
               <div className="flex justify-between"><span>Formulario:</span><span className="font-bold">D-103</span></div>
               <div className="flex justify-between"><span>Período:</span><span>{monthName} {year}</span></div>
               <div className="flex justify-between"><span>Número de referencia:</span><span className="font-bold text-orange-700">{refNo}</span></div>
-              <div className="border-t border-gray-300 mt-2 pt-2">
+              <div className="mt-2 border-t border-gray-300 pt-2">
                 <div className="flex justify-between"><span>Total retenciones:</span><span>₡ {fmtNum(result?.cas301_totalRetencion ?? 0)}</span></div>
                 <div className="flex justify-between"><span>Créditos:</span><span>₡ {fmtNum(result?.cas302_creditosCertificados ?? 0)}</span></div>
               </div>
-              <div className={`flex justify-between border-t border-gray-300 pt-2 mt-2 font-black ${(result?.cas304_impuestoPagar ?? 0) > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+              <div className={cn(
+                'mt-2 flex justify-between border-t border-gray-300 pt-2 font-black',
+                (result?.cas304_impuestoPagar ?? 0) > 0 ? 'text-red-700' : 'text-emerald-700',
+              )}>
                 <span>{(result?.cas304_impuestoPagar ?? 0) > 0 ? 'A PAGAR:' : 'SALDO A FAVOR:'}</span>
                 <span>₡ {fmtNum((result?.cas304_impuestoPagar ?? 0) > 0 ? result!.cas304_impuestoPagar : (result?.cas305_saldoFavor ?? 0))}</span>
               </div>
-              <div className="text-center text-gray-400 text-xs mt-3 pt-2 border-t border-gray-200">** SIMULACIÓN EDUCATIVA — NO TIENE VALIDEZ LEGAL **</div>
+              <div className="mt-3 border-t border-gray-200 pt-2 text-center text-xs text-gray-400">
+                ** SIMULACIÓN EDUCATIVA — NO TIENE VALIDEZ LEGAL **
+              </div>
             </div>
+
             <div className="space-y-2">
-              <button
+              <Button
+                variant="primary"
                 onClick={async () => {
                   if (!declId) return;
                   try {
@@ -512,19 +567,17 @@ export default function D103Page() {
                   } catch { toast.error('No se pudo descargar el PDF'); }
                 }}
                 disabled={!declId}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50"
+                className="w-full cx-press"
               >
-                <Download className="w-4 h-4" /> Descargar comprobante PDF
-              </button>
+                <Download className="h-4 w-4" /> Descargar comprobante PDF
+              </Button>
               <div className="flex gap-3">
-                <button onClick={() => setShowResult(false)}
-                  className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                <Button variant="secondary" onClick={() => setShowResult(false)} className="flex-1 cx-press">
                   Ver declaración
-                </button>
-                <button onClick={() => router.push('/estudiante/impuestos')}
-                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">
+                </Button>
+                <Button variant="gold" onClick={() => router.push('/estudiante/impuestos')} className="flex-1 cx-press">
                   Ir al historial
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -540,8 +593,4 @@ function toNumeric(form: D103Form) {
     servicios8:           parseFloat(form.servicios8           || '0') || 0,
     creditosCertificados: parseFloat(form.creditosCertificados || '0') || 0,
   };
-}
-
-function fmtNum(n: number) {
-  return Number(n).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

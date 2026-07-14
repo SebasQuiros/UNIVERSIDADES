@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Clock } from 'lucide-react';
+import { AlertTriangle, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ExamTimerProps {
@@ -50,27 +50,27 @@ export function ExamTimer({ attemptId, timeLimitMinutes, onTimeUp }: ExamTimerPr
     setSecondsLeft((prev) => {
       const next = prev - 1;
 
-      // Fire milestone toasts
+      // Avisos por hitos de tiempo
       if (next === 600 && !alertedRef.current.at10) {
         alertedRef.current.at10 = true;
         toast('Quedan 10 minutos para terminar el examen', {
-          icon: '⏰',
+          icon: <Clock className="w-4 h-4" />,
           duration: 5000,
-          style: { background: '#fef3c7', color: '#92400e', fontWeight: 600 },
+          style: { background: '#FDF6E3', color: '#8A6608', fontWeight: 600 },
         });
       }
       if (next === 300 && !alertedRef.current.at5) {
         alertedRef.current.at5 = true;
         toast('¡Quedan solo 5 minutos!', {
-          icon: '⚠️',
+          icon: <AlertTriangle className="w-4 h-4" />,
           duration: 5000,
           style: { background: '#fee2e2', color: '#991b1b', fontWeight: 600 },
         });
       }
       if (next === 60 && !alertedRef.current.at1) {
         alertedRef.current.at1 = true;
-        toast('¡ÚLTIMO MINUTO! El examen se enviará automáticamente.', {
-          icon: '🚨',
+        toast('¡Último minuto! El examen se enviará automáticamente.', {
+          icon: <AlertTriangle className="w-4 h-4" />,
           duration: 8000,
           style: { background: '#dc2626', color: '#fff', fontWeight: 700 },
         });
@@ -107,25 +107,29 @@ export function ExamTimer({ attemptId, timeLimitMinutes, onTimeUp }: ExamTimerPr
     return () => clearTimeout(timer);
   }, [secondsLeft, tick, onTimeUp, storageKey]);
 
-  // Color state
-  const isRed    = secondsLeft <= 300;  // <= 5 min
-  const isYellow = !isRed && secondsLeft <= 600; // <= 10 min
+  // Estado de color según el tiempo restante
+  const isRed    = secondsLeft <= 300;              // ≤ 5 min
+  const isYellow = !isRed && secondsLeft <= 600;    // ≤ 10 min
 
-  const bgClass = isRed
-    ? 'bg-red-600 animate-pulse'
+  const toneClass = isRed
+    ? 'bg-gradient-to-br from-red-500 to-red-700 border-red-300/40'
     : isYellow
-    ? 'bg-yellow-500'
-    : 'bg-gray-900';
+    ? 'bg-gradient-to-br from-[#D4A017] to-[#B8860B] border-gold-100/40'
+    : 'bg-gradient-to-br from-csq-mid to-csq-dark border-white/15';
+
+  // El rebote llama la atención al entrar en los últimos 5 min, pero se detiene tras
+  // 3 repeticiones: el movimiento perpetuo en un examen cronometrado es hostil.
+  const alertClass = isRed ? 'cx-bounce cx-iter-3' : '';
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl ${bgClass} text-white select-none`}
-      style={{ minWidth: 120, justifyContent: 'center' }}
+      className={`fixed top-4 right-4 z-50 flex items-center gap-2 rounded-full border px-4 py-2.5 text-white shadow-soft select-none ${toneClass} ${alertClass}`}
+      style={{ minWidth: 124, justifyContent: 'center' }}
       aria-live="polite"
       aria-label={`Tiempo restante: ${formatHMS(secondsLeft)}`}
     >
       <Clock className="w-4 h-4 flex-shrink-0" />
-      <span className="text-base font-mono font-bold tracking-wider">
+      <span className="font-mono text-base font-bold tabular-nums tracking-wider">
         {formatHMS(Math.max(0, secondsLeft))}
       </span>
     </div>

@@ -37,7 +37,7 @@ export function PageHeader({
         {Icon && <IconTile icon={Icon} tint={iconTint} size={52} className="mt-0.5" />}
         <div className="min-w-0">
           {eyebrow && (
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-700 mb-1">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-gold-900 mb-1">
               {eyebrow}
             </p>
           )}

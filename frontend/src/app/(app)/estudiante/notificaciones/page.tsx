@@ -2,21 +2,24 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { formatDateTime, getErrorMessage } from '@/lib/utils';
+import { formatDateTime, getErrorMessage, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { Card } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { SceneEmptyBox } from '@/components/illustrations';
 import type { Notification } from '@/types';
 import toast from 'react-hot-toast';
 import { Bell, CheckCheck, BookOpen, Award, Info, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 const NOTIF_ICONS: Record<string, { icon: React.ElementType; color: string }> = {
-  EXERCISE_ASSIGNED: { icon: BookOpen, color: 'text-blue-700 bg-blue-50' },
-  GRADED:            { icon: Award,    color: 'text-emerald-600 bg-emerald-50' },
-  EXERCISE_DUE:      { icon: AlertTriangle, color: 'text-amber-600 bg-amber-50' },
-  INFO:              { icon: Info,     color: 'text-gray-500 bg-gray-100' },
-  WARNING:           { icon: AlertTriangle, color: 'text-amber-600 bg-amber-50' },
-  SYSTEM:            { icon: Info,     color: 'text-gray-500 bg-gray-100' },
+  EXERCISE_ASSIGNED: { icon: BookOpen,      color: 'text-blue-700 bg-blue-50 border-blue-100' },
+  GRADED:            { icon: Award,         color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+  EXERCISE_DUE:      { icon: AlertTriangle, color: 'text-gold-700 bg-gold-50 border-gold-100' },
+  INFO:              { icon: Info,          color: 'text-gray-500 bg-gray-100 border-gray-200' },
+  WARNING:           { icon: AlertTriangle, color: 'text-gold-700 bg-gold-50 border-gold-100' },
+  SYSTEM:            { icon: Info,          color: 'text-gray-500 bg-gray-100 border-gray-200' },
 };
 
 export default function NotificacionesPage() {
@@ -63,41 +66,54 @@ export default function NotificacionesPage() {
   const unread = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
       <div className="max-w-2xl mx-auto">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Bell className="w-6 h-6 text-blue-700" />
-              Notificaciones
-            </h2>
-            {unread > 0 && (
-              <p className="text-sm text-gray-500 mt-1">{unread} sin leer</p>
-            )}
-          </div>
-          {unread > 0 && (
-            <Button variant="secondary" size="sm" onClick={markAllRead}>
-              <CheckCheck className="w-4 h-4" />
-              Marcar todas
-            </Button>
-          )}
-        </div>
+        {/* Cabecera */}
+        <PageHeader
+          eyebrow="Tu bandeja"
+          title="Notificaciones"
+          subtitle={
+            unread > 0
+              ? `Tienes ${unread} notificación${unread !== 1 ? 'es' : ''} sin leer.`
+              : 'Aquí llegan los avisos de tus cursos, entregas y calificaciones.'
+          }
+          icon={Bell}
+          className="mb-6"
+          actions={
+            unread > 0 ? (
+              <Button variant="secondary" size="sm" onClick={markAllRead} className="cx-press">
+                <CheckCheck className="w-4 h-4" />
+                Marcar todas
+              </Button>
+            ) : undefined
+          }
+        />
 
-        {loading ? (
-          <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center py-20 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-              <Bell className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-700 font-semibold">Sin notificaciones</p>
-            <p className="text-gray-500 text-sm mt-1">Estás al día</p>
-          </div>
-        ) : (
+        {loading && notifications.length === 0 ? (
           <div className="space-y-2">
-            {notifications.map((notif) => {
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-start gap-4 p-4 rounded-card bg-white border border-gray-200/70 shadow-card">
+                <Skeleton className="w-10 h-10 rounded-xl" />
+                <div className="flex-1 space-y-2 py-0.5">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : notifications.length === 0 ? (
+          <Card>
+            <EmptyState
+              illustration={<SceneEmptyBox size={200} className="cx-float" />}
+              title="Estás al día"
+              description="No tienes notificaciones pendientes. Cuando tu profesor publique un ejercicio o califique una entrega, te avisamos aquí."
+            />
+          </Card>
+        ) : (
+          <div className="space-y-2.5">
+            {notifications.map((notif, i) => {
               const cfg = NOTIF_ICONS[notif.type] ?? NOTIF_ICONS.INFO;
               const Icon = cfg.icon;
               return (
@@ -105,31 +121,41 @@ export default function NotificacionesPage() {
                   key={notif.id}
                   onClick={() => !notif.isRead && markRead(notif.id)}
                   className={cn(
-                    'w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all duration-150',
+                    'w-full flex items-start gap-4 p-4 rounded-card border text-left transition-all cx-pop cx-hop-parent cx-press',
+                    i < 6 ? `cx-d${i + 1}` : undefined,
                     notif.isRead
-                      ? 'bg-white border-gray-200 opacity-60'
-                      : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm',
+                      ? 'bg-white/70 border-gray-200/70 opacity-70 hover:opacity-100'
+                      : 'bg-white border-gray-200/70 shadow-card hover:shadow-card-hover hover:border-gray-300/70',
                   )}
                 >
-                  <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5', cfg.color)}>
-                    <Icon className="w-4 h-4" />
+                  <div className={cn(
+                    'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 border cx-hop',
+                    cfg.color,
+                  )}>
+                    <Icon className="w-4 h-4" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <p className={cn(
-                        'text-sm font-medium leading-snug',
+                        'text-sm font-semibold leading-snug',
                         notif.isRead ? 'text-gray-500' : 'text-gray-900',
                       )}>
                         {notif.title}
                       </p>
                       {!notif.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1.5" />
+                        <span className="relative flex h-2.5 w-2.5 flex-shrink-0 mt-1.5">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-blue-500 cx-ping" aria-hidden />
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-600" />
+                          <span className="sr-only">Sin leer</span>
+                        </span>
                       )}
                     </div>
                     {notif.body && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notif.body}</p>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">{notif.body}</p>
                     )}
-                    <p className="text-xs text-gray-400 mt-1.5">{formatDateTime(notif.createdAt)}</p>
+                    <p className="text-xs text-gray-400 mt-1.5 font-mono tabular-nums">
+                      {formatDateTime(notif.createdAt)}
+                    </p>
                   </div>
                 </button>
               );

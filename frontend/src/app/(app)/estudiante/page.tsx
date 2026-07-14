@@ -72,7 +72,7 @@ function SectionHeading({ icon: Icon, eyebrow, title, action }: {
       <div className="flex items-center gap-3">
         <IconTile icon={Icon} tint="#1B2E6E" size={40} />
         <div>
-          <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-700">{eyebrow}</p>
+          <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">{eyebrow}</p>
           <h3 className="text-base font-bold tracking-tight text-gray-900">{title}</h3>
         </div>
       </div>

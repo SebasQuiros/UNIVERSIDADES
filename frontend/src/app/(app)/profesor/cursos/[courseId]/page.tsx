@@ -3,24 +3,49 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { formatDate, getErrorMessage } from '@/lib/utils';
 import { DifficultyBadge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, buttonClasses } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import type { Exercise } from '@/types';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { IconTile } from '@/components/ui/IconTile';
+import { ArtLedger, SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
+import type { Exercise, ExerciseDifficulty } from '@/types';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft, Users, FileText, Plus, UserPlus,
-  Calendar, X, ChevronRight, Globe, Lock, Search, UserX,
+  Calendar, X, ChevronRight, Globe, Lock, Search,
   BarChart2, Download, TrendingUp, Clock, CheckCircle, AlertCircle,
-  Table2, Layers, BookMarked, Mail, Trash2, GraduationCap, Upload, CheckCircle2, Award, Calculator,
+  Table2, Layers, BookMarked, Mail, Trash2, GraduationCap, Upload,
+  CheckCircle2, Award, Calculator, Info,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
-import { exportToExcel, exportToExcelMultiSheet } from '@/lib/excel';
+import { exportToExcelMultiSheet } from '@/lib/excel';
+
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
+
+// Paleta de marca para las gráficas (azules + dorado).
+const CHART = {
+  blue:    '#2563EB',
+  gold:    '#D4A017',
+  emerald: '#059669',
+  amber:   '#F59E0B',
+  red:     '#DC2626',
+  grid:    '#EFF6FF',
+  axis:    '#64748B',
+} as const;
+
+type ExerciseWithCount = Exercise & { _count?: { attempts: number } };
 
 interface CourseDetail {
   id: string; name: string; code: string | null; period: string | null;
@@ -72,8 +97,8 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
   const [saving, setSaving]     = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<any[]>(`/api/v1/universities/${universityId}/users`)
-      .then(({ data }) => setStudents(data.filter((u: any) => u.role === 'STUDENT' && u.isActive)))
+    api.get<Array<Student & { role: string }>>(`/api/v1/universities/${universityId}/users`)
+      .then(({ data }) => setStudents(data.filter((u) => u.role === 'STUDENT' && u.isActive)))
       .catch(() => toast.error('No se pudieron cargar los estudiantes'));
   }, [universityId]);
 
@@ -97,23 +122,31 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-md">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-900">Inscribir estudiante</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+      <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <IconTile icon={UserPlus} tint="#2563EB" size={40} />
+            <div>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">Roster</p>
+              <h3 className="font-bold tracking-tight text-gray-900">Inscribir estudiante</h3>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 cx-press" aria-label="Cerrar">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <div className="p-4">
+        <div className="p-5">
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-gray-400" />
             <input
               value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre o correo..."
+              placeholder="Buscar por nombre o correo…"
               autoFocus
-              className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="w-full rounded-xl border border-gray-300 py-2.5 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
             />
           </div>
-          <div className="max-h-72 overflow-y-auto divide-y divide-gray-100 rounded-xl border border-gray-200">
+          <div className="max-h-72 divide-y divide-gray-100 overflow-y-auto rounded-xl border border-gray-200">
             {filtered.length === 0 ? (
               <p className="p-6 text-center text-sm text-gray-400">
                 {students.length === 0 ? 'No hay estudiantes en esta universidad' : 'Sin resultados'}
@@ -121,34 +154,28 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
             ) : filtered.map((s) => {
               const isEnrolled = enrolled.includes(s.id);
               return (
-                <div key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                <div key={s.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-blue-50/50">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-sm font-bold text-blue-700">
                     {s.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{s.name}</p>
-                    <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-800">{s.name}</p>
+                    <p className="truncate text-xs text-gray-400">{s.email}</p>
                   </div>
                   {isEnrolled ? (
-                    <span className="text-xs text-emerald-600 font-medium flex-shrink-0">Ya inscrito</span>
+                    <span className="flex-shrink-0 text-xs font-semibold text-emerald-600">Ya inscrito</span>
                   ) : (
-                    <button
-                      onClick={() => enroll(s.id)}
-                      disabled={saving === s.id}
-                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
-                    >
-                      {saving === s.id ? '...' : 'Inscribir'}
-                    </button>
+                    <Button size="sm" onClick={() => enroll(s.id)} disabled={saving === s.id} className="flex-shrink-0 cx-press">
+                      {saving === s.id ? '…' : 'Inscribir'}
+                    </Button>
                   )}
                 </div>
               );
             })}
           </div>
         </div>
-        <div className="p-4 border-t border-gray-200">
-          <button onClick={onClose} className="w-full py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
-            Cerrar
-          </button>
+        <div className="border-t border-gray-100 p-5">
+          <Button variant="secondary" onClick={onClose} className="w-full">Cerrar</Button>
         </div>
       </div>
     </div>
@@ -173,7 +200,7 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => setRawText(prev => prev + '\n' + (ev.target?.result as string ?? ''));
+    reader.onload = ev => setRawText(prev => prev + '\n' + ((ev.target?.result as string) ?? ''));
     reader.readAsText(file);
     e.target.value = '';
   }
@@ -197,25 +224,30 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Upload className="w-4 h-4 text-blue-700" />
-            Importar estudiantes en bulk
-          </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+      <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <IconTile icon={Upload} tint="#1B2E6E" size={40} />
+            <div>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">Roster</p>
+              <h3 className="font-bold tracking-tight text-gray-900">Importar estudiantes</h3>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 cx-press" aria-label="Cerrar">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {!result ? (
           <>
-            <div className="p-5 space-y-4">
+            <div className="space-y-4 p-6">
               <p className="text-sm text-gray-500">
                 Pega los correos o sube un archivo CSV/TXT. Acepta separadores por coma, punto y coma, salto de línea o espacio.
               </p>
 
               {/* File upload */}
-              <label className="flex items-center gap-3 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 px-4 py-3 transition-colors hover:border-blue-400 hover:bg-blue-50">
                 <Upload className="w-4 h-4 text-gray-400" />
                 <span className="text-sm text-gray-500">Subir archivo CSV / TXT</span>
                 <input type="file" accept=".csv,.txt" onChange={handleFile} className="hidden" />
@@ -223,62 +255,60 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
 
               {/* Text area */}
               <div>
-                <label className="text-xs font-medium text-gray-500 mb-1.5 block">O pega los correos aquí:</label>
+                <label className="mb-1.5 block text-xs font-medium text-gray-500">O pega los correos aquí:</label>
                 <textarea
                   value={rawText}
                   onChange={e => setRawText(e.target.value)}
-                  placeholder={"estudiante1@utn.ac.cr\nestudiante2@utn.ac.cr, estudiante3@utn.ac.cr"}
+                  placeholder={'estudiante1@universidad.ac.cr\nestudiante2@universidad.ac.cr, estudiante3@universidad.ac.cr'}
                   rows={6}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
+                  className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
                 />
               </div>
 
               {/* Preview count */}
               {emails.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
+                <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 cx-pop">
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                  <span><strong>{emails.length}</strong> correo{emails.length !== 1 ? 's' : ''} detectado{emails.length !== 1 ? 's' : ''}</span>
+                  <span className="tabular-nums">
+                    <strong>{emails.length}</strong> correo{emails.length !== 1 ? 's' : ''} detectado{emails.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
               )}
             </div>
 
-            <div className="p-5 border-t border-gray-200 flex gap-3">
-              <button onClick={onClose}
-                className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
-                Cancelar
-              </button>
-              <button onClick={handleImport} disabled={loading || emails.length === 0}
-                className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl disabled:opacity-50 transition-colors">
+            <div className="flex gap-3 border-t border-gray-100 p-6">
+              <Button variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
+              <Button onClick={handleImport} disabled={loading || emails.length === 0} loading={loading} className="flex-1 cx-press">
                 <Upload className="w-4 h-4" />
-                {loading ? 'Importando...' : `Importar ${emails.length > 0 ? emails.length : ''}`}
-              </button>
+                {loading ? 'Importando…' : `Importar ${emails.length > 0 ? emails.length : ''}`}
+              </Button>
             </div>
           </>
         ) : (
           /* Results */
           <>
-            <div className="p-5 space-y-4">
+            <div className="space-y-4 p-6">
               <div className="grid grid-cols-3 gap-3">
-                <div className="text-center p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                  <p className="text-2xl font-bold text-emerald-600 font-mono tabular-nums">{result.enrolled}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Inscritos</p>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center cx-pop cx-d1">
+                  <p className="text-2xl font-extrabold text-emerald-600 tabular-nums">{result.enrolled}</p>
+                  <p className="mt-0.5 text-xs text-gray-500">Inscritos</p>
                 </div>
-                <div className="text-center p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                  <p className="text-2xl font-bold text-gray-500 font-mono tabular-nums">{result.alreadyEnrolled}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Ya inscritos</p>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center cx-pop cx-d2">
+                  <p className="text-2xl font-extrabold text-gray-500 tabular-nums">{result.alreadyEnrolled}</p>
+                  <p className="mt-0.5 text-xs text-gray-500">Ya inscritos</p>
                 </div>
-                <div className="text-center p-3 bg-red-50 border border-red-200 rounded-xl">
-                  <p className="text-2xl font-bold text-red-500 font-mono tabular-nums">{result.notFound.length}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">No encontrados</p>
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center cx-pop cx-d3">
+                  <p className="text-2xl font-extrabold text-red-600 tabular-nums">{result.notFound.length}</p>
+                  <p className="mt-0.5 text-xs text-gray-500">No encontrados</p>
                 </div>
               </div>
 
               {result.notFound.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-xs font-semibold text-red-600">Correos no encontrados en el sistema:</p>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
+                  <div className="max-h-32 space-y-1 overflow-y-auto">
                     {result.notFound.map(email => (
-                      <div key={email} className="text-xs font-mono text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
+                      <div key={email} className="rounded-lg border border-red-100 bg-red-50 px-3 py-1.5 font-mono text-xs text-red-700">
                         {email}
                       </div>
                     ))}
@@ -288,11 +318,8 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
               )}
             </div>
 
-            <div className="p-5 border-t border-gray-200">
-              <button onClick={onClose}
-                className="w-full py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors">
-                Cerrar
-              </button>
+            <div className="border-t border-gray-100 p-6">
+              <Button onClick={onClose} className="w-full cx-press">Cerrar</Button>
             </div>
           </>
         )}
@@ -327,124 +354,131 @@ function AnalyticsTab({ courseId, universityId }: { courseId: string; university
 
   return (
     <div className="space-y-6">
-      {/* Overview cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Estudiantes', value: overview.totalStudents, icon: Users, color: 'bg-blue-50 text-blue-700' },
-          { label: 'Ejercicios publicados', value: overview.totalExercises, icon: FileText, color: 'bg-slate-100 text-slate-600' },
-          { label: 'Entrega promedio', value: `${overview.avgCompletionRate}%`, icon: TrendingUp, color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Nota promedio', value: overview.avgScore !== null ? `${overview.avgScore}%` : '—', icon: BarChart2, color: 'bg-amber-50 text-amber-600' },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500">{label}</span>
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${color}`}>
-                <Icon className="w-3.5 h-3.5" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{value}</p>
-          </div>
-        ))}
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Estudiantes" value={String(overview.totalStudents)} icon={Users} tint="#2563EB" className="cx-pop cx-d1" />
+        <StatCard label="Ejercicios publicados" value={String(overview.totalExercises)} icon={FileText} tint="#1B2E6E" className="cx-pop cx-d2" />
+        <StatCard label="Entrega promedio" value={`${overview.avgCompletionRate}%`} icon={TrendingUp} tint="#059669" className="cx-pop cx-d3" />
+        <StatCard
+          label="Nota promedio"
+          value={overview.avgScore !== null ? `${overview.avgScore}%` : '—'}
+          icon={BarChart2} tint="#B8860B" className="cx-pop cx-d4"
+        />
       </div>
 
       {exercises.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-          <BarChart2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">No hay ejercicios publicados aún</p>
-        </div>
+        <SectionCard title="Analítica" icon={BarChart2} iconTint="#B8860B">
+          <EmptyState
+            illustration={<SceneSearchEmpty size={180} className="cx-float" />}
+            title="No hay ejercicios publicados aún"
+            description="Publica un ejercicio para empezar a ver estadísticas del grupo."
+          />
+        </SectionCard>
       ) : (
         <>
-          {/* Bar chart - submission rate */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-blue-700" />
-              Entregas y aprobación por ejercicio
-            </h4>
+          {/* Entregas y aprobación */}
+          <SectionCard
+            icon={TrendingUp}
+            iconTint="#2563EB"
+            eyebrow="Comparativa"
+            title="Entregas y aprobación por ejercicio"
+            className="cx-pop"
+          >
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={chartData} margin={{ top: 0, right: 16, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: CHART.axis }} />
+                <YAxis tick={{ fontSize: 11, fill: CHART.axis }} />
                 <Tooltip
-                  formatter={(value: any, name: any) => [
+                  contentStyle={{ borderRadius: 12, border: '1px solid #DBEAFE', fontSize: 12 }}
+                  formatter={(value, name) => [
                     name === 'entrega' ? `${value} estudiantes` : `${value}%`,
                     name === 'entrega' ? 'Entregaron' : 'Aprobación',
                   ]}
                 />
-                <Bar dataKey="entrega"  fill="#2563EB" radius={[4, 4, 0, 0]} name="entrega" />
-                <Bar dataKey="aprobado" fill="#10b981" radius={[4, 4, 0, 0]} name="aprobado" />
+                <Bar dataKey="entrega"  fill={CHART.blue} radius={[6, 6, 0, 0]} name="entrega" />
+                <Bar dataKey="aprobado" fill={CHART.gold} radius={[6, 6, 0, 0]} name="aprobado" />
               </BarChart>
             </ResponsiveContainer>
-            <div className="flex items-center gap-4 mt-2 justify-center text-xs text-gray-500">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-600 inline-block" /> Entregaron</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-500 inline-block" /> % Aprobación</span>
+            <div className="mt-2 flex items-center justify-center gap-4 text-xs text-gray-500">
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-blue-600" /> Entregaron</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-gold-600" /> % Aprobación</span>
             </div>
-          </div>
+          </SectionCard>
 
-          {/* Bar chart - average score */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-slate-600" />
-              Nota promedio por ejercicio
-            </h4>
+          {/* Nota promedio */}
+          <SectionCard
+            icon={BarChart2}
+            iconTint="#B8860B"
+            eyebrow="Rendimiento"
+            title="Nota promedio por ejercicio"
+            className="cx-pop cx-d2"
+          >
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={chartData} margin={{ top: 0, right: 16, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: any) => [`${v}%`, 'Promedio']} />
-                <Bar dataKey="promedio" radius={[4, 4, 0, 0]} name="promedio">
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: CHART.axis }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: CHART.axis }} />
+                <Tooltip
+                  contentStyle={{ borderRadius: 12, border: '1px solid #DBEAFE', fontSize: 12 }}
+                  formatter={(v) => [`${v}%`, 'Promedio']}
+                />
+                <Bar dataKey="promedio" radius={[6, 6, 0, 0]} name="promedio">
                   {chartData.map((entry, i) => (
-                    <Cell key={i} fill={entry.promedio >= 70 ? '#10b981' : entry.promedio >= 50 ? '#f59e0b' : '#ef4444'} />
+                    <Cell key={i} fill={entry.promedio >= 70 ? CHART.emerald : entry.promedio >= 50 ? CHART.gold : CHART.red} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </SectionCard>
 
-          {/* Exercise table */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="p-5 border-b border-gray-200">
-              <h4 className="font-semibold text-gray-800">Detalle por ejercicio</h4>
-            </div>
+          {/* Detalle por ejercicio */}
+          <SectionCard
+            icon={Table2}
+            iconTint="#1B2E6E"
+            eyebrow="Detalle"
+            title="Detalle por ejercicio"
+            flushBody
+            className="cx-pop cx-d3"
+          >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                <thead className="border-b border-gray-100 bg-gray-50/70 text-xs uppercase tracking-wide text-gray-500">
                   <tr>
-                    <th className="text-left px-4 py-3">Ejercicio</th>
-                    <th className="text-center px-4 py-3">Entregas</th>
-                    <th className="text-center px-4 py-3">Calificados</th>
-                    <th className="text-center px-4 py-3">Aprobación</th>
-                    <th className="text-center px-4 py-3">Promedio</th>
-                    <th className="text-center px-4 py-3">Tiempo prom.</th>
+                    <th className="px-4 py-3 text-left">Ejercicio</th>
+                    <th className="px-4 py-3 text-center">Entregas</th>
+                    <th className="px-4 py-3 text-center">Calificados</th>
+                    <th className="px-4 py-3 text-center">Aprobación</th>
+                    <th className="px-4 py-3 text-center">Promedio</th>
+                    <th className="px-4 py-3 text-center">Tiempo prom.</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {exercises.map((ex) => (
-                    <tr key={ex.id} className="hover:bg-gray-50">
+                    <tr key={ex.id} className="transition-colors hover:bg-blue-50/50">
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-800">{ex.title}</p>
-                        <DifficultyBadge difficulty={ex.difficulty as any} />
+                        <DifficultyBadge difficulty={ex.difficulty as ExerciseDifficulty} />
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-600">{ex.submitted}/{ex.totalAssigned}</td>
-                      <td className="px-4 py-3 text-center text-gray-600">{ex.graded}</td>
+                      <td className="px-4 py-3 text-center text-gray-600 tabular-nums">{ex.submitted}/{ex.totalAssigned}</td>
+                      <td className="px-4 py-3 text-center text-gray-600 tabular-nums">{ex.graded}</td>
                       <td className="px-4 py-3 text-center">
                         {ex.passRate !== null ? (
-                          <span className={`font-semibold ${ex.passRate >= 70 ? 'text-emerald-600' : ex.passRate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                          <span className={`font-semibold tabular-nums ${ex.passRate >= 70 ? 'text-emerald-600' : ex.passRate >= 50 ? 'text-gold-700' : 'text-red-600'}`}>
                             {ex.passRate}%
                           </span>
-                        ) : <span className="text-gray-400">—</span>}
+                        ) : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {ex.avgScore !== null ? (
-                          <span className={`font-semibold ${ex.avgScore >= 70 ? 'text-emerald-600' : ex.avgScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                          <span className={`font-semibold tabular-nums ${ex.avgScore >= 70 ? 'text-emerald-600' : ex.avgScore >= 50 ? 'text-gold-700' : 'text-red-600'}`}>
                             {ex.avgScore}%
                           </span>
-                        ) : <span className="text-gray-400">—</span>}
+                        ) : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-4 py-3 text-center text-gray-600">
                         {ex.avgTimeMin !== null ? (
-                          <span className="flex items-center justify-center gap-1">
+                          <span className="flex items-center justify-center gap-1 tabular-nums">
                             <Clock className="w-3 h-3" />{ex.avgTimeMin} min
                           </span>
                         ) : '—'}
@@ -454,7 +488,7 @@ function AnalyticsTab({ courseId, universityId }: { courseId: string; university
                 </tbody>
               </table>
             </div>
-          </div>
+          </SectionCard>
         </>
       )}
     </div>
@@ -472,7 +506,7 @@ function evMasteryColor(pct: number | null) {
   if (pct == null) return '#CBD5E1';
   if (pct >= 80) return '#059669';
   if (pct >= 60) return '#2563EB';
-  if (pct >= 40) return '#D97706';
+  if (pct >= 40) return '#D4A017';
   return '#DC2626';
 }
 function CompetencyCourseTab({ courseId }: { courseId: string }) {
@@ -492,49 +526,50 @@ function CompetencyCourseTab({ courseId }: { courseId: string }) {
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1">Dominio promedio</p>
-          <p className="text-2xl font-black font-mono tabular-nums" style={{ color: evMasteryColor(data.summary.avgMastery) }}>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-card border border-gray-200/70 bg-white p-5 shadow-card cx-pop cx-d1">
+          <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Dominio promedio</p>
+          <p className="mt-2 text-3xl font-extrabold tabular-nums" style={{ color: evMasteryColor(data.summary.avgMastery) }}>
             {data.summary.avgMastery != null ? `${data.summary.avgMastery}%` : '—'}
           </p>
         </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1">Competencias cubiertas</p>
-          <p className="text-2xl font-black text-blue-800 font-mono tabular-nums">{data.summary.competenciesCovered}</p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1">Estudiantes</p>
-          <p className="text-2xl font-black text-slate-700 font-mono tabular-nums">{data.summary.totalStudents}</p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1">En riesgo</p>
-          <p className="text-2xl font-black font-mono tabular-nums" style={{ color: data.summary.atRiskCount > 0 ? '#DC2626' : '#059669' }}>
+        <StatCard label="Competencias cubiertas" value={String(data.summary.competenciesCovered)} icon={Award} tint="#2563EB" className="cx-pop cx-d2" />
+        <StatCard label="Estudiantes" value={String(data.summary.totalStudents)} icon={Users} tint="#1B2E6E" className="cx-pop cx-d3" />
+        <div className="rounded-card border border-gray-200/70 bg-white p-5 shadow-card cx-pop cx-d4">
+          <p className="text-xs font-medium uppercase tracking-wider text-gray-500">En riesgo</p>
+          <p className="mt-2 text-3xl font-extrabold tabular-nums" style={{ color: data.summary.atRiskCount > 0 ? '#DC2626' : '#059669' }}>
             {data.summary.atRiskCount}
           </p>
         </div>
       </div>
 
       {/* Dominio por competencia */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-          <Award className="w-4 h-4 text-blue-700" /> Dominio por competencia
-        </h3>
+      <SectionCard
+        icon={Award}
+        iconTint="#B8860B"
+        eyebrow="Evidencia"
+        title="Dominio por competencia"
+        className="cx-pop"
+      >
         {data.competencies.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 text-sm">
-            Este curso aún no tiene competencias vinculadas a sus ejercicios.
-          </div>
+          <EmptyState
+            illustration={<SceneSearchEmpty size={170} className="cx-float" />}
+            title="Sin competencias vinculadas"
+            description="Este curso aún no tiene competencias asociadas a sus ejercicios."
+          />
         ) : (
           <div className="space-y-3">
             {data.competencies.map(c => (
               <div key={c.id}>
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="font-medium text-gray-700"><span className="font-mono text-gray-400 mr-1.5">{c.code}</span>{c.name}</span>
-                  <span className="font-bold" style={{ color: evMasteryColor(c.masteryPct) }}>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="font-medium text-gray-700">
+                    <span className="mr-1.5 font-mono text-gray-400">{c.code}</span>{c.name}
+                  </span>
+                  <span className="font-bold tabular-nums" style={{ color: evMasteryColor(c.masteryPct) }}>
                     {c.masteryPct != null ? `${c.masteryPct}%` : 'Sin evidencia'}
                   </span>
                 </div>
-                <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
                   <div className="h-full rounded-full transition-all duration-500"
                     style={{ width: `${c.masteryPct ?? 0}%`, background: evMasteryColor(c.masteryPct) }} />
                 </div>
@@ -542,41 +577,49 @@ function CompetencyCourseTab({ courseId }: { courseId: string }) {
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* Roster con riesgo */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-          <Users className="w-4 h-4 text-blue-700" /> Estudiantes
-        </h3>
+      <SectionCard
+        icon={Users}
+        iconTint="#2563EB"
+        eyebrow="Roster"
+        title="Estudiantes"
+        flushBody
+        className="cx-pop cx-d2"
+      >
         {data.students.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 text-sm">Sin estudiantes inscritos.</div>
+          <EmptyState
+            illustration={<SceneEmptyBox size={180} className="cx-float" />}
+            title="Sin estudiantes inscritos"
+            description="Inscribe estudiantes para seguir su dominio por competencia."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                  <th className="py-2 pr-3 font-medium">Estudiante</th>
-                  <th className="py-2 px-3 font-medium text-center">Progreso</th>
-                  <th className="py-2 px-3 font-medium text-right">Dominio</th>
-                  <th className="py-2 pl-3 font-medium text-center">Estado</th>
+              <thead className="border-b border-gray-100 bg-gray-50/70 text-xs uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="px-5 py-3 text-left">Estudiante</th>
+                  <th className="px-3 py-3 text-center">Progreso</th>
+                  <th className="px-3 py-3 text-right">Dominio</th>
+                  <th className="px-5 py-3 text-center">Estado</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {data.students.map(s => (
-                  <tr key={s.id} className="border-b border-gray-50 last:border-0">
-                    <td className="py-2.5 pr-3">
+                  <tr key={s.id} className="transition-colors hover:bg-blue-50/50">
+                    <td className="px-5 py-3">
                       <p className="font-medium text-gray-800">{s.name}</p>
                       <p className="text-xs text-gray-400">{s.email}</p>
                     </td>
-                    <td className="py-2.5 px-3 text-center text-gray-600">{s.completedExercises}/{s.totalExercises}</td>
-                    <td className="py-2.5 px-3 text-right font-bold" style={{ color: evMasteryColor(s.overallPct) }}>
+                    <td className="px-3 py-3 text-center text-gray-600 tabular-nums">{s.completedExercises}/{s.totalExercises}</td>
+                    <td className="px-3 py-3 text-right font-bold tabular-nums" style={{ color: evMasteryColor(s.overallPct) }}>
                       {s.overallPct != null ? `${s.overallPct}%` : '—'}
                     </td>
-                    <td className="py-2.5 pl-3 text-center">
+                    <td className="px-5 py-3 text-center">
                       {s.atRisk
-                        ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full"><AlertCircle className="w-3 h-3" /> En riesgo</span>
-                        : <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full"><CheckCircle className="w-3 h-3" /> Al día</span>}
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600"><AlertCircle className="w-3 h-3" /> En riesgo</span>
+                        : <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600"><CheckCircle className="w-3 h-3" /> Al día</span>}
                     </td>
                   </tr>
                 ))}
@@ -584,7 +627,7 @@ function CompetencyCourseTab({ courseId }: { courseId: string }) {
             </table>
           </div>
         )}
-      </div>
+      </SectionCard>
     </div>
   );
 }
@@ -608,48 +651,59 @@ function GradebookTab({ courseId, universityId }: { courseId: string; university
     if (score === null) return 'text-gray-400';
     const pct = (score / maxScore) * 100;
     if (pct >= 70) return 'text-emerald-600 font-semibold';
-    if (pct >= 50) return 'text-amber-600 font-semibold';
+    if (pct >= 50) return 'text-gold-700 font-semibold';
     return 'text-red-600 font-semibold';
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-      <div className="p-5 border-b border-gray-200 flex items-center gap-2">
-        <Table2 className="w-4 h-4 text-blue-700" />
-        <h4 className="font-semibold text-gray-900">Libro de Calificaciones</h4>
-        <span className="text-xs text-gray-400 ml-auto">{data.students.length} estudiantes · {data.exercises.length} ejercicios</span>
-      </div>
+    <SectionCard
+      icon={Table2}
+      iconTint="#1B2E6E"
+      eyebrow="Notas"
+      title="Libro de calificaciones"
+      flushBody
+      className="cx-pop"
+      action={
+        <span className="text-xs text-gray-400 tabular-nums">
+          {data.students.length} estudiantes · {data.exercises.length} ejercicios
+        </span>
+      }
+    >
       {data.students.length === 0 ? (
-        <div className="p-12 text-center text-gray-500 text-sm">No hay estudiantes inscritos</div>
+        <EmptyState
+          illustration={<SceneEmptyBox size={190} className="cx-float" />}
+          title="No hay estudiantes inscritos"
+          description="Inscribe estudiantes para llevar su libro de calificaciones."
+        />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+            <thead className="border-b border-gray-100 bg-gray-50/70 text-xs uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="text-left px-4 py-3 sticky left-0 bg-gray-50 min-w-[180px]">Estudiante</th>
+                <th className="sticky left-0 min-w-[180px] bg-gray-50/70 px-4 py-3 text-left">Estudiante</th>
                 {data.exercises.map((ex) => (
-                  <th key={ex.id} className="text-center px-3 py-3 min-w-[120px]">
-                    <span className="block truncate max-w-[110px] mx-auto" title={ex.title}>{ex.title}</span>
+                  <th key={ex.id} className="min-w-[120px] px-3 py-3 text-center">
+                    <span className="mx-auto block max-w-[110px] truncate" title={ex.title}>{ex.title}</span>
                   </th>
                 ))}
-                <th className="text-center px-4 py-3 min-w-[90px] bg-blue-50 text-blue-700">Promedio</th>
+                <th className="min-w-[90px] bg-blue-50 px-4 py-3 text-center text-blue-700">Promedio</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {data.students.map(({ student, grades, average }) => (
-                <tr key={student.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 sticky left-0 bg-white">
-                    <p className="font-medium text-gray-800 truncate max-w-[160px]">{student.name}</p>
-                    <p className="text-xs text-gray-400 truncate max-w-[160px]">{student.email}</p>
+                <tr key={student.id} className="group transition-colors hover:bg-blue-50/50">
+                  <td className="sticky left-0 bg-white px-4 py-3 group-hover:bg-blue-50/50">
+                    <p className="max-w-[160px] truncate font-medium text-gray-800">{student.name}</p>
+                    <p className="max-w-[160px] truncate text-xs text-gray-400">{student.email}</p>
                   </td>
                   {grades.map((g, i) => (
                     <td key={i} className="px-3 py-3 text-center">
                       {g.score !== null ? (
-                        <span className={scoreColor(g.score, g.maxScore)}>
+                        <span className={`tabular-nums ${scoreColor(g.score, g.maxScore)}`}>
                           {g.score}/{g.maxScore}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400 italic">
+                        <span className="text-xs italic text-gray-400">
                           {g.status === 'NOT_STARTED' ? 'Sin iniciar' :
                            g.status === 'IN_PROGRESS' ? 'En curso' :
                            g.status === 'SUBMITTED'   ? 'Entregado' : '—'}
@@ -657,12 +711,12 @@ function GradebookTab({ courseId, universityId }: { courseId: string; university
                       )}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-center bg-blue-50/50">
+                  <td className="bg-blue-50/50 px-4 py-3 text-center">
                     {average !== null ? (
-                      <span className={`font-bold ${average >= 70 ? 'text-emerald-600' : average >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                      <span className={`font-bold tabular-nums ${average >= 70 ? 'text-emerald-600' : average >= 50 ? 'text-gold-700' : 'text-red-600'}`}>
                         {Math.round(average)}%
                       </span>
-                    ) : <span className="text-gray-400">—</span>}
+                    ) : <span className="text-gray-300">—</span>}
                   </td>
                 </tr>
               ))}
@@ -670,7 +724,7 @@ function GradebookTab({ courseId, universityId }: { courseId: string; university
           </table>
         </div>
       )}
-    </div>
+    </SectionCard>
   );
 }
 
@@ -708,51 +762,51 @@ function TemplateModal({ courseId, onClose, onCreated }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <BookMarked className="w-4 h-4 text-blue-700" />
-            <h3 className="font-semibold text-gray-900">Usar plantilla</h3>
+      <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <IconTile icon={BookMarked} tint="#1B2E6E" size={40} />
+            <div>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">Reutilizar</p>
+              <h3 className="font-bold tracking-tight text-gray-900">Usar plantilla</h3>
+            </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 cx-press" aria-label="Cerrar">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <div className="p-4 max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto p-5">
           {loading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : templates.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Layers className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-              <p className="text-sm">No tienes plantillas guardadas.</p>
-              <p className="text-xs text-gray-400 mt-1">Marca un ejercicio como plantilla desde el menú del ejercicio.</p>
-            </div>
+            <EmptyState
+              illustration={<SceneEmptyBox size={170} className="cx-float" />}
+              title="No tienes plantillas guardadas"
+              description="Marca un ejercicio como plantilla desde su menú para reutilizarlo aquí."
+            />
           ) : (
             <div className="space-y-2">
               {templates.map((t) => (
-                <div key={t.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:border-gray-300 hover:bg-gray-50 transition-all">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{t.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                <div key={t.id} className="flex items-center gap-3 rounded-xl border border-gray-200 p-3 transition-all hover:border-blue-300 hover:bg-blue-50/40 cx-hop-parent">
+                  <IconTile icon={Layers} tint="#2563EB" size={36} className="cx-hop" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-gray-800">{t.title}</p>
+                    <p className="mt-0.5 text-xs text-gray-400">
                       {DIFF_LABELS[t.difficulty] ?? t.difficulty}
                       {t.course && <span className="ml-2">· {t.course.name}</span>}
                     </p>
                   </div>
-                  <button
-                    onClick={() => useTemplate(t.id)}
-                    disabled={saving === t.id}
-                    className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
-                  >
-                    {saving === t.id ? '...' : 'Usar'}
-                  </button>
+                  <Button size="sm" onClick={() => useTemplate(t.id)} disabled={saving === t.id} className="flex-shrink-0 cx-press">
+                    {saving === t.id ? '…' : 'Usar'}
+                  </Button>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="p-4 border-t border-gray-200">
-          <button onClick={onClose} className="w-full py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
-            Cancelar
-          </button>
+        <div className="border-t border-gray-100 p-5">
+          <Button variant="secondary" onClick={onClose} className="w-full">Cancelar</Button>
         </div>
       </div>
     </div>
@@ -764,7 +818,7 @@ interface CourseBaseTemplate {
   key: string; code: string; name: string; description: string;
   exerciseCount: number; competencyCodes: string[];
 }
-function UtnTemplateModal({ courseId, onClose, onApplied }: {
+function BaseCourseTemplateModal({ courseId, onClose, onApplied }: {
   courseId: string; onClose: () => void; onApplied: () => void;
 }) {
   const [templates, setTemplates] = useState<CourseBaseTemplate[]>([]);
@@ -787,7 +841,7 @@ function UtnTemplateModal({ courseId, onClose, onApplied }: {
       if (data.createdCount > 0) {
         toast.success(`${data.createdCount} ejercicio(s) cargados${data.skippedCount ? ` (${data.skippedCount} ya existían)` : ''}`);
       } else {
-        toast(`Todos los ejercicios ya estaban cargados`, { icon: 'ℹ️' });
+        toast('Todos los ejercicios ya estaban cargados', { icon: <Info className="w-4 h-4 text-blue-600" /> });
       }
       onApplied();
     } catch (err) {
@@ -799,59 +853,59 @@ function UtnTemplateModal({ courseId, onClose, onApplied }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="w-4 h-4 text-blue-700" />
-            <h3 className="font-semibold text-gray-900">Cargar curso base</h3>
+      <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <IconTile icon={GraduationCap} tint="#B8860B" size={40} />
+            <div>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">Currículo</p>
+              <h3 className="font-bold tracking-tight text-gray-900">Cargar curso base</h3>
+            </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 cx-press" aria-label="Cerrar">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <div className="p-4 max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto p-5">
           {loading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : templates.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Layers className="w-10 h-10 mx-auto text-gray-200 mb-3" />
-              <p className="text-sm">No hay plantillas de curso disponibles.</p>
-            </div>
+            <EmptyState
+              illustration={<SceneEmptyBox size={170} className="cx-float" />}
+              title="No hay plantillas de curso disponibles"
+              description="Cuando existan cursos base publicados, aparecerán aquí."
+            />
           ) : (
             <div className="space-y-3">
               {templates.map((t) => (
-                <div key={t.key} className="p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/40 transition-all">
+                <div key={t.key} className="rounded-xl border border-gray-200 p-4 transition-all hover:border-blue-300 hover:bg-blue-50/40">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">{t.code}</span>
-                        <p className="text-sm font-semibold text-gray-900 truncate">{t.name}</p>
+                        <span className="rounded bg-blue-100 px-1.5 py-0.5 font-mono text-xs font-bold text-blue-700">{t.code}</span>
+                        <p className="truncate text-sm font-semibold text-gray-900">{t.name}</p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1.5 leading-snug">{t.description}</p>
-                      <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
-                        <span className="flex items-center gap-1"><FileText className="w-3 h-3" />{t.exerciseCount} ejercicios</span>
-                        <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{t.competencyCodes.length} competencias</span>
+                      <p className="mt-1.5 text-xs leading-snug text-gray-500">{t.description}</p>
+                      <div className="mt-2 flex items-center gap-3 text-[11px] text-gray-400">
+                        <span className="flex items-center gap-1 tabular-nums"><FileText className="w-3 h-3" />{t.exerciseCount} ejercicios</span>
+                        <span className="flex items-center gap-1 tabular-nums"><CheckCircle2 className="w-3 h-3" />{t.competencyCodes.length} competencias</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => apply(t.key)}
-                      disabled={applying === t.key}
-                      className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
-                    >
+                    <Button size="sm" onClick={() => apply(t.key)} disabled={applying === t.key} className="flex-shrink-0 cx-press">
                       {applying === t.key ? 'Cargando…' : 'Cargar'}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <div className="p-4 border-t border-gray-200">
-          <p className="text-[11px] text-gray-400 mb-3 text-center">
+        <div className="border-t border-gray-100 p-5">
+          <p className="mb-3 text-center text-[11px] text-gray-400">
             Se crean los ejercicios publicados con sus rúbricas y competencias. No se duplican los que ya existan.
           </p>
-          <button onClick={onClose} className="w-full py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
-            Cerrar
-          </button>
+          <Button variant="secondary" onClick={onClose} className="w-full">Cerrar</Button>
         </div>
       </div>
     </div>
@@ -859,10 +913,16 @@ function UtnTemplateModal({ courseId, onClose, onApplied }: {
 }
 
 // ── Students Tab ──────────────────────────────────────────────────────────────
+interface EnrolledRow {
+  enrolledAt: string;
+  student: { id: string; name: string; email: string };
+  stats: { submitted: number; graded: number; totalExercises: number; avgScore: number | null };
+}
+
 function StudentsTab({ courseId, universityId, onEnroll }: {
   courseId: string; universityId: string; onEnroll: () => void;
 }) {
-  const [students, setStudents]   = useState<any[]>([]);
+  const [students, setStudents]   = useState<EnrolledRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
   const [removing, setRemoving]   = useState<string | null>(null);
@@ -870,7 +930,7 @@ function StudentsTab({ courseId, universityId, onEnroll }: {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get<any[]>(`/api/v1/universities/${universityId}/courses/${courseId}/students`)
+    api.get<EnrolledRow[]>(`/api/v1/universities/${universityId}/courses/${courseId}/students`)
       .then(({ data }) => setStudents(data))
       .catch(() => toast.error('Error al cargar estudiantes'))
       .finally(() => setLoading(false));
@@ -899,153 +959,172 @@ function StudentsTab({ courseId, universityId, onEnroll }: {
 
   if (loading) return <div className="flex justify-center py-16"><Spinner size="lg" /></div>;
 
+  const withScore  = students.filter((s) => s.stats.avgScore !== null);
+  const classAvg   = withScore.length > 0
+    ? `${Math.round(withScore.reduce((a, s) => a + (s.stats.avgScore ?? 0), 0) / withScore.length)}%`
+    : '—';
+
   return (
-    <div className="space-y-4">
-      {/* Header bar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+    <div className="space-y-5">
+      {/* Barra de acciones */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-gray-400" />
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o correo..."
-            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+            placeholder="Buscar por nombre o correo…"
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
           />
         </div>
-        <button onClick={() => { onEnroll(); }}
-          className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors">
+        <Button onClick={onEnroll} className="cx-press">
           <UserPlus className="w-4 h-4" /> Inscribir estudiante
-        </button>
+        </Button>
       </div>
 
-      {/* Stats bar */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Inscritos', value: students.length, color: 'text-blue-700', bg: 'bg-blue-50' },
-          { label: 'Con entregas', value: students.filter((s) => s.stats.submitted > 0).length, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Promedio clase', value: (() => {
-            const withScore = students.filter((s) => s.stats.avgScore !== null);
-            return withScore.length > 0
-              ? `${Math.round(withScore.reduce((a, s) => a + s.stats.avgScore, 0) / withScore.length)}%`
-              : '—';
-          })(), color: 'text-slate-600', bg: 'bg-slate-100' },
-        ].map(({ label, value, color, bg }) => (
-          <div key={label} className={`${bg} rounded-xl p-4 border border-gray-100`}>
-            <p className="text-xs text-gray-500 mb-1">{label}</p>
-            <p className={`text-2xl font-bold font-mono tabular-nums ${color}`}>{value}</p>
-          </div>
-        ))}
+      {/* KPIs */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="Inscritos" value={String(students.length)} icon={Users} tint="#2563EB" className="cx-pop cx-d1" />
+        <StatCard
+          label="Con entregas"
+          value={String(students.filter((s) => s.stats.submitted > 0).length)}
+          icon={CheckCircle2} tint="#059669" className="cx-pop cx-d2"
+        />
+        <StatCard label="Promedio clase" value={classAvg} icon={BarChart2} tint="#B8860B" className="cx-pop cx-d3" />
       </div>
 
-      {/* Student list */}
+      {/* Lista */}
       {filtered.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-16 text-center">
-          <UserX className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">{search ? 'Sin resultados para tu búsqueda' : 'No hay estudiantes inscritos'}</p>
-          {!search && (
-            <button onClick={onEnroll} className="mt-3 text-sm text-blue-700 hover:underline font-medium">
-              Inscribir primer estudiante
-            </button>
-          )}
-        </div>
+        <SectionCard title="Estudiantes" icon={Users} iconTint="#2563EB">
+          <EmptyState
+            illustration={search
+              ? <SceneSearchEmpty size={180} className="cx-float" />
+              : <SceneEmptyBox size={180} className="cx-float" />}
+            title={search ? 'Sin resultados para tu búsqueda' : 'No hay estudiantes inscritos'}
+            description={search
+              ? 'Prueba con otro nombre o correo.'
+              : 'Inscribe al primer estudiante para empezar a seguir su progreso.'}
+            action={!search
+              ? <Button onClick={onEnroll} className="cx-press"><UserPlus className="w-4 h-4" /> Inscribir estudiante</Button>
+              : undefined}
+          />
+        </SectionCard>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-xs text-gray-500 uppercase border-b border-gray-200">
-              <tr>
-                <th className="text-left px-5 py-3">Estudiante</th>
-                <th className="text-center px-4 py-3 hidden md:table-cell">Inscrito</th>
-                <th className="text-center px-4 py-3">Entregas</th>
-                <th className="text-center px-4 py-3 hidden sm:table-cell">Calificados</th>
-                <th className="text-center px-4 py-3">Promedio</th>
-                <th className="px-4 py-3 w-12"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((s) => (
-                <tr key={s.student.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
-                        {s.student.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-gray-800 truncate">{s.student.name}</p>
-                        <p className="text-xs text-gray-400 truncate flex items-center gap-1">
-                          <Mail className="w-3 h-3" />{s.student.email}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 text-center text-gray-400 text-xs hidden md:table-cell">
-                    {formatDate(s.enrolledAt)}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    <span className="font-medium text-gray-700">
-                      {s.stats.submitted}/{s.stats.totalExercises}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-center text-gray-600 hidden sm:table-cell">
-                    {s.stats.graded}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    {s.stats.avgScore !== null ? (
-                      <span className={`font-bold ${s.stats.avgScore >= 70 ? 'text-emerald-600' : s.stats.avgScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                        {s.stats.avgScore}%
-                      </span>
-                    ) : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    {confirmId === s.student.id ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleRemove(s.student.id)}
-                          disabled={removing === s.student.id}
-                          className="px-2 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50"
-                        >
-                          {removing === s.student.id ? '...' : 'Sí'}
-                        </button>
-                        <button
-                          onClick={() => setConfirmId(null)}
-                          className="px-2 py-1 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg"
-                        >
-                          No
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmId(s.student.id)}
-                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        title="Remover del curso"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </td>
+        <SectionCard
+          icon={Users}
+          iconTint="#2563EB"
+          eyebrow="Roster"
+          title="Estudiantes del curso"
+          flushBody
+          className="cx-pop"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-gray-100 bg-gray-50/70 text-xs uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="px-5 py-3 text-left">Estudiante</th>
+                  <th className="hidden px-4 py-3 text-center md:table-cell">Inscrito</th>
+                  <th className="px-4 py-3 text-center">Entregas</th>
+                  <th className="hidden px-4 py-3 text-center sm:table-cell">Calificados</th>
+                  <th className="px-4 py-3 text-center">Promedio</th>
+                  <th className="w-12 px-4 py-3"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-400">
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filtered.map((s) => (
+                  <tr key={s.student.id} className="transition-colors hover:bg-blue-50/50">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-sm font-bold text-blue-700">
+                          {s.student.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-gray-800">{s.student.name}</p>
+                          <p className="flex items-center gap-1 truncate text-xs text-gray-400">
+                            <Mail className="w-3 h-3" />{s.student.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden px-4 py-4 text-center text-xs text-gray-400 md:table-cell">
+                      {formatDate(s.enrolledAt)}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className="font-medium text-gray-700 tabular-nums">
+                        {s.stats.submitted}/{s.stats.totalExercises}
+                      </span>
+                    </td>
+                    <td className="hidden px-4 py-4 text-center text-gray-600 tabular-nums sm:table-cell">
+                      {s.stats.graded}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      {s.stats.avgScore !== null ? (
+                        <span className={`font-bold tabular-nums ${s.stats.avgScore >= 70 ? 'text-emerald-600' : s.stats.avgScore >= 50 ? 'text-gold-700' : 'text-red-600'}`}>
+                          {s.stats.avgScore}%
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      {confirmId === s.student.id ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="danger" size="sm"
+                            onClick={() => handleRemove(s.student.id)}
+                            disabled={removing === s.student.id}
+                            className="cx-press"
+                          >
+                            {removing === s.student.id ? '…' : 'Sí'}
+                          </Button>
+                          <Button variant="secondary" size="sm" onClick={() => setConfirmId(null)}>
+                            No
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmId(s.student.id)}
+                          className="rounded-lg p-1.5 text-gray-300 transition-colors hover:bg-red-50 hover:text-red-500 cx-press"
+                          title="Remover del curso"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-gray-100 bg-gray-50/70 px-5 py-3 text-xs text-gray-400 tabular-nums">
             {filtered.length} estudiante{filtered.length !== 1 ? 's' : ''}{search ? ` (filtrado de ${students.length})` : ''}
           </div>
-        </div>
+        </SectionCard>
       )}
     </div>
   );
 }
 
 // ── Grades export ─────────────────────────────────────────────────────────────
+interface ExportGradeCell { exerciseId: string; score: number | null; maxScore: number; status: string }
+interface ExportGradeRow {
+  student: { id: string; name: string; email: string };
+  grades: ExportGradeCell[];
+  average: number | null;
+}
+interface ExportGradesResponse {
+  exercises: Array<{ id: string; title: string; maxScore: number }>;
+  students: ExportGradeRow[];
+}
+
 async function exportGrades(courseId: string, universityId: string, courseName: string) {
   try {
-    const { data } = await api.get<any>(`/api/v1/universities/${universityId}/courses/${courseId}/grades`);
-    const exercises: any[] = data.exercises;
-    const students: any[]  = data.students;
+    const { data } = await api.get<ExportGradesResponse>(`/api/v1/universities/${universityId}/courses/${courseId}/grades`);
+    const exercises = data.exercises;
+    const students  = data.students;
     const filename = `Calificaciones_${courseName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}`;
 
     // ── Sheet 1: Calificaciones (student × exercise matrix) ──────────────────
-    const sheet1 = students.map((s: any) => {
+    const sheet1 = students.map((s) => {
       const row: Record<string, unknown> = { 'Estudiante': s.student.name, 'Email': s.student.email };
-      exercises.forEach((ex: any, i: number) => {
+      exercises.forEach((ex, i) => {
         const g = s.grades[i];
         row[ex.title] = g?.score != null ? g.score : (g?.status ?? '—');
         row[`${ex.title} (%)`] = g?.score != null ? Math.round((g.score / g.maxScore) * 100) : '—';
@@ -1055,22 +1134,22 @@ async function exportGrades(courseId: string, universityId: string, courseName: 
     });
 
     // ── Sheet 2: Estadísticas por ejercicio ──────────────────────────────────
-    const sheet2 = exercises.map((ex: any) => {
+    const sheet2 = exercises.map((ex) => {
       const scores = students
-        .map((s: any) => s.grades.find((g: any) => g.exerciseId === ex.id))
-        .filter((g: any) => g?.score != null)
-        .map((g: any) => Math.round((g.score / g.maxScore) * 100));
+        .map((s) => s.grades.find((g) => g.exerciseId === ex.id))
+        .filter((g): g is ExportGradeCell => g?.score != null)
+        .map((g) => Math.round(((g.score as number) / g.maxScore) * 100));
       const n    = scores.length;
-      const avg  = n > 0 ? scores.reduce((a: number, b: number) => a + b, 0) / n : null;
+      const avg  = n > 0 ? scores.reduce((a, b) => a + b, 0) / n : null;
       const min  = n > 0 ? Math.min(...scores) : null;
       const max  = n > 0 ? Math.max(...scores) : null;
-      const std  = n > 1 ? Math.round(Math.sqrt(scores.reduce((a: number, b: number) => a + (b - avg!) ** 2, 0) / n)) : null;
-      const pass = scores.filter((v: number) => v >= 60).length;
-      const d1   = scores.filter((v: number) => v < 60).length;
-      const d2   = scores.filter((v: number) => v >= 60 && v < 80).length;
-      const d3   = scores.filter((v: number) => v >= 80).length;
-      const submitted = students.filter((s: any) => {
-        const g = s.grades.find((g: any) => g.exerciseId === ex.id);
+      const std  = n > 1 ? Math.round(Math.sqrt(scores.reduce((a, b) => a + (b - avg!) ** 2, 0) / n)) : null;
+      const pass = scores.filter((v) => v >= 60).length;
+      const d1   = scores.filter((v) => v < 60).length;
+      const d2   = scores.filter((v) => v >= 60 && v < 80).length;
+      const d3   = scores.filter((v) => v >= 80).length;
+      const submitted = students.filter((s) => {
+        const g = s.grades.find((gr) => gr.exerciseId === ex.id);
         return g && ['SUBMITTED', 'GRADED'].includes(g.status);
       }).length;
       return {
@@ -1090,10 +1169,10 @@ async function exportGrades(courseId: string, universityId: string, courseName: 
     });
 
     // ── Sheet 3: Resumen por estudiante ──────────────────────────────────────
-    const sheet3 = students.map((s: any) => {
-      const submitted  = s.grades.filter((g: any) => ['SUBMITTED', 'GRADED'].includes(g.status)).length;
-      const graded     = s.grades.filter((g: any) => g.status === 'GRADED' && g.score != null).length;
-      const passed     = s.grades.filter((g: any) => g.status === 'GRADED' && g.score != null && Math.round((g.score / g.maxScore) * 100) >= 60).length;
+    const sheet3 = students.map((s) => {
+      const submitted  = s.grades.filter((g) => ['SUBMITTED', 'GRADED'].includes(g.status)).length;
+      const graded     = s.grades.filter((g) => g.status === 'GRADED' && g.score != null).length;
+      const passed     = s.grades.filter((g) => g.status === 'GRADED' && g.score != null && Math.round(((g.score as number) / g.maxScore) * 100) >= 60).length;
       return {
         'Estudiante':    s.student.name,
         'Email':         s.student.email,
@@ -1120,15 +1199,14 @@ async function exportGrades(courseId: string, universityId: string, courseName: 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function CourseDetailPage() {
   const { courseId: id }   = useParams<{ courseId: string }>();
-  const { user } = useAuth();
   const router   = useRouter();
   const [course, setCourse]         = useState<CourseDetail | null>(null);
-  const [exercises, setExercises]   = useState<Exercise[]>([]);
+  const [exercises, setExercises]   = useState<ExerciseWithCount[]>([]);
   const [loading, setLoading]       = useState(true);
   const [showEnroll, setShowEnroll]           = useState(false);
   const [showBulkEnroll, setShowBulkEnroll]   = useState(false);
   const [showTemplates, setShowTemplates]     = useState(false);
-  const [showUtn, setShowUtn]                 = useState(false);
+  const [showBaseCourse, setShowBaseCourse]   = useState(false);
   const [tab, setTab]                     = useState<'overview' | 'students' | 'competencias' | 'analytics' | 'gradebook'>('overview');
   const [exporting, setExporting]         = useState(false);
 
@@ -1137,7 +1215,7 @@ export default function CourseDetailPage() {
     try {
       const [c, e] = await Promise.all([
         api.get<CourseDetail>(`/api/v1/courses/${id}`),
-        api.get<Exercise[]>(`/api/v1/courses/${id}/exercises`),
+        api.get<ExerciseWithCount[]>(`/api/v1/courses/${id}/exercises`),
       ]);
       setCourse(c.data);
       setExercises(e.data);
@@ -1151,7 +1229,18 @@ export default function CourseDetailPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <div className="flex-1 flex items-center justify-center"><Spinner size="lg" /></div>;
+  if (loading) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+        <Skeleton className="mb-6 h-4 w-48" />
+        <div className="mb-6 h-44 rounded-card border border-gray-200/70 bg-white shadow-card" />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <div className="h-72 rounded-card border border-gray-200/70 bg-white shadow-card" />
+          <div className="h-72 rounded-card border border-gray-200/70 bg-white shadow-card" />
+        </div>
+      </div>
+    );
+  }
   if (!course) return null;
 
   const enrolledIds = course.enrollments.map((e) => e.student.id);
@@ -1163,7 +1252,7 @@ export default function CourseDetailPage() {
   }
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
       {showEnroll && course.universityId && (
         <EnrollModal
           courseId={id} universityId={course.universityId} enrolled={enrolledIds}
@@ -1185,88 +1274,113 @@ export default function CourseDetailPage() {
           onCreated={() => { load(); setShowTemplates(false); }}
         />
       )}
-      {showUtn && (
-        <UtnTemplateModal
+      {showBaseCourse && (
+        <BaseCourseTemplateModal
           courseId={id}
-          onClose={() => setShowUtn(false)}
-          onApplied={() => { load(); setShowUtn(false); }}
+          onClose={() => setShowBaseCourse(false)}
+          onApplied={() => { load(); setShowBaseCourse(false); }}
         />
       )}
 
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-        <Link href="/profesor/cursos" className="hover:text-gray-700 flex items-center gap-1">
-          <ArrowLeft className="w-3.5 h-3.5" /> Mis Cursos
+      <div className="mb-5 flex items-center gap-2 text-sm text-gray-500">
+        <Link href="/profesor/cursos" className="flex items-center gap-1 transition-colors hover:text-gray-700">
+          <ArrowLeft className="w-3.5 h-3.5" /> Mis cursos
         </Link>
-        <span>/</span>
-        <span className="text-gray-700">{course.name}</span>
+        <span className="text-gray-300">/</span>
+        <span className="font-medium text-gray-700">{course.name}</span>
       </div>
 
-      {/* Course header */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            {course.code && (
-              <span className="text-xs font-mono text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
-                {course.code}
-              </span>
-            )}
-            <h2 className="text-xl font-bold text-gray-900 mt-2">{course.name}</h2>
-            {course.description && <p className="text-gray-500 text-sm mt-1">{course.description}</p>}
-            <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-              {course.period && (
-                <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />{course.period}</span>
+      {/* Cabecera del curso — banda azul noche */}
+      <div className="relative mb-6 overflow-hidden rounded-card shadow-soft lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+        <div aria-hidden className="pointer-events-none absolute right-6 bottom-4 hidden opacity-95 xl:block">
+          <ArtLedger size={150} className="cx-float" />
+        </div>
+        <div className="relative flex flex-wrap items-start justify-between gap-5 p-6 lg:p-8">
+          <div className="min-w-0 xl:max-w-2xl">
+            <p className="mb-2 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500">
+              Portal profesor
+            </p>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              {course.code && (
+                <span className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-xs text-blue-100">
+                  {course.code}
+                </span>
               )}
-              <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{course.enrollments.length} estudiantes</span>
-              <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" />{exercises.length} ejercicios</span>
+              {course.period && (
+                <span className="flex items-center gap-1 rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-xs text-blue-100">
+                  <Calendar className="w-3 h-3" />{course.period}
+                </span>
+              )}
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-white lg:text-3xl">{course.name}</h1>
+            {course.description && <p className="mt-1.5 max-w-prose text-sm text-blue-200/80">{course.description}</p>}
+            <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-blue-100">
+              <span className="flex items-center gap-1.5 tabular-nums">
+                <Users className="w-4 h-4 text-blue-300" />{course.enrollments.length} estudiantes
+              </span>
+              <span className="flex items-center gap-1.5 tabular-nums">
+                <FileText className="w-4 h-4 text-blue-300" />{exercises.length} ejercicios
+              </span>
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="secondary" size="sm" onClick={handleExport} loading={exporting}>
+
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={handleExport} loading={exporting} className="cx-press">
               <Download className="w-4 h-4" /> Exportar notas
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => setShowBulkEnroll(true)}>
+            <Button variant="secondary" size="sm" onClick={() => setShowBulkEnroll(true)} className="cx-press">
               <Upload className="w-4 h-4" /> Importar CSV
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => setShowEnroll(true)}>
+            <Button variant="secondary" size="sm" onClick={() => setShowEnroll(true)} className="cx-press">
               <UserPlus className="w-4 h-4" /> Inscribir
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => setShowTemplates(true)}>
+            <Button variant="secondary" size="sm" onClick={() => setShowTemplates(true)} className="cx-press">
               <BookMarked className="w-4 h-4" /> Desde plantilla
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => setShowUtn(true)}>
+            <Button variant="secondary" size="sm" onClick={() => setShowBaseCourse(true)} className="cx-press">
               <GraduationCap className="w-4 h-4" /> Cargar curso base
             </Button>
-            <Link href={`/profesor/cursos/${id}/analytics`}>
-              <Button variant="secondary" size="sm">
-                <TrendingUp className="w-4 h-4" /> Analytics
-              </Button>
+            <Link
+              href={`/profesor/cursos/${id}/analytics`}
+              className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'cx-press' })}
+            >
+              <TrendingUp className="w-4 h-4" /> Analítica
             </Link>
-            <Link href={`/profesor/cursos/${id}/practica`}>
-              <Button variant="secondary" size="sm">
-                <Calculator className="w-4 h-4" /> Práctica
-              </Button>
+            <Link
+              href={`/profesor/cursos/${id}/practica`}
+              className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'cx-press' })}
+            >
+              <Calculator className="w-4 h-4" /> Práctica
             </Link>
-            <Link href={`/profesor/ejercicios/nuevo?cursoId=${id}`}>
-              <Button size="sm"><Plus className="w-4 h-4" /> Nuevo ejercicio</Button>
+            <Link
+              href={`/profesor/ejercicios/nuevo?cursoId=${id}`}
+              className={buttonClasses({ variant: 'gold', size: 'sm', className: 'cx-press' })}
+            >
+              <Plus className="w-4 h-4" /> Nuevo ejercicio
             </Link>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="mb-6 flex w-fit gap-1 rounded-2xl border border-gray-200/70 bg-white p-1 shadow-card">
         {([
           { key: 'overview',     label: 'Resumen',        icon: FileText      },
           { key: 'students',     label: 'Estudiantes',    icon: GraduationCap },
           { key: 'competencias', label: 'Competencias',   icon: Award         },
           { key: 'gradebook',    label: 'Calificaciones', icon: Table2        },
-          { key: 'analytics',    label: 'Analytics',      icon: BarChart2     },
+          { key: 'analytics',    label: 'Analítica',      icon: BarChart2     },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all cx-press ${
+              tab === key
+                ? 'bg-gradient-to-br from-blue-600 to-[#1B2E6E] text-white shadow-[0_6px_20px_rgba(27,46,110,0.28)]'
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+            }`}
           >
             <span className="flex items-center gap-2"><Icon className="w-4 h-4" /> {label}</span>
           </button>
@@ -1286,93 +1400,114 @@ export default function CourseDetailPage() {
           onEnroll={() => setShowEnroll(true)}
         />
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* Students */}
-          <section className="bg-white border border-gray-200 shadow-sm rounded-xl">
-            <div className="flex items-center justify-between p-5 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-700" />
-                Estudiantes inscritos
-                <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs px-1.5 py-0.5 rounded-full">
-                  {course.enrollments.length}
-                </span>
-              </h3>
-              <button onClick={() => setShowEnroll(true)}
-                className="flex items-center gap-1 text-xs font-medium text-blue-700 hover:text-blue-800 transition-colors">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {/* Estudiantes inscritos */}
+          <SectionCard
+            icon={Users}
+            iconTint="#2563EB"
+            eyebrow={`${course.enrollments.length} inscrito${course.enrollments.length !== 1 ? 's' : ''}`}
+            title="Estudiantes inscritos"
+            flushBody
+            className="cx-pop"
+            action={
+              <Button variant="ghost" size="sm" onClick={() => setShowEnroll(true)} className="cx-press">
                 <UserPlus className="w-3.5 h-3.5" /> Agregar
-              </button>
-            </div>
-            <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+              </Button>
+            }
+          >
+            <div className="max-h-80 divide-y divide-gray-100 overflow-y-auto">
               {course.enrollments.length === 0 ? (
-                <div className="p-8 text-center">
-                  <UserX className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">No hay estudiantes inscritos</p>
-                  <button onClick={() => setShowEnroll(true)} className="mt-3 text-xs text-blue-700 hover:underline">
-                    Inscribir ahora
-                  </button>
-                </div>
+                <EmptyState
+                  illustration={<SceneEmptyBox size={170} className="cx-float" />}
+                  title="No hay estudiantes inscritos"
+                  description="Inscribe al primer estudiante para comenzar."
+                  action={
+                    <Button variant="secondary" size="sm" onClick={() => setShowEnroll(true)} className="cx-press">
+                      <UserPlus className="w-3.5 h-3.5" /> Inscribir ahora
+                    </Button>
+                  }
+                />
               ) : (
                 course.enrollments.map((enroll) => (
-                  <div key={enroll.id} className="flex items-center gap-3 p-4 hover:bg-gray-50">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-semibold text-sm flex-shrink-0">
+                  <div key={enroll.id} className="flex items-center gap-3 p-4 transition-colors hover:bg-blue-50/50">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-sm font-bold text-blue-700">
                       {enroll.student.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-700 truncate">{enroll.student.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{enroll.student.email}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-700">{enroll.student.name}</p>
+                      <p className="truncate text-xs text-gray-400">{enroll.student.email}</p>
                     </div>
                     <span className="text-xs text-gray-400">{formatDate(enroll.enrolledAt)}</span>
                   </div>
                 ))
               )}
             </div>
-          </section>
+          </SectionCard>
 
-          {/* Exercises */}
-          <section className="bg-white border border-gray-200 shadow-sm rounded-xl">
-            <div className="flex items-center justify-between p-5 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-blue-700" />
-                Ejercicios
-                <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs px-1.5 py-0.5 rounded-full">
-                  {exercises.length}
-                </span>
-              </h3>
-              <Link href={`/profesor/ejercicios/nuevo?cursoId=${id}`}>
-                <Button variant="ghost" size="sm"><Plus className="w-4 h-4" /> Nuevo</Button>
+          {/* Ejercicios */}
+          <SectionCard
+            icon={FileText}
+            iconTint="#B8860B"
+            eyebrow={`${exercises.length} en el curso`}
+            title="Ejercicios"
+            flushBody
+            className="cx-pop cx-d2"
+            action={
+              <Link
+                href={`/profesor/ejercicios/nuevo?cursoId=${id}`}
+                className={buttonClasses({ variant: 'ghost', size: 'sm', className: 'cx-press' })}
+              >
+                <Plus className="w-4 h-4" /> Nuevo
               </Link>
-            </div>
-            <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+            }
+          >
+            <div className="max-h-80 divide-y divide-gray-100 overflow-y-auto">
               {exercises.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-gray-500 text-sm">No hay ejercicios creados</p>
-                </div>
+                <EmptyState
+                  illustration={<SceneEmptyBox size={170} className="cx-float" />}
+                  title="No hay ejercicios creados"
+                  description="Crea un ejercicio o carga un curso base para empezar."
+                  action={
+                    <Link
+                      href={`/profesor/ejercicios/nuevo?cursoId=${id}`}
+                      className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'cx-press' })}
+                    >
+                      <Plus className="w-4 h-4" /> Nuevo ejercicio
+                    </Link>
+                  }
+                />
               ) : (
                 exercises.map((ex) => (
                   <Link key={ex.id} href={`/profesor/ejercicios/${ex.id}?cursoId=${id}`}
-                    className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors group">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                    className="group flex items-center gap-3 p-4 transition-colors hover:bg-blue-50/50 cx-hop-parent cx-press">
+                    <IconTile
+                      icon={ex.isPublished ? Globe : Lock}
+                      tint={ex.isPublished ? '#059669' : '#94A3B8'}
+                      size={38}
+                      className="cx-hop"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center gap-2">
                         <DifficultyBadge difficulty={ex.difficulty} />
                         {ex.isPublished
-                          ? <span className="flex items-center gap-1 text-xs text-emerald-600"><Globe className="w-3 h-3" />Publicado</span>
-                          : <span className="flex items-center gap-1 text-xs text-gray-400"><Lock className="w-3 h-3" />Borrador</span>
+                          ? <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600"><Globe className="w-3 h-3" />Publicado</span>
+                          : <span className="flex items-center gap-1 text-xs font-semibold text-gray-400"><Lock className="w-3 h-3" />Borrador</span>
                         }
                       </div>
-                      <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 truncate">{ex.title}</p>
+                      <p className="truncate text-sm font-semibold text-gray-700 group-hover:text-gray-900">{ex.title}</p>
                       {ex.dueDate && (
-                        <p className="text-xs text-gray-400 mt-0.5">Vence: {formatDate(ex.dueDate)}</p>
+                        <p className="mt-0.5 text-xs text-gray-400">Vence: {formatDate(ex.dueDate)}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-xs text-gray-400">{(ex as any)._count?.attempts ?? 0} intentos</span>
-                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <span className="text-xs text-gray-400 tabular-nums">{ex._count?.attempts ?? 0} intentos</span>
+                      <ChevronRight className="w-4 h-4 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-500" />
                     </div>
                   </Link>
                 ))
               )}
             </div>
-          </section>
+          </SectionCard>
         </div>
       )}
     </div>

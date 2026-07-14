@@ -7,7 +7,11 @@ import { api } from '@/lib/api';
 import { getErrorMessage, cn } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { EntrySkeleton } from '@/components/ui/Skeleton';
+import { ArtLedger, SceneEmptyBox } from '@/components/illustrations';
 import {
   ArrowLeft, ChevronRight, CheckCircle2, X, Lock,
   ShoppingCart, ShoppingBag, ArrowDownToLine, ArrowUpFromLine, Wallet,
@@ -115,14 +119,17 @@ function RejectModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md ring-1 ring-gray-900/5 animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-csq-dark/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-card shadow-card-hover w-full max-w-md ring-1 ring-gray-900/5 cx-pop">
         <div className="flex items-center justify-between px-7 pt-6 pb-5 border-b border-gray-100">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900 tracking-tight">Rechazar asiento #{entry.entryNumber}</h3>
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900 mb-0.5">Libro diario</p>
+            <h3 className="text-base font-bold text-gray-900 tracking-tight">
+              Rechazar asiento <span className="font-mono tabular-nums">#{entry.entryNumber}</span>
+            </h3>
             <p className="text-sm text-gray-500 mt-1 truncate max-w-[280px]">{entry.description}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition-colors cx-press">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -141,8 +148,8 @@ function RejectModal({
             />
           </label>
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-            <Button type="submit" loading={saving} className="flex-1 !bg-red-600 hover:!bg-red-700">
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1 cx-press">Cancelar</Button>
+            <Button type="submit" variant="danger" loading={saving} className="flex-1 cx-press">
               Rechazar asiento
             </Button>
           </div>
@@ -182,18 +189,18 @@ function EntryRow({
 
   return (
     <div className={cn(
-      'group transition-colors border-l-2',
-      isPending ? 'bg-amber-50/30 border-l-amber-400' : 'border-l-transparent',
-      open ? 'bg-gray-50/50' : 'hover:bg-gray-50/40',
+      'group cx-hop-parent transition-colors border-l-2',
+      isPending ? 'bg-gold-50/60 border-l-gold-500' : 'border-l-transparent',
+      open ? 'bg-blue-50/40' : 'hover:bg-blue-50/30',
     )}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-4 px-6 lg:px-8 py-4 text-left"
+        className="w-full flex items-center gap-4 px-6 lg:px-8 py-4 text-left cx-press"
       >
         <span className={cn(
-          'text-gray-400 transition-transform duration-200',
-          open && 'rotate-90 text-gray-600',
+          'text-gray-400 transition-transform duration-200 cx-hop',
+          open && 'rotate-90 text-blue-700',
         )}>
           <ChevronRight className="w-4 h-4" />
         </span>
@@ -222,7 +229,7 @@ function EntryRow({
       >
         <div className="overflow-hidden">
           <div className="px-6 lg:px-8 pb-6">
-            <div className="bg-white border border-gray-200/70 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-gray-200/70 rounded-2xl overflow-hidden shadow-card">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50/70 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <tr>
@@ -277,7 +284,7 @@ function EntryRow({
                   </button>
                   <button
                     onClick={() => onReject(entry)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cx-press"
                   >
                     <X className="w-3.5 h-3.5" />
                     Rechazar
@@ -285,7 +292,7 @@ function EntryRow({
                   <button
                     onClick={confirm}
                     disabled={working === 'confirm'}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-60 disabled:cursor-wait"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-60 disabled:cursor-wait cx-press"
                   >
                     {working === 'confirm'
                       ? <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -368,74 +375,103 @@ export default function DiarioPage() {
         />
       )}
 
-      <div className="max-w-6xl mx-auto px-6 lg:px-10 py-8 lg:py-10 space-y-8">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/estudiante/ejercicio/${attemptId}`}
-            className="p-2 -ml-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            aria-label="Volver"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">Libro diario</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Asientos generados desde eventos de negocio. Confirma los pendientes para que afecten el saldo.
-            </p>
-          </div>
-          {counts.PENDING > 0 && (
-            <span className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
-              </span>
-              {counts.PENDING} {counts.PENDING === 1 ? 'asiento por revisar' : 'asientos por revisar'}
-            </span>
-          )}
-        </div>
+      <div className="max-w-6xl mx-auto px-6 lg:px-10 py-8 lg:py-10 space-y-7">
+        {/* Volver */}
+        <Link
+          href={`/estudiante/ejercicio/${attemptId}`}
+          className="inline-flex items-center gap-2 -ml-1 text-sm font-medium text-gray-500 hover:text-blue-700 transition-colors cx-press"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Volver al ejercicio
+        </Link>
 
-        {/* Filter tabs + search */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex items-center gap-1 bg-white border border-gray-200/70 rounded-xl p-1 shadow-sm">
-            {([
-              { key: 'ALL',       label: 'Todos'      },
-              { key: 'PENDING',   label: 'Pendientes' },
-              { key: 'CONFIRMED', label: 'Confirmados'},
-              { key: 'REJECTED',  label: 'Rechazados' },
-            ] as const).map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setFilter(key)}
-                className={cn(
-                  'flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all',
-                  filter === key
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50',
-                )}
-              >
-                {label}
-                <span className={cn(
-                  'inline-flex items-center justify-center min-w-[22px] px-1.5 py-px text-[10px] font-mono rounded-md',
-                  filter === key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600',
-                )}>
-                  {counts[key]}
+        {/* Encabezado */}
+        <PageHeader
+          eyebrow="Ciclo contable"
+          title="Libro diario"
+          subtitle="Asientos generados desde eventos de negocio. Confirma los pendientes para que afecten el saldo."
+          icon={BookOpen}
+          iconTint="#1B2E6E"
+          className="lp-in"
+          actions={
+            counts.PENDING > 0 ? (
+              <span className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold bg-gold-50 text-gold-900 border border-gold-100 rounded-full">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-gold-500 cx-ping" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-600" />
                 </span>
-              </button>
-            ))}
-          </div>
-          <div className="relative flex-1 max-w-md ml-auto">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por número, descripción o referencia…"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-300 bg-white shadow-sm transition-colors"
-            />
-          </div>
-        </div>
+                {counts.PENDING} {counts.PENDING === 1 ? 'asiento por revisar' : 'asientos por revisar'}
+              </span>
+            ) : undefined
+          }
+        />
 
-        {/* Entry list */}
-        <Card>
+        {/* Banda del módulo */}
+        <Card variant="onDark" className="cx-pop">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+                Partida doble
+              </p>
+              <h2 className="text-lg font-bold leading-snug">Todo asiento debe cuadrar: débitos = créditos.</h2>
+              <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+                Revisa cada asiento antes de confirmarlo. Una vez confirmado queda bloqueado y afecta los saldos
+                del libro mayor.
+              </p>
+            </div>
+            <ArtLedger size={140} className="lp-drift flex-shrink-0" />
+          </div>
+        </Card>
+
+        {/* Asientos */}
+        <SectionCard
+          eyebrow="Registros"
+          title="Asientos del período"
+          description="Filtra por estado o busca por número, descripción o referencia."
+          icon={BookOpen}
+          iconTint="#2563EB"
+          flushBody
+          className="cx-pop cx-d1"
+        >
+          {/* Filtros + búsqueda */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-6 lg:px-7 py-5 border-b border-gray-100">
+            <div className="flex items-center gap-1 bg-gray-100/80 rounded-xl p-1">
+              {([
+                { key: 'ALL',       label: 'Todos'      },
+                { key: 'PENDING',   label: 'Pendientes' },
+                { key: 'CONFIRMED', label: 'Confirmados'},
+                { key: 'REJECTED',  label: 'Rechazados' },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={cn(
+                    'flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all cx-press',
+                    filter === key
+                      ? 'text-white bg-gradient-to-br from-blue-600 to-csq-mid shadow-[0_6px_20px_rgba(27,46,110,0.28)]'
+                      : 'text-gray-500 hover:text-blue-700 hover:bg-white',
+                  )}
+                >
+                  {label}
+                  <span className={cn(
+                    'inline-flex items-center justify-center min-w-[22px] px-1.5 py-px text-[10px] font-mono tabular-nums rounded-md',
+                    filter === key ? 'bg-white/20 text-white' : 'bg-white text-gray-600',
+                  )}>
+                    {counts[key]}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="relative flex-1 max-w-md sm:ml-auto">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por número, descripción o referencia…"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 bg-white transition-colors"
+              />
+            </div>
+          </div>
+
           {loading ? (
             <div>
               <EntrySkeleton />
@@ -445,23 +481,29 @@ export default function DiarioPage() {
               <EntrySkeleton />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-20 px-8 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gray-100 mb-4">
-                {filter === 'PENDING' ? (
-                  <ShieldCheck className="w-7 h-7 text-emerald-500" />
-                ) : (
-                  <BookOpen className="w-7 h-7 text-gray-400" />
-                )}
-              </div>
-              <p className="text-base font-medium text-gray-900">
-                {filter === 'PENDING' ? 'Todo al día' : 'Sin asientos'}
-              </p>
-              <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
-                {filter === 'PENDING'
+            <EmptyState
+              illustration={
+                filter === 'PENDING'
+                  ? <ArtLedger size={190} className="lp-drift" />
+                  : <SceneEmptyBox size={200} className="lp-drift" />
+              }
+              title={filter === 'PENDING' ? 'Todo al día' : 'Sin asientos'}
+              description={
+                filter === 'PENDING'
                   ? 'No hay asientos pendientes de confirmación. El sistema se generó al día.'
-                  : 'No hay asientos con los filtros aplicados. Cambia los criterios para ver más resultados.'}
-              </p>
-            </div>
+                  : 'No hay asientos con los filtros aplicados. Cambia los criterios para ver más resultados.'
+              }
+              action={
+                filter !== 'ALL' ? (
+                  <Button variant="outline" onClick={() => setFilter('ALL')} className="cx-press">
+                    {filter === 'PENDING'
+                      ? <><ShieldCheck className="w-4 h-4" /> Ver todos los asientos</>
+                      : <>Ver todos los asientos</>}
+                  </Button>
+                ) : undefined
+              }
+              className="py-16"
+            />
           ) : (
             <div className="divide-y divide-gray-100">
               {filtered.map((e) => (
@@ -475,7 +517,7 @@ export default function DiarioPage() {
               ))}
             </div>
           )}
-        </Card>
+        </SectionCard>
       </div>
     </div>
   );

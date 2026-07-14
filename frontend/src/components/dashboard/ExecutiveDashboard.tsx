@@ -27,10 +27,10 @@ interface DashboardData {
   }>;
 }
 
-// paleta v2
-const TEAL = '#2563EB';
-const TEAL_D = '#1D4ED8';
-const TEAL_L = '#60A5FA';
+// Paleta de marca (azules). Nombres heredados del diseño anterior, ya renombrados.
+const ACCENT = '#2563EB';
+const ACCENT_D = '#1D4ED8';
+const ACCENT_L = '#60A5FA';
 const RED = '#DC2626';
 const INK = '#03080F';
 
@@ -64,8 +64,8 @@ function SplitKpi({
   return (
     <div className={CARD + ' p-4'} style={CARD_SH}>
       <div className="flex items-center gap-2">
-        <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${TEAL}18` }}>
-          <Icon style={{ color: TEAL, width: 14, height: 14 }} />
+        <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${ACCENT}18` }}>
+          <Icon style={{ color: ACCENT, width: 14, height: 14 }} />
         </span>
         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">{label}</span>
       </div>
@@ -95,8 +95,8 @@ function DualKpi({
   return (
     <div className={CARD + ' p-4'} style={CARD_SH}>
       <div className="flex items-center gap-2">
-        <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${TEAL}18` }}>
-          <Icon style={{ color: TEAL, width: 14, height: 14 }} />
+        <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${ACCENT}18` }}>
+          <Icon style={{ color: ACCENT, width: 14, height: 14 }} />
         </span>
         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">{label}</span>
       </div>
@@ -186,17 +186,17 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
       {/* ── KPI row (estilo Alegra) ───────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SplitKpi label="Cuentas por cobrar" icon={Coins} total={receivables.outstanding}
-          a={{ label: 'Vigentes', value: receivables.outstanding - (receivables.overdue ?? 0), docs: receivables.count - (receivables.overdueCount ?? 0), color: TEAL }}
+          a={{ label: 'Vigentes', value: receivables.outstanding - (receivables.overdue ?? 0), docs: receivables.count - (receivables.overdueCount ?? 0), color: ACCENT }}
           b={{ label: 'Vencidas', value: receivables.overdue ?? 0, docs: receivables.overdueCount ?? 0, color: RED }} />
         <SplitKpi label="Cuentas por pagar" icon={CreditCard} total={payables.outstanding}
-          a={{ label: 'Vigentes', value: payables.outstanding - (payables.overdue ?? 0), docs: payables.count - (payables.overdueCount ?? 0), color: TEAL }}
+          a={{ label: 'Vigentes', value: payables.outstanding - (payables.overdue ?? 0), docs: payables.count - (payables.overdueCount ?? 0), color: ACCENT }}
           b={{ label: 'Vencidas', value: payables.overdue ?? 0, docs: payables.overdueCount ?? 0, color: RED }} />
         <DualKpi label={ivaToPay ? 'IVA por pagar · D-104' : 'IVA a favor · D-104'} icon={Landmark}
           total={Math.abs(tax.ivaPosition)}
           a={{ label: 'Débito fiscal', value: fmtCRCfull(tax.ivaCobrado) }}
           b={{ label: 'Crédito fiscal', value: fmtCRCfull(tax.ivaPagado) }} />
         <DualKpi label="Utilidad del período" icon={TrendingUp}
-          total={totals.grossMargin} totalColor={totals.grossMargin >= 0 ? TEAL_D : RED}
+          total={totals.grossMargin} totalColor={totals.grossMargin >= 0 ? ACCENT_D : RED}
           a={{ label: 'Ingresos', value: fmtCRCfull(totals.totalSales) }}
           b={{ label: 'Margen neto', value: `${marginPct.toFixed(1)}%` }} />
       </div>
@@ -217,8 +217,8 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
             <AreaChart data={trendData} margin={{ top: 8, right: 12, left: 6, bottom: 0 }}>
               <defs>
                 <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={TEAL} stopOpacity={0.22} />
-                  <stop offset="100%" stopColor={TEAL} stopOpacity={0} />
+                  <stop offset="0%" stopColor={ACCENT} stopOpacity={0.22} />
+                  <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F0" vertical={false} />
@@ -231,7 +231,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
                 <Tooltip formatter={(v: any) => [fmtCRCfull(v), 'Ventas']}
                   contentStyle={{ borderRadius: 8, border: '1px solid #E2E8F0', fontSize: 12 }} />
               )}
-              <Area type="monotone" dataKey="total" stroke={TEAL} strokeWidth={2.5} fill="url(#salesGrad)" dot={false} />
+              <Area type="monotone" dataKey="total" stroke={ACCENT} strokeWidth={2.5} fill="url(#salesGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -260,7 +260,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
                 domain={[0, (dataMax: number) => (dataMax > 0 ? Math.ceil(dataMax) : 5)]}
                 tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
               <Bar dataKey="value" radius={[5, 5, 0, 0]}>
-                {[TEAL_D, TEAL_L].map((c, i) => <Cell key={i} fill={c} />)}
+                {[ACCENT_D, ACCENT_L].map((c, i) => <Cell key={i} fill={c} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

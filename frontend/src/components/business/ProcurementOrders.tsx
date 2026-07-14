@@ -2,9 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { formatDate, getErrorMessage } from '@/lib/utils';
-import { Spinner } from '@/components/ui/Spinner';
+import { formatDate, getErrorMessage, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { IconTile } from '@/components/ui/IconTile';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ArtInventory } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   Truck, PackageCheck, Plus, X, ShoppingCart, Receipt, CreditCard,
@@ -45,6 +50,9 @@ interface ProcurementOrder {
 // Empresa hermana del ejercicio o grupo de práctica (candidata a vendedora).
 interface SiblingCompany { id: string; name: string; }
 
+// Forma mínima de las empresas que devuelven los endpoints de candidatas.
+interface TradingCompanyDto { id?: string; name?: string; }
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const money = (n: number) =>
   '₡' + (Number(n) ?? 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -60,7 +68,7 @@ const STEPS: { key: OrderStatus; label: string }[] = [
 
 const STATUS_META: Record<OrderStatus, { label: string; bg: string; color: string }> = {
   PO_ISSUED:  { label: 'Orden emitida', bg: '#EFF6FF', color: '#1D4ED8' },
-  DISPATCHED: { label: 'Despachada',    bg: '#FEF3C7', color: '#B45309' },
+  DISPATCHED: { label: 'Despachada',    bg: '#FDF6E3', color: '#B8860B' },
   RECEIVED:   { label: 'Recibida',      bg: '#EDE9FE', color: '#6D28D9' },
   INVOICED:   { label: 'Facturada',     bg: '#E0F2FE', color: '#0369A1' },
   PAID:       { label: 'Pagada',        bg: '#DCFCE7', color: '#15803D' },
@@ -114,23 +122,45 @@ function Stepper({ status }: { status: OrderStatus }) {
         return (
           <div key={s.key} className="flex items-center">
             <div className="flex flex-col items-center gap-1" style={{ minWidth: 54 }}>
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold transition-colors"
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-mono tabular-nums transition-colors"
                 style={{
-                  background: done ? '#2563EB' : '#E2E8F0',
+                  background: done ? 'linear-gradient(145deg,#2563EB,#1B2E6E)' : '#E2E8F0',
                   color: done ? '#fff' : '#94A3B8',
                   boxShadow: isCurrent ? '0 0 0 3px rgba(37,99,235,0.18)' : 'none',
                 }}>
                 {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
               </div>
-              <span className="text-[10px] font-medium text-center leading-tight"
+              <span className="text-[10px] font-semibold text-center leading-tight"
                 style={{ color: done ? '#334155' : '#94A3B8' }}>{s.label}</span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className="h-0.5 rounded self-start mt-3" style={{ width: 20, background: i < currentIdx ? '#2563EB' : '#E2E8F0' }} />
+              <div className="h-0.5 rounded self-start mt-3 transition-colors"
+                style={{ width: 20, background: i < currentIdx ? '#2563EB' : '#E2E8F0' }} />
             )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ─── Skeleton de tarjeta de orden ────────────────────────────────────────────
+function OrderCardSkeleton() {
+  return (
+    <div className="bg-white border border-gray-200/70 rounded-card shadow-card p-5 flex flex-col gap-4">
+      <div className="flex items-start gap-3">
+        <Skeleton className="w-11 h-11 rounded-xl" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+        <Skeleton className="h-5 w-20 rounded-full" />
+      </div>
+      <Skeleton className="h-12 rounded-xl" />
+      <Skeleton className="h-20 rounded-xl" />
+      <div className="grid grid-cols-3 gap-2">
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}
+      </div>
     </div>
   );
 }
@@ -179,68 +209,92 @@ export function ProcurementOrders({
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header explicativo + acción */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Truck className="w-5 h-5 text-blue-700" />
-            Aprovisionamiento (ERP)
-          </h2>
-          <p className="text-gray-500 text-sm mt-1 max-w-2xl">
-            Órdenes de compra entre empresas del curso. El comprador emite la orden, el vendedor
-            despacha, el comprador recibe (inventario), el vendedor factura (asiento y CxP) y el
-            comprador paga.
-          </p>
+    <div className="flex flex-col gap-5">
+      {/* Encabezado explicativo + acción */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <IconTile icon={Truck} tint="#1B2E6E" size={46} />
+          <div>
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900 mb-0.5">
+              Modo ERP
+            </p>
+            <h2 className="text-lg font-bold text-gray-900 tracking-tight">
+              Aprovisionamiento entre empresas
+            </h2>
+            <p className="text-gray-500 text-sm mt-1 max-w-2xl leading-relaxed">
+              Órdenes de compra entre empresas del curso. El comprador emite la orden, el vendedor
+              despacha, el comprador recibe (inventario), el vendedor factura (asiento y CxP) y el
+              comprador paga.
+            </p>
+          </div>
         </div>
         {canCreate && (
-          <Button onClick={() => setShowModal(true)} className="flex-shrink-0">
+          <Button onClick={() => setShowModal(true)} className="flex-shrink-0 cx-press">
             <Plus className="w-4 h-4" /> Nueva orden de compra
           </Button>
         )}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-      ) : orders.length === 0 ? (
-        <div className="flex flex-col items-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-            <PackageCheck className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-gray-700 font-semibold">No hay órdenes de aprovisionamiento</h3>
-          <p className="text-gray-500 text-sm mt-1 max-w-md">
-            {canCreate
-              ? 'Emití una orden de compra a otra empresa del grupo para iniciar el flujo ERP.'
-              : 'Aparecerán aquí las órdenes de compra donde participes como comprador o vendedor.'}
-          </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {Array.from({ length: 2 }).map((_, i) => <OrderCardSkeleton key={i} />)}
         </div>
+      ) : orders.length === 0 ? (
+        <Card>
+          <EmptyState
+            illustration={<ArtInventory size={190} className="cx-float" />}
+            title="Todavía no hay órdenes de aprovisionamiento"
+            description={
+              canCreate
+                ? 'Emite una orden de compra a otra empresa del grupo y sigue el flujo completo: despacho, recepción, factura y pago.'
+                : 'Aparecerán aquí las órdenes de compra donde participes como comprador o vendedor.'
+            }
+            action={
+              canCreate ? (
+                <Button onClick={() => setShowModal(true)} className="cx-press">
+                  <Plus className="w-4 h-4" /> Nueva orden de compra
+                </Button>
+              ) : undefined
+            }
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {orders.map((o) => {
+          {orders.map((o, idx) => {
             const busy = busyId === o.id;
             const acts = actionsFor(o);
             const isBuyer = o.role === 'BUYER';
             return (
-              <div key={o.id}
-                className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex flex-col gap-4">
+              <div
+                key={o.id}
+                className={cn(
+                  'bg-white border border-gray-200/70 rounded-card shadow-card hover:shadow-card-hover',
+                  'p-5 flex flex-col gap-4 cx-lift cx-hop-parent cx-pop',
+                  idx < 6 ? `cx-d${idx + 1}` : undefined,
+                )}
+              >
                 {/* Encabezado: contraparte + rol */}
                 <div className="flex items-start gap-3">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
-                    style={{ background: isBuyer ? '#1B2E6E' : '#475569' }}>
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white cx-hop"
+                    style={{
+                      background: isBuyer
+                        ? 'linear-gradient(145deg,#2563EB,#1B2E6E)'
+                        : 'linear-gradient(145deg,#1E3A8A,#0F2657)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)',
+                    }}
+                  >
                     {isBuyer ? <ShoppingCart className="w-5 h-5" /> : <Truck className="w-5 h-5" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 truncate">
+                    <h3 className="font-bold text-gray-900 truncate tracking-tight">
                       {o.counterpartyName ?? 'Empresa del curso'}
                     </h3>
                     <p className="text-xs text-gray-400 mt-0.5">{formatDate(o.createdAt)}</p>
                   </div>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
-                    style={isBuyer
-                      ? { background: '#EFF6FF', color: '#1D4ED8' }
-                      : { background: '#F1F5F9', color: '#475569' }}>
+                  <Badge variant={isBuyer ? 'blue' : 'slate'} className="flex-shrink-0">
                     {isBuyer ? 'Comprador' : 'Vendedor'}
-                  </span>
+                  </Badge>
                 </div>
 
                 {/* Stepper de estado */}
@@ -252,11 +306,11 @@ export function ProcurementOrders({
                 <div className="border border-gray-100 rounded-xl overflow-hidden">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="bg-gray-50 text-gray-500">
-                        <th className="text-left font-medium px-3 py-1.5">Descripción</th>
-                        <th className="text-right font-medium px-3 py-1.5">Cant.</th>
-                        <th className="text-right font-medium px-3 py-1.5">Precio</th>
-                        <th className="text-right font-medium px-3 py-1.5">Importe</th>
+                      <tr className="bg-gray-50 text-gray-500 uppercase tracking-wider">
+                        <th className="text-left font-semibold px-3 py-2">Descripción</th>
+                        <th className="text-right font-semibold px-3 py-2">Cant.</th>
+                        <th className="text-right font-semibold px-3 py-2">Precio</th>
+                        <th className="text-right font-semibold px-3 py-2">Importe</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -265,7 +319,7 @@ export function ProcurementOrders({
                           <td className="px-3 py-1.5 text-gray-700">{it.description}</td>
                           <td className="px-3 py-1.5 text-right text-gray-600 font-mono tabular-nums">{Number(it.quantity)}</td>
                           <td className="px-3 py-1.5 text-right text-gray-600 font-mono tabular-nums">{money(it.unitPrice)}</td>
-                          <td className="px-3 py-1.5 text-right text-gray-900 font-mono tabular-nums">
+                          <td className="px-3 py-1.5 text-right text-gray-900 font-semibold font-mono tabular-nums">
                             {money(Number(it.quantity) * Number(it.unitPrice))}
                           </td>
                         </tr>
@@ -279,22 +333,22 @@ export function ProcurementOrders({
                 {/* Totales */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-center">
-                    <p className="text-[11px] text-gray-400">Subtotal</p>
+                    <p className="text-[11px] text-gray-400 uppercase tracking-wide">Subtotal</p>
                     <p className="text-sm font-bold text-gray-900 mt-0.5 font-mono tabular-nums">{money(o.subtotal)}</p>
                   </div>
                   <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 text-center">
-                    <p className="text-[11px] text-gray-400">IVA</p>
+                    <p className="text-[11px] text-gray-400 uppercase tracking-wide">IVA</p>
                     <p className="text-sm font-bold text-gray-900 mt-0.5 font-mono tabular-nums">{money(o.taxAmount)}</p>
                   </div>
                   <div className="p-2.5 bg-blue-50 rounded-xl border border-blue-100 text-center">
-                    <p className="text-[11px] text-blue-500">Total</p>
-                    <p className="text-sm font-bold text-blue-700 mt-0.5 font-mono tabular-nums">{money(o.total)}</p>
+                    <p className="text-[11px] text-blue-600 uppercase tracking-wide">Total</p>
+                    <p className="text-sm font-extrabold text-blue-700 mt-0.5 font-mono tabular-nums">{money(o.total)}</p>
                   </div>
                 </div>
 
                 {/* Acciones según (rol, estado) */}
                 {acts.length > 0 && (
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 mt-auto">
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 mt-auto">
                     {acts.map((a) => (
                       <Button
                         key={a.key}
@@ -303,6 +357,7 @@ export function ProcurementOrders({
                         onClick={() => runAction(o, a)}
                         disabled={busy}
                         loading={busy && a.key !== 'cancel'}
+                        className="cx-press"
                       >
                         <a.icon className="w-3.5 h-3.5" /> {a.label}
                       </Button>
@@ -332,7 +387,7 @@ export function ProcurementOrders({
 interface DraftItem { description: string; cabysCode: string; quantity: string; unitPrice: string; }
 
 const BLANK_ITEM: DraftItem = { description: '', cabysCode: '', quantity: '1', unitPrice: '0' };
-const INPUT = 'w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition';
+const INPUT = 'w-full px-3 py-2 text-sm rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 outline-none transition';
 
 function NewOrderModal({
   companyId, exerciseId, practiceGroupId, onClose, onCreated,
@@ -360,10 +415,10 @@ function NewOrderModal({
     const url = practiceGroupId
       ? `/api/v1/practice/groups/${practiceGroupId}/companies`
       : `/api/v1/exercises/${exerciseId}/trading-companies`;
-    api.get<any[]>(url)
+    api.get<TradingCompanyDto[]>(url)
       .then(({ data }) => {
         const list = (Array.isArray(data) ? data : [])
-          .map((c) => ({ id: c.id, name: c.name }))
+          .map((c) => ({ id: c.id ?? '', name: c.name ?? '' }))
           .filter((c) => c.id && c.id !== companyId);
         setSiblings(list);
         if (list.length === 0) setUseManual(true);
@@ -416,24 +471,41 @@ function NewOrderModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-csq-dark/60 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}>
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl my-8" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#EFF6FF' }}>
-              <ShoppingCart className="w-4 h-4 text-blue-700" />
-            </span>
-            <h3 className="font-bold text-gray-900">Nueva orden de compra</h3>
+      <div
+        className="bg-white w-full max-w-2xl rounded-card border border-gray-200/70 shadow-2xl my-8 overflow-hidden cx-pop"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cabecera del modal */}
+        <div className="relative flex items-center justify-between px-6 py-4 text-white bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+          <span
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent"
+          />
+          <div className="flex items-center gap-3">
+            <IconTile icon={ShoppingCart} size={40} onDark />
+            <div>
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-gold-500">
+                Aprovisionamiento
+              </p>
+              <h3 className="font-bold tracking-tight">Nueva orden de compra</h3>
+            </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors cx-press"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <form onSubmit={submit} className="p-6 space-y-4">
           {/* Vendedor */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-gray-600">Empresa vendedora *</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-semibold text-gray-700">Empresa vendedora *</span>
               {siblings.length > 0 && (
                 <button type="button" onClick={() => setUseManual((v) => !v)}
                   className="text-[11px] font-semibold text-blue-700 hover:underline">
@@ -445,7 +517,7 @@ function NewOrderModal({
               <>
                 <input value={manualId} onChange={(e) => setManualId(e.target.value)}
                   placeholder="Pegá el ID de la empresa vendedora" className={INPUT} />
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
                   No se encontraron empresas del curso disponibles automáticamente. Pedí el
                   identificador (companyId) de la empresa vendedora del curso y pegalo aquí.
                 </p>
@@ -464,50 +536,59 @@ function NewOrderModal({
 
           {/* Líneas */}
           <div>
-            <span className="text-xs font-semibold text-gray-600 mb-2 block">Líneas de la orden *</span>
+            <span className="text-xs font-semibold text-gray-700 mb-2 block">Líneas de la orden *</span>
             <div className="space-y-2">
               {items.map((it, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-start">
                   <input value={it.description} onChange={(e) => setItem(i, { description: e.target.value })}
                     placeholder="Descripción" className={INPUT + ' col-span-5'} />
                   <input value={it.cabysCode} onChange={(e) => setItem(i, { cabysCode: e.target.value })}
-                    placeholder="CABYS (opc.)" className={INPUT + ' col-span-2'} />
+                    placeholder="CABYS (opc.)" className={INPUT + ' col-span-2 font-mono'} />
                   <input type="number" min="0" step="any" value={it.quantity}
                     onChange={(e) => setItem(i, { quantity: e.target.value })}
-                    placeholder="Cant." className={INPUT + ' col-span-2 text-right'} />
+                    placeholder="Cant." className={INPUT + ' col-span-2 text-right font-mono tabular-nums'} />
                   <input type="number" min="0" step="any" value={it.unitPrice}
                     onChange={(e) => setItem(i, { unitPrice: e.target.value })}
-                    placeholder="Precio" className={INPUT + ' col-span-2 text-right'} />
+                    placeholder="Precio" className={INPUT + ' col-span-2 text-right font-mono tabular-nums'} />
                   <button type="button" onClick={() => removeItem(i)} disabled={items.length === 1}
-                    className="col-span-1 h-9 flex items-center justify-center text-gray-300 hover:text-red-500 disabled:opacity-30 disabled:hover:text-gray-300">
+                    aria-label="Quitar línea"
+                    className="col-span-1 h-9 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-30 disabled:hover:text-gray-300 disabled:hover:bg-transparent cx-press">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ))}
             </div>
             <button type="button" onClick={addItem}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">
+              className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline cx-press">
               <Plus className="w-3.5 h-3.5" /> Agregar línea
             </button>
           </div>
 
           {/* Notas */}
           <label className="block">
-            <span className="text-xs font-semibold text-gray-600 mb-1 block">Notas (opcional)</span>
+            <span className="text-xs font-semibold text-gray-700 mb-1.5 block">Notas (opcional)</span>
             <input value={notes} onChange={(e) => setNotes(e.target.value)}
               placeholder="Referencia, condiciones…" className={INPUT} />
           </label>
 
           {/* Totales estimados */}
-          <div className="flex items-center justify-end gap-6 p-3 bg-gray-50 rounded-xl text-sm">
-            <span className="text-gray-500">Subtotal <b className="text-gray-900 font-mono ml-1">{money(subtotal)}</b></span>
-            <span className="text-gray-500">IVA (13%) <b className="text-gray-900 font-mono ml-1">{money(iva)}</b></span>
-            <span className="text-gray-500">Total <b className="text-blue-700 font-mono ml-1">{money(subtotal + iva)}</b></span>
+          <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-2 p-3.5 bg-gray-50 rounded-2xl border border-gray-100 text-sm">
+            <span className="text-gray-500">
+              Subtotal <b className="text-gray-900 font-mono tabular-nums ml-1">{money(subtotal)}</b>
+            </span>
+            <span className="text-gray-500">
+              IVA (13%) <b className="text-gray-900 font-mono tabular-nums ml-1">{money(iva)}</b>
+            </span>
+            <span className="text-gray-500">
+              Total <b className="text-blue-700 font-mono tabular-nums ml-1">{money(subtotal + iva)}</b>
+            </span>
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancelar</Button>
-            <Button type="submit" loading={saving}>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={saving} className="cx-press">
+              Cancelar
+            </Button>
+            <Button type="submit" loading={saving} className="cx-press">
               <ShoppingCart className="w-4 h-4" /> Emitir orden
             </Button>
           </div>

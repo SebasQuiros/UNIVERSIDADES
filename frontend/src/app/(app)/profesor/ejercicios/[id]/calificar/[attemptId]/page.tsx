@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { ElementType, ReactNode } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -8,15 +9,25 @@ import { formatDate, formatDateTime, getErrorMessage, esc } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { IconTile } from '@/components/ui/IconTile';
+import { ArtBalance } from '@/components/illustrations';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import {
-  ArrowLeft, FileText, BookOpen,
-  CheckCircle2, Clock, Send, TrendingUp,
-  Zap, ChevronDown, ChevronUp, X, Check,
-  AlertTriangle, BarChart2, Printer, Eye, RotateCcw,
+  ArrowLeft, FileText, BookOpen, Users, Package,
+  CheckCircle2, Clock, Send, TrendingUp, Award,
+  Zap, ChevronDown, ChevronUp, X, ClipboardCheck,
+  AlertTriangle, BarChart2, Printer, RotateCcw, Receipt,
 } from 'lucide-react';
 import { ExamActivityLog } from '@/components/exam';
+
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
 
 interface Invoice {
   id: string; consecutiveNumber: string; issueDate: string;
@@ -36,24 +47,52 @@ interface AutoGradePreview {
   results: RubricResult[]; feedbackText: string; rubricComments: Record<string, string>;
 }
 
-function SectionCard({ title, icon, children, collapsible = false }: {
-  title: string; icon: React.ReactNode; children: React.ReactNode; collapsible?: boolean;
+type AttemptWithStudent = ExerciseAttempt & {
+  student?: { id: string; name: string; email: string };
+};
+
+/** Check trazado (SVG con pathLength=1) — animación `cx-draw`. */
+function DrawnCheck({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}
+      strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden
+    >
+      <path d="M5 13l4 4L19 7" pathLength={1} className="cx-draw" />
+    </svg>
+  );
+}
+
+/** Tarjeta plegable del expediente del intento (facturas, asientos, rúbricas). */
+function CollapsibleCard({ title, eyebrow, icon: Icon, iconTint = '#1B2E6E', children, collapsible = false, className }: {
+  title: string; eyebrow?: string; icon: ElementType; iconTint?: string;
+  children: ReactNode; collapsible?: boolean; className?: string;
 }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden mb-6">
+    <section className={`mb-6 overflow-hidden rounded-card border border-gray-200/70 bg-white shadow-card ${className ?? ''}`}>
       <button
-        className="w-full flex items-center justify-between gap-2 p-5 border-b border-gray-200 text-left"
+        type="button"
+        className="flex w-full items-center justify-between gap-3 border-b border-gray-100 px-6 py-4 text-left lg:px-7"
         onClick={() => collapsible && setOpen(o => !o)}
       >
-        <span className="flex items-center gap-2 font-semibold text-gray-900">
-          <span className="text-blue-700">{icon}</span>
-          {title}
+        <span className="flex items-center gap-3.5">
+          <IconTile icon={Icon} tint={iconTint} size={44} />
+          <span className="min-w-0">
+            {eyebrow && (
+              <span className="block text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">
+                {eyebrow}
+              </span>
+            )}
+            <span className="block text-base font-bold tracking-tight text-gray-900">{title}</span>
+          </span>
         </span>
-        {collapsible && (open ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />)}
+        {collapsible && (open
+          ? <ChevronUp className="w-4 h-4 flex-shrink-0 text-gray-400" />
+          : <ChevronDown className="w-4 h-4 flex-shrink-0 text-gray-400" />)}
       </button>
-      {open && <div className="p-5">{children}</div>}
-    </div>
+      {open && <div className="px-6 py-5 lg:px-7">{children}</div>}
+    </section>
   );
 }
 
@@ -63,7 +102,7 @@ export default function GradeAttemptPage() {
   const courseId = searchParams.get('cursoId') ?? '';
   const router   = useRouter();
 
-  const [attempt,     setAttempt]     = useState<ExerciseAttempt | null>(null);
+  const [attempt,     setAttempt]     = useState<AttemptWithStudent | null>(null);
   const [invoices,    setInvoices]    = useState<Invoice[]>([]);
   const [entries,     setEntries]     = useState<JournalEntry[]>([]);
   const [loading,     setLoading]     = useState(true);
@@ -79,7 +118,7 @@ export default function GradeAttemptPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get<ExerciseAttempt>(`/api/v1/attempts/${attemptId}`);
+      const { data } = await api.get<AttemptWithStudent>(`/api/v1/attempts/${attemptId}`);
       setAttempt(data);
       if (data.score != null) setScore(String(data.score));
       if (data.feedback) {
@@ -89,7 +128,7 @@ export default function GradeAttemptPage() {
           if (parsed?.rubric) setRubricCmts(parsed.rubric);
         } catch { setFeedback(data.feedback as string); }
       }
-      const companyId = (data as any).company?.id;
+      const companyId = data.company?.id;
       if (companyId) {
         const [invRes, jRes] = await Promise.allSettled([
           api.get<Invoice[] | { invoices: Invoice[] }>(`/api/v1/companies/${companyId}/invoices`),
@@ -97,11 +136,11 @@ export default function GradeAttemptPage() {
         ]);
         if (invRes.status === 'fulfilled') {
           const d = invRes.value.data;
-          setInvoices(Array.isArray(d) ? d : (d as any).invoices ?? []);
+          setInvoices(Array.isArray(d) ? d : d.invoices ?? []);
         }
         if (jRes.status  === 'fulfilled') {
           const d = jRes.value.data;
-          setEntries(Array.isArray(d) ? d : (d as any).entries ?? []);
+          setEntries(Array.isArray(d) ? d : d.entries ?? []);
         }
       }
     } catch { toast.error('Error al cargar el intento'); }
@@ -116,7 +155,7 @@ export default function GradeAttemptPage() {
       const { data } = await api.post<AutoGradePreview>(`/api/v1/attempts/${attemptId}/auto-grade`);
       setPreview(data);
       setShowPreview(true);
-      // Pre-fill score and feedback from preview
+      // Pre-carga puntaje y retroalimentación desde la vista previa
       setScore(String(data.score));
       setFeedback(data.feedbackText);
       setRubricCmts(data.rubricComments);
@@ -167,15 +206,15 @@ export default function GradeAttemptPage() {
     }
   }
 
-  if (loading) return <div className="flex-1 flex items-center justify-center"><Spinner size="lg" /></div>;
+  if (loading) return <div className="flex-1 flex items-center justify-center bg-[#F4F6F8]"><Spinner size="lg" /></div>;
   if (!attempt) return null;
 
   const isAlreadyGraded = attempt.status === 'GRADED';
   const prog     = attempt.studentProgress;
   const exercise = attempt.exercise!;
-  const student  = (attempt as any).student;
-  const company  = (attempt as any).company;
-  const hasRubricsWithCriteria = exercise.rubrics?.some((r: any) => r.criterion);
+  const student  = attempt.student;
+  const company  = attempt.company;
+  const hasRubricsWithCriteria = exercise.rubrics?.some((r) => r.criterion);
   const canAutoGrade = !isAlreadyGraded && hasRubricsWithCriteria && !!company;
 
   function handlePrintReport() {
@@ -198,7 +237,7 @@ export default function GradeAttemptPage() {
     const rubricsHtml = exercise.rubrics?.length
       ? `<div class="section">
           <div class="section-header">Rúbricas de evaluación</div>
-          ${exercise.rubrics.map((r: any) => {
+          ${exercise.rubrics.map((r) => {
             const comment = parsedRubricCmts[r.id] || rubricCmts[r.id] || '';
             const passed  = comment.startsWith('✓');
             const failed  = comment.startsWith('✗');
@@ -348,199 +387,238 @@ export default function GradeAttemptPage() {
   }
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      <div className="max-w-4xl mx-auto">
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+      <div className="mx-auto max-w-4xl">
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-          <Link href="/profesor/pendientes" className="hover:text-gray-700 flex items-center gap-1">
+        <div className="mb-5 flex items-center gap-2 text-sm text-gray-500">
+          <Link href="/profesor/pendientes" className="flex items-center gap-1 transition-colors hover:text-gray-700">
             <ArrowLeft className="w-3.5 h-3.5" /> Pendientes
           </Link>
-          <span>/</span>
-          <span className="text-gray-700">Calificar</span>
+          <span className="text-gray-300">/</span>
+          <span className="font-medium text-gray-700">Calificar</span>
         </div>
 
-        {/* Header */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
-          <div className="flex items-start gap-4 flex-wrap">
-            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-lg font-bold text-gray-600 flex-shrink-0">
+        {/* Cabecera — banda azul noche con el expediente del estudiante */}
+        <div className="relative mb-6 overflow-hidden rounded-card shadow-soft lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+          <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+          <div aria-hidden className="pointer-events-none absolute right-6 bottom-4 hidden opacity-95 xl:block">
+            <ArtBalance size={140} className="cx-float" />
+          </div>
+          <div className="relative flex flex-wrap items-start gap-5 p-6 lg:p-8">
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-xl font-extrabold text-white">
               {student?.name?.charAt(0)?.toUpperCase() ?? '?'}
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-3 flex-wrap mb-1">
-                <h2 className="text-xl font-bold text-gray-900">{student?.name ?? '—'}</h2>
+            <div className="min-w-0 flex-1">
+              <p className="mb-1.5 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500">
+                Calificación
+              </p>
+              <div className="mb-1 flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-extrabold tracking-tight text-white">{student?.name ?? '—'}</h1>
                 <StatusBadge status={attempt.status} />
               </div>
-              <p className="text-gray-500 text-sm">{student?.email}</p>
-              <p className="text-gray-500 text-sm mt-0.5 font-medium">{exercise.title}</p>
-              <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+              <p className="text-sm text-blue-200/80">{student?.email}</p>
+              <p className="mt-0.5 text-sm font-semibold text-blue-100">{exercise.title}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-blue-200/80">
                 {prog?.timeSpentMin != null && (
-                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{prog.timeSpentMin} min</span>
+                  <span className="flex items-center gap-1.5 tabular-nums">
+                    <Clock className="w-3.5 h-3.5" />{prog.timeSpentMin} min
+                  </span>
                 )}
-                {attempt.startedAt   && <span>Inicio: {formatDateTime(attempt.startedAt)}</span>}
-                {attempt.submittedAt && <span>Envío: {formatDateTime(attempt.submittedAt)}</span>}
+                {attempt.startedAt   && <span className="tabular-nums">Inicio: {formatDateTime(attempt.startedAt)}</span>}
+                {attempt.submittedAt && <span className="tabular-nums">Envío: {formatDateTime(attempt.submittedAt)}</span>}
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-col items-end gap-3">
               {isAlreadyGraded && (
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-emerald-600 font-mono tabular-nums">{attempt.score}</p>
-                  <p className="text-xs text-gray-400">/ {attempt.maxScore} pts</p>
+                <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-3 text-right cx-tada">
+                  <p className="text-3xl font-extrabold text-emerald-300 tabular-nums">{attempt.score}</p>
+                  <p className="text-xs text-blue-200/80 tabular-nums">/ {attempt.maxScore} pts</p>
                 </div>
               )}
-              <button
-                onClick={handlePrintReport}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 bg-white hover:bg-gray-50 rounded-xl transition-colors"
-              >
+              <Button variant="secondary" size="sm" onClick={handlePrintReport} className="cx-press">
                 <Printer className="w-3.5 h-3.5" />
                 Exportar PDF
-              </button>
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Progress stats */}
+        {/* Métricas del intento */}
         {prog && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            {[
-              { label: 'Clientes',  value: prog.clientsCount  ?? 0, color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200'   },
-              { label: 'Productos', value: prog.productsCount ?? 0, color: 'text-slate-600',  bg: 'bg-slate-100 border-slate-200' },
-              { label: 'Facturas',  value: prog.invoicesCount ?? 0, color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200'     },
-              { label: 'Asientos',  value: prog.entriesCount  ?? 0, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
-            ].map(s => (
-              <div key={s.label} className={`rounded-xl p-4 text-center border ${s.bg}`}>
-                <p className={`text-2xl font-bold font-mono tabular-nums ${s.color}`}>{s.value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-              </div>
-            ))}
+          <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <StatCard label="Clientes"  value={String(prog.clientsCount  ?? 0)} icon={Users}   tint="#B8860B" className="cx-pop cx-d1" />
+            <StatCard label="Productos" value={String(prog.productsCount ?? 0)} icon={Package} tint="#1B2E6E" className="cx-pop cx-d2" />
+            <StatCard label="Facturas"  value={String(prog.invoicesCount ?? 0)} icon={Receipt} tint="#2563EB" className="cx-pop cx-d3" />
+            <StatCard label="Asientos"  value={String(prog.entriesCount  ?? 0)} icon={BookOpen} tint="#059669" className="cx-pop cx-d4" />
           </div>
         )}
 
-        {/* Rubrics */}
+        {/* Rúbricas */}
         {exercise.rubrics && exercise.rubrics.length > 0 && (
-          <SectionCard title="Rúbricas de evaluación" icon={<CheckCircle2 className="w-4 h-4" />} collapsible>
+          <CollapsibleCard
+            title="Rúbricas de evaluación"
+            eyebrow="Criterios"
+            icon={ClipboardCheck}
+            iconTint="#B8860B"
+            collapsible
+            className="cx-pop"
+          >
             <div className="space-y-2">
-              {exercise.rubrics.map((r: any) => (
-                <div key={r.id} className="flex items-start justify-between p-3 bg-gray-50 rounded-xl border border-gray-200 gap-4">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-700">{r.description}</p>
-                    {r.criterion && (
-                      <p className="text-xs text-blue-700 mt-0.5 font-mono">
-                        {r.criterion}{r.expectedValue ? ` = ${r.expectedValue}` : ''}
-                      </p>
-                    )}
-                    {rubricCmts[r.id] && (
-                      <p className="text-xs text-gray-500 mt-1 italic">{rubricCmts[r.id]}</p>
-                    )}
+              {exercise.rubrics.map((r) => {
+                const comment = rubricCmts[r.id];
+                const passed  = comment?.startsWith('✓');
+                const failed  = comment?.startsWith('✗');
+                return (
+                  <div
+                    key={r.id}
+                    className={`flex items-start justify-between gap-4 rounded-xl border p-3.5 ${
+                      passed ? 'border-emerald-200 bg-emerald-50'
+                      : failed ? 'border-red-200 bg-red-50'
+                      : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                      {passed && <DrawnCheck className="mt-0.5 w-4 h-4 flex-shrink-0 text-emerald-600" />}
+                      {failed && <X className="mt-0.5 w-4 h-4 flex-shrink-0 text-red-600" />}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800">{r.description}</p>
+                        {r.criterion && (
+                          <p className="mt-0.5 font-mono text-xs text-blue-700">
+                            {r.criterion}{r.expectedValue ? ` = ${r.expectedValue}` : ''}
+                          </p>
+                        )}
+                        {comment && (
+                          <p className={`mt-1 text-xs ${passed ? 'text-emerald-700' : failed ? 'text-red-700' : 'text-gray-500'}`}>
+                            {comment}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="flex-shrink-0 text-sm font-bold text-gray-500 tabular-nums">{r.points} pts</span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-500 flex-shrink-0">{r.points} pts</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </SectionCard>
+          </CollapsibleCard>
         )}
 
-        {/* Auto-grade preview panel */}
+        {/* Vista previa de auto-calificación */}
         {showPreview && preview && (
-          <div className="bg-white border-2 border-blue-200 shadow-md rounded-xl overflow-hidden mb-6">
-            <div className="flex items-center justify-between p-5 bg-blue-50 border-b border-blue-200">
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-blue-700" />
-                <h3 className="font-bold text-blue-800">Resultado de Auto-calificación</h3>
+          <div className="mb-6 overflow-hidden rounded-card border-2 border-blue-200 bg-white shadow-card-hover cx-pop">
+            <div className="flex items-center justify-between border-b border-blue-200 bg-blue-50 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <IconTile icon={Zap} tint="#2563EB" size={40} className="cx-wiggle-loop" />
+                <div>
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">Sugerencia</p>
+                  <h3 className="font-bold tracking-tight text-blue-900">Resultado de auto-calificación</h3>
+                </div>
               </div>
-              <button onClick={() => setShowPreview(false)} className="text-blue-500 hover:text-blue-700">
+              <button onClick={() => setShowPreview(false)} className="text-blue-500 hover:text-blue-700 cx-press" aria-label="Cerrar">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Score summary */}
-            <div className="grid grid-cols-3 gap-4 p-5 border-b border-blue-100">
+            {/* Resumen */}
+            <div className="grid grid-cols-3 gap-4 border-b border-blue-100 p-6">
               <div className="text-center">
-                <p className="text-3xl font-black text-blue-700 font-mono tabular-nums">{preview.score}</p>
-                <p className="text-xs text-gray-500 mt-0.5">/ {preview.maxScore} pts</p>
-                <p className="text-xs font-semibold text-blue-700 mt-1">Puntaje sugerido</p>
+                <p className="text-3xl font-extrabold text-blue-700 tabular-nums cx-count">{preview.score}</p>
+                <p className="mt-0.5 text-xs text-gray-500 tabular-nums">/ {preview.maxScore} pts</p>
+                <p className="mt-1 text-xs font-bold text-blue-700">Puntaje sugerido</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-black text-emerald-600 font-mono tabular-nums">{preview.passedCount}</p>
-                <p className="text-xs text-gray-500 mt-0.5">/ {preview.totalCount} criterios</p>
-                <p className="text-xs font-semibold text-emerald-600 mt-1">Aprobados</p>
+                <p className="text-3xl font-extrabold text-emerald-600 tabular-nums cx-count">{preview.passedCount}</p>
+                <p className="mt-0.5 text-xs text-gray-500 tabular-nums">/ {preview.totalCount} criterios</p>
+                <p className="mt-1 text-xs font-bold text-emerald-600">Aprobados</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-black text-gray-700 font-mono tabular-nums">
+                <p className="text-3xl font-extrabold text-gray-700 tabular-nums cx-count">
                   {preview.totalPoints > 0 ? Math.round((preview.earnedPoints / preview.totalPoints) * 100) : 0}%
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">{preview.earnedPoints.toFixed(1)} / {preview.totalPoints.toFixed(1)} pts rubrica</p>
-                <p className="text-xs font-semibold text-gray-600 mt-1">Porcentaje</p>
+                <p className="mt-0.5 text-xs text-gray-500 tabular-nums">
+                  {preview.earnedPoints.toFixed(1)} / {preview.totalPoints.toFixed(1)} pts rúbrica
+                </p>
+                <p className="mt-1 text-xs font-bold text-gray-600">Porcentaje</p>
               </div>
             </div>
 
-            {/* Per-criterion results */}
-            <div className="p-5 space-y-2">
-              {preview.results.map(r => (
-                <div key={r.rubricId} className={`flex items-start gap-3 p-3 rounded-xl border ${
-                  r.passed
-                    ? 'bg-emerald-50 border-emerald-200'
-                    : 'bg-red-50 border-red-200'
-                }`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+            {/* Resultado por criterio */}
+            <div className="space-y-2 p-6">
+              {preview.results.map((r, i) => (
+                <div
+                  key={r.rubricId}
+                  className={`flex items-start gap-3 rounded-xl border p-3.5 cx-pop cx-d${Math.min(i + 1, 6)} ${
+                    r.passed ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'
+                  }`}
+                >
+                  <div className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full ${
                     r.passed ? 'bg-emerald-500' : 'bg-red-500'
                   }`}>
                     {r.passed
-                      ? <Check className="w-3.5 h-3.5 text-white" />
-                      : <X    className="w-3.5 h-3.5 text-white" />}
+                      ? <DrawnCheck className="w-3.5 h-3.5 text-white" />
+                      : <X className="w-3.5 h-3.5 text-white" />}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{r.description}</p>
-                    <p className={`text-xs mt-0.5 ${r.passed ? 'text-emerald-600' : 'text-red-600'}`}>{r.detail}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800">{r.description}</p>
+                    <p className={`mt-0.5 text-xs ${r.passed ? 'text-emerald-700' : 'text-red-700'}`}>{r.detail}</p>
                   </div>
-                  <span className={`text-xs font-bold flex-shrink-0 ${r.passed ? 'text-emerald-700' : 'text-red-500'}`}>
+                  <span className={`flex-shrink-0 text-xs font-bold tabular-nums ${r.passed ? 'text-emerald-700' : 'text-red-600'}`}>
                     {r.passed ? `+${r.points}` : `0/${r.points}`} pts
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="px-5 pb-5">
-              <p className="text-xs text-gray-400 flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                El puntaje ha sido pre-cargado en el formulario. Puedes ajustarlo antes de confirmar.
+            <div className="px-6 pb-6">
+              <p className="flex items-center gap-1.5 text-xs text-gray-500">
+                <AlertTriangle className="w-3.5 h-3.5 text-gold-600" />
+                El puntaje quedó pre-cargado en el formulario. Puedes ajustarlo antes de confirmar.
               </p>
             </div>
           </div>
         )}
 
-        {/* Company info */}
+        {/* Empresa */}
         {company && (
           <div className="mb-4 px-1">
-            <p className="text-xs text-gray-500 font-medium">Empresa: <span className="text-gray-700">{company.name}</span></p>
+            <p className="text-xs font-medium text-gray-500">
+              Empresa: <span className="font-semibold text-gray-700">{company.name}</span>
+            </p>
           </div>
         )}
 
-        {/* Invoices */}
+        {/* Facturas */}
         {invoices.length > 0 && (
-          <SectionCard title={`Facturas (${invoices.length})`} icon={<FileText className="w-4 h-4" />} collapsible>
+          <CollapsibleCard
+            title={`Facturas (${invoices.length})`}
+            eyebrow="Evidencia"
+            icon={FileText}
+            iconTint="#2563EB"
+            collapsible
+            className="cx-pop cx-d2"
+          >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-                    <th className="text-left pb-3">Número</th>
-                    <th className="text-left pb-3">Cliente</th>
-                    <th className="text-left pb-3">Fecha</th>
-                    <th className="text-right pb-3">Total</th>
-                    <th className="text-right pb-3">Estado</th>
+                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
+                    <th className="pb-3 text-left">Número</th>
+                    <th className="pb-3 text-left">Cliente</th>
+                    <th className="pb-3 text-left">Fecha</th>
+                    <th className="pb-3 text-right">Total</th>
+                    <th className="pb-3 text-right">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {invoices.map(inv => (
-                    <tr key={inv.id} className="hover:bg-gray-50">
-                      <td className="py-3 text-blue-700 font-mono text-xs">{inv.consecutiveNumber}</td>
+                    <tr key={inv.id} className="transition-colors hover:bg-blue-50/50">
+                      <td className="py-3 font-mono text-xs text-blue-700">{inv.consecutiveNumber}</td>
                       <td className="py-3 text-gray-700">{inv.clientName}</td>
                       <td className="py-3 text-gray-500">{formatDate(inv.issueDate)}</td>
-                      <td className="py-3 text-right text-gray-700 font-medium">
+                      <td className="py-3 text-right font-semibold text-gray-800 tabular-nums">
                         ₡{Number(inv.total).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-3 text-right">
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${
+                        <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
                           inv.status === 'ACCEPTED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                           inv.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
                           'bg-gray-100 text-gray-600 border-gray-200'
@@ -553,40 +631,47 @@ export default function GradeAttemptPage() {
                 </tbody>
               </table>
             </div>
-          </SectionCard>
+          </CollapsibleCard>
         )}
 
-        {/* Journal entries */}
+        {/* Asientos contables */}
         {entries.length > 0 && (
-          <SectionCard title={`Asientos contables (${entries.length})`} icon={<BookOpen className="w-4 h-4" />} collapsible>
+          <CollapsibleCard
+            title={`Asientos contables (${entries.length})`}
+            eyebrow="Doble partida"
+            icon={BookOpen}
+            iconTint="#059669"
+            collapsible
+            className="cx-pop cx-d3"
+          >
             <div className="space-y-4">
               {entries.map(entry => (
-                <div key={entry.id} className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
+                <div key={entry.id} className="overflow-hidden rounded-xl border border-gray-200">
+                  <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 p-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-700">#{entry.entryNumber} — {entry.description}</p>
+                      <p className="text-sm font-semibold text-gray-700">#{entry.entryNumber} — {entry.description}</p>
                       {entry.reference && <p className="text-xs text-gray-500">Ref: {entry.reference}</p>}
                     </div>
                     <span className="text-xs text-gray-400">{formatDate(entry.entryDate)}</span>
                   </div>
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="text-gray-400 border-b border-gray-100">
-                        <th className="text-left p-3">Cuenta</th>
-                        <th className="text-right p-3">Débito</th>
-                        <th className="text-right p-3">Crédito</th>
+                      <tr className="border-b border-gray-100 text-gray-400">
+                        <th className="p-3 text-left">Cuenta</th>
+                        <th className="p-3 text-right">Débito</th>
+                        <th className="p-3 text-right">Crédito</th>
                       </tr>
                     </thead>
                     <tbody>
                       {entry.lines.map((line, i) => (
-                        <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                        <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-blue-50/50">
                           <td className="p-3 text-gray-600">
                             <span className="font-mono text-gray-400">{line.account.code}</span> {line.account.name}
                           </td>
-                          <td className="p-3 text-right text-gray-700">
+                          <td className="p-3 text-right text-gray-700 tabular-nums">
                             {Number(line.debit) > 0 ? `₡${Number(line.debit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
                           </td>
-                          <td className="p-3 text-right text-gray-700">
+                          <td className="p-3 text-right text-gray-700 tabular-nums">
                             {Number(line.credit) > 0 ? `₡${Number(line.credit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
                           </td>
                         </tr>
@@ -596,44 +681,41 @@ export default function GradeAttemptPage() {
                 </div>
               ))}
             </div>
-          </SectionCard>
+          </CollapsibleCard>
         )}
 
-        {/* Exam activity log */}
+        {/* Registro de actividad del examen */}
         <div className="mb-6">
           <ExamActivityLog attemptId={attemptId} defaultExpanded={false} />
         </div>
 
-        {/* Grading form */}
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-8">
-          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-blue-700" />
-              {isAlreadyGraded ? 'Calificación enviada' : 'Enviar calificación'}
-            </h3>
-            {canAutoGrade && (
-              <Button
-                type="button"
-                onClick={handleAutoGrade}
-                loading={autoing}
-                className="!bg-blue-600 hover:!bg-blue-700 border-blue-600 gap-2"
-                size="sm"
-              >
+        {/* Formulario de calificación */}
+        <SectionCard
+          icon={isAlreadyGraded ? Award : TrendingUp}
+          iconTint={isAlreadyGraded ? '#059669' : '#1B2E6E'}
+          eyebrow={isAlreadyGraded ? 'Cerrado' : 'Acción'}
+          title={isAlreadyGraded ? 'Calificación enviada' : 'Enviar calificación'}
+          className="mb-8 cx-pop"
+          action={
+            canAutoGrade ? (
+              <Button type="button" size="sm" onClick={handleAutoGrade} loading={autoing} className="cx-press">
                 <Zap className="w-4 h-4" />
-                Auto-calificar con IA
+                Auto-calificar
               </Button>
-            )}
-            {!canAutoGrade && !isAlreadyGraded && (
-              <p className="text-xs text-gray-400 flex items-center gap-1">
+            ) : !isAlreadyGraded ? (
+              <p className="flex items-center gap-1 text-xs text-gray-400">
                 <BarChart2 className="w-3.5 h-3.5" />
                 {!company ? 'Sin empresa creada' : 'Sin rúbricas con criterios'}
               </p>
-            )}
-          </div>
-
+            ) : undefined
+          }
+        >
           {isAlreadyGraded && attempt.feedback && (
-            <div className="mb-5 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <p className="text-xs font-semibold text-emerald-700 mb-1">Retroalimentación enviada</p>
+            <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-700">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Retroalimentación enviada
+              </p>
               <p className="text-sm text-gray-700">
                 {(() => {
                   try { const p = JSON.parse(attempt.feedback as string); return p.text || attempt.feedback; }
@@ -646,7 +728,7 @@ export default function GradeAttemptPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">
-                Puntaje * <span className="text-gray-400 font-normal">(0 – {attempt.maxScore} pts)</span>
+                Puntaje * <span className="font-normal text-gray-400 tabular-nums">(0 – {attempt.maxScore} pts)</span>
               </label>
               <input
                 type="number" min="0" max={Number(attempt.maxScore)} step="0.5"
@@ -654,7 +736,7 @@ export default function GradeAttemptPage() {
                 onChange={e => setScore(e.target.value)}
                 disabled={isAlreadyGraded}
                 placeholder={`0 – ${attempt.maxScore}`}
-                className="w-full max-w-xs rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full max-w-xs rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 tabular-nums focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 disabled:opacity-50"
               />
             </div>
 
@@ -664,29 +746,29 @@ export default function GradeAttemptPage() {
                 rows={4} value={feedback}
                 onChange={e => setFeedback(e.target.value)}
                 disabled={isAlreadyGraded}
-                placeholder="Escribe comentarios para el estudiante sobre su trabajo..."
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50"
+                placeholder="Escribe comentarios para el estudiante sobre su trabajo…"
+                className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 disabled:opacity-50"
               />
             </div>
 
-            <div className="flex gap-3 pt-2 flex-wrap">
-              <Button type="button" variant="secondary" onClick={() => router.back()}>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Button type="button" variant="secondary" onClick={() => router.back()} className="cx-press">
                 <ArrowLeft className="w-4 h-4" /> Volver
               </Button>
               {(attempt.status === 'SUBMITTED' || attempt.status === 'GRADED') && (
-                <Button type="button" variant="secondary" loading={reopening} onClick={handleReopen}>
+                <Button type="button" variant="outline" loading={reopening} onClick={handleReopen} className="cx-press">
                   <RotateCcw className="w-4 h-4" /> Reabrir intento
                 </Button>
               )}
               {!isAlreadyGraded && (
-                <Button type="submit" loading={saving} disabled={!score}>
+                <Button type="submit" loading={saving} disabled={!score} className="cx-press">
                   <Send className="w-4 h-4" />
                   {preview ? 'Confirmar calificación' : 'Enviar calificación'}
                 </Button>
               )}
             </div>
           </form>
-        </div>
+        </SectionCard>
       </div>
     </div>
   );

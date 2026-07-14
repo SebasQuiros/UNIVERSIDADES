@@ -2,9 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
-import { Spinner } from '@/components/ui/Spinner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ArtCoins, SceneEmptyBox } from '@/components/illustrations';
 import toast from 'react-hot-toast';
-import { Users, Building2, DollarSign, TrendingUp } from 'lucide-react';
+import { Users, Building2, Coins, TrendingUp, Lock } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
@@ -14,6 +19,12 @@ import {
 // Annual license price per student in Costa Rican colones (CRC).
 // Confidential — only visible to SUPERADMIN (this page is under /superadmin/*).
 const PRICE_PER_STUDENT_CRC = 5000;
+
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +36,16 @@ interface UniversityBreakdown {
   isActive:      boolean;
 }
 
+/** Forma parcial devuelta por /superadmin/universities (sólo lo que usamos aquí). */
+interface UniversityApiItem {
+  id:             string;
+  name:           string;
+  shortName?:     string | null;
+  isActive?:      boolean;
+  studentsCount?: number;
+  _count?:        { users?: number };
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmtCrc = (n: number) =>
@@ -34,7 +55,7 @@ const fmtCrc = (n: number) =>
     maximumFractionDigits: 0,
   }).format(n);
 
-const BAR_COLORS = ['#2563EB', '#10b981', '#f59e0b', '#ef4444', '#475569', '#ec4899'];
+const BAR_COLORS = ['#2563EB', '#1B2E6E', '#3B82F6', '#059669', '#B8860B', '#475569'];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -47,7 +68,7 @@ export default function IngresosPage() {
     try {
       // Fetch all universities + their student counts.
       // Uses the existing /superadmin/universities endpoint (SUPERADMIN-only).
-      const { data } = await api.get<any[]>('/api/v1/superadmin/universities');
+      const { data } = await api.get<UniversityApiItem[]>('/api/v1/superadmin/universities');
       const mapped: UniversityBreakdown[] = (data ?? []).map((u) => ({
         id:            u.id,
         name:          u.name,
@@ -65,10 +86,6 @@ export default function IngresosPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) {
-    return <div className="flex-1 flex items-center justify-center"><Spinner size="lg" /></div>;
-  }
-
   const activeUnis     = universities.filter((u) => u.isActive);
   const totalStudents  = activeUnis.reduce((s, u) => s + u.studentsCount, 0);
   const annualRevenue  = totalStudents * PRICE_PER_STUDENT_CRC;
@@ -84,126 +101,166 @@ export default function IngresosPage() {
     }));
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Ingresos</h2>
-        <p className="text-gray-500 text-sm mt-1">
-          Licencia anual de <span className="font-semibold text-gray-700">{fmtCrc(PRICE_PER_STUDENT_CRC)}</span> por estudiante activo.
-        </p>
-        <p className="text-xs text-gray-400 mt-1">
-          Información confidencial &mdash; visible únicamente para SuperAdmin.
-        </p>
-      </div>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      <PageHeader
+        eyebrow="Superadmin"
+        title="Ingresos y planes"
+        subtitle={`Licencia anual de ${fmtCrc(PRICE_PER_STUDENT_CRC)} por estudiante activo.`}
+        icon={Coins}
+        iconTint="#B8860B"
+        className="mb-6"
+        actions={
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold-50 border border-gold-100 text-gold-900 text-xs font-semibold">
+            <Lock className="w-3.5 h-3.5" /> Información confidencial
+          </span>
+        }
+      />
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <Users className="w-5 h-5 text-blue-600" />
+      {loading ? (
+        <>
+          <Skeleton className="h-52 w-full rounded-card mb-8" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-80 rounded-card lg:col-span-2" />
+            <Skeleton className="h-80 rounded-card" />
           </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{totalStudents}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Estudiantes activos</p>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <Building2 className="w-5 h-5 text-slate-600" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{activeUnis.length}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Universidades activas</p>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-            <DollarSign className="w-5 h-5 text-emerald-600" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{fmtCrc(annualRevenue)}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Ingresos anuales estimados</p>
-          </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-5 flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <TrendingUp className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums">{fmtCrc(monthlyRevenue)}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Promedio mensual</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Chart + breakdown layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar chart */}
-        <div className="lg:col-span-2 bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-          <h3 className="font-semibold text-gray-800 text-sm mb-4">Estudiantes por universidad</h3>
-          {chartData.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-              <Users className="w-8 h-8 mb-2 opacity-30" />
-              <p className="text-sm">Sin estudiantes registrados</p>
+        </>
+      ) : (
+        <>
+          {/* Banda hero — resumen económico */}
+          <div className="relative overflow-hidden rounded-card shadow-soft mb-8 lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+            <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+            <div aria-hidden className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 hidden xl:block opacity-95">
+              <ArtCoins size={180} className="lp-drift" />
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: '#6b7280' }}
-                  tickFormatter={(v) => v.length > 12 ? v.slice(0, 12) + '…' : v}
+            <div className="relative p-6 lg:p-8">
+              <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500 mb-2">
+                Modelo de licencias
+              </p>
+              <h2 className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
+                Ingresos estimados
+              </h2>
+              <p className="text-sm text-blue-200/80 mt-1.5 max-w-md">
+                Proyección basada en los estudiantes activos de las universidades habilitadas.
+              </p>
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard
+                  key={`st-${totalStudents}`}
+                  variant="dark"
+                  label="Estudiantes activos"
+                  value={String(totalStudents)}
+                  icon={Users}
+                  className="cx-count"
                 />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
-                  formatter={(v: any, name: any) => {
-                    if (name === 'students') return [v, 'Estudiantes'];
-                    return [v, name];
-                  }}
+                <StatCard
+                  key={`un-${activeUnis.length}`}
+                  variant="dark"
+                  label="Universidades activas"
+                  value={String(activeUnis.length)}
+                  icon={Building2}
+                  className="cx-count"
                 />
-                <Bar dataKey="students" radius={[6, 6, 0, 0]}>
-                  {chartData.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+                <StatCard
+                  key={`an-${annualRevenue}`}
+                  variant="dark"
+                  label="Ingresos anuales"
+                  value={fmtCrc(annualRevenue)}
+                  icon={Coins}
+                  hint="Estimación"
+                  className="cx-count"
+                />
+                <StatCard
+                  key={`me-${monthlyRevenue}`}
+                  variant="dark"
+                  label="Promedio mensual"
+                  value={fmtCrc(monthlyRevenue)}
+                  icon={TrendingUp}
+                  hint="Anual ÷ 12"
+                  className="cx-count"
+                />
+              </div>
+            </div>
+          </div>
 
-        {/* Breakdown table */}
-        <div className="lg:col-span-1 bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-          <h3 className="font-semibold text-gray-800 text-sm mb-4">Desglose por universidad</h3>
-          {activeUnis.length === 0 ? (
-            <div className="flex flex-col items-center py-12 text-gray-400">
-              <Building2 className="w-8 h-8 mb-2 opacity-30" />
-              <p className="text-sm">Sin universidades</p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {activeUnis
-                .slice()
-                .sort((a, b) => b.studentsCount - a.studentsCount)
-                .map((u) => (
-                  <div key={u.id} className="flex items-center justify-between text-sm border-b border-gray-100 pb-2 last:border-b-0">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-gray-800 font-medium truncate">{u.shortName || u.name}</p>
-                      <p className="text-xs text-gray-400">{u.studentsCount} estudiantes</p>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-700 flex-shrink-0 ml-2 font-mono tabular-nums">
-                      {fmtCrc(u.studentsCount * PRICE_PER_STUDENT_CRC)}
-                    </p>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      </div>
+          {/* Gráfica + desglose */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <SectionCard
+              className="lg:col-span-2"
+              icon={Users}
+              iconTint="#2563EB"
+              eyebrow="Distribución"
+              title="Estudiantes por universidad"
+            >
+              {chartData.length === 0 ? (
+                <EmptyState
+                  illustration={<SceneEmptyBox size={170} className="lp-drift" />}
+                  title="Sin estudiantes registrados"
+                  description="Cuando las universidades activas matriculen estudiantes, verás aquí su distribución."
+                  className="py-6"
+                />
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11, fill: '#6b7280' }}
+                      tickFormatter={(v: string) => v.length > 12 ? v.slice(0, 12) + '…' : v}
+                    />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#9ca3af' }} />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(37,99,235,0.06)' }}
+                      contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
+                    />
+                    <Bar dataKey="students" name="Estudiantes" radius={[6, 6, 0, 0]}>
+                      {chartData.map((entry, i) => (
+                        <Cell key={`${entry.name}-${i}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              icon={Building2}
+              iconTint="#B8860B"
+              eyebrow="Por institución"
+              title="Desglose de licencias"
+            >
+              {activeUnis.length === 0 ? (
+                <EmptyState
+                  illustration={<SceneEmptyBox size={150} className="lp-drift" />}
+                  title="Sin universidades activas"
+                  description="Activa una universidad para calcular su licencia anual."
+                  className="py-6"
+                />
+              ) : (
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                  {activeUnis
+                    .slice()
+                    .sort((a, b) => b.studentsCount - a.studentsCount)
+                    .map((u) => (
+                      <div
+                        key={u.id}
+                        className="flex items-center justify-between gap-3 text-sm border-b border-gray-100 pb-2 last:border-b-0 cx-lift rounded-lg px-1"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-gray-800 font-semibold truncate">{u.shortName || u.name}</p>
+                          <p className="text-xs text-gray-400 font-mono tabular-nums">
+                            {u.studentsCount} estudiantes
+                          </p>
+                        </div>
+                        <p className="text-sm font-bold text-gray-800 flex-shrink-0 font-mono tabular-nums">
+                          {fmtCrc(u.studentsCount * PRICE_PER_STUDENT_CRC)}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </SectionCard>
+          </div>
+        </>
+      )}
     </div>
   );
 }

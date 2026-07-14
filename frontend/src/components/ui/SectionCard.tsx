@@ -55,7 +55,7 @@ export function SectionCard({
             {Icon && <IconTile icon={Icon} tint={iconTint} size={44} onDark={dark} />}
             <div className="min-w-0">
               {eyebrow && (
-                <p className={cn('text-[0.68rem] font-bold uppercase tracking-[0.13em] mb-0.5', dark ? 'text-gold-500' : 'text-gold-700')}>
+                <p className={cn('text-[0.68rem] font-bold uppercase tracking-[0.13em] mb-0.5', dark ? 'text-gold-500' : 'text-gold-900')}>
                   {eyebrow}
                 </p>
               )}

@@ -4,17 +4,30 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase/client';
-import { getErrorMessage } from '@/lib/utils';
+import { getErrorMessage, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/Badge';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { SceneStudentDesk } from '@/components/illustrations';
 import toast from 'react-hot-toast';
-import { User, Mail, Lock, Shield, Building2, Camera, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import {
+  User, Mail, Lock, Shield, Building2, Camera, Eye, EyeOff,
+  CheckCircle, XCircle, UserCog,
+} from 'lucide-react';
 
 const ROLE_LABELS: Record<string, string> = {
   STUDENT:    'Estudiante',
   TEACHER:    'Profesor',
   ADMIN:      'Administrador',
   SUPERADMIN: 'Super Administrador',
+};
+
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
 };
 
 export function ProfilePage() {
@@ -83,117 +96,130 @@ export function ProfilePage() {
   }
 
   const initials = user.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  const passwordsMatch = Boolean(confirmPassword && newPassword && newPassword === confirmPassword);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto max-w-2xl">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Mi Perfil</h2>
-        <p className="text-gray-500 text-sm mt-1">Administra tu información personal y seguridad</p>
-      </div>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      <div className="max-w-2xl">
 
-      {/* Avatar + info card */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
-        <div className="flex items-center gap-5">
-          <div className="relative flex-shrink-0">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={user.name}
-                className="w-16 h-16 rounded-xl object-cover border-2 border-gray-200"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl">
-                {initials}
-              </div>
-            )}
+        {/* Cabecera */}
+        <PageHeader
+          eyebrow="Tu cuenta"
+          title="Mi perfil"
+          subtitle="Administra tu información personal y la seguridad de tu acceso."
+          icon={UserCog}
+          className="mb-6"
+        />
+
+        {/* Tarjeta de identidad (banda azul noche) */}
+        <div className="relative overflow-hidden rounded-card shadow-soft mb-6 cx-pop bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+          <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+          <div aria-hidden className="pointer-events-none absolute right-2 bottom-0 hidden sm:block opacity-90">
+            <SceneStudentDesk size={150} className="cx-float" />
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-lg truncate">{user.name}</h3>
-            <p className="text-gray-500 text-sm truncate">{user.email}</p>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
-                <Shield className="w-3 h-3" />
-                {ROLE_LABELS[user.role] ?? user.role}
-              </span>
-              {user.universityId && (
-                <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                  <Building2 className="w-3 h-3" />
-                  Universidad asignada
-                </span>
+          <div className="relative flex items-center gap-5 p-6">
+            <div className="relative flex-shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={user.name}
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl bg-white/10 border border-white/20">
+                  {initials}
+                </div>
               )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-extrabold text-white text-lg truncate tracking-tight">{user.name}</h3>
+              <p className="text-blue-200/80 text-sm truncate">{user.email}</p>
+              <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-gold-500/20 text-gold-100 border border-gold-500/30">
+                  <Shield className="w-3 h-3" />
+                  {ROLE_LABELS[user.role] ?? user.role}
+                </span>
+                {user.universityId && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-blue-100 border border-white/15">
+                    <Building2 className="w-3 h-3" />
+                    Universidad asignada
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Edit profile form */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 mb-6">
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <User className="w-4 h-4 text-blue-700" />
-          Información personal
-        </h3>
-        <form onSubmit={handleSaveProfile} className="space-y-4">
-          <Input
-            label="Nombre completo"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            icon={<User className="w-4 h-4" />}
-            placeholder="Tu nombre completo"
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Correo electrónico
-            </label>
-            <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 text-sm">
-              <Mail className="w-4 h-4 text-gray-400" />
-              {user.email}
-            </div>
-            <p className="text-xs text-gray-400 mt-1">El correo no se puede cambiar</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL de foto de perfil
-            </label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  icon={<Camera className="w-4 h-4" />}
-                  placeholder="https://ejemplo.com/foto.jpg"
-                />
+        {/* Información personal */}
+        <SectionCard
+          eyebrow="Datos"
+          title="Información personal"
+          description="Así te ven tus profesores y compañeros de equipo."
+          icon={User}
+          iconTint="#2563EB"
+          className="mb-6 cx-pop cx-d1"
+        >
+          <form onSubmit={handleSaveProfile} className="space-y-4">
+            <Input
+              label="Nombre completo"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              icon={<User className="w-4 h-4" />}
+              placeholder="Tu nombre completo"
+            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Correo electrónico
+              </label>
+              <div className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 text-sm">
+                <Mail className="w-4 h-4 text-gray-400" />
+                {user.email}
               </div>
-              {avatarUrl && (
-                <img
-                  src={avatarUrl}
-                  alt="preview"
-                  className="w-10 h-10 rounded-xl object-cover border border-gray-200 flex-shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-              )}
+              <p className="text-xs text-gray-400 mt-1.5">El correo no se puede cambiar.</p>
             </div>
-            <p className="text-xs text-gray-400 mt-1">Pega la URL de una imagen pública</p>
-          </div>
-          <div className="pt-2">
-            <Button type="submit" loading={savingProfile}>
-              Guardar cambios
-            </Button>
-          </div>
-        </form>
-      </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Foto de perfil
+              </label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Input
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    icon={<Camera className="w-4 h-4" />}
+                    placeholder="https://ejemplo.com/foto.jpg"
+                  />
+                </div>
+                {avatarUrl && (
+                  <img
+                    src={avatarUrl}
+                    alt="Vista previa"
+                    className="w-11 h-11 rounded-xl object-cover border border-gray-200 flex-shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">Pega la URL de una imagen pública.</p>
+            </div>
+            <div className="pt-1">
+              <Button type="submit" loading={savingProfile} className="cx-press">
+                Guardar cambios
+              </Button>
+            </div>
+          </form>
+        </SectionCard>
 
-      {/* Change password form */}
-      <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-6">
-        <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-          <Lock className="w-4 h-4 text-blue-700" />
-          Cambiar contraseña
-        </h3>
-        <p className="text-xs text-gray-400 mb-4">
-          Usa al menos 8 caracteres con letras y números.
-        </p>
-
-        <form onSubmit={handleChangePassword} className="space-y-4">
+        {/* Seguridad */}
+        <SectionCard
+          eyebrow="Seguridad"
+          title="Cambiar contraseña"
+          description="Usa al menos 8 caracteres, combinando letras y números."
+          icon={Lock}
+          iconTint="#B8860B"
+          className="cx-pop cx-d2"
+        >
+          <form onSubmit={handleChangePassword} className="space-y-4">
             <div className="relative">
               <Input
                 label="Contraseña actual"
@@ -206,7 +232,8 @@ export function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setShowCurrent((v) => !v)}
-                className="absolute right-3 top-8 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label={showCurrent ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
                 {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -223,7 +250,8 @@ export function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setShowNew((v) => !v)}
-                className="absolute right-3 top-8 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label={showNew ? 'Ocultar contraseña' : 'Mostrar contraseña'}
               >
                 {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -238,18 +266,29 @@ export function ProfilePage() {
                 placeholder="Repite la nueva contraseña"
               />
               {confirmPassword && newPassword && (
-                <p className={`text-xs mt-1 flex items-center gap-1 ${newPassword === confirmPassword ? 'text-emerald-600' : 'text-red-500'}`}>
-                  <CheckCircle className="w-3 h-3" />
-                  {newPassword === confirmPassword ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden'}
+                <p
+                  key={passwordsMatch ? 'ok' : 'ko'}
+                  className={cn(
+                    'text-xs mt-1.5 flex items-center gap-1 font-medium',
+                    passwordsMatch ? 'text-emerald-600 cx-pop' : 'text-red-500 cx-shake',
+                  )}
+                >
+                  {passwordsMatch
+                    ? <><CheckCircle className="w-3.5 h-3.5" /> Las contraseñas coinciden</>
+                    : <><XCircle className="w-3.5 h-3.5" /> Las contraseñas no coinciden</>}
                 </p>
               )}
             </div>
-            <div className="pt-2">
-              <Button type="submit" loading={savingPassword} variant="secondary">
+            <div className="flex items-center gap-3 pt-1">
+              <Button type="submit" loading={savingPassword} variant="secondary" className="cx-press">
                 Cambiar contraseña
               </Button>
+              <Badge variant="slate">
+                <Shield className="w-3 h-3" /> Sesión protegida
+              </Badge>
             </div>
           </form>
+        </SectionCard>
       </div>
     </div>
   );

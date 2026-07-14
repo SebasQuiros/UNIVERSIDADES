@@ -7,11 +7,17 @@ import { formatDate, getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { IconTile } from '@/components/ui/IconTile';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   Users, Plus, Search, X, GraduationCap, BookOpen,
-  ShieldCheck, Copy, CheckCheck, AlertTriangle, ToggleLeft,
-  ToggleRight, ChevronDown, RefreshCw, UserCheck, UserX,
+  ShieldCheck, Copy, CheckCheck, AlertTriangle,
+  ChevronDown, RefreshCw, UserCheck, UserX,
   KeyRound, Download,
 } from 'lucide-react';
 
@@ -127,25 +133,36 @@ function CreateUserModal({
     }
   }
 
+  const hasErrors = Object.keys(errors).length > 0;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white border border-gray-200 rounded-xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100">
-          <div>
-            <h3 className="font-semibold text-gray-900">Nuevo Usuario</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Se generará una contraseña temporal automáticamente</p>
+      <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
+      <div className={`relative bg-white border border-gray-200/70 rounded-card w-full max-w-md shadow-card-hover cx-pop ${hasErrors ? 'cx-shake' : ''}`}>
+        <div className="flex items-center justify-between gap-3 p-5 border-b border-gray-100">
+          <div className="flex items-center gap-3 min-w-0">
+            <IconTile icon={Plus} tint="#2563EB" size={42} />
+            <div className="min-w-0">
+              <p className="text-[0.66rem] font-bold uppercase tracking-[0.13em] text-gold-900">Administración</p>
+              <h3 className="font-bold text-gray-900 truncate">Nuevo usuario</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Se generará una contraseña temporal automáticamente</p>
+            </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors rounded-lg p-1">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cx-press"
+            aria-label="Cerrar"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
+
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <Input
             label="Nombre completo *"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Ej: Juan Pérez Solano"
+            placeholder="Nombre y apellidos"
             error={errors.name}
             autoFocus
           />
@@ -154,7 +171,7 @@ function CreateUserModal({
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            placeholder="usuario@utn.ac.cr"
+            placeholder="usuario@institucion.ac.cr"
             error={errors.email}
           />
           <div className="flex flex-col gap-1.5">
@@ -162,22 +179,23 @@ function CreateUserModal({
             <select
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+              className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
             >
               <option value="STUDENT">Estudiante</option>
               <option value="TEACHER">Profesor</option>
               <option value="ADMIN">Administrador</option>
             </select>
           </div>
-          <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 flex gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700 leading-relaxed">
-              La contraseña temporal se mostrará <strong>una sola vez</strong> después de crear el usuario. Anótela o cópiela antes de cerrar.
+          <div className="rounded-xl bg-gold-50 border border-gold-100 p-3 flex gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-gold-700 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-gold-900 leading-relaxed">
+              La contraseña temporal se mostrará <strong>una sola vez</strong> después de crear el usuario.
+              Cópiala antes de cerrar la ventana.
             </p>
           </div>
           <div className="flex gap-3 pt-1">
-            <Button type="button" variant="secondary" onClick={onClose} className="flex-1">Cancelar</Button>
-            <Button type="submit" loading={saving} className="flex-1">
+            <Button type="button" variant="secondary" onClick={onClose} className="flex-1 cx-press">Cancelar</Button>
+            <Button type="submit" loading={saving} className="flex-1 cx-press">
               <Plus className="w-4 h-4" /> Crear usuario
             </Button>
           </div>
@@ -214,38 +232,39 @@ function CredentialsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-      <div className="relative bg-white border border-gray-200 rounded-xl w-full max-w-md shadow-2xl">
+      <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" />
+      <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-md shadow-card-hover cx-pop">
         {/* Header */}
         <div className="flex items-center gap-3 p-5 border-b border-gray-100">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-            <UserCheck className="w-5 h-5 text-emerald-600" />
+          <div className="cx-tada">
+            <IconTile icon={UserCheck} tint="#059669" size={46} />
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Usuario creado exitosamente</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{user.name}</p>
+          <div className="min-w-0">
+            <p className="text-[0.66rem] font-bold uppercase tracking-[0.13em] text-gold-900">Listo</p>
+            <h3 className="font-bold text-gray-900 truncate">Usuario creado</h3>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">{user.name}</p>
           </div>
         </div>
 
         {/* Body */}
         <div className="p-5 space-y-4">
-          {/* Warning banner */}
+          {/* Aviso */}
           <div className="rounded-xl bg-red-50 border border-red-200 p-3 flex gap-2.5">
             <KeyRound className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-red-700 leading-relaxed font-medium">
-              ⚠️ Esta contraseña temporal se muestra <strong>una sola vez</strong>. Cópiala ahora — no podrás verla de nuevo.
+              Esta contraseña temporal se muestra <strong>una sola vez</strong>. Cópiala ahora — no podrás verla de nuevo.
             </p>
           </div>
 
           {/* Email */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Correo</label>
+            <label className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">Correo</label>
             <div className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 border border-gray-200">
               <span className="flex-1 text-sm font-mono text-gray-800 truncate">{user.email}</span>
               <button
                 onClick={() => copy(user.email, setCopiedEmail)}
-                className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                title="Copiar email"
+                className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-blue-700 hover:bg-blue-50 transition-colors cx-press"
+                title="Copiar correo"
               >
                 {copiedEmail ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
               </button>
@@ -254,14 +273,14 @@ function CredentialsModal({
 
           {/* Password */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Contraseña temporal</label>
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-300">
-              <span className="flex-1 text-sm font-mono font-bold text-amber-800 tracking-widest select-all">
+            <label className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400">Contraseña temporal</label>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-gold-50 border border-gold-100">
+              <span className="flex-1 text-sm font-mono font-bold text-gold-900 tracking-widest select-all">
                 {user.temporaryPassword}
               </span>
               <button
                 onClick={() => copy(user.temporaryPassword, setCopiedPass)}
-                className="flex-shrink-0 p-1.5 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-100 transition-colors"
+                className="flex-shrink-0 p-1.5 rounded-lg text-gold-700 hover:text-gold-900 hover:bg-gold-100 transition-colors cx-press"
                 title="Copiar contraseña"
               >
                 {copiedPass ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
@@ -269,10 +288,10 @@ function CredentialsModal({
             </div>
           </div>
 
-          {/* Copy all button */}
+          {/* Copiar todo */}
           <button
             onClick={copyAll}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-all"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-500 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-all cx-press"
           >
             {copiedAll ? (
               <><CheckCheck className="w-4 h-4 text-emerald-500" /><span className="text-emerald-600">¡Credenciales copiadas!</span></>
@@ -281,14 +300,13 @@ function CredentialsModal({
             )}
           </button>
 
-          {/* Info */}
           <p className="text-xs text-center text-gray-400">
-            El usuario deberá cambiar su contraseña al iniciar sesión por primera vez.
+            La persona usuaria deberá cambiar su contraseña al iniciar sesión por primera vez.
           </p>
         </div>
 
         <div className="px-5 pb-5">
-          <Button onClick={onClose} className="w-full">Entendido, cerrar</Button>
+          <Button onClick={onClose} className="w-full cx-press">Entendido, cerrar</Button>
         </div>
       </div>
     </div>
@@ -334,7 +352,7 @@ function RoleEditor({
       <button
         onClick={() => setOpen(!open)}
         disabled={saving}
-        className="flex items-center gap-1.5 group"
+        className="flex items-center gap-1.5 group cx-press"
         title="Cambiar rol"
       >
         <RoleBadge role={user.role} />
@@ -346,12 +364,12 @@ function RoleEditor({
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[140px]">
+          <div className="absolute left-0 top-full mt-1 z-20 bg-white border border-gray-200/70 rounded-xl shadow-card-hover py-1 min-w-[140px] cx-pop">
             {['STUDENT', 'TEACHER', 'ADMIN'].map((r) => (
               <button
                 key={r}
                 onClick={() => handleRoleChange(r)}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${r === user.role ? 'font-semibold text-blue-700' : 'text-gray-700'}`}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50/60 transition-colors flex items-center gap-2 ${r === user.role ? 'font-semibold text-blue-700' : 'text-gray-700'}`}
               >
                 {r === user.role && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 flex-shrink-0" />}
                 {r !== user.role && <span className="w-1.5 h-1.5 flex-shrink-0" />}
@@ -401,7 +419,7 @@ export default function UsuariosPage() {
   }
 
   // ── Toggle active / inactive ──────────────────────────────────────────────────
-  async function handleToggle(userId: string, currentActive: boolean) {
+  async function handleToggle(userId: string) {
     setTogglingId(userId);
     try {
       const { data } = await api.patch<UserItem>(
@@ -443,8 +461,17 @@ export default function UsuariosPage() {
     pending: users.filter((u) => u.mustChangePassword).length,
   };
 
+  const STAT_CARDS = [
+    { label: 'Estudiantes',           value: counts.STUDENT, icon: GraduationCap, tint: '#2563EB', filter: 'STUDENT' },
+    { label: 'Profesores',            value: counts.TEACHER, icon: BookOpen,      tint: '#059669', filter: 'TEACHER' },
+    { label: 'Admins',                value: counts.ADMIN,   icon: ShieldCheck,   tint: '#475569', filter: 'ADMIN'   },
+    { label: 'Contraseña pendiente',  value: counts.pending, icon: KeyRound,      tint: '#B8860B', filter: ''        },
+  ];
+
+  const hasFilters = Boolean(search || roleFilter || statusFilter);
+
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
 
       {/* Modals */}
       {showCreate && universityId && (
@@ -461,236 +488,273 @@ export default function UsuariosPage() {
         />
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {users.length} usuario{users.length !== 1 ? 's' : ''} en esta institución
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={load}
-            title="Recargar"
-            className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          {users.length > 0 && (
+      <PageHeader
+        eyebrow="Administración"
+        title="Gestión de usuarios"
+        subtitle={`${users.length} persona${users.length !== 1 ? 's' : ''} con acceso en esta institución.`}
+        icon={Users}
+        iconTint="#475569"
+        className="mb-8"
+        actions={
+          <>
             <button
-              onClick={() => exportUsersCSV(users, universityId)}
-              title="Exportar lista de usuarios en CSV"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 text-sm font-medium transition-colors"
+              onClick={load}
+              title="Recargar"
+              aria-label="Recargar la lista de personas"
+              className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors cx-press"
             >
-              <Download className="w-4 h-4" /> CSV
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            {users.length > 0 && (
+              <Button
+                variant="secondary"
+                onClick={() => exportUsersCSV(users, universityId)}
+                title="Exportar lista de usuarios en CSV"
+                className="cx-press"
+              >
+                <Download className="w-4 h-4" /> CSV
+              </Button>
+            )}
+            <Button onClick={() => setShowCreate(true)} className="cx-press">
+              <Plus className="w-4 h-4" /> Nuevo usuario
+            </Button>
+          </>
+        }
+      />
+
+      {/* KPIs — clic para filtrar */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {STAT_CARDS.map((s) => {
+          const active = (s.filter && roleFilter === s.filter) || (!s.filter && statusFilter === 'pending');
+          return (
+            <button
+              key={s.label}
+              onClick={() => s.filter
+                ? setRoleFilter(roleFilter === s.filter ? '' : s.filter)
+                : setStatusFilter(statusFilter === 'pending' ? '' : 'pending')}
+              className={`text-left rounded-card transition-all cx-press cx-hop-parent ${
+                active ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-[#F4F6F8]' : ''
+              }`}
+            >
+              <div className="bg-white border border-gray-200/70 shadow-card hover:shadow-card-hover rounded-card p-5 h-full">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500 leading-tight">
+                      {s.label}
+                    </p>
+                    <p
+                      key={`${s.label}-${s.value}`}
+                      className="mt-2 text-3xl font-extrabold tabular-nums leading-tight text-gray-900 cx-count"
+                    >
+                      {s.value}
+                    </p>
+                  </div>
+                  <IconTile icon={s.icon} tint={s.tint} size={46} className="cx-hop" />
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Listado */}
+      <SectionCard
+        icon={Users}
+        iconTint="#475569"
+        eyebrow="Directorio"
+        title="Personas de la institución"
+        description={`Mostrando ${filtered.length} de ${users.length} usuario${users.length !== 1 ? 's' : ''}`}
+        flushBody
+      >
+        {/* Filtros */}
+        <div className="flex gap-3 flex-wrap px-6 lg:px-7 py-4 border-b border-gray-100 bg-gray-50/60">
+          <div className="flex-1 min-w-52 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre o correo…"
+              className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 text-sm transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+            />
+          </div>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="rounded-xl bg-white border border-gray-300 text-gray-700 px-4 py-2.5 text-sm transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+          >
+            <option value="">Todos los roles</option>
+            <option value="STUDENT">Estudiantes</option>
+            <option value="TEACHER">Profesores</option>
+            <option value="ADMIN">Admins</option>
+          </select>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="rounded-xl bg-white border border-gray-300 text-gray-700 px-4 py-2.5 text-sm transition-colors hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500"
+          >
+            <option value="">Todos los estados</option>
+            <option value="active">Activos</option>
+            <option value="inactive">Inactivos</option>
+            <option value="pending">Con contraseña temporal</option>
+          </select>
+          {hasFilters && (
+            <button
+              onClick={() => { setSearch(''); setRoleFilter(''); setStatusFilter(''); }}
+              className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors cx-press"
+            >
+              <X className="w-3.5 h-3.5" /> Limpiar
             </button>
           )}
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="w-4 h-4" /> Nuevo usuario
-          </Button>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {[
-          { label: 'Estudiantes',        value: counts.STUDENT, icon: GraduationCap, color: 'text-blue-600',   bg: 'bg-blue-50',   filter: 'STUDENT' },
-          { label: 'Profesores',         value: counts.TEACHER, icon: BookOpen,      color: 'text-emerald-600',bg: 'bg-emerald-50',filter: 'TEACHER' },
-          { label: 'Admins',             value: counts.ADMIN,   icon: ShieldCheck,   color: 'text-slate-600', bg: 'bg-slate-100', filter: 'ADMIN'   },
-          { label: 'Contraseña pendiente',value: counts.pending, icon: KeyRound,     color: 'text-amber-600',  bg: 'bg-amber-50',  filter: ''        },
-        ].map((s) => (
-          <button
-            key={s.label}
-            onClick={() => s.filter ? setRoleFilter(roleFilter === s.filter ? '' : s.filter) : setStatusFilter(statusFilter === 'pending' ? '' : 'pending')}
-            className={`p-4 rounded-xl border border-gray-200 bg-white shadow-sm text-center transition-all hover:shadow-md hover:border-gray-300 ${
-              (s.filter && roleFilter === s.filter) || (!s.filter && statusFilter === 'pending')
-                ? 'ring-2 ring-blue-500 border-blue-300'
-                : ''
-            }`}
-          >
-            <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center mx-auto mb-2`}>
-              <s.icon className={`w-4 h-4 ${s.color}`} />
-            </div>
-            <p className={`text-2xl font-bold font-mono tabular-nums ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5 leading-tight">{s.label}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-3 mb-5 flex-wrap">
-        <div className="flex-1 min-w-52 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o email…"
-            className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
-          />
-        </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="rounded-xl bg-white border border-gray-300 text-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Todos los roles</option>
-          <option value="STUDENT">Estudiantes</option>
-          <option value="TEACHER">Profesores</option>
-          <option value="ADMIN">Admins</option>
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl bg-white border border-gray-300 text-gray-700 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Todos los estados</option>
-          <option value="active">Activos</option>
-          <option value="inactive">Inactivos</option>
-          <option value="pending">Con contraseña temporal</option>
-        </select>
-        {(search || roleFilter || statusFilter) && (
-          <button
-            onClick={() => { setSearch(''); setRoleFilter(''); setStatusFilter(''); }}
-            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 border border-gray-200 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" /> Limpiar
-          </button>
-        )}
-      </div>
-
-      {/* Table */}
-      {loading ? (
-        <div className="flex flex-col items-center py-24 gap-3">
-          <Spinner size="lg" />
-          <p className="text-sm text-gray-400">Cargando usuarios…</p>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center py-20 text-center bg-white rounded-xl border border-gray-200">
-          <Users className="w-10 h-10 text-gray-200 mb-3" />
-          <p className="text-gray-500 font-medium">
-            {search || roleFilter || statusFilter ? 'Sin resultados para los filtros aplicados' : 'No hay usuarios registrados'}
-          </p>
-          {!search && !roleFilter && !statusFilter && (
-            <button onClick={() => setShowCreate(true)} className="mt-4 text-sm text-blue-700 hover:underline">
-              Crear el primer usuario
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100 bg-gray-50/70">
-                  <th className="text-left px-5 py-3.5">Usuario</th>
-                  <th className="text-left px-5 py-3.5">Rol</th>
-                  <th className="text-left px-5 py-3.5">Estado</th>
-                  <th className="text-left px-5 py-3.5 hidden md:table-cell">Registrado</th>
-                  <th className="text-left px-5 py-3.5 hidden lg:table-cell">Último acceso</th>
-                  <th className="text-right px-5 py-3.5">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filtered.map((u) => (
-                  <tr key={u.id} className={`hover:bg-gray-50/60 transition-colors ${!u.isActive ? 'opacity-60' : ''}`}>
-                    {/* User info */}
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                          u.isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
-                        }`}>
-                          {u.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="font-medium text-gray-800 truncate">{u.name}</p>
-                            {u.mustChangePassword && (
-                              <span
-                                title="Debe cambiar contraseña"
-                                className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 font-medium"
-                              >
-                                <KeyRound className="w-2.5 h-2.5" /> Temporal
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-400 truncate max-w-[200px]">{u.email}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Role (editable) */}
-                    <td className="px-5 py-3.5">
-                      <RoleEditor
-                        user={u}
-                        universityId={universityId}
-                        onUpdated={handleUserUpdated}
-                      />
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
-                        u.isActive
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-gray-50 text-gray-500 border-gray-200'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                        {u.isActive ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-
-                    {/* Created */}
-                    <td className="px-5 py-3.5 hidden md:table-cell">
-                      <span className="text-xs text-gray-400">{formatDate(u.createdAt)}</span>
-                    </td>
-
-                    {/* Last login */}
-                    <td className="px-5 py-3.5 hidden lg:table-cell">
-                      <span className="text-xs text-gray-400">
-                        {u.lastLogin ? formatDate(u.lastLogin) : '—'}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-end gap-1">
-                        {u.role !== 'SUPERADMIN' && (
-                          <button
-                            onClick={() => handleToggle(u.id, u.isActive)}
-                            disabled={togglingId === u.id}
-                            title={u.isActive ? 'Desactivar usuario' : 'Activar usuario'}
-                            className={`p-1.5 rounded-lg transition-colors ${
-                              u.isActive
-                                ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                                : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
-                            }`}
-                          >
-                            {togglingId === u.id ? (
-                              <Spinner size="sm" />
-                            ) : u.isActive ? (
-                              <UserX className="w-4 h-4" />
-                            ) : (
-                              <UserCheck className="w-4 h-4" />
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </td>
+        {/* Tabla */}
+        {loading ? (
+          <TableSkeleton rows={6} cols={6} />
+        ) : filtered.length === 0 ? (
+          hasFilters ? (
+            <EmptyState
+              illustration={<SceneSearchEmpty size={190} className="lp-drift" />}
+              title="Sin resultados"
+              description="Ninguna persona coincide con los filtros aplicados. Ajusta la búsqueda para seguir."
+              action={
+                <Button
+                  variant="secondary"
+                  onClick={() => { setSearch(''); setRoleFilter(''); setStatusFilter(''); }}
+                  className="cx-press"
+                >
+                  Limpiar filtros
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              illustration={<SceneEmptyBox size={200} className="lp-drift" />}
+              title="Aún no hay usuarios"
+              description="Crea la primera cuenta para que profesores y estudiantes entren a la plataforma."
+              action={
+                <Button onClick={() => setShowCreate(true)} className="cx-press">
+                  <Plus className="w-4 h-4" /> Crear el primer usuario
+                </Button>
+              }
+            />
+          )
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100 bg-gray-50">
+                    <th className="text-left px-6 py-3.5">Usuario</th>
+                    <th className="text-left px-5 py-3.5">Rol</th>
+                    <th className="text-left px-5 py-3.5">Estado</th>
+                    <th className="text-left px-5 py-3.5 hidden md:table-cell">Registrado</th>
+                    <th className="text-left px-5 py-3.5 hidden lg:table-cell">Último acceso</th>
+                    <th className="text-right px-6 py-3.5">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((u) => (
+                    <tr key={u.id} className={`hover:bg-blue-50/40 transition-colors ${!u.isActive ? 'opacity-60' : ''}`}>
+                      {/* Usuario */}
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 border ${
+                            u.isActive
+                              ? 'bg-gradient-to-br from-blue-100 to-blue-50 border-blue-100 text-blue-700'
+                              : 'bg-gray-100 border-gray-200 text-gray-500'
+                          }`}>
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-semibold text-gray-800 truncate">{u.name}</p>
+                              {u.mustChangePassword && (
+                                <span
+                                  title="Debe cambiar contraseña"
+                                  className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full bg-gold-50 text-gold-900 border border-gold-100 font-medium"
+                                >
+                                  <KeyRound className="w-2.5 h-2.5" /> Temporal
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-400 truncate max-w-[200px]">{u.email}</p>
+                          </div>
+                        </div>
+                      </td>
 
-          {/* Footer count */}
-          <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
-            <p className="text-xs text-gray-400">
-              Mostrando {filtered.length} de {users.length} usuario{users.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-      )}
+                      {/* Rol (editable) */}
+                      <td className="px-5 py-3.5">
+                        <RoleEditor
+                          user={u}
+                          universityId={universityId}
+                          onUpdated={handleUserUpdated}
+                        />
+                      </td>
+
+                      {/* Estado */}
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border ${
+                          u.isActive
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-gray-50 text-gray-500 border-gray-200'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${u.isActive ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                          {u.isActive ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+
+                      {/* Registrado */}
+                      <td className="px-5 py-3.5 hidden md:table-cell">
+                        <span className="text-xs text-gray-400">{formatDate(u.createdAt)}</span>
+                      </td>
+
+                      {/* Último acceso */}
+                      <td className="px-5 py-3.5 hidden lg:table-cell">
+                        <span className="text-xs text-gray-400">
+                          {u.lastLogin ? formatDate(u.lastLogin) : '—'}
+                        </span>
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="px-6 py-3.5">
+                        <div className="flex items-center justify-end gap-1">
+                          {u.role !== 'SUPERADMIN' && (
+                            <button
+                              onClick={() => handleToggle(u.id)}
+                              disabled={togglingId === u.id}
+                              title={u.isActive ? 'Desactivar usuario' : 'Activar usuario'}
+                              className={`p-1.5 rounded-lg transition-colors cx-press ${
+                                u.isActive
+                                  ? 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                                  : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50'
+                              }`}
+                            >
+                              {togglingId === u.id ? (
+                                <Spinner size="sm" />
+                              ) : u.isActive ? (
+                                <UserX className="w-4 h-4" />
+                              ) : (
+                                <UserCheck className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pie de tabla */}
+            <div className="px-6 lg:px-7 py-3 border-t border-gray-100 bg-gray-50/60">
+              <p className="text-xs text-gray-400">
+                Mostrando {filtered.length} de {users.length} usuario{users.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </>
+        )}
+      </SectionCard>
     </div>
   );
 }

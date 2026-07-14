@@ -25,6 +25,19 @@ export function esc(value: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
+/**
+ * Número en formato es-CR con 2 decimales, sin símbolo de moneda ("1.234,56").
+ *
+ * Acepta `string` porque los montos del backend son `Decimal` de Prisma y viajan
+ * como string en el JSON. Mismo formato que usaban las declaraciones D-1xx.
+ */
+export function fmtNum(n: number | string): string {
+  return Number(n).toLocaleString('es-CR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('es-CR', {

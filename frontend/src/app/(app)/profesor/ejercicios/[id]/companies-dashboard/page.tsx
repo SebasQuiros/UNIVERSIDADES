@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import type { ElementType } from 'react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -22,9 +23,13 @@ import {
   CircleDollarSign, BookOpen, Power,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { IconTile } from '@/components/ui/IconTile';
+import { SceneEmptyBox } from '@/components/illustrations';
 import { getErrorMessage } from '@/lib/utils';
 
 interface Member { id: string; name: string; email: string; role: 'OWNER' | 'MEMBER' }
@@ -51,6 +56,7 @@ interface Dashboard {
   companies: CompanyStats[];
 }
 
+/** Moneda en colones, formato es-CR. */
 const fmtMoney = (n: number) =>
   '₡ ' + Number(n).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -102,112 +108,124 @@ export default function ProfesorCompaniesDashboard() {
     }
   }
 
+  const backHref = cursoId
+    ? `/profesor/ejercicios/${id}?cursoId=${cursoId}`
+    : `/profesor/ejercicios/${id}`;
+
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50/60">
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div className="flex-1 overflow-y-auto bg-[#F4F6F8]">
+      <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
 
-        <div className="flex items-center justify-between">
-          <Link
-            href={cursoId
-              ? `/profesor/ejercicios/${id}?cursoId=${cursoId}`
-              : `/profesor/ejercicios/${id}`}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="w-4 h-4" /> Volver al ejercicio
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Link href={backHref} className="flex items-center gap-1 transition-colors hover:text-gray-700">
+            <ArrowLeft className="w-3.5 h-3.5" /> Volver al ejercicio
           </Link>
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-xs text-gray-500">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={e => setAutoRefresh(e.target.checked)}
-              />
-              Auto-actualizar 15s
-            </label>
-            <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+          <span className="text-gray-300">/</span>
+          <span className="font-medium text-gray-700">Panel de empresas</span>
         </div>
 
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Panel de empresas</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Monitor en vivo del estado contable de cada empresa del ejercicio.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Multiempresa"
+          title="Panel de empresas"
+          subtitle="Monitor en vivo del estado contable de cada empresa del ejercicio."
+          icon={Building2}
+          actions={
+            <>
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-gray-500">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={e => setAutoRefresh(e.target.checked)}
+                  className="h-4 w-4 rounded accent-blue-600"
+                />
+                Auto-actualizar 15s
+              </label>
+              <Button variant="secondary" size="sm" onClick={load} disabled={loading} className="cx-press">
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Actualizar
+              </Button>
+            </>
+          }
+        />
 
         {loading && !data ? (
-          <div className="flex justify-center py-20"><Spinner /></div>
+          <div className="flex justify-center py-20"><Spinner size="lg" /></div>
         ) : !data || data.companies.length === 0 ? (
-          <Card className="py-14 text-center text-sm text-gray-500">
-            No hay empresas creadas para este ejercicio.
-          </Card>
+          <div className="rounded-card border border-gray-200/70 bg-white shadow-card">
+            <EmptyState
+              illustration={<SceneEmptyBox size={200} className="cx-float" />}
+              title="No hay empresas creadas"
+              description="Cuando los estudiantes creen su empresa para este ejercicio, aparecerán aquí."
+            />
+          </div>
         ) : (
           <>
             {/* Resumen global */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <SummaryStat
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <StatCard
                 label="Empresas"
-                value={data.companies.length}
+                value={String(data.companies.length)}
                 icon={Building2}
-                color="blue"
+                tint="#2563EB"
+                className="cx-pop cx-d1"
               />
-              <SummaryStat
+              <StatCard
                 label="Facturas emitidas"
-                value={data.companies.reduce((s, c) => s + c.stats.invoicesCount, 0)}
+                value={String(data.companies.reduce((s, c) => s + c.stats.invoicesCount, 0))}
                 icon={FileText}
-                color="emerald"
+                tint="#059669"
+                className="cx-pop cx-d2"
               />
-              <SummaryStat
+              <StatCard
                 label="Ventas totales"
                 value={fmtMoney(data.companies.reduce((s, c) => s + c.stats.totalSales, 0))}
                 icon={CircleDollarSign}
-                color="amber"
-                isMoney
+                tint="#B8860B"
+                className="cx-pop cx-d3"
               />
-              <SummaryStat
-                label="AR pendiente"
+              <StatCard
+                label="CxC pendiente"
                 value={fmtMoney(data.companies.reduce((s, c) => s + c.stats.arOutstanding, 0))}
                 icon={CircleDollarSign}
-                color="red"
-                isMoney
+                tint="#DC2626"
+                className="cx-pop cx-d4"
               />
             </div>
 
             {/* Cards por empresa */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.companies.map(c => (
-                <Card
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {data.companies.map((c, i) => (
+                <div
                   key={c.id}
-                  className={`overflow-hidden ${
-                    c.isCompanyEnabled ? '' : 'border-amber-300'
+                  className={`overflow-hidden rounded-card border bg-white shadow-card transition-all cx-lift cx-pop cx-d${Math.min(i + 1, 6)} ${
+                    c.isCompanyEnabled ? 'border-gray-200/70' : 'border-gold-100'
                   }`}
                 >
-                  {/* Header */}
-                  <div className={`px-4 py-3 ${
-                    c.isCompanyEnabled ? 'bg-gray-50' : 'bg-amber-50'
-                  } border-b border-gray-100 flex items-center justify-between gap-2`}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        c.mode === 'GROUP' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'
-                      }`}>
-                        <Building2 className="w-4 h-4" />
-                      </div>
+                  {/* Cabecera */}
+                  <div className={`flex items-center justify-between gap-2 border-b px-4 py-3 ${
+                    c.isCompanyEnabled ? 'border-gray-100 bg-gray-50/70' : 'border-gold-100 bg-gold-50'
+                  }`}>
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <IconTile
+                        icon={Building2}
+                        tint={c.mode === 'GROUP' ? '#2563EB' : '#64748B'}
+                        size={36}
+                      />
                       <div className="min-w-0">
-                        <div className="font-semibold text-sm text-gray-900 truncate">{c.name}</div>
+                        <div className="truncate text-sm font-bold text-gray-900">{c.name}</div>
                         <div className="text-[10px] uppercase tracking-wide text-gray-500">
-                          {c.mode} · {c.legalId}
+                          {c.mode === 'GROUP' ? 'Grupal' : 'Individual'} · {c.legalId}
                         </div>
                       </div>
                     </div>
                     <button
                       onClick={() => toggleEnabled(c)}
                       title={c.isCompanyEnabled ? 'Deshabilitar' : 'Habilitar'}
-                      className={`p-1.5 rounded-lg ${
+                      className={`rounded-lg p-1.5 transition-colors cx-press ${
                         c.isCompanyEnabled
-                          ? 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
-                          : 'text-amber-700 bg-amber-100'
+                          ? 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+                          : 'bg-gold-100 text-gold-900'
                       }`}
                     >
                       <Power className="w-4 h-4" />
@@ -215,19 +233,19 @@ export default function ProfesorCompaniesDashboard() {
                   </div>
 
                   {/* Stats */}
-                  <div className="p-4 grid grid-cols-2 gap-3 text-xs">
-                    <Stat icon={FileText}        label="Facturas" value={c.stats.invoicesCount} />
-                    <Stat icon={ShoppingCart}    label="Compras"  value={c.stats.purchasesCount} />
-                    <Stat icon={CircleDollarSign} label="Ventas"  value={fmtMoney(c.stats.totalSales)}     mono />
-                    <Stat icon={CircleDollarSign} label="Compras ₡" value={fmtMoney(c.stats.totalPurchases)} mono />
-                    <Stat icon={CircleDollarSign} label="AR" value={fmtMoney(c.stats.arOutstanding)} mono color="red" />
-                    <Stat icon={CircleDollarSign} label="AP" value={fmtMoney(c.stats.apOutstanding)} mono color="amber" />
-                    <Stat icon={BookOpen}        label="Asientos" value={c.stats.journalEntries} />
+                  <div className="grid grid-cols-2 gap-3 p-4 text-xs">
+                    <Stat icon={FileText}         label="Facturas"  value={c.stats.invoicesCount} />
+                    <Stat icon={ShoppingCart}     label="Compras"   value={c.stats.purchasesCount} />
+                    <Stat icon={CircleDollarSign} label="Ventas"    value={fmtMoney(c.stats.totalSales)} />
+                    <Stat icon={CircleDollarSign} label="Compras ₡" value={fmtMoney(c.stats.totalPurchases)} />
+                    <Stat icon={CircleDollarSign} label="CxC"       value={fmtMoney(c.stats.arOutstanding)} color="red" />
+                    <Stat icon={CircleDollarSign} label="CxP"       value={fmtMoney(c.stats.apOutstanding)} color="gold" />
+                    <Stat icon={BookOpen}         label="Asientos"  value={c.stats.journalEntries} />
                   </div>
 
                   {/* Miembros */}
-                  <div className="px-4 pb-3 border-t border-gray-100 pt-2">
-                    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-gray-500 font-semibold mb-1.5">
+                  <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                    <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-gray-500">
                       <Users className="w-3 h-3" />
                       {c.mode === 'GROUP'
                         ? `${c.members.length} ${c.members.length === 1 ? 'miembro' : 'miembros'}`
@@ -235,22 +253,22 @@ export default function ProfesorCompaniesDashboard() {
                     </div>
                     {c.mode === 'INDIVIDUAL' ? (
                       c.owner ? (
-                        <div className="text-xs text-gray-700 truncate">
+                        <div className="truncate text-xs text-gray-700">
                           {c.owner.name} <span className="text-gray-400">· {c.owner.email}</span>
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-400 italic">Sin estudiante</div>
+                        <div className="text-xs italic text-gray-400">Sin estudiante</div>
                       )
                     ) : c.members.length === 0 ? (
-                      <div className="text-xs text-gray-400 italic">Sin miembros aún</div>
+                      <div className="text-xs italic text-gray-400">Sin miembros aún</div>
                     ) : (
                       <ul className="space-y-0.5">
                         {c.members.map(m => (
-                          <li key={m.id} className="text-xs text-gray-700 truncate">
+                          <li key={m.id} className="truncate text-xs text-gray-700">
                             {m.name}
                             {m.role === 'OWNER' && (
-                              <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-bold uppercase bg-blue-100 text-blue-800">
-                                owner
+                              <span className="ml-1.5 rounded bg-blue-100 px-1 py-0.5 text-[9px] font-bold uppercase text-blue-800">
+                                dueño
                               </span>
                             )}
                           </li>
@@ -258,7 +276,7 @@ export default function ProfesorCompaniesDashboard() {
                       </ul>
                     )}
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           </>
@@ -269,50 +287,21 @@ export default function ProfesorCompaniesDashboard() {
   );
 }
 
-function SummaryStat({
-  label, value, icon: Icon, color, isMoney,
-}: {
-  label: string; value: string | number; icon: any;
-  color: 'blue' | 'emerald' | 'amber' | 'red'; isMoney?: boolean;
-}) {
-  const cls: Record<string, string> = {
-    blue:    'from-blue-500 to-blue-700',
-    emerald: 'from-emerald-500 to-emerald-700',
-    amber:   'from-amber-500 to-amber-700',
-    red:     'from-red-500 to-red-700',
-  };
-  return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-[10px] uppercase tracking-wide text-gray-500 font-semibold">{label}</div>
-          <div className={`mt-1 ${isMoney ? 'text-base font-bold' : 'text-2xl font-bold'} text-gray-900 ${isMoney ? 'font-mono' : ''}`}>
-            {value}
-          </div>
-        </div>
-        <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${cls[color]} text-white flex items-center justify-center`}>
-          <Icon className="w-4 h-4" />
-        </div>
-      </div>
-    </Card>
-  );
-}
-
 function Stat({
-  icon: Icon, label, value, mono, color,
+  icon: Icon, label, value, color,
 }: {
-  icon: any; label: string; value: string | number;
-  mono?: boolean; color?: 'red' | 'amber';
+  icon: ElementType; label: string; value: string | number;
+  color?: 'red' | 'gold';
 }) {
-  const cls = color === 'red'   ? 'text-red-700'
-            : color === 'amber' ? 'text-amber-700'
+  const cls = color === 'red'  ? 'text-red-700'
+            : color === 'gold' ? 'text-gold-900'
             : 'text-gray-800';
   return (
     <div className="flex items-center gap-2">
-      <Icon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+      <Icon className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
       <div className="min-w-0">
-        <div className="text-gray-500 text-[10px] uppercase tracking-wide">{label}</div>
-        <div className={`${cls} ${mono ? 'font-mono' : 'font-semibold'} text-xs truncate`}>
+        <div className="text-[10px] uppercase tracking-wide text-gray-500">{label}</div>
+        <div className={`truncate text-xs font-semibold tabular-nums ${cls}`}>
           {value}
         </div>
       </div>
