@@ -1,6 +1,9 @@
 'use client';
 
-import { CheckCircle2, AlertTriangle, XCircle, Send, X, FileText, Info } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Send, X, FileText, Info, ClipboardCheck } from 'lucide-react';
+import { IconTile } from '@/components/ui/IconTile';
+import { Button } from '@/components/ui/Button';
+import { cn } from '@/lib/utils';
 import type { Attachment } from './AttachmentPanel';
 import type { PerfilTributarioData } from './PerfilTributario';
 
@@ -26,8 +29,12 @@ interface D101Lines {
   retencionesSource: string; pagosParciales: string;
 }
 
+/** Formularios soportados. Unión cerrada: hace exhaustivos los `Record` de abajo
+ *  y evita que un tipo desconocido caiga en las casillas de OTRA declaración. */
+export type DeclarationType = 'D101_RENTA' | 'D103_RETENCION' | 'D104_IVA' | 'D115_DIVIDENDOS';
+
 interface Props {
-  type: string;
+  type: DeclarationType;
   period: string;
   form: D104Lines | D101Lines | Record<string, any>;
   attachments: Attachment[];
@@ -38,6 +45,45 @@ interface Props {
   submitting: boolean;
 }
 
+/** Etiqueta de cabecera por formulario (solo presentación). */
+const TYPE_TITLE: Record<DeclarationType, string> = {
+  D104_IVA:        'D-104 · IVA',
+  D101_RENTA:      'D-101 · Renta',
+  D103_RETENCION:  'D-103 · Retenciones',
+  D115_DIVIDENDOS: 'D-115 · Dividendos',
+};
+
+/**
+ * Casillas de RESULTADO de cada formulario. Cada declaración numera sus casillas
+ * distinto, así que el resumen debe leer la casilla que corresponde al tipo:
+ *
+ *   D-104 IVA        → 304 impuesto a pagar · 305 saldo a favor
+ *   D-101 Renta      → 602 impuesto a pagar · 603 saldo a favor
+ *   D-103 Retención  → 304 impuesto a pagar · 305 saldo a favor
+ *   D-115 Dividendos → 305 impuesto a PAGAR · 306 saldo a favor
+ *
+ * OJO: la casilla 305 NO significa lo mismo en todos los formularios (en D-104 y
+ * D-103 es saldo a favor; en D-115 es impuesto a pagar). Por eso el mapeo es
+ * explícito por tipo y nunca una cadena de "primero la que exista".
+ *
+ * Fuente de la numeración: `_components/calc.ts`, espejo de
+ * `backend/src/modules/tax-declarations/tax-declarations.service.ts`.
+ */
+const RESULT_KEYS: Record<DeclarationType, { pagar: string; favor: string }> = {
+  D104_IVA:        { pagar: 'cas304_impuestoPagar', favor: 'cas305_saldoFavor' },
+  D101_RENTA:      { pagar: 'cas602_impuestoPagar', favor: 'cas603_saldoFavor' },
+  D103_RETENCION:  { pagar: 'cas304_impuestoPagar', favor: 'cas305_saldoFavor' },
+  D115_DIVIDENDOS: { pagar: 'cas305_impuestoPagar', favor: 'cas306_saldoFavor' },
+};
+
+/** Periodicidad de cada formulario (coincide con las fichas del hub de Tributación). */
+const PERIOD_HINT: Record<DeclarationType, string> = {
+  D104_IVA:        'Declaración mensual de IVA — vence el 15 del mes siguiente.',
+  D103_RETENCION:  'Declaración mensual de retenciones — vence el 15 del mes siguiente.',
+  D101_RENTA:      'Período fiscal anual (1 oct – 30 set). Vence el 15 de diciembre.',
+  D115_DIVIDENDOS: 'Período fiscal anual (1 oct – 30 set). Vence el 15 de diciembre.',
+};
+
 function hasAttachment(attachments: Attachment[], lineKey: string) {
   return attachments.some(a => a.lineKey === lineKey);
 }
@@ -47,28 +93,32 @@ function hasValue(form: Record<string, string>, key: string) {
 }
 
 function statusIcon(status: 'ok' | 'warn' | 'error') {
-  if (status === 'ok')   return <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />;
-  if (status === 'warn') return <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />;
-  return <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />;
+  if (status === 'ok')   return <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-emerald-500" />;
+  if (status === 'warn') return <AlertTriangle className="h-4 w-4 flex-shrink-0 text-gold-700" />;
+  return <XCircle className="h-4 w-4 flex-shrink-0 text-red-500" />;
 }
 
 function CheckRow({ item }: { item: CheckItem }) {
   return (
-    <div className={`flex items-start gap-2.5 py-1.5 px-3 rounded-lg ${
-      item.status === 'ok'   ? 'bg-emerald-50' :
-      item.status === 'warn' ? 'bg-amber-50'   : 'bg-red-50'
-    }`}>
+    <div className={cn(
+      'flex items-start gap-2.5 rounded-xl border px-3 py-2',
+      item.status === 'ok'   ? 'border-emerald-100 bg-emerald-50' :
+      item.status === 'warn' ? 'border-gold-100 bg-gold-50' :
+                               'border-red-100 bg-red-50',
+    )}>
       {statusIcon(item.status)}
-      <div className="flex-1 min-w-0">
-        <p className={`text-xs font-medium ${
+      <div className="min-w-0 flex-1">
+        <p className={cn(
+          'text-xs font-semibold',
           item.status === 'ok'   ? 'text-emerald-800' :
-          item.status === 'warn' ? 'text-amber-800'   : 'text-red-800'
-        }`}>{item.label}</p>
+          item.status === 'warn' ? 'text-gold-900'    : 'text-red-800',
+        )}>{item.label}</p>
         {item.detail && (
-          <p className={`text-xs mt-0.5 ${
+          <p className={cn(
+            'mt-0.5 text-xs leading-relaxed',
             item.status === 'ok'   ? 'text-emerald-600' :
-            item.status === 'warn' ? 'text-amber-600'   : 'text-red-600'
-          }`}>{item.detail}</p>
+            item.status === 'warn' ? 'text-gold-700'    : 'text-red-600',
+          )}>{item.detail}</p>
         )}
       </div>
     </div>
@@ -94,9 +144,7 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
   items.push({
     id: 'period',
     label: `Período declarado: ${period}`,
-    detail: type === 'D104_IVA'
-      ? `Declaración mensual de IVA — venció el 15 del mes siguiente.`
-      : `Período fiscal anual (1 oct – 30 set). Vence el 15 de diciembre.`,
+    detail: PERIOD_HINT[type],
     status: 'ok',
   });
 
@@ -116,7 +164,7 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
         items.push({
           id: line.key,
           label: ok
-            ? `${line.label}: factura(s) adjunta(s) ✓`
+            ? `${line.label}: factura(s) adjunta(s)`
             : `${line.label}: sin factura adjunta`,
           detail: ok
             ? `${attachments.filter(a => a.lineKey === line.key).length} archivo(s) de respaldo`
@@ -140,7 +188,7 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
         items.push({
           id: line.key,
           label: ok
-            ? `${line.label}: factura(s) adjunta(s) ✓`
+            ? `${line.label}: factura(s) adjunta(s)`
             : `${line.label}: sin factura adjunta`,
           detail: ok
             ? `${attachments.filter(a => a.lineKey === line.key).length} archivo(s) de respaldo`
@@ -177,7 +225,7 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
         items.push({
           id: line.key,
           label: ok
-            ? `${line.label}: respaldo adjunto ✓`
+            ? `${line.label}: respaldo adjunto`
             : `${line.label}: sin documento adjunto`,
           detail: ok
             ? `${attachments.filter(a => a.lineKey === line.key).length} archivo(s) de respaldo`
@@ -194,57 +242,71 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
   const fmtNum = (n: number) =>
     Number(n).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const impuestoPagar = type === 'D104_IVA'
-    ? (result?.cas304_impuestoPagar ?? 0)
-    : (result?.cas602_impuestoPagar ?? 0);
-  const saldoFavor = type === 'D104_IVA'
-    ? (result?.cas305_saldoFavor ?? 0)
-    : (result?.cas603_saldoFavor ?? 0);
+  // Lee la casilla de resultado que corresponde al formulario. Antes solo se
+  // contemplaba D-104 y todo lo demás caía en las casillas de D-101 (602/603),
+  // por lo que D-103 y D-115 mostraban siempre "Sin impuesto calculado" aunque
+  // el cálculo existiera. Solo cambia lo que se MUESTRA: el cálculo y lo que se
+  // persiste siguen viniendo de `calc.ts` / del backend, intactos.
+  //
+  // SIN FALLBACK: si el tipo no está en el mapa (no debería, la unión lo impide),
+  // se muestra "—". Enseñar las casillas de OTRA declaración sería peligroso.
+  const keys: { pagar: string; favor: string } | undefined = RESULT_KEYS[type];
+  const impuestoPagar = keys ? Number(result?.[keys.pagar] ?? 0) : 0;
+  const saldoFavor    = keys ? Number(result?.[keys.favor] ?? 0) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl my-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-csq-dark/70 p-4 backdrop-blur-sm">
+      <div className="cx-pop my-4 w-full max-w-lg overflow-hidden rounded-card bg-white shadow-soft">
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-blue-700" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-gray-900">Verificación antes de presentar</h3>
-              <p className="text-xs text-gray-500">
-                {type === 'D104_IVA' ? 'D-104 IVA' : 'D-101 Renta'} — Período: {period}
+        {/* Cabecera */}
+        <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <IconTile icon={ClipboardCheck} tint="#1B2E6E" size={44} />
+            <div className="min-w-0">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">
+                Antes de presentar
+              </p>
+              <h3 className="truncate text-base font-bold tracking-tight text-gray-900">
+                Verificación de la declaración
+              </h3>
+              <p className="truncate text-xs text-gray-500">
+                {TYPE_TITLE[type] ?? type} — Período: {period}
               </p>
             </div>
           </div>
-          <button onClick={onCancel} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-            <X className="w-4 h-4" />
+          <button
+            onClick={onCancel}
+            aria-label="Cerrar"
+            className="cx-press flex-shrink-0 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Banner TRIBU */}
-        <div className="mx-6 mt-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-          <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-          <p className="text-xs text-amber-800 font-medium">
+        {/* Aviso de simulación */}
+        <div className="mx-6 mt-4 flex items-center gap-2 rounded-xl border border-gold-100 bg-gold-50 px-3 py-2">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 text-gold-700" />
+          <p className="text-xs font-semibold text-gold-900">
             SIMULACIÓN EDUCATIVA — Esta declaración NO se envía al sistema real de Hacienda de Costa Rica.
           </p>
         </div>
 
-        {/* Checklist */}
-        <div className="px-6 py-4 space-y-2 max-h-72 overflow-y-auto">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Lista de verificación</p>
+        {/* Lista de verificación */}
+        <div className="max-h-72 space-y-2 overflow-y-auto px-6 py-4">
+          <p className="mb-2 flex items-center gap-1.5 text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">
+            <FileText className="h-3.5 w-3.5" /> Lista de verificación
+          </p>
           {items.map(item => <CheckRow key={item.id} item={item} />)}
           {items.length === 0 && (
-            <p className="text-xs text-gray-400 text-center py-4">No hay datos declarados aún.</p>
+            <p className="py-4 text-center text-xs text-gray-400">No hay datos declarados aún.</p>
           )}
         </div>
 
-        {/* Info sobre facturas */}
+        {/* Por qué se piden facturas */}
         {warnings > 0 && (
-          <div className="mx-6 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
-            <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-blue-700">
+          <div className="mx-6 flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" />
+            <p className="text-xs leading-relaxed text-blue-700">
               <strong>¿Por qué se necesitan facturas?</strong> En el sistema TRIBU CR real, cada transacción debe
               respaldarse con una <strong>factura electrónica</strong> emitida o recibida y registrada en ATV
               (Administración Tributaria Virtual). Sin respaldo, Hacienda puede objetar la declaración.
@@ -254,50 +316,57 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
         )}
 
         {/* Resultado */}
-        <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 rounded-b-none">
-          <div className="flex items-center justify-between">
-            <div>
+        <div className="mt-4 border-t border-gray-100 bg-gray-50 px-6 py-3.5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
               <p className="text-xs text-gray-500">Resultado de la declaración</p>
-              {impuestoPagar > 0 ? (
+              {!keys ? (
+                <p className="text-sm font-bold text-gray-500">—</p>
+              ) : impuestoPagar > 0 ? (
                 <p className="text-sm font-bold text-red-700">
-                  Impuesto a pagar: <span className="font-mono">₡ {fmtNum(impuestoPagar)}</span>
+                  Impuesto a pagar:{' '}
+                  <span className="font-mono tabular-nums">₡ {fmtNum(impuestoPagar)}</span>
                 </p>
               ) : saldoFavor > 0 ? (
                 <p className="text-sm font-bold text-emerald-700">
-                  Saldo a favor: <span className="font-mono">₡ {fmtNum(saldoFavor)}</span>
+                  Saldo a favor:{' '}
+                  <span className="font-mono tabular-nums">₡ {fmtNum(saldoFavor)}</span>
                 </p>
               ) : (
                 <p className="text-sm font-bold text-gray-500">Sin impuesto calculado</p>
               )}
             </div>
-            <div className="text-right">
+            <div className="flex-shrink-0 text-right">
               {warnings > 0 && (
-                <p className="text-xs text-amber-600 font-semibold">{warnings} advertencia(s)</p>
+                <p className="text-xs font-semibold text-gold-700">{warnings} advertencia(s)</p>
               )}
               {errors > 0 && (
-                <p className="text-xs text-red-600 font-semibold">{errors} error(s) bloqueante(s)</p>
+                <p className="cx-shake text-xs font-semibold text-red-600">{errors} error(es) bloqueante(s)</p>
               )}
               {warnings === 0 && errors === 0 && (
-                <p className="text-xs text-emerald-600 font-semibold">Todo listo ✓</p>
+                <p className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Todo listo
+                </p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="px-6 py-4 flex gap-3 border-t border-gray-100">
-          <button onClick={onCancel}
-            className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+        {/* Acciones */}
+        <div className="flex gap-3 border-t border-gray-100 px-6 py-4">
+          <Button variant="secondary" onClick={onCancel} className="flex-1 cx-press">
             Revisar primero
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={onConfirm}
-            disabled={submitting || errors > 0}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-blue-700 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50"
+            loading={submitting}
+            disabled={errors > 0}
+            className="flex-1 cx-press"
           >
-            <Send className="w-4 h-4" />
+            {!submitting && <Send className="h-4 w-4" />}
             {submitting ? 'Presentando...' : warnings > 0 ? 'Presentar con advertencias' : 'Presentar declaración'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
