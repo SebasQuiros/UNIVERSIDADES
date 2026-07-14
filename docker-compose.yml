@@ -74,6 +74,8 @@ services:
     restart: unless-stopped
     environment:
       DATABASE_URL:  "postgresql://${POSTGRES_USER:-contafacil}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerido — definí en .env}@pgbouncer:5432/${POSTGRES_DB:-contafacil}?pgbouncer=true&connection_limit=100"
+      # Conexión DIRECTA (sin pooler): Prisma la exige para migraciones y seed.
+      DIRECT_URL:    "postgresql://${POSTGRES_USER:-contafacil}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerido — definí en .env}@database:5432/${POSTGRES_DB:-contafacil}"
       REDIS_URL:     "${REDIS_URL:-redis://redis:6379}"
       JWT_SECRET:    "${JWT_SECRET:?JWT_SECRET requerido — generar con: node -e \"console.log(require('crypto').randomBytes(48).toString('hex'))\"}"
       JWT_EXPIRES:   "${JWT_EXPIRES:-15m}"
@@ -82,6 +84,10 @@ services:
       PORT:          "${BACKEND_PORT:-3001}"
       NODE_ENV:      "${NODE_ENV:-development}"
       CORS_ORIGIN:   "${CORS_ORIGIN:-http://localhost:3000,http://localhost}"
+      # Supabase Auth — validación del JWT y alta de usuarios.
+      SUPABASE_URL:              "${SUPABASE_URL:-}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:-}"
+      SUPABASE_JWKS_URL:         "${SUPABASE_JWKS_URL:-}"
       # OAuth (configurar después)
       GOOGLE_CLIENT_ID:     "${GOOGLE_CLIENT_ID:-}"
       GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
@@ -111,8 +117,8 @@ services:
       npx prisma generate;
       npx prisma migrate deploy;
       npx prisma db seed || true;
-      ([ -f /app/dist/src/main.js ] || npm run build) &&
-      node dist/src/main.js"
+      ([ -f /app/dist/main.js ] || npm run build) &&
+      node dist/main.js"
 
   # ── 3. Nginx Reverse Proxy ───────────────────────────────────
   nginx:
@@ -141,6 +147,9 @@ services:
       NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:3001}"
       NODE_ENV: "development"
       BACKEND_URL: "http://backend:3001"
+      # Supabase Auth — el cliente del navegador las necesita para inicializarse.
+      NEXT_PUBLIC_SUPABASE_URL: "${NEXT_PUBLIC_SUPABASE_URL:-}"
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}"
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     volumes:

@@ -9,6 +9,7 @@ import {
   Landmark, BookOpen, Building2, Receipt, LineChart, TrendingUp,
   Bell, UserCircle, Sparkles,
 } from 'lucide-react';
+import { SceneSearchEmpty } from '@/components/illustrations';
 
 interface Cmd {
   label: string;
@@ -145,11 +146,17 @@ export function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-[fadeIn_.12s_ease]" onClick={close} />
-      <div className="relative w-full max-w-xl rounded-2xl overflow-hidden border shadow-2xl animate-[cmdIn_.14s_cubic-bezier(.2,.8,.2,1)]"
-        style={{ background: '#03080F', borderColor: 'rgba(96,165,250,0.28)', boxShadow: '0 24px 80px rgba(0,0,0,0.55)' }}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-[cmdkFade_.14s_ease]" onClick={close} />
+      <div
+        className="relative w-full max-w-xl rounded-card overflow-hidden lp-pop"
+        style={{
+          // Panel azul noche, en degradado, con hairline azul y sombra suave
+          background: 'linear-gradient(180deg,#03080F 0%,#060F1C 100%)',
+          boxShadow: '0 28px 80px rgba(3,8,15,0.62), 0 0 0 1px rgba(96,165,250,0.22)',
+        }}
+      >
         {/* Input */}
-        <div className="flex items-center gap-3 px-4 h-14 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-3 px-4 h-14 border-b" style={{ borderColor: 'rgba(96,165,250,0.14)' }}>
           <Search className="w-5 h-5 flex-shrink-0" style={{ color: '#60A5FA' }} />
           <input
             ref={inputRef}
@@ -164,13 +171,15 @@ export function CommandPalette() {
         {/* Results */}
         <div ref={listRef} className="max-h-[52vh] overflow-y-auto py-2">
           {results.length === 0 ? (
-            <div className="px-4 py-10 text-center">
-              <Sparkles className="w-6 h-6 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.25)' }} />
-              <p className="text-sm text-white/45">Sin resultados para “{q}”.</p>
+            <div className="px-4 py-8 flex flex-col items-center text-center">
+              <SceneSearchEmpty size={168} className="lp-drift" />
+              <p className="mt-3 text-sm text-white/55">Sin resultados para “{q}”.</p>
+              <p className="mt-1 text-xs text-white/35">Probá con otro término o concepto contable.</p>
             </div>
           ) : groups.map((g) => (
             <div key={g.group} className="mb-1">
-              <p className="px-4 pt-2 pb-1 text-[10px] font-mono font-bold uppercase tracking-[0.1em]" style={{ color: 'rgba(255,255,255,0.35)' }}>{g.group}</p>
+              {/* Eyebrow dorado de sección */}
+              <p className="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'rgba(251,191,36,0.72)' }}>{g.group}</p>
               {g.items.map(({ c, idx }) => {
                 const Icon = c.icon;
                 const active = idx === sel;
@@ -180,12 +189,20 @@ export function CommandPalette() {
                     data-idx={idx}
                     onMouseMove={() => setSel(idx)}
                     onClick={() => go(c)}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
-                    style={{ background: active ? '#2563EB' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.8)' }}
+                    className="relative w-full flex items-center gap-3 px-4 py-2 text-left transition-colors"
+                    style={{
+                      background: active ? 'linear-gradient(90deg,#1E3A8A,#0F2657)' : 'transparent',
+                      color: active ? '#fff' : 'rgba(255,255,255,0.8)',
+                    }}
                   >
-                    <Icon className="w-4 h-4 flex-shrink-0" style={{ color: active ? '#fff' : 'rgba(255,255,255,0.5)' }} />
+                    {/* Barra/acento dorado del ítem activo */}
+                    {active && (
+                      <span aria-hidden className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r-full"
+                        style={{ background: 'linear-gradient(180deg,#FDE68A,#D4A017)', boxShadow: '0 0 8px rgba(251,191,36,0.5)' }} />
+                    )}
+                    <Icon className="w-4 h-4 flex-shrink-0" style={{ color: active ? '#93C5FD' : 'rgba(255,255,255,0.5)' }} />
                     <span className="flex-1 text-[13.5px]">{c.label}</span>
-                    {active && <CornerDownLeft className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.85)' }} />}
+                    {active && <CornerDownLeft className="w-3.5 h-3.5" style={{ color: '#FBBF24' }} />}
                   </button>
                 );
               })}
@@ -194,16 +211,15 @@ export function CommandPalette() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-4 px-4 h-9 border-t text-[11px]" style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
+        <div className="flex items-center gap-4 px-4 h-9 border-t text-[11px]" style={{ borderColor: 'rgba(96,165,250,0.14)', color: 'rgba(255,255,255,0.4)' }}>
           <span className="flex items-center gap-1"><ArrowUp className="w-3 h-3" /><ArrowDown className="w-3 h-3" /> navegar</span>
           <span className="flex items-center gap-1"><CornerDownLeft className="w-3 h-3" /> abrir</span>
-          <span className="ml-auto flex items-center gap-1 font-mono"><Sparkles className="w-3 h-3" style={{ color: '#60A5FA' }} /> ContaSJ ⌘K</span>
+          <span className="ml-auto flex items-center gap-1"><Sparkles className="w-3 h-3" style={{ color: '#60A5FA' }} /> ContaSJ ⌘K</span>
         </div>
       </div>
 
       <style>{`
-        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes cmdIn { from { opacity: 0; transform: translateY(-8px) scale(.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+        @keyframes cmdkFade { from { opacity: 0 } to { opacity: 1 } }
       `}</style>
     </div>
   );

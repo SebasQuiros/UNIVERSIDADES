@@ -62,7 +62,7 @@ export function CompanyStockCard({ companyId, companyName }: { companyId: string
   }, [companyId]);
 
   if (loading) {
-    return <div className="rounded-2xl h-64 animate-pulse" style={{ background: '#03080F' }} />;
+    return <div className="rounded-card h-64 animate-pulse" style={{ background: '#03080F' }} />;
   }
   if (error || !val) return null;
 
@@ -72,7 +72,7 @@ export function CompanyStockCard({ companyId, companyName }: { companyId: string
   const ticker = deriveTicker(companyName);
 
   return (
-    <div className="rounded-2xl overflow-hidden text-white"
+    <div className="rounded-card overflow-hidden text-white shadow-soft lp-in"
       style={{ background: '#03080F', border: '1px solid rgba(96,165,250,0.18)' }}>
 
       {/* Encabezado tipo bolsa */}

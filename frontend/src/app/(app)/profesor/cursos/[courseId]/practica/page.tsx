@@ -6,6 +6,11 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Card } from '@/components/ui/Card';
+import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import { LearningProfileCard } from '@/components/pedagogy/LearningProfileCard';
 import toast from 'react-hot-toast';
 import {
@@ -93,52 +98,51 @@ export default function TeacherPracticePage() {
         <ArrowLeft className="w-4 h-4" /> Volver al curso
       </Link>
 
-      <div className="flex items-center gap-2 mb-1">
-        <span className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212,160,23,0.14)' }}>
-          <Calculator className="w-5 h-5" style={{ color: '#B8860B' }} />
-        </span>
-        <h2 className="text-2xl font-bold text-gray-900">Práctica libre (Espacio Contador)</h2>
-      </div>
-      <p className="text-gray-500 text-sm mb-6">
-        {courseName ? `${courseName} · ` : ''}Empresas-cliente que tus estudiantes practican por su cuenta, sin calificación.
-      </p>
+      <PageHeader
+        eyebrow="Profesor · Práctica libre"
+        title="Práctica libre (Espacio Contador)"
+        subtitle={`${courseName ? `${courseName} · ` : ''}Empresas-cliente que tus estudiantes practican por su cuenta, sin calificación.`}
+        icon={Calculator}
+        iconTint="#B8860B"
+        className="lp-in"
+      />
 
       {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+        <div className="flex justify-center py-20 mt-6"><Spinner size="lg" /></div>
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            {[
-              { label: 'Estudiantes practicando', value: `${summary.active}/${summary.students}`, icon: Users,     tint: 'rgba(212,160,23,0.12)', color: '#B8860B' },
-              { label: 'Empresas de práctica',    value: summary.companies,                       icon: Building2, tint: '#EFF6FF',              color: '#2563EB' },
-              { label: 'Asientos registrados',    value: summary.entries,                         icon: FileText,  tint: '#ECFDF5',              color: '#059669' },
-              { label: 'Promedio empresas/est.',  value: summary.students ? (summary.companies / summary.students).toFixed(1) : '0', icon: Calculator, tint: '#F5F3FF', color: '#7C3AED' },
-            ].map((k, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: k.tint }}>
-                    <k.icon className="w-4 h-4" style={{ color: k.color }} />
-                  </span>
-                </div>
-                <p className="text-2xl font-bold text-gray-900 font-mono tabular-nums leading-none">{k.value}</p>
-                <p className="text-xs text-gray-500 mt-1.5">{k.label}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 mt-6">
+            <StatCard label="Estudiantes practicando" value={`${summary.active}/${summary.students}`} icon={Users} tint="#B8860B" />
+            <StatCard label="Empresas de práctica" value={String(summary.companies)} icon={Building2} tint="#2563EB" />
+            <StatCard label="Asientos registrados" value={String(summary.entries)} icon={FileText} tint="#059669" />
+            <StatCard label="Promedio empresas/est." value={summary.students ? (summary.companies / summary.students).toFixed(1) : '0'} icon={Calculator} tint="#7C3AED" />
           </div>
 
           {rows.length === 0 ? (
-            <EmptyState text="Este curso aún no tiene estudiantes inscritos." />
+            <Card className="lp-in">
+              <EmptyState
+                illustration={<SceneSearchEmpty size={210} className="lp-drift" />}
+                title="Sin estudiantes inscritos"
+                description="Este curso aún no tiene estudiantes inscritos."
+              />
+            </Card>
           ) : summary.companies === 0 ? (
-            <EmptyState text="Ningún estudiante ha creado empresas de práctica todavía. Invitalos a usar el Espacio Contador para practicar el ciclo contable sin nota." />
+            <Card className="lp-in">
+              <EmptyState
+                illustration={<SceneEmptyBox size={210} className="lp-drift" />}
+                title="Aún no hay práctica libre"
+                description="Ningún estudiante ha creado empresas de práctica todavía. Invitalos a usar el Espacio Contador para practicar el ciclo contable sin nota."
+              />
+            </Card>
           ) : (
             <div className="space-y-2.5">
-              {sorted.map((r) => {
+              {sorted.map((r, ri) => {
                 const open = expanded.has(r.student.id);
                 const last = lastActivityOf(r);
                 const has  = r.totalCompanies > 0;
                 return (
-                  <div key={r.student.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                  <div key={r.student.id} className={`bg-white border border-gray-200/70 rounded-card shadow-card overflow-hidden lp-in lp-in-d${Math.min(ri + 1, 5)}`}>
                     <button
                       onClick={() => has && toggle(r.student.id)}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
@@ -214,8 +218,8 @@ export default function TeacherPracticePage() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 mt-6 p-3 rounded-xl text-xs" style={{ background: 'rgba(212,160,23,0.08)', color: '#8a6d0f' }}>
-            <Sparkles className="w-4 h-4 flex-shrink-0" />
+          <div className="flex items-center gap-2 mt-6 p-3.5 rounded-card text-xs bg-gold-50 text-gold-900 border border-gold-100">
+            <Sparkles className="w-4 h-4 flex-shrink-0 text-gold-700" />
             La práctica libre no afecta la nota. Es evidencia útil de constancia y autoaprendizaje para tu acreditación.
           </div>
         </>
@@ -229,17 +233,6 @@ function Stat({ n, label }: { n: number; label: string }) {
     <div className="text-right">
       <p className="text-base font-bold text-gray-900 font-mono tabular-nums leading-none">{n}</p>
       <p className="text-[11px] text-gray-400">{label}</p>
-    </div>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="flex flex-col items-center py-16 text-center">
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(212,160,23,0.12)' }}>
-        <Calculator className="w-8 h-8" style={{ color: GOLD }} />
-      </div>
-      <p className="text-gray-500 text-sm max-w-md">{text}</p>
     </div>
   );
 }

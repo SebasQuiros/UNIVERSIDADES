@@ -4,17 +4,28 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
-import { StatusBadge, DifficultyBadge } from '@/components/ui/Badge';
+import { StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtReport, SceneEmptyBox } from '@/components/illustrations';
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 import type { Course, ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
+import type { ElementType } from 'react';
 import {
   BookOpen, Users, FileText, ClipboardCheck,
-  ArrowRight, Plus, Clock, TrendingUp,
+  ArrowRight, Plus, Clock, TrendingUp, GraduationCap,
 } from 'lucide-react';
+
+// Textura de puntos sutil para la banda hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
 
 // ── Animated counter hook ─────────────────────────────────────────────────
 function useCountUp(target: number, duration = 800) {
@@ -33,41 +44,13 @@ function useCountUp(target: number, duration = 800) {
   return count;
 }
 
-function StatCard({ label, value, icon: Icon, gradient, glow, sub }: {
-  label: string; value: number | string; icon: React.ElementType;
-  gradient: string; glow: string; sub?: string;
+// ── KPI del hero (StatCard oscuro con contador animado) ────────────────────
+// Conserva el count-up original alimentando el valor animado al primitivo StatCard.
+function CountStat({ label, value, icon, hint }: {
+  label: string; value: number; icon: ElementType; hint?: string;
 }) {
-  const numVal = typeof value === 'number' ? value : 0;
-  const animated = useCountUp(numVal);
-  return (
-    <div className="relative rounded-xl p-5 overflow-hidden transition-transform duration-200 hover:-translate-y-0.5"
-      style={{ background: gradient, boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
-      <div className="absolute inset-0 opacity-10"
-        style={{ background: 'radial-gradient(circle at top right, white 0%, transparent 60%)' }} />
-      <div className="relative flex items-start justify-between mb-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-white/70">{label}</span>
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-sm">
-          <Icon className="w-4 h-4 text-white" />
-        </div>
-      </div>
-      <p className="relative text-3xl font-black text-white leading-none font-mono tabular-nums">{typeof value === 'number' ? animated : value}</p>
-      {sub && <p className="relative text-xs text-white/60 mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-// Placeholder de tarjeta de estadística — mantiene el layout mientras cargan los datos
-function StatCardSkeleton() {
-  return (
-    <div className="rounded-xl p-5 bg-white border border-gray-200/80" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
-      <div className="flex items-start justify-between mb-3">
-        <Skeleton className="h-3 w-20" />
-        <Skeleton className="w-8 h-8 rounded-lg" />
-      </div>
-      <Skeleton className="h-8 w-16" />
-      <Skeleton className="h-3 w-24 mt-2" />
-    </div>
-  );
+  const animated = useCountUp(value);
+  return <StatCard variant="dark" label={label} value={String(animated)} icon={icon} hint={hint} />;
 }
 
 export default function ProfesorDashboard() {
@@ -108,55 +91,78 @@ export default function ProfesorDashboard() {
   // En vez de esconder toda la pantalla con un spinner, renderizamos el shell
   // siempre y mostramos placeholders donde van los datos (progressive skeletons).
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto" style={{ background: '#F4F6F8' }}>
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
 
       {showOnboarding && user?.id && (
         <OnboardingWizard userId={user.id} onComplete={() => setShowOnboarding(false)} />
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Bienvenido, {firstName} 👋</h2>
-          <p className="text-gray-500 text-sm mt-1">Resumen de tus cursos y actividad</p>
-        </div>
-        <Link href="/profesor/ejercicios/nuevo">
-          <Button size="sm">
-            <Plus className="w-4 h-4" />
-            Nuevo ejercicio
-          </Button>
-        </Link>
-      </div>
+      {/* Cabecera */}
+      <PageHeader
+        eyebrow="Panel del profesor"
+        title={`Bienvenido, ${firstName}`}
+        subtitle="Resumen de tus cursos y actividad"
+        icon={GraduationCap}
+        className="mb-6"
+        actions={
+          <Link href="/profesor/ejercicios/nuevo">
+            <Button size="sm">
+              <Plus className="w-4 h-4" />
+              Nuevo ejercicio
+            </Button>
+          </Link>
+        }
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {loading ? (
-          Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
-        ) : (
-          <>
-            <StatCard label="Cursos activos"  value={stats.courses}   icon={BookOpen}       gradient="#2563EB" glow="rgba(16,24,40,0.04)" sub="Este período" />
-            <StatCard label="Ejercicios"      value={stats.exercises} icon={FileText}       gradient="#475569" glow="rgba(16,24,40,0.04)" sub="Publicados y borradores" />
-            <StatCard label="Estudiantes"     value={stats.students}  icon={Users}          gradient="linear-gradient(135deg,#10B981,#059669)" glow="rgba(16,185,129,0.25)" sub="Inscritos en total" />
-            <StatCard label="Por calificar"   value={stats.pending}   icon={ClipboardCheck} gradient="linear-gradient(135deg,#F59E0B,#D97706)" glow="rgba(245,158,11,0.25)" sub="Requieren atención" />
-          </>
-        )}
+      {/* Banda hero — KPIs docentes sobre azul noche */}
+      <div className="relative overflow-hidden rounded-card shadow-soft mb-10 lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+        <div aria-hidden className="pointer-events-none absolute right-6 bottom-5 hidden xl:block opacity-95">
+          <ArtReport size={168} className="lp-drift" />
+        </div>
+        <div className="relative p-6 lg:p-8">
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500 mb-2">
+            Tu docencia
+          </p>
+          <h2 className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
+            Cursos y desempeño en marcha
+          </h2>
+          <p className="text-sm text-blue-200/80 mt-1.5 max-w-md">
+            Cursos activos, ejercicios publicados y entregas por revisar.
+          </p>
+          <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4 xl:max-w-3xl">
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-card h-28 bg-white/5 border border-white/10 animate-pulse" />
+              ))
+            ) : (
+              <>
+                <CountStat label="Cursos activos" value={stats.courses}   icon={BookOpen}       hint="Este período" />
+                <CountStat label="Ejercicios"     value={stats.exercises} icon={FileText}       hint="Publicados y borradores" />
+                <CountStat label="Estudiantes"    value={stats.students}  icon={Users}          hint="Inscritos en total" />
+                <CountStat label="Por calificar"  value={stats.pending}   icon={ClipboardCheck} hint="Requieren atención" />
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
         {/* Courses */}
-        <section className="bg-white rounded-xl transition-shadow duration-200 hover:shadow-lg" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)', border: '1px solid rgba(226,232,240,0.8)' }}>
-          <div className="flex items-center justify-between p-5 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-blue-700" />
-              Mis Cursos
-            </h3>
+        <SectionCard
+          icon={BookOpen}
+          eyebrow="Tus cursos"
+          title="Mis Cursos"
+          flushBody
+          action={
             <Link href="/profesor/cursos">
               <Button variant="ghost" size="sm">
                 Ver todos <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </Link>
-          </div>
+          }
+        >
           <div className="divide-y divide-gray-100">
             {loading ? (
               Array.from({ length: 4 }).map((_, i) => (
@@ -169,12 +175,16 @@ export default function ProfesorDashboard() {
                 </div>
               ))
             ) : courses.length === 0 ? (
-              <div className="p-8 text-center">
-                <p className="text-gray-500 text-sm">No tienes cursos creados</p>
-                <Link href="/profesor/cursos" className="mt-2 inline-block">
-                  <Button variant="secondary" size="sm">Crear curso</Button>
-                </Link>
-              </div>
+              <EmptyState
+                illustration={<SceneEmptyBox size={180} className="lp-drift" />}
+                title="Aún no tienes cursos"
+                description="Crea tu primer curso para empezar a publicar ejercicios y seguir a tus estudiantes."
+                action={
+                  <Link href="/profesor/cursos">
+                    <Button variant="secondary" size="sm">Crear curso</Button>
+                  </Link>
+                }
+              />
             ) : (
               courses.slice(0, 4).map((course) => (
                 <Link
@@ -201,28 +211,25 @@ export default function ProfesorDashboard() {
               ))
             )}
           </div>
-        </section>
+        </SectionCard>
 
         {/* Pending grading */}
-        <section className="bg-white rounded-xl transition-shadow duration-200 hover:shadow-lg" style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)', border: '1px solid rgba(226,232,240,0.8)' }}>
-          <div className="flex items-center justify-between p-5 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <ClipboardCheck className="w-4 h-4 text-amber-500" />
-              Pendientes de calificar
-              {stats.pending > 0 && (
-                <span className="bg-amber-400 text-amber-900 text-xs font-bold rounded-full px-1.5 py-0.5">
-                  {stats.pending}
-                </span>
-              )}
-            </h3>
-            {stats.pending > 0 && (
+        <SectionCard
+          icon={ClipboardCheck}
+          iconTint="#B8860B"
+          eyebrow={stats.pending > 0 ? `${stats.pending} por revisar` : 'Al día'}
+          title="Pendientes de calificar"
+          flushBody
+          action={
+            stats.pending > 0 ? (
               <Link href="/profesor/pendientes">
                 <Button variant="ghost" size="sm">
                   Ver todos <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </Link>
-            )}
-          </div>
+            ) : undefined
+          }
+        >
           <div className="divide-y divide-gray-100">
             {loading ? (
               Array.from({ length: 4 }).map((_, i) => (
@@ -238,9 +245,11 @@ export default function ProfesorDashboard() {
                 </div>
               ))
             ) : pendingAttempts.length === 0 ? (
-              <div className="p-8 text-center">
-                <p className="text-gray-500 text-sm">¡Todo al día! No hay intentos por calificar</p>
-              </div>
+              <EmptyState
+                illustration={<SceneEmptyBox size={180} className="lp-drift" />}
+                title="¡Todo al día!"
+                description="No hay intentos por calificar. Cuando tus estudiantes entreguen, aparecerán aquí."
+              />
             ) : (
               pendingAttempts.map((attempt) => (
                 <Link
@@ -253,7 +262,7 @@ export default function ProfesorDashboard() {
                       {attempt.exercise?.title}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {(attempt as any).student?.name ?? 'Estudiante'}
+                      {(attempt as { student?: { name?: string } }).student?.name ?? 'Estudiante'}
                     </p>
                     <div className="flex items-center gap-3 mt-1.5">
                       <StatusBadge status={attempt.status} />
@@ -276,7 +285,7 @@ export default function ProfesorDashboard() {
               ))
             )}
           </div>
-        </section>
+        </SectionCard>
       </div>
     </div>
   );

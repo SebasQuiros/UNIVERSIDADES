@@ -6,10 +6,15 @@ import { api } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { IconTile } from '@/components/ui/IconTile';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ArtLedger, SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   Calculator, Building2, Plus, ChevronRight, Receipt, FileText, Users,
-  Search, Trash2, X, BookOpenCheck, Sparkles,
+  Search, Trash2, X, Sparkles,
 } from 'lucide-react';
 
 interface PracticeCompany {
@@ -73,27 +78,40 @@ export default function ContadorPage() {
 
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-2">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <span className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(212,160,23,0.14)' }}>
-              <Calculator className="w-5 h-5" style={{ color: '#B8860B' }} />
-            </span>
-            Espacio Contador
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            Practicá como contador: gestioná varias empresas-cliente sin nota. Perfecto para replicar ejercicios del libro.
-          </p>
+      {/* Encabezado */}
+      <PageHeader
+        eyebrow="Espacio Contador"
+        title="Practicá como contador"
+        subtitle="Gestioná varias empresas-cliente sin nota. Perfecto para replicar ejercicios del libro."
+        icon={Calculator}
+        iconTint="#B8860B"
+        actions={(
+          <Button variant="gold" onClick={() => setShowForm(true)}>
+            <Plus className="w-4 h-4" /> Nueva empresa de práctica
+          </Button>
+        )}
+        className="lp-in"
+      />
+
+      {/* Hero: taller de contabilidad */}
+      <Card variant="onDark" className="lp-in lp-in-d1 mt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
+          <div className="flex-1 min-w-0">
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
+              Ciclo contable completo
+            </p>
+            <h2 className="text-lg font-bold leading-snug">Tu taller de contabilidad, a tu ritmo.</h2>
+            <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
+              Catálogo de cuentas, asientos, mayor, balances y estados financieros. Sin límite y sin calificación.
+            </p>
+          </div>
+          <ArtLedger size={160} className="lp-drift flex-shrink-0" />
         </div>
-        <Button onClick={() => setShowForm(true)} style={{ background: GOLD, borderColor: GOLD, color: '#1a1205' }}>
-          <Plus className="w-4 h-4" /> Nueva empresa de práctica
-        </Button>
-      </div>
+      </Card>
 
       {/* Buscador */}
       {companies.length > 0 && (
-        <div className="relative w-full sm:w-72 mt-5 mb-6">
+        <div className="relative w-full sm:w-72 mt-6 mb-6">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={query}
@@ -107,29 +125,31 @@ export default function ContadorPage() {
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center py-16 text-center mt-6">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-5" style={{ background: 'rgba(212,160,23,0.12)' }}>
-            <BookOpenCheck className="w-10 h-10" style={{ color: GOLD }} />
-          </div>
-          <h3 className="text-gray-800 font-semibold text-lg">
-            {companies.length === 0 ? 'Aún no tenés empresas de práctica' : 'Sin resultados'}
-          </h3>
-          <p className="text-gray-500 text-sm mt-1.5 mb-5 max-w-md">
-            {companies.length === 0
-              ? 'Creá una empresa-cliente para practicar el ciclo contable completo a tu ritmo: catálogo de cuentas, asientos, mayor, balances y estados financieros. Sin límite y sin calificación.'
-              : 'Probá con otra búsqueda.'}
-          </p>
-          {companies.length === 0 && (
-            <Button onClick={() => setShowForm(true)} style={{ background: GOLD, borderColor: GOLD, color: '#1a1205' }}>
-              <Plus className="w-4 h-4" /> Crear mi primera empresa
-            </Button>
-          )}
-        </div>
+        <Card className="lp-in">
+          <EmptyState
+            illustration={
+              companies.length === 0
+                ? <SceneEmptyBox size={220} className="lp-drift" />
+                : <SceneSearchEmpty size={220} className="lp-drift" />
+            }
+            title={companies.length === 0 ? 'Aún no tenés empresas de práctica' : 'Sin resultados'}
+            description={
+              companies.length === 0
+                ? 'Creá una empresa-cliente para practicar el ciclo contable completo a tu ritmo: catálogo de cuentas, asientos, mayor, balances y estados financieros. Sin límite y sin calificación.'
+                : 'Probá con otra búsqueda.'
+            }
+            action={companies.length === 0 ? (
+              <Button variant="gold" onClick={() => setShowForm(true)}>
+                <Plus className="w-4 h-4" /> Crear mi primera empresa
+              </Button>
+            ) : undefined}
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((c) => (
+          {filtered.map((c, i) => (
             <div key={c.id}
-              className="group bg-white border border-gray-200 hover:border-amber-300 shadow-sm rounded-xl p-5 flex flex-col gap-4 transition-all duration-200 hover:shadow-md">
+              className={`group bg-white border border-gray-200/70 shadow-card rounded-card p-5 flex flex-col gap-4 lp-card-pro lp-in lp-in-d${Math.min(i + 1, 5)}`}>
               <div className="flex items-start gap-3">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center font-bold flex-shrink-0 text-white" style={{ background: GOLD }}>
                   {c.name.charAt(0).toUpperCase()}
@@ -228,12 +248,10 @@ function NewPracticeModal({
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}>
-      <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl my-8" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-lg rounded-card shadow-card-hover my-8 lp-pop" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(212,160,23,0.14)' }}>
-              <Building2 className="w-4.5 h-4.5" style={{ color: '#B8860B' }} />
-            </span>
+          <div className="flex items-center gap-3">
+            <IconTile icon={Building2} tint="#B8860B" size={40} />
             <h3 className="font-bold text-gray-900">Nueva empresa de práctica</h3>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
@@ -285,7 +303,7 @@ function NewPracticeModal({
 
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancelar</Button>
-            <Button type="submit" disabled={saving} style={{ background: GOLD, borderColor: GOLD, color: '#1a1205' }}>
+            <Button type="submit" variant="gold" loading={saving} disabled={saving}>
               {saving ? 'Creando…' : 'Crear empresa'}
             </Button>
           </div>

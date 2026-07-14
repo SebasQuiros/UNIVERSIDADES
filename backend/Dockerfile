@@ -1,19 +1,39 @@
 # ================================================================
-#  CONTAFÁCIL SQ — Backend Dockerfile (single-stage, production)
+#  CONTAFÁCIL SQ — Backend Dockerfile (multi-stage)
+#  Stages: base → dependencies → development → production
+#  `production` queda de último: sigue siendo el target por defecto
+#  cuando no se especifica uno (deploy/prod sin cambios).
 # ================================================================
 
-FROM node:20-alpine
+# ── Base ─────────────────────────────────────────────────────────
+FROM node:20-alpine AS base
 WORKDIR /app
-
 RUN apk add --no-cache python3 make g++ openssl
 
-# Instalar dependencias
+# ── Dependencias ─────────────────────────────────────────────────
+FROM base AS dependencies
+
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm install --legacy-peer-deps
 
 # Generar cliente Prisma con binario local
 RUN ./node_modules/.bin/prisma generate
+
+# ── Desarrollo ───────────────────────────────────────────────────
+# docker-compose.yml monta el código y define su propio `command`
+# (npm install + prisma generate/migrate/seed + arranque), así que
+# aquí basta con la imagen con dependencias y el código base.
+FROM dependencies AS development
+
+COPY . .
+
+EXPOSE 3001
+
+CMD ["npm", "run", "start:dev"]
+
+# ── Producción ───────────────────────────────────────────────────
+FROM dependencies AS production
 
 # Copiar código fuente y assets
 COPY . .

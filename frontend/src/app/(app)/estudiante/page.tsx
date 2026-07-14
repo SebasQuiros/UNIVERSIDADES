@@ -7,13 +7,19 @@ import { api } from '@/lib/api';
 import { formatDate, getErrorMessage } from '@/lib/utils';
 import { StatusBadge, DifficultyBadge, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Card } from '@/components/ui/Card';
+import { IconTile } from '@/components/ui/IconTile';
+import { SceneStudentDesk, SceneEmptyBox } from '@/components/illustrations';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
+import type { ElementType, ReactNode } from 'react';
 import {
   BookOpen, Clock, CheckCircle2, TrendingUp, Calendar,
-  Building2, Play, ChevronRight, AlertCircle, RefreshCw, Users,
+  Building2, Play, ChevronRight, RefreshCw, Users, GraduationCap, Wallet,
 } from 'lucide-react';
 
 // Tipo mínimo de Company devuelto por GET /companies (Fase 1: incluye GROUP)
@@ -26,6 +32,12 @@ interface CompanyLite {
   exercise?: { id: string; title: string } | null;
   attempt?: { id: string; status: string; exercise?: { id: string; title: string } } | null;
 }
+
+// Textura de puntos sutil para las bandas hero (fondo azul noche).
+const DOT_TEXTURE: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)',
+  backgroundSize: '20px 20px',
+};
 
 // ── Animated counter hook ─────────────────────────────────────────────────
 function useCountUp(target: number, duration = 800) {
@@ -42,6 +54,31 @@ function useCountUp(target: number, duration = 800) {
     return () => clearInterval(timer);
   }, [target, duration]);
   return count;
+}
+
+// ── KPI del hero (StatCard oscuro con contador animado) ────────────────────
+// Conserva el count-up original alimentando el valor animado al primitivo StatCard.
+function CountStat({ label, value, icon }: { label: string; value: number; icon: ElementType }) {
+  const animated = useCountUp(value);
+  return <StatCard variant="dark" label={label} value={String(animated)} icon={icon} />;
+}
+
+// ── Encabezado de sección (IconTile + eyebrow dorado + título) ─────────────
+function SectionHeading({ icon: Icon, eyebrow, title, action }: {
+  icon: ElementType; eyebrow: string; title: string; action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-4 mb-4">
+      <div className="flex items-center gap-3">
+        <IconTile icon={Icon} tint="#1B2E6E" size={40} />
+        <div>
+          <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-700">{eyebrow}</p>
+          <h3 className="text-base font-bold tracking-tight text-gray-900">{title}</h3>
+        </div>
+      </div>
+      {action}
+    </div>
+  );
 }
 
 // ── Helper: exercise type label ───────────────────────────────────────────
@@ -72,60 +109,28 @@ function ProgressBar({ pct }: { pct: number }) {
   );
 }
 
-// ── Stats Card ────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon: Icon, accent }: {
-  label: string; value: number; icon: React.ElementType; accent: string;
-}) {
-  const animated = useCountUp(value);
-  return (
-    <div className="rounded-xl p-4 bg-white border border-gray-200 flex items-center gap-4 transition-colors hover:border-gray-300"
-      style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
-      <div className="w-11 h-11 rounded-md flex items-center justify-center flex-shrink-0"
-        style={{ background: `${accent}18` }}>
-        <Icon className="w-5 h-5" style={{ color: accent }} />
-      </div>
-      <div>
-        <p className="text-3xl font-bold text-gray-900 leading-none font-mono tabular-nums">{animated}</p>
-        <p className="text-[11px] text-gray-500 mt-1.5 font-semibold uppercase tracking-wide font-mono">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Skeletons ─────────────────────────────────────────────────────────────
-// Placeholders que conservan el layout mientras cargan los datos, para evitar
-// el "salto" de 0 → valor real y la pantalla vacía con spinner.
-function StatCardSkeleton() {
-  return (
-    <div className="rounded-xl p-5 bg-white border border-gray-200/80 flex items-center gap-4" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-      <Skeleton className="w-11 h-11 rounded-xl" />
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-12" />
-        <Skeleton className="h-3 w-24" />
-      </div>
-    </div>
-  );
-}
-
+// ── Skeleton de tarjeta de intento ────────────────────────────────────────
+// Placeholder que conserva el layout mientras cargan los datos, para evitar
+// el "salto" de la pantalla vacía con spinner.
 function AttemptCardSkeleton() {
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-5 flex flex-col gap-4" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+    <div className="bg-white border border-gray-200/70 rounded-2xl p-5 flex flex-col gap-4 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 space-y-2">
           <div className="flex gap-2">
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-5 w-20 rounded-full" />
+            <div className="h-5 w-16 rounded-full bg-gray-100 animate-pulse" />
+            <div className="h-5 w-20 rounded-full bg-gray-100 animate-pulse" />
           </div>
-          <Skeleton className="h-5 w-3/4" />
-          <Skeleton className="h-4 w-full max-w-xs" />
+          <div className="h-5 w-3/4 bg-gray-100 rounded animate-pulse" />
+          <div className="h-4 w-full max-w-xs bg-gray-100 rounded animate-pulse" />
         </div>
-        <Skeleton className="h-5 w-20 rounded-full" />
+        <div className="h-5 w-20 rounded-full bg-gray-100 animate-pulse" />
       </div>
       <div className="flex gap-4">
-        <Skeleton className="h-3 w-24" />
-        <Skeleton className="h-3 w-20" />
+        <div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
+        <div className="h-3 w-20 bg-gray-100 rounded animate-pulse" />
       </div>
-      <Skeleton className="h-9 w-full rounded-xl mt-auto" />
+      <div className="h-9 w-full rounded-xl bg-gray-100 animate-pulse mt-auto" />
     </div>
   );
 }
@@ -150,8 +155,7 @@ function AttemptCard({ attempt, onStart }: { attempt: ExerciseAttempt; onStart: 
   }
 
   return (
-    <div className="group bg-white border border-gray-200 rounded-xl p-5 flex flex-col gap-4 transition-colors duration-150 hover:border-blue-300"
-      style={{ boxShadow: '0 1px 2px rgba(16,24,40,0.04)' }}>
+    <div className="group bg-white border border-gray-200/70 rounded-2xl p-5 flex flex-col gap-4 shadow-card hover:shadow-card-hover lp-card-pro">
 
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -322,32 +326,64 @@ export default function EstudianteDashboard() {
   const activeCompanyId =
     companies.find((c) => c.isCompanyEnabled)?.id ?? companies[0]?.id ?? null;
 
-  return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto" style={{ background: '#F4F6F8' }}>
+  const groupCompanies = companies.filter((c) => c.mode === 'GROUP');
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Buenos días, {firstName} 👋
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            El pulso de tu empresa simulada
-          </p>
+  return (
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+
+      {/* Cabecera */}
+      <PageHeader
+        eyebrow="Panel del estudiante"
+        title={`Buenos días, ${firstName}`}
+        subtitle="El pulso de tu empresa simulada"
+        icon={GraduationCap}
+        className="mb-6"
+        actions={
+          <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+        }
+      />
+
+      {/* Banda hero — resumen académico sobre azul noche */}
+      <div className="relative overflow-hidden rounded-card shadow-soft mb-10 lp-in bg-gradient-to-br from-csq-dark via-csq-dark-2 to-csq-mid">
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={DOT_TEXTURE} />
+        <div aria-hidden className="pointer-events-none absolute right-2 bottom-0 hidden lg:block opacity-95">
+          <SceneStudentDesk size={230} className="lp-drift" />
         </div>
-        <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </Button>
+        <div className="relative p-6 lg:p-8">
+          <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500 mb-2">
+            Resumen académico
+          </p>
+          <h2 className="text-xl lg:text-2xl font-extrabold text-white tracking-tight">
+            Tu avance de un vistazo
+          </h2>
+          <p className="text-sm text-blue-200/80 mt-1.5 max-w-md">
+            Ejercicios asignados, en curso y calificados por tu profesor.
+          </p>
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 lg:max-w-2xl">
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-card h-28 bg-white/5 border border-white/10 animate-pulse" />
+              ))
+            ) : (
+              <>
+                <CountStat label="Ejercicios totales" value={stats.total}      icon={BookOpen} />
+                <CountStat label="En progreso"        value={stats.inProgress} icon={TrendingUp} />
+                <CountStat label="Calificados"        value={stats.graded}     icon={CheckCircle2} />
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ── Resumen del negocio (siempre visible, estilo Alegra) ── */}
       <section className="mb-10">
-        <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide font-mono mb-4">
-          Resumen del negocio
-        </h3>
+        <SectionHeading icon={Wallet} eyebrow="Tu empresa" title="Resumen del negocio" />
         {loading
           ? <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}
+              {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-card animate-pulse" />)}
             </div>
           : <ExecutiveDashboard companyId={activeCompanyId} compact />}
         {!loading && !activeCompanyId && (
@@ -358,62 +394,45 @@ export default function EstudianteDashboard() {
       </section>
 
       {/* Tus ejercicios */}
-      <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wide font-mono mb-4">Tus ejercicios</h3>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => <StatCardSkeleton key={i} />)
-        ) : (
-          <>
-            <StatCard label="Ejercicios totales" value={stats.total}      icon={BookOpen}     accent="#2563EB" />
-            <StatCard label="En progreso"        value={stats.inProgress} icon={TrendingUp}   accent="#B45309" />
-            <StatCard label="Calificados"        value={stats.graded}     icon={CheckCircle2} accent="#1D4ED8" />
-          </>
-        )}
-      </div>
+      <SectionHeading icon={BookOpen} eyebrow="Tus ejercicios" title="Ejercicios asignados" />
 
       {loading ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <AttemptCardSkeleton key={i} />)}
         </div>
       ) : attempts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
-            <BookOpen className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-gray-700 font-semibold">Sin ejercicios asignados</h3>
-          <p className="text-gray-500 text-sm mt-1">
-            Tu profesor aún no ha publicado ejercicios
-          </p>
-        </div>
+        <Card>
+          <EmptyState
+            illustration={<SceneEmptyBox size={200} className="lp-drift" />}
+            title="Sin ejercicios asignados"
+            description="Tu profesor aún no ha publicado ejercicios. En cuanto lo haga, aparecerán aquí para que empieces a operar tu empresa."
+          />
+        </Card>
       ) : (
         <>
           {/* Empresas grupales — solo si el estudiante es miembro de alguna */}
-          {companies.filter(c => c.mode === 'GROUP').length > 0 && (
+          {groupCompanies.length > 0 && (
             <section className="mb-8">
               <div className="flex items-center gap-2 mb-4">
                 <Users className="w-4 h-4 text-blue-600" />
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
                   Mis empresas grupales
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white bg-blue-600">
-                  {companies.filter(c => c.mode === 'GROUP').length}
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white bg-blue-600 font-mono">
+                  {groupCompanies.length}
                 </span>
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                {companies.filter(c => c.mode === 'GROUP').map(c => (
+                {groupCompanies.map((c) => (
                   <div
                     key={c.id}
-                    className={`flex items-center gap-3 p-4 rounded-xl border ${
+                    className={`flex items-center gap-3 p-4 rounded-2xl border shadow-card lp-card-pro ${
                       c.isCompanyEnabled
-                        ? 'border-gray-200 bg-white hover:border-blue-300'
+                        ? 'border-gray-200/70 bg-white'
                         : 'border-amber-300 bg-amber-50'
-                    } transition-colors`}
+                    }`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
-                      <Building2 className="w-5 h-5" />
-                    </div>
+                    <IconTile icon={Building2} tint="#1B2E6E" size={44} />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-gray-900 truncate">{c.name}</div>
                       <div className="text-xs text-gray-500 truncate">
@@ -442,8 +461,7 @@ export default function EstudianteDashboard() {
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
                   Pendientes
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded text-white font-mono"
-                  style={{ background: '#2563EB' }}>
+                <span className="text-xs font-bold px-2 py-0.5 rounded text-white font-mono bg-blue-600">
                   {active.length}
                 </span>
               </div>
@@ -466,7 +484,7 @@ export default function EstudianteDashboard() {
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">
                   Completados
                 </h3>
-                <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold px-2 py-0.5 rounded-full font-mono">
                   {done.length}
                 </span>
               </div>
