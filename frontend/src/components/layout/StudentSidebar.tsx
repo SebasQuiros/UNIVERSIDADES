@@ -25,6 +25,7 @@ const TXT_FAINT = 'rgba(255,255,255,0.55)';
 interface Sub {
   label: string;
   tab?: string;        // pestaña del ejercicio (?tab=)
+  sub?: string;        // desambigua ítems que comparten la misma pestaña (&sub=)
   endsWith?: string;   // subruta del ejercicio (/compras)
   path?: string;       // ruta global directa
   slug?: string;       // página base (/estudiante/modulo/<slug>) usada si no hay ejercicio
@@ -87,7 +88,7 @@ export function StudentSidebar() {
     }
     // Con ejercicio activo → pestaña/subruta real del ejercicio.
     if (base && s.endsWith) return `${base}${s.endsWith}`;
-    if (base && s.tab)      return `${base}?tab=${s.tab}`;
+    if (base && s.tab)      return `${base}?tab=${s.tab}${s.sub ? `&sub=${s.sub}` : ''}`;
     // Sin ejercicio (o ítem sólo-base) → su página base.
     if (s.path) return s.path;
     if (s.slug) return `/estudiante/modulo/${s.slug}`;
@@ -101,7 +102,7 @@ export function StudentSidebar() {
       children: [
         { label: 'Clientes',            tab: 'clients',  slug: 'clientes' },
         { label: 'Facturas de venta',   tab: 'invoices', slug: 'facturas-venta' },
-        { label: 'Pagos recibidos',     tab: 'invoices', slug: 'pagos-recibidos' },
+        { label: 'Pagos recibidos',     tab: 'invoices', slug: 'pagos-recibidos', sub: 'pagos' },
         { label: 'Facturas recurrentes', slug: 'facturas-recurrentes' },
         { label: 'Notas de crédito',    slug: 'notas-credito' },
         { label: 'Notas de débito',     slug: 'notas-debito' },
@@ -137,7 +138,7 @@ export function StudentSidebar() {
       key: 'bancos', label: 'Bancos', icon: Landmark,
       children: [
         { label: 'Bancos y cajas',           tab: 'bank', slug: 'bancos' },
-        { label: 'Conciliaciones bancarias', tab: 'bank', slug: 'conciliaciones' },
+        { label: 'Conciliaciones bancarias', tab: 'bank', slug: 'conciliaciones', sub: 'conciliaciones' },
       ],
     },
     {
@@ -224,7 +225,13 @@ export function StudentSidebar() {
     if (s.path && pathname.startsWith(s.path)) return true;
     if (s.slug && pathname.startsWith(`/estudiante/modulo/${s.slug}`)) return true;
     if (base && s.endsWith) return pathname.endsWith(s.endsWith);
-    if (base && s.tab) return inExercise && !pathname.endsWith('/compras') && (currentTab ?? 'dashboard') === s.tab;
+    if (base && s.tab) {
+      const tabMatch = inExercise && !pathname.endsWith('/compras') && (currentTab ?? 'dashboard') === s.tab;
+      if (!tabMatch) return false;
+      // Varios ítems comparten pestaña (ej. Facturas/Pagos → invoices): desambiguar por &sub=.
+      const currentSub = searchParams.get('sub');
+      return s.sub ? currentSub === s.sub : !currentSub;
+    }
     return false;
   };
   const groupActive = (g: Group) => {
