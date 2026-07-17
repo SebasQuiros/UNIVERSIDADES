@@ -12,7 +12,7 @@
  */
 
 import {
-  Injectable, NotFoundException, ForbiddenException, BadRequestException,
+  Injectable, Inject, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -20,6 +20,9 @@ import {
   SchedulePartialPaymentsDto,
   CreateRetencionDto,
 } from './dto/tax-declarations.dto';
+import { assertCompanyAccess } from '../../common/auth/company-access.helper';
+import { REDIS_CLIENT } from '../../redis/redis.module';
+import { resolveAttemptId, computeTaxAfterCredits, round } from './renta-authz';
 
 // ── Costa Rica 2026 official tax brackets for PYME ────────────────────────────
 // Source: Decreto Ejecutivo N° 44.xxx Ministerio de Hacienda, período fiscal 2025-2026
@@ -52,42 +55,45 @@ const QUARTER_DATES = [
 
 @Injectable()
 export class RentaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
 
-  // ── Resolve company + verify ownership ───────────────────────────────────
-  // Fase 1: este service solo soporta companies modo INDIVIDUAL — los flujos
-  // de partialPayment / retencion guardan attemptId no-null. Para GROUP se
-  // implementará en una fase posterior. La autorización ya respeta GROUP en
-  // los endpoints HTTP via CompanyOwnerGuard; acá lanzamos un error claro.
+  // ── Resolve company + verify access ──────────────────────────────────────
+  // Fase 2a — Cimiento B: se delega la autorización al helper canónico
+  // `assertCompanyAccess` (el mismo que usa `tax-declarations.service.ts` y
+  // que respeta `CompanyOwnerGuard`), en vez de la comparación a medida que
+  // lanzaba en modo GROUP. Regla: INDIVIDUAL → estudiante dueño; GROUP →
+  // estudiante miembro (`CompanyMembership`, resuelta siempre fresca de DB —
+  // ver `company-access.helper.ts`). El anclaje fiscal de Retencion/Partial-
+  // Payment es `companyId`; `attemptId` se conserva solo para INDIVIDUAL.
   private async resolveCompany(
     companyId: string,
-    studentId: string,
-  ): Promise<{ id: string; attemptId: string; studentId: string }> {
+    userId: string,
+  ): Promise<{ id: string; attemptId: string | null; mode: 'INDIVIDUAL' | 'GROUP' }> {
+    const access = await assertCompanyAccess(this.prisma, companyId, userId, {
+      redis: this.redis,
+    });
+
+    // `attemptId` no forma parte del "core" cacheado (no lo necesitan los
+    // guards); se lee aparte, ya sobre una empresa cuyo acceso fue verificado.
     const company = await this.prisma.company.findUnique({
-      where: { id: companyId },
+      where:  { id: companyId },
+      select: { attemptId: true },
     });
     if (!company) throw new NotFoundException('Empresa no encontrada');
-    if (company.mode === 'GROUP') {
-      throw new ForbiddenException(
-        'Renta service: aún no soportado en companies modo GROUP',
-      );
-    }
-    if (company.studentId !== studentId) throw new ForbiddenException();
-    if (!company.attemptId || !company.studentId) {
-      throw new ForbiddenException(
-        'Renta service: empresa INDIVIDUAL sin attemptId/studentId',
-      );
-    }
+
     return {
-      id:        company.id,
+      id:        access.id,
       attemptId: company.attemptId,
-      studentId: company.studentId,
+      mode:      access.mode,
     };
   }
 
   // ── Calculate D-101 from journal lines ───────────────────────────────────
-  async calculateD101(companyId: string, fiscalYear: number, studentId: string) {
-    await this.resolveCompany(companyId, studentId);
+  async calculateD101(companyId: string, fiscalYear: number, userId: string) {
+    await this.resolveCompany(companyId, userId);
 
     const startDate = new Date(fiscalYear, 0, 1);   // Jan 1
     const endDate   = new Date(fiscalYear, 11, 31);  // Dec 31
@@ -191,12 +197,17 @@ export class RentaService {
       .filter(p => p.isPaid)
       .reduce((s, p) => s + Number(p.amount), 0);
 
+    // NOTA (Fase 2a — Cimiento B4, fix de criterio fiscal): las retenciones
+    // listadas acá son las que la empresa PRACTICÓ a terceros (agente
+    // retenedor) — son pasivo a enterar en el D-103, NUNCA crédito de la
+    // renta propia. Se listan como informativas pero YA NO se restan del
+    // impuesto (antes se restaban por error y subdeclaraban el D-101).
     const retenciones = await this.getRetenciones(companyId, fiscalYear);
-    const withholdingsReceived = retenciones.reduce(
-      (s, r) => s + Number(r.retentionAmount), 0,
-    );
 
-    const taxAfterCredits = totalTax - totalPartialPaid - withholdingsReceived;
+    const { impuestoAPagar, saldoAFavor } = computeTaxAfterCredits({
+      totalTax,
+      totalPartialPaid,
+    });
 
     return {
       fiscalYear,
@@ -211,10 +222,14 @@ export class RentaService {
       impuestoDeterminado:  totalTax,
       // Credits
       pagosParciales:       round(totalPartialPaid),
-      retencionesRecibidas: round(withholdingsReceived),
+      // Se mantiene por retrocompatibilidad de UI: "retenciones soportadas
+      // acreditables". Esa ruta (retenciones que OTROS le practicaron a la
+      // empresa) aún no está modelada en el cálculo automático, así que el
+      // crédito queda en 0 — no se acredita el lado equivocado (ver B4).
+      retencionesRecibidas: 0,
       // Result
-      impuestoAPagar:       round(Math.max(0, taxAfterCredits)),
-      saldoAFavor:          round(Math.max(0, -taxAfterCredits)),
+      impuestoAPagar:       impuestoAPagar,
+      saldoAFavor:          saldoAFavor,
       // Meta
       isSmallCompany,
       tipoEmpresa:          isSmallCompany ? 'PYME' : 'GRANDE',
@@ -232,10 +247,10 @@ export class RentaService {
   // ── Schedule 4 quarterly partial payments ────────────────────────────────
   async schedulePartialPayments(
     companyId: string,
-    studentId: string,
+    userId: string,
     dto: SchedulePartialPaymentsDto,
   ) {
-    const company = await this.resolveCompany(companyId, studentId);
+    const company = await this.resolveCompany(companyId, userId);
     const quarterAmount = round(dto.estimatedTax / 4);
 
     // Delete existing unplanned records for this year (idempotent)
@@ -249,7 +264,9 @@ export class RentaService {
         return this.prisma.partialPayment.create({
           data: {
             companyId,
-            attemptId:  company.attemptId,
+            // GROUP no tiene un único intento dueño: el anclaje fiscal real
+            // es companyId; attemptId queda NULL (ver renta-authz.ts).
+            attemptId:  resolveAttemptId({ mode: company.mode, companyAttemptId: company.attemptId }),
             fiscalYear: dto.fiscalYear,
             quarter:    q.quarter,
             dueDate,
@@ -275,10 +292,10 @@ export class RentaService {
   async markPartialPaymentPaid(
     paymentId: string,
     companyId: string,
-    studentId: string,
+    userId: string,
     paidDate: Date,
   ) {
-    await this.resolveCompany(companyId, studentId);
+    await this.resolveCompany(companyId, userId);
 
     const payment = await this.prisma.partialPayment.findFirst({
       where: { id: paymentId, companyId },
@@ -294,10 +311,10 @@ export class RentaService {
   // ── Create a retencion + auto journal entry ──────────────────────────────
   async createRetencion(
     companyId: string,
-    studentId: string,
+    userId: string,
     dto: CreateRetencionDto,
   ) {
-    const company = await this.resolveCompany(companyId, studentId);
+    const company = await this.resolveCompany(companyId, userId);
 
     const rate = RETENTION_RATES[dto.type];
     if (rate === undefined) {
@@ -323,7 +340,9 @@ export class RentaService {
       const retencion = await tx.retencion.create({
         data: {
           companyId,
-          attemptId:       company.attemptId,
+          // GROUP no tiene un único intento dueño: el anclaje fiscal real es
+          // companyId; attemptId queda NULL (ver renta-authz.ts).
+          attemptId:       resolveAttemptId({ mode: company.mode, companyAttemptId: company.attemptId }),
           type:            dto.type,
           supplierName:    dto.supplierName,
           supplierCedula:  dto.supplierCedula ?? null,
@@ -367,7 +386,7 @@ export class RentaService {
       await tx.journalEntry.create({
         data: {
           companyId,
-          createdById: studentId,
+          createdById: userId,
           entryNumber: seq.lastNumber,
           entryDate:   date,
           source:      'MANUAL',
@@ -425,10 +444,8 @@ export class RentaService {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function round(n: number): number {
-  return Math.round(n * 100) / 100;
-}
-
+// `round()` vive en `renta-authz.ts` (compartido con las funciones puras de
+// autorización/créditos) y se importa arriba; acá solo queda el formateador.
 function fmtCR(n: number): string {
   return n.toLocaleString('es-CR');
 }

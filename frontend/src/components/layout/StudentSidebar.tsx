@@ -10,7 +10,7 @@ import {
   Home, ArrowDownCircle, ArrowUpCircle, Package, Landmark, BookOpen,
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
   LogOut, Menu, X, ChevronDown, UserCircle,
-  GraduationCap, Calculator, Users,
+  GraduationCap, Calculator, Users, Ticket,
 } from 'lucide-react';
 
 // ── Paleta de marca (azul noche + acento dorado) ───────────────
@@ -164,6 +164,9 @@ export function StudentSidebar() {
         { label: 'Estados financieros', tab: 'reports', slug: 'estados-financieros' },
     ]},
     { key: 'tribu', label: 'Tributación · TRIBU', icon: Receipt, href: '/estudiante/impuestos', path: '/estudiante/impuestos' },
+    // Andamiaje fase 1 (maqueta): unirse a una "Sesión de Aula" con código de
+    // profesor (lobby → mi empresa → auditoría entre pares → resultados).
+    { key: 'sesion', label: 'Sesión de aula', icon: Ticket, href: '/estudiante/sesion/unirse', path: '/estudiante/sesion' },
   ];
 
   const LEARN: Group[] = [

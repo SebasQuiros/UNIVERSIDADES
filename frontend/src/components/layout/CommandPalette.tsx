@@ -7,7 +7,7 @@ import {
   FileText, Coins, RefreshCw, ShoppingCart, ClipboardList, Inbox,
   Package, BarChart2, Scale, Tag, Warehouse, FolderTree, Layers,
   Landmark, BookOpen, Building2, Receipt, LineChart, TrendingUp,
-  Bell, UserCircle, Sparkles,
+  Bell, UserCircle, Sparkles, Ticket, KeyRound, FileSearch,
 } from 'lucide-react';
 import { SceneSearchEmpty } from '@/components/illustrations';
 
@@ -62,6 +62,13 @@ const COMMANDS: Cmd[] = [
   { group: 'Reportes', label: 'Estados financieros', href: M('estados-financieros'),  icon: BarChart2,    keywords: 'estado financiero balance general resultados' },
 
   { group: 'Tributación', label: 'Tributación · TRIBU', href: '/estudiante/impuestos', icon: Receipt,     keywords: 'impuesto tributacion hacienda d104 d101 iva renta' },
+
+  // Andamiaje fase 1 (maqueta): "Sesión de aula" — unirse con código, lobby,
+  // mi empresa, auditoría entre pares, resultados. El id de sesión/expediente
+  // es el de la sesión de prueba (`_mock.ts`) mientras no hay backend.
+  { group: 'Sesión de aula', label: 'Unirme con código',    href: '/estudiante/sesion/unirse',                            icon: KeyRound,    keywords: 'sesion aula codigo kahoot unirse profesor' },
+  { group: 'Sesión de aula', label: 'Mi sesión',            href: '/estudiante/sesion/aula-viva-2t-2026',                 icon: Ticket,      keywords: 'sesion aula lobby mi empresa arquetipo resultados' },
+  { group: 'Sesión de aula', label: 'Expediente de auditoría', href: '/estudiante/sesion/aula-viva-2t-2026/auditoria',    icon: FileSearch,  keywords: 'auditoria evidencia hallazgo opinion circularizar fichas' },
 
   { group: 'Aprendizaje', label: 'Simulador financiero', href: '/estudiante/simulador', icon: LineChart,  keywords: 'simulador accion bolsa valoracion macro' },
   { group: 'Aprendizaje', label: 'Mi progreso',      href: '/estudiante/progreso',    icon: TrendingUp,   keywords: 'progreso xp nivel ranking gamificacion' },

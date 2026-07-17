@@ -518,33 +518,60 @@ export class InvoicesService {
           date:              invoice.issueDate,
         });
 
+        // ── Cimiento A (FASE 2a) — outbox del espejo inter-company ──────
+        // Abrimos la OBLIGACIÓN del espejo (fila `InterCompanyMirror` en
+        // PENDING) ATÓMICAMENTE con la venta: si esta tx commitea, la
+        // obligación queda registrada de forma durable aunque el intento de
+        // espejo post-commit de abajo nunca llegue a correr (crash, deploy,
+        // etc.). Si la tx revierte, la obligación revierte con ella — no
+        // queda huérfana. El cumplimiento (intentar el espejo de verdad) es
+        // eventual y se resuelve después del commit.
+        await this.interCompany.openMirrorObligation(invoiceId, companyId, tx);
+
       });
 
-      // ── Fase 4: replicación inter-company (FUERA de la tx principal) ──
-      // Se ejecuta DESPUÉS del commit del seller. Si la replicación falla
-      // (config inconsistente del buyer, falta de periodo abierto, plan
-      // contable incompleto, etc.) NO afecta la venta. Lleva su propia
-      // transacción interna en `mirrorSaleToBuyer`.
+      // La venta ya commiteó — a partir de acá NADA debe poder revertirla ni
+      // hacer que el `catch` de abajo borre los PDF/XML ya persistidos y
+      // referenciados por la factura (marcamos `committed` YA, antes de
+      // intentar el espejo).
+      committed = true;
+
+      // ── Fase 4 + Cimiento A: replicación inter-company (FUERA de la tx
+      // principal, DESPUÉS del commit del seller) ────────────────────────
+      // La venta ya está firme — NUNCA se revierte por una falla del espejo
+      // en el comprador (config inconsistente, periodo cerrado, plan
+      // contable incompleto, etc.). `attemptMirrorAndRecordOutcome` corre el
+      // intento en su propia transacción y persiste el resultado
+      // (DONE/FAILED/NOT_APPLICABLE) en el outbox abierto arriba — ya NO se
+      // traga la falla con un log como único registro.
+      //
+      // Red de seguridad adicional: `attemptMirrorAndRecordOutcome` ya
+      // captura internamente cualquier falla de `mirrorSaleToBuyer`, pero si
+      // la propia escritura del outbox fallara (p. ej. DB caída en ese
+      // instante), este try/catch evita que ese error se confunda con un
+      // fallo de la emisión — la respuesta al usuario sigue siendo éxito.
       try {
-        await this.prisma.$transaction(async (mirrorTx) => {
-          await this.interCompany.mirrorSaleToBuyer(
-            {
-              sellerCompanyId: companyId,
-              userId,
-              invoiceId,
-              customerId:      invoice.clientId,
-            },
-            mirrorTx,
-          );
+        const mirrorResult = await this.interCompany.attemptMirrorAndRecordOutcome({
+          sellerCompanyId: companyId,
+          userId,
+          invoiceId,
+          customerId:      invoice.clientId,
         });
-      } catch (err) {
-        this.logger.warn(
-          `Inter-company mirror falló para invoice ${invoiceId}: ${(err as Error).message}. ` +
-          `La venta del seller fue persistida correctamente.`,
+        if (mirrorResult.status === 'FAILED') {
+          this.logger.warn(
+            `Inter-company mirror quedó FAILED para invoice ${invoiceId} (reintentable vía ` +
+            `InterCompanyService.retryMirror/reconcilePendingMirrors). ` +
+            `La venta del seller fue persistida correctamente.`,
+          );
+        }
+      } catch (mirrorErr) {
+        this.logger.error(
+          `No se pudo registrar el resultado del espejo inter-company para invoice ${invoiceId}: ` +
+          `${(mirrorErr as Error).message}. La venta del seller fue persistida correctamente; ` +
+          `el outbox quedará en PENDING hasta el próximo reintento.`,
         );
       }
 
-      committed = true;
       this.logger.log(`✓ Factura FE-${invoice.consecutiveNumber} emitida y aceptada`);
 
       return {

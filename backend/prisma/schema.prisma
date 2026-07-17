@@ -1344,7 +1344,10 @@ model PurchaseInvoice {
   // F2 (Modo Empresarial/ERP): factura del vendedor que originó esta compra
   // inter-company. Permite, al aceptar la propuesta, sincronizar inventario
   // desde las líneas del vendedor. NULL para compras normales del estudiante.
-  sourceInvoiceId String? @map("source_invoice_id") @db.Uuid
+  // @unique: idempotencia del espejo B2B — una factura fuente genera a lo sumo
+  // una compra espejo (los NULL son distintos en Postgres, así que las compras
+  // normales del estudiante no colisionan). Ver InterCompanyMirror (outbox).
+  sourceInvoiceId String? @unique @map("source_invoice_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt      @map("updated_at")
 
@@ -1388,6 +1391,42 @@ model ProcurementOrder {
   @@index([buyerCompanyId])
   @@index([sellerCompanyId])
   @@map("procurement_orders")
+}
+
+// ── Outbox del espejo inter-company (transactional outbox) ──
+// Estado durable del reflejo venta→compra. La venta del vendedor SIEMPRE
+// persiste (una factura electrónica válida no depende de que la contraparte
+// registre su compra); acá se registra si el espejo se aplicó, quedó pendiente,
+// falló (reintentable) o no aplica (cliente externo al universo). Esto
+// desambigua "falla de plataforma" de "omisión del estudiante": el oráculo de
+// auditoría solo cruza facturas con status DONE, nunca PENDING/FAILED.
+// seller/buyer/source/purchase como UUID scalars sin relación, mismo criterio
+// que ProcurementOrder (no inflar la lista de relaciones de Company/Invoice).
+enum MirrorStatus {
+  NOT_APPLICABLE  // cliente externo, feature apagado o sin contraparte — sin obligación
+  PENDING         // obligación creada, espejo aún no aplicado
+  DONE            // compra espejo (o propuesta) registrada en el comprador
+  FAILED          // falla de plataforma (periodo cerrado, plan incompleto...) — reintentable
+}
+
+model InterCompanyMirror {
+  id                String       @id @default(uuid()) @db.Uuid
+  sourceInvoiceId   String       @unique @map("source_invoice_id") @db.Uuid  // idempotencia: un espejo por factura fuente
+  sellerCompanyId   String       @map("seller_company_id") @db.Uuid
+  buyerCompanyId    String?      @map("buyer_company_id")  @db.Uuid          // NULL hasta resolver el match por cédula
+  status            MirrorStatus @default(PENDING)
+  reason            String?      // código legible: no_matching_company, buyer_no_open_period, ...
+  attempts          Int          @default(0)
+  lastError         String?      @map("last_error")
+  lastAttemptAt     DateTime?    @map("last_attempt_at")
+  purchaseInvoiceId String?      @map("purchase_invoice_id") @db.Uuid        // la compra generada en B cuando DONE
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt      @map("updated_at")
+
+  @@index([sellerCompanyId])
+  @@index([buyerCompanyId])
+  @@index([status])
+  @@map("inter_company_mirrors")
 }
 
 // ── Multiempresa en modo práctica (Espacio Contador) — grupos de estudiantes ──
@@ -1468,7 +1507,9 @@ model LearningProfile {
 model PartialPayment {
   id          String    @id @default(uuid()) @db.Uuid
   companyId   String    @map("company_id") @db.Uuid
-  attemptId   String    @map("attempt_id") @db.Uuid
+  // Nullable para soportar empresas GROUP (sin attempt 1:1). El anclaje fiscal
+  // es companyId (la persona jurídica es el contribuyente). INDIVIDUAL lo puebla.
+  attemptId   String?   @map("attempt_id") @db.Uuid
   fiscalYear  Int       @map("fiscal_year")
   quarter     Int       // 1, 2, 3, 4
   dueDate     DateTime  @map("due_date")
@@ -1487,7 +1528,9 @@ model PartialPayment {
 model Retencion {
   id              String    @id @default(uuid()) @db.Uuid
   companyId       String    @map("company_id") @db.Uuid
-  attemptId       String    @map("attempt_id") @db.Uuid
+  // Nullable para soportar empresas GROUP (sin attempt 1:1). El anclaje fiscal
+  // es companyId (la persona jurídica es el contribuyente). INDIVIDUAL lo puebla.
+  attemptId       String?   @map("attempt_id") @db.Uuid
   // 'SERVICIOS_PROFESIONALES' | 'ALQUILER' | 'DIVIDENDOS' | 'TRANSPORTE'
   type            String
   supplierName    String    @map("supplier_name")

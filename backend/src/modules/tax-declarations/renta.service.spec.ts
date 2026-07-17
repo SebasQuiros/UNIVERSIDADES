@@ -6,9 +6,31 @@
  * ya que los servicios fuente requieren Prisma (no disponible en tests unitarios).
  *
  * Fuentes de referencia:
- *   - src/modules/tax-declarations/renta.service.ts (TAX_BRACKETS_2026)
- *   - src/modules/tax-declarations/tax-declarations.service.ts (RENTA_BRACKETS_2026, calcD101)
+ *   - src/modules/tax-declarations/renta.service.ts (TAX_BRACKETS_2026, calculateD101 — el
+ *     D-101 AUTOMÁTICO, calculado desde journalLine + Retencion por companyId, habilitado
+ *     también para empresas GROUP — Fase 2a, Cimiento B).
+ *   - src/modules/tax-declarations/tax-declarations.service.ts (RENTA_BRACKETS_2026, calcD101 —
+ *     el D-101 MANUAL: formulario donde el estudiante tipea las casillas a mano, incluida la
+ *     Sección V "Retenciones en la fuente" — crédito de retenciones SOPORTADAS auto-declaradas).
+ *
+ * IMPORTANTE — dos formularios D-101 distintos, no confundir (reconciliación FASE 2a):
+ *   `calculateD101` (renta.service.ts) tenía el bug de `withholdingsReceived`: acreditaba
+ *   contra la renta propia las retenciones que la empresa PRACTICÓ a terceros (pasivo D-103,
+ *   agente retenedor) — se corrigió (Cimiento B4, ver `renta-authz.ts` → `computeTaxAfterCredits`):
+ *   ahora el único crédito automático es `totalPartialPaid`. Ese fix SÍ se prueba abajo, contra
+ *   la función real vía import (sección "calculateD101 — créditos (Cimiento B4)").
+ *   `calcD101` (tax-declarations.service.ts) es un formulario MANUAL y distinto: el campo
+ *   `retencionesSource` ("Retenciones en la fuente", DTO `D101FormDto`, Sección V) es lo que el
+ *   propio estudiante declara como retención SOPORTADA (que otros le practicaron a la empresa) —
+ *   ese es, según el criterio fiscal de Cimiento B4, el crédito CORRECTO del D-101 (a diferencia
+ *   de las retenciones practicadas). No fue tocado en Fase 2a (fuera de alcance — ver
+ *   spec-cimientos.md §1, "Tramos y umbral PYME del D-101 ... tax-declarations.service.ts").
+ *   Los tests de esa sección siguen probando la fórmula real y vigente de ese formulario; no son
+ *   el bug corregido. Se renombraron para dejar la distinción explícita y evitar la lectura
+ *   errónea de que ambos formularios comparten la misma fórmula de créditos.
  */
+
+import { computeTaxAfterCredits } from './renta-authz';
 
 // ─── Tramos PYME 2026 — renta.service.ts ─────────────────────────────────────
 const TAX_BRACKETS_2026 = [
@@ -292,10 +314,16 @@ describe('RentaService — Lógica de tramos PYME 2026', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PRUEBAS — calcD101 (réplica de tax-declarations.service.ts)
+// PRUEBAS — calcD101 (réplica de tax-declarations.service.ts) — FORMULARIO MANUAL
+// NOTA: este calcD101 es el D-101 que el estudiante llena a mano (casillas), NO el
+// D-101 automático de renta.service.ts. Su campo `retencionesSource` ("Retenciones
+// en la fuente") es la retención SOPORTADA que el propio estudiante declara —
+// crédito correcto según Cimiento B4 — y no fue tocado en esta fase. No confundir
+// con el fix de `withholdingsReceived` de `calculateD101` (ver sección al final del
+// archivo, "calculateD101 — créditos (Cimiento B4)").
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('D-101 Renta — Cálculo completo', () => {
+describe('D-101 Renta MANUAL (tax-declarations.service.ts) — Cálculo completo', () => {
 
   it('debe calcular 5% para renta gravable de ₡3.000.000 (solo tramo 1)', () => {
     const result = calcD101({ ingresosBrutos: 3_000_000 });
@@ -344,7 +372,7 @@ describe('D-101 Renta — Cálculo completo', () => {
     expect(result.cas210_totalGastos).toBe(100_000);        // solo se deduce el máximo
   });
 
-  it('debe restar créditos del impuesto calculado y mostrar impuesto a pagar', () => {
+  it('formulario MANUAL: acredita retenciones en la fuente SOPORTADAS auto-declaradas (Sección V) + pagos parciales — distinto del D-101 automático', () => {
     const result = calcD101({
       ingresosBrutos:     5_000_000,
       retencionesSource:  50_000,
@@ -355,7 +383,7 @@ describe('D-101 Renta — Cálculo completo', () => {
     expect(result.cas601_impuestoNeto).toBe(expectedNeto);
   });
 
-  it('debe mostrar saldo a favor cuando los créditos superan el impuesto', () => {
+  it('formulario MANUAL: muestra saldo a favor cuando la retención soportada auto-declarada supera el impuesto', () => {
     // impuesto ≈ 150.000 (tramo 1 de 3.000.000 × 5%), créditos = 200.000
     const result = calcD101({
       ingresosBrutos:     3_000_000,
@@ -372,5 +400,64 @@ describe('D-101 Renta — Cálculo completo', () => {
       ingresosExentos:  1_000_000,
     });
     expect(result.cas103_ingresosGravables).toBe(4_000_000);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRUEBAS — calculateD101 · créditos (Cimiento B4, fix de withholdingsReceived)
+// Fuente: src/modules/tax-declarations/renta.service.ts (calculateD101) delega el
+// cálculo de créditos a `computeTaxAfterCredits` (renta-authz.ts). Se importa
+// DIRECTO (no se replica): ese módulo ya está libre de Prisma/Nest a propósito
+// (ver encabezado de renta-authz.ts). Esta es la fórmula real y vigente del
+// D-101 AUTOMÁTICO — la que reemplazó el bug donde las retenciones PRACTICADAS
+// (pasivo D-103, agente retenedor) se acreditaban por error contra la renta
+// propia. Reconciliación pedida tras revisión de code-reviewer/fiscal-contable
+// (FASE 2a): antes esta cobertura solo existía indirectamente en
+// renta-authz.spec.ts; se agrega aquí también, junto al resto del núcleo D-101,
+// para que quien lea renta.service.spec.ts vea el contraste explícito con el
+// formulario MANUAL de la sección anterior (que sí acredita `retencionesSource`,
+// legítimamente, porque ese campo es retención SOPORTADA auto-declarada, no
+// practicada).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('calculateD101 (renta.service.ts) — créditos vía computeTaxAfterCredits [Cimiento B4]', () => {
+  it(
+    'empresa que PRACTICÓ retenciones a terceros (₡40.000, pasivo D-103) pero sin pagos ' +
+      'parciales: el impuesto NO baja por esas retenciones — impuestoAPagar=150.000 ' +
+      '(el bug corregido daba 110.000 al restarlas indebidamente vía withholdingsReceived)',
+    () => {
+      const result = computeTaxAfterCredits({ totalTax: 150_000, totalPartialPaid: 0 });
+      expect(result.impuestoAPagar).toBe(150_000);
+      expect(result.saldoAFavor).toBe(0);
+    },
+  );
+
+  it('con pagos parciales (₡100.000, único crédito automático legítimo): impuestoAPagar=50.000', () => {
+    const result = computeTaxAfterCredits({ totalTax: 150_000, totalPartialPaid: 100_000 });
+    expect(result.impuestoAPagar).toBe(50_000);
+    expect(result.saldoAFavor).toBe(0);
+  });
+
+  it('pagos parciales superan el impuesto determinado: saldo a favor de ₡50.000', () => {
+    const result = computeTaxAfterCredits({ totalTax: 150_000, totalPartialPaid: 200_000 });
+    expect(result.impuestoAPagar).toBe(0);
+    expect(result.saldoAFavor).toBe(50_000);
+  });
+
+  it('empresa recién constituida / sin movimientos (totalTax=0, totalPartialPaid=0): impuestoAPagar=0, saldoAFavor=0', () => {
+    const result = computeTaxAfterCredits({ totalTax: 0, totalPartialPaid: 0 });
+    expect(result.impuestoAPagar).toBe(0);
+    expect(result.saldoAFavor).toBe(0);
+  });
+
+  it('GROUP e INDIVIDUAL usan la MISMA función de créditos — el modo nunca bifurca el número (regresión anti-fork, Cimiento B)', () => {
+    // calculateD101 llama a computeTaxAfterCredits igual sin importar company.mode;
+    // lo único que cambia entre INDIVIDUAL/GROUP es authz y el anclaje de attemptId
+    // (ver canTributeForCompany/resolveAttemptId en renta-authz.spec.ts), nunca esta
+    // fórmula.
+    const individual = computeTaxAfterCredits({ totalTax: 792_500, totalPartialPaid: 300_000 });
+    const group       = computeTaxAfterCredits({ totalTax: 792_500, totalPartialPaid: 300_000 });
+    expect(group).toEqual(individual);
+    expect(individual.impuestoAPagar).toBe(492_500);
   });
 });

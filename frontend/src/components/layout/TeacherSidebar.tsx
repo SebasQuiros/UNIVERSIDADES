@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import type { ExerciseAttempt } from '@/types';
 import {
-  LayoutDashboard, BookOpen, FileText, ClipboardCheck,
+  LayoutDashboard, BookOpen, FileText, ClipboardCheck, Presentation,
   LogOut, Menu, X, ChevronRight, GraduationCap, UserCircle,
 } from 'lucide-react';
 
@@ -30,6 +30,7 @@ export function TeacherSidebar() {
     { href: '/profesor',            label: 'Dashboard',               icon: LayoutDashboard, exact: true },
     { href: '/profesor/cursos',     label: 'Mis Cursos',              icon: BookOpen },
     { href: '/profesor/ejercicios', label: 'Mis Ejercicios',          icon: FileText },
+    { href: '/profesor/sesiones',   label: 'Sesiones de aula',        icon: Presentation },
     { href: '/profesor/pendientes', label: 'Pendientes de calificar', icon: ClipboardCheck, badge: pending },
   ];
 
