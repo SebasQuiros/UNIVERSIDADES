@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import type { Notification } from '@/types';
+import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import {
   Home, Coins, Wallet, Package, Landmark, BookOpen, BookOpenCheck,
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
@@ -53,7 +53,7 @@ export function StudentSidebar() {
   const currentTab   = searchParams.get('tab');
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const [unread, setUnread] = useState(0);
+  const unread = useUnreadNotifications();
   const [pending, setPending] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -68,14 +68,6 @@ export function StudentSidebar() {
       setActiveId(a?.id ?? null);
     }).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    const fetchUnread = () => api.get<Notification[]>('/api/v1/notifications')
-      .then(({ data }) => setUnread(data.filter((n) => !n.isRead).length)).catch(() => {});
-    fetchUnread();
-    const id = setInterval(fetchUnread, 15_000);
-    return () => clearInterval(id);
-  }, [pathname]);
 
   // Solo el profesor: entregas pendientes de calificar (badge del espacio Docencia).
   useEffect(() => {

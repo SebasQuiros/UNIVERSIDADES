@@ -128,13 +128,18 @@ function MiniStat({ label, value, icon: Icon }: { label: string; value: string |
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
-export function ExecutiveDashboard({ companyId, compact }: { companyId?: string | null; compact?: boolean }) {
-  const [data, setData]       = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function ExecutiveDashboard({ companyId, compact, initialData }: { companyId?: string | null; compact?: boolean; initialData?: DashboardData | null }) {
+  const [data, setData]       = useState<DashboardData | null>(initialData ?? null);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError]     = useState(false);
 
   useEffect(() => {
     let active = true;
+    // El padre ya cargó el dashboard (evita la request duplicada): sin fetch inicial.
+    if (initialData) {
+      setData(initialData); setError(false); setLoading(false);
+      return;
+    }
     if (!companyId) {
       setData(ZERO_DATA); setError(false); setLoading(false);
       return;
@@ -145,7 +150,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
       .catch(() => { if (active) setError(true); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [companyId]);
+  }, [companyId, initialData]);
 
   if (loading) {
     return (

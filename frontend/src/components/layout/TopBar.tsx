@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { api } from '@/lib/api';
-import type { Notification } from '@/types';
+import { useUnreadNotifications } from '@/hooks/useUnreadNotifications';
 import { Bell, ChevronRight, Search, HelpCircle } from 'lucide-react';
 import { SpaceSwitcher } from './SpaceSwitcher';
 
@@ -41,17 +39,7 @@ function buildCrumbs(pathname: string) {
 export function TopBar() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const [unread, setUnread] = useState(0);
-
-  useEffect(() => {
-    const fetchUnread = () =>
-      api.get<Notification[]>('/api/v1/notifications')
-        .then(({ data }) => setUnread(data.filter((n) => !n.isRead).length))
-        .catch(() => {});
-    fetchUnread();
-    const id = setInterval(fetchUnread, 30_000);
-    return () => clearInterval(id);
-  }, [pathname]);
+  const unread = useUnreadNotifications();
 
   const crumbs = buildCrumbs(pathname);
 

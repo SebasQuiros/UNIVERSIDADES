@@ -199,7 +199,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
   // Se renderiza arriba; debajo queda la gamificación existente.
   // El simulador (precio de acción, macro, IA, eventos) vive en su propia
   // sección: /estudiante/simulador.
-  const executivePanel = <ExecutiveDashboard companyId={companyId} />;
+  const executivePanel = <ExecutiveDashboard companyId={companyId} initialData={dash} />;
 
   // ── Gamification ──────────────────────────────────────────────────────────
   const progressPct = Number(progress?.progress?.progressPct ?? attempt.studentProgress?.progressPct ?? 0);
