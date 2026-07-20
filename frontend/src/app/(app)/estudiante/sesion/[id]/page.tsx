@@ -36,7 +36,7 @@ export default function MiSesionPage() {
   const [phase, setPhase] = useState<SessionPhase>('LOBBY');
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       <PageHeader
         eyebrow="Sesión de aula"
         title={MOCK_SESSION.title}

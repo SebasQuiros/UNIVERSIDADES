@@ -91,7 +91,7 @@ export default function ProfesorDashboard() {
   // En vez de esconder toda la pantalla con un spinner, renderizamos el shell
   // siempre y mostramos placeholders donde van los datos (progressive skeletons).
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
 
       {showOnboarding && user?.id && (
         <OnboardingWizard userId={user.id} onComplete={() => setShowOnboarding(false)} />

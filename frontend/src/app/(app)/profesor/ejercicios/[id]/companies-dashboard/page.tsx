@@ -113,7 +113,7 @@ export default function ProfesorCompaniesDashboard() {
     : `/profesor/ejercicios/${id}`;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1]">
       <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
 
         {/* Breadcrumb */}

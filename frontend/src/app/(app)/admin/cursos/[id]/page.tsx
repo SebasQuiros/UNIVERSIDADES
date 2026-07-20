@@ -159,7 +159,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
 
 function CourseSkeleton() {
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       <Skeleton className="h-4 w-48 mb-6" />
       <Skeleton className="h-24 w-full rounded-card mb-8" />
       <Skeleton className="h-40 w-full rounded-card mb-6" />
@@ -206,7 +206,7 @@ export default function AdminCourseDetailPage() {
   const enrolledIds = course.enrollments.map(e => e.student.id);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       {showEnroll && user?.universityId && (
         <EnrollModal
           courseId={id} universityId={user.universityId} enrolled={enrolledIds}

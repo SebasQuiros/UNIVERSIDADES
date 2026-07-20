@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import type { Notification } from '@/types';
 import {
-  Home, ArrowDownCircle, ArrowUpCircle, Package, Landmark, BookOpen,
+  Home, Coins, Wallet, Package, Landmark, BookOpen, BookOpenCheck,
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
   LogOut, Menu, X, ChevronDown, UserCircle,
   GraduationCap, Calculator, Users, Ticket,
@@ -112,7 +112,7 @@ export function StudentSidebar() {
   const GROUPS: Group[] = [
     { key: 'inicio', label: 'Inicio', icon: Home, href: '/estudiante', exact: true },
     {
-      key: 'ingresos', label: 'Ingresos', icon: ArrowDownCircle,
+      key: 'ingresos', label: 'Ventas y cobros', icon: Coins,
       children: [
         { label: 'Clientes',            tab: 'clients',  slug: 'clientes' },
         { label: 'Facturas de venta',   tab: 'invoices', slug: 'facturas-venta' },
@@ -124,7 +124,7 @@ export function StudentSidebar() {
       ],
     },
     {
-      key: 'gastos', label: 'Gastos', icon: ArrowUpCircle,
+      key: 'gastos', label: 'Compras y pagos', icon: Wallet,
       children: [
         { label: 'Proveedores',         tab: 'suppliers', slug: 'proveedores' },
         { label: 'Propuestas de compra', tab: 'purchase-proposals' },
@@ -135,7 +135,7 @@ export function StudentSidebar() {
       ],
     },
     {
-      key: 'inventario', label: 'Inventario', icon: Package,
+      key: 'inventario', label: 'Existencias', icon: Package,
       children: [
         { label: 'Ítems y productos',   tab: 'products', slug: 'productos' },
         { label: 'Valor de inventario', slug: 'valor-inventario' },
@@ -144,14 +144,14 @@ export function StudentSidebar() {
       ],
     },
     {
-      key: 'bancos', label: 'Bancos', icon: Landmark,
+      key: 'bancos', label: 'Tesorería', icon: Landmark,
       children: [
         { label: 'Bancos y cajas',           tab: 'bank', slug: 'bancos' },
         { label: 'Conciliaciones bancarias', tab: 'bank', slug: 'conciliaciones', sub: 'conciliaciones' },
       ],
     },
     {
-      key: 'contabilidad', label: 'Contabilidad', icon: BookOpen,
+      key: 'contabilidad', label: 'Registro contable', icon: BookOpenCheck,
       children: [
         { label: 'Catálogo de cuentas',     slug: 'catalogo-cuentas' },
         { label: 'Diario (asientos)',       tab: 'journal',        slug: 'asiento-contable' },
@@ -167,7 +167,7 @@ export function StudentSidebar() {
         { label: 'Tutor IA',                tab: 'tutor' },
       ],
     },
-    { key: 'reportes', label: 'Reportes', icon: BarChart2, children: [
+    { key: 'reportes', label: 'Estados y análisis', icon: BarChart2, children: [
         { label: 'Estados financieros', tab: 'reports', slug: 'estados-financieros' },
     ]},
     { key: 'tribu', label: 'Tributación · TRIBU', icon: Receipt, href: '/estudiante/impuestos', path: '/estudiante/impuestos' },
@@ -205,20 +205,20 @@ export function StudentSidebar() {
     { key: 'd-pen',  label: 'Pendientes de calificar', icon: ClipboardCheck,  href: '/profesor/pendientes', path: '/profesor/pendientes', badge: pending },
   ];
   const CONTADOR_GROUPS: Group[] = [
-    { key: 'c-ing', label: 'Ingresos', icon: ArrowDownCircle, children: [
+    { key: 'c-ing', label: 'Ventas y cobros', icon: Coins, children: [
       { label: 'Clientes',          tab: 'clients' },
       { label: 'Facturas de venta', tab: 'invoices' },
     ]},
-    { key: 'c-gas', label: 'Gastos', icon: ArrowUpCircle, children: [
+    { key: 'c-gas', label: 'Compras y pagos', icon: Wallet, children: [
       { label: 'Proveedores', tab: 'suppliers' },
     ]},
-    { key: 'c-inv', label: 'Inventario', icon: Package, children: [
+    { key: 'c-inv', label: 'Existencias', icon: Package, children: [
       { label: 'Productos', tab: 'products' },
     ]},
-    { key: 'c-ban', label: 'Bancos', icon: Landmark, children: [
+    { key: 'c-ban', label: 'Tesorería', icon: Landmark, children: [
       { label: 'Bancos y cajas', tab: 'bank' },
     ]},
-    { key: 'c-con', label: 'Contabilidad', icon: BookOpen, children: [
+    { key: 'c-con', label: 'Registro contable', icon: BookOpenCheck, children: [
       { label: 'Diario (asientos)',       tab: 'journal' },
       { label: 'Libro mayor',             tab: 'ledger' },
       { label: 'Mayorización',            tab: 'mayorizacion' },
@@ -230,7 +230,7 @@ export function StudentSidebar() {
       { label: 'Activos fijos',           tab: 'fixed-assets' },
       { label: 'Nómina',                  tab: 'payroll' },
     ]},
-    { key: 'c-rep', label: 'Reportes', icon: BarChart2, children: [
+    { key: 'c-rep', label: 'Estados y análisis', icon: BarChart2, children: [
       { label: 'Estados financieros', tab: 'reports' },
     ]},
   ];

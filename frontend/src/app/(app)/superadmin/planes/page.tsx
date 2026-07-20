@@ -101,7 +101,7 @@ export default function IngresosPage() {
     }));
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       <PageHeader
         eyebrow="Superadmin"
         title="Ingresos y planes"

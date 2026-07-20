@@ -86,7 +86,7 @@ export default function UnirseSesionPage() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6 lg:p-8 bg-[#F4F6F8]">
+    <div className="flex-1 flex items-center justify-center p-6 lg:p-8 bg-[#FBF8F1]">
       <div className="w-full max-w-3xl">
         <Link
           href="/estudiante"

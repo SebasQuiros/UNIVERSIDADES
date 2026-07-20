@@ -40,7 +40,7 @@ export default function SesionControlPage() {
   const session = MOCK_SESSIONS.find((s) => s.id === id) ?? MOCK_SESSIONS[0];
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
 
       {/* Breadcrumb */}
       <div className="mb-5 flex items-center gap-2 text-sm text-gray-500">

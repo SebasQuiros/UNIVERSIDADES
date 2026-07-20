@@ -176,12 +176,12 @@ export default function NuevoEjercicioPage() {
     }
   }
 
-  if (loadingCourses) return <div className="flex-1 flex items-center justify-center bg-[#F4F6F8]"><Spinner size="lg" /></div>;
+  if (loadingCourses) return <div className="flex-1 flex items-center justify-center bg-[#FBF8F1]"><Spinner size="lg" /></div>;
 
   const totalPoints = rubrics.reduce((s, r) => s + (Number(r.points) || 0), 0);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
       <div className="mx-auto max-w-3xl">
 
         <PageHeader

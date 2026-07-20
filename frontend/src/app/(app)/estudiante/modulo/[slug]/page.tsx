@@ -231,7 +231,7 @@ export default function ModuloPage() {
 
   if (!cfg) {
     return (
-      <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F4F6F8]">
+      <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#FBF8F1]">
         <div className="max-w-lg mx-auto mt-10">
           <Card>
             <EmptyState
@@ -261,7 +261,7 @@ export default function ModuloPage() {
   });
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F4F6F8]">
+    <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#FBF8F1]">
       <div className="max-w-6xl mx-auto">
 
         {/* Cabecera */}

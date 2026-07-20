@@ -66,7 +66,7 @@ export default function NotificacionesPage() {
   const unread = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       <div className="max-w-2xl mx-auto">
 
         {/* Cabecera */}

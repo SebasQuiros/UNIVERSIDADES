@@ -122,7 +122,7 @@ export default function ExerciseDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+      <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
         <Skeleton className="mb-6 h-4 w-48" />
         <div className="mb-6 h-48 rounded-card border border-gray-200/70 bg-white shadow-card" />
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -147,7 +147,7 @@ export default function ExerciseDetailPage() {
   const hasActiveAttempts = activeAttempts > 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
 
       {/* Modal de eliminar / archivar */}
       {showDeleteModal && (

@@ -24,7 +24,7 @@ interface TribuHeaderProps {
 }
 
 const ACCENTS: Record<Accent, { sub: string; badge: string; chip: string; strip: string }> = {
-  blue:    { sub: '#93C5FD', badge: 'rgba(37,99,235,0.28)',  chip: '#2563EB', strip: '#F4F6F8' },
+  blue:    { sub: '#93C5FD', badge: 'rgba(37,99,235,0.28)',  chip: '#2563EB', strip: '#FBF8F1' },
   emerald: { sub: '#6EE7B7', badge: 'rgba(16,185,129,0.26)', chip: '#047857', strip: '#ECFDF5' },
   orange:  { sub: '#FDBA74', badge: 'rgba(249,115,22,0.26)', chip: '#C2410C', strip: '#FFF7ED' },
   purple:  { sub: '#CBD5E1', badge: 'rgba(148,163,184,0.26)', chip: '#475569', strip: '#F1F5F9' },

@@ -134,7 +134,7 @@ export default function LiveDashboardPage() {
     }
   }
 
-  if (loading) return <div className="flex-1 flex items-center justify-center bg-[#F4F6F8]"><Spinner size="lg" /></div>;
+  if (loading) return <div className="flex-1 flex items-center justify-center bg-[#FBF8F1]"><Spinner size="lg" /></div>;
   if (!data) return null;
 
   const filteredStudents = filterStatus === 'ALL'
@@ -146,7 +146,7 @@ export default function LiveDashboardPage() {
     : 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
 
       {/* Modal de mensaje masivo */}
       {showBroadcast && (

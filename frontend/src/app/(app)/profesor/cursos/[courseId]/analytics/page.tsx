@@ -197,7 +197,7 @@ export default function CourseAnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+      <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
         <div className="mb-8 h-40 rounded-card border border-gray-200/70 bg-white shadow-card" />
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -216,7 +216,7 @@ export default function CourseAnalyticsPage() {
 
   if (!data) {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+      <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
         <div className="rounded-card border border-gray-200/70 bg-white shadow-card">
           <EmptyState
             illustration={<SceneSearchEmpty size={200} className="cx-float" />}
@@ -240,7 +240,7 @@ export default function CourseAnalyticsPage() {
   const totalGrades = exerciseStats.reduce((s, e) => s + e.graded, 0);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
 
       {/* Breadcrumb */}
       <div className="mb-5 flex items-center gap-2 text-sm text-gray-500">

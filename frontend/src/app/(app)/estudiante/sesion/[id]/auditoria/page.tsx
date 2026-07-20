@@ -186,7 +186,7 @@ export default function ExpedienteAuditoriaPage() {
   }
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       <Link
         href={`/estudiante/sesion/${id ?? ''}`}
         className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"

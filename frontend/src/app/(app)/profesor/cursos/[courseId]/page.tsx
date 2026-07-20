@@ -1231,7 +1231,7 @@ export default function CourseDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+      <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
         <Skeleton className="mb-6 h-4 w-48" />
         <div className="mb-6 h-44 rounded-card border border-gray-200/70 bg-white shadow-card" />
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
@@ -1252,7 +1252,7 @@ export default function CourseDetailPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
       {showEnroll && course.universityId && (
         <EnrollModal
           courseId={id} universityId={course.universityId} enrolled={enrolledIds}

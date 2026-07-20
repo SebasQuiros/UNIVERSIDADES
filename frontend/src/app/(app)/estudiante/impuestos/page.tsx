@@ -214,7 +214,7 @@ export default function ImpuestosPage() {
   const borradores  = declarations.filter(d => d.status === 'DRAFT').length;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
       <div className="mx-auto max-w-5xl space-y-8">
 
         {toDelete && (

@@ -471,7 +471,7 @@ export default function UsuariosPage() {
   const hasFilters = Boolean(search || roleFilter || statusFilter);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
 
       {/* Modals */}
       {showCreate && universityId && (
@@ -533,7 +533,7 @@ export default function UsuariosPage() {
                 ? setRoleFilter(roleFilter === s.filter ? '' : s.filter)
                 : setStatusFilter(statusFilter === 'pending' ? '' : 'pending')}
               className={`text-left rounded-card transition-all cx-press cx-hop-parent ${
-                active ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-[#F4F6F8]' : ''
+                active ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-[#FBF8F1]' : ''
               }`}
             >
               <div className="bg-white border border-gray-200/70 shadow-card hover:shadow-card-hover rounded-card p-5 h-full">
