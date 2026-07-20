@@ -11,6 +11,8 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
+import { CatalogoCuentasView } from '@/components/modulo/CatalogoCuentasView';
+import { ValorInventarioView } from '@/components/modulo/ValorInventarioView';
 import {
   FileText, ShoppingCart, Package, Landmark, BookOpen, Coins,
   ClipboardList, Tag, Warehouse, Scale, RefreshCw, Building2,
@@ -227,6 +229,12 @@ const AREA_TINT: Record<string, string> = {
 export default function ModuloPage() {
   const params = useParams();
   const slug = String(params.slug ?? '');
+
+  // ── Slugs con backend real: se pintan con su propio componente ──
+  // (resuelven la empresa del attempt activo y hacen su fetch).
+  if (slug === 'catalogo-cuentas') return <CatalogoCuentasView />;
+  if (slug === 'valor-inventario') return <ValorInventarioView />;
+
   const cfg = C[slug];
 
   if (!cfg) {
