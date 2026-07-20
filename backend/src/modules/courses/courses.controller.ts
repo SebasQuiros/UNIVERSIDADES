@@ -35,16 +35,17 @@ export class CoursesController {
   // belonging to the university in the URL — cross-university access is blocked
   // at the DB query level.
   @Get()
-  findAll(@Param('universityId') universityId: string) {
-    return this.svc.findAll(universityId);
+  findAll(@Param('universityId') universityId: string, @CurrentUser() user: any) {
+    return this.svc.findAll(universityId, user);
   }
 
   @Get(':id')
   findOne(
     @Param('universityId') universityId: string,
     @Param('id') id: string,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.findOne(universityId, id);
+    return this.svc.findOne(universityId, id, user);
   }
 
   @Post()
@@ -55,7 +56,7 @@ export class CoursesController {
     @CurrentUser() user: any,
     @Body() dto: CreateCourseDto,
   ) {
-    return this.svc.create(universityId, user.id, dto);
+    return this.svc.create(universityId, user, dto);
   }
 
   @Patch(':id')
@@ -66,7 +67,7 @@ export class CoursesController {
     @CurrentUser() user: any,
     @Body() dto: UpdateCourseDto,
   ) {
-    return this.svc.update(universityId, id, user.id, user.role, dto);
+    return this.svc.update(universityId, id, user, dto);
   }
 
   @Get(':id/grades')
@@ -74,8 +75,9 @@ export class CoursesController {
   getCourseGrades(
     @Param('universityId') universityId: string,
     @Param('id') id: string,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.getCourseGrades(universityId, id);
+    return this.svc.getCourseGrades(universityId, id, user);
   }
 
   @Get(':id/analytics')
@@ -83,8 +85,9 @@ export class CoursesController {
   getCourseAnalytics(
     @Param('universityId') universityId: string,
     @Param('id') id: string,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.getCourseAnalytics(universityId, id);
+    return this.svc.getCourseAnalytics(universityId, id, user);
   }
 
   @Get(':id/students')
@@ -92,8 +95,9 @@ export class CoursesController {
   getStudents(
     @Param('universityId') universityId: string,
     @Param('id') id: string,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.getStudentsWithProgress(universityId, id);
+    return this.svc.getStudentsWithProgress(universityId, id, user);
   }
 
   @Get(':id/practice')
@@ -101,8 +105,9 @@ export class CoursesController {
   getPractice(
     @Param('universityId') universityId: string,
     @Param('id') id: string,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.getPracticeOverview(universityId, id);
+    return this.svc.getPracticeOverview(universityId, id, user);
   }
 
   @Delete(':id/students/:studentId')
@@ -113,7 +118,7 @@ export class CoursesController {
     @Param('studentId') studentId: string,
     @CurrentUser() user: any,
   ) {
-    return this.svc.unenroll(universityId, id, studentId, user.id, user.role);
+    return this.svc.unenroll(universityId, id, studentId, user);
   }
 
   @Delete(':id')
@@ -123,7 +128,7 @@ export class CoursesController {
     @Param('id') id: string,
     @CurrentUser() user: any,
   ) {
-    return this.svc.remove(universityId, id, user.id, user.role);
+    return this.svc.remove(universityId, id, user);
   }
 
   @Post(':id/enroll')
@@ -133,8 +138,9 @@ export class CoursesController {
     @Param('universityId') universityId: string,
     @Param('id') id: string,
     @Body() dto: EnrollStudentDto,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.enroll(universityId, id, dto);
+    return this.svc.enroll(universityId, id, dto, user);
   }
 
   @Post(':id/enroll-bulk')
@@ -146,6 +152,6 @@ export class CoursesController {
     @Body() dto: EnrollBulkDto,
     @CurrentUser() user: any,
   ) {
-    return this.svc.enrollBulk(universityId, id, dto.emails, user.id, user.role);
+    return this.svc.enrollBulk(universityId, id, dto.emails, user);
   }
 }

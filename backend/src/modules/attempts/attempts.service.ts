@@ -90,6 +90,17 @@ export class AttemptsService {
     if (!attempt) throw new NotFoundException('Intento no encontrado');
 
     this._assertAccess(attempt, userId, userRole);
+
+    // M1: no filtrar la clave de respuestas al alumno. Para criterios answer-key
+    // (p.ej. account_balance_gte "CODIGO:MONTO") `expectedValue` es la solución
+    // del auto-grading. El STUDENT recibe la rúbrica SIN `expectedValue`; el staff
+    // la recibe completa. Redacción post-fetch para no alterar el shape de la query.
+    if (userRole === 'STUDENT' && (attempt as any).exercise?.rubrics) {
+      (attempt as any).exercise.rubrics = (attempt as any).exercise.rubrics.map(
+        ({ expectedValue: _drop, ...rest }: any) => rest,
+      );
+    }
+
     return attempt;
   }
 

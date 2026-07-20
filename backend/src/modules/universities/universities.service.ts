@@ -32,9 +32,15 @@ export class UniversitiesService {
     @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
 
-  async findAll() {
+  async findAll(user?: { role: string; universityId: string | null }) {
+    // SUPERADMIN ve todas; ADMIN solo la suya (evita enumerar tenants ajenos).
+    // Si un ADMIN no tiene universidad asignada, no ve ninguna.
+    const scope =
+      !user || user.role === 'SUPERADMIN'
+        ? {}
+        : { id: user.universityId ?? '00000000-0000-0000-0000-000000000000' };
     return this.prisma.university.findMany({
-      where:   { isActive: true },
+      where:   { isActive: true, ...scope },
       include: {
         plan:   { select: { id: true, name: true } },
         _count: { select: { users: true, courses: true } },

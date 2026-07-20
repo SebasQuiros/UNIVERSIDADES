@@ -8,6 +8,24 @@ import { CreateCourseDto, UpdateCourseDto, EnrollStudentDto } from './dto/course
 export class CoursesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Tenant guard for staff mutations. Course routes carry `universityId` as an
+  // attacker-controlled URL param and scope queries with { id, universityId },
+  // so an ADMIN of university A could otherwise target university B by putting
+  // B in the URL. Enforce that the ADMIN's own universityId matches the scope.
+  //  · ADMIN      → caller.universityId must equal the route universityId.
+  //  · SUPERADMIN → unrestricted (cross-university).
+  //  · TEACHER    → tenant already covered by the per-course teacherId check;
+  //                 kept here as defence-in-depth for the same mismatch.
+  private assertTenantScope(
+    caller: { role: string; universityId: string | null },
+    universityId: string,
+  ) {
+    if (caller.role === 'SUPERADMIN') return;
+    if (caller.universityId !== universityId) {
+      throw new NotFoundException('Curso no encontrado');
+    }
+  }
+
   async findMine(teacherId: string) {
     return this.prisma.course.findMany({
       where:   { teacherId, isActive: true },
@@ -45,7 +63,8 @@ export class CoursesService {
     return course;
   }
 
-  async findAll(universityId: string) {
+  async findAll(universityId: string, caller: { role: string; universityId: string | null }) {
+    this.assertTenantScope(caller, universityId);
     await this._checkUniversity(universityId);
     return this.prisma.course.findMany({
       where:   { universityId, isActive: true },
@@ -57,7 +76,8 @@ export class CoursesService {
     });
   }
 
-  async findOne(universityId: string, courseId: string) {
+  async findOne(universityId: string, courseId: string, caller: { role: string; universityId: string | null }) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({
       where:   { id: courseId, universityId },
       include: {
@@ -73,8 +93,15 @@ export class CoursesService {
     return course;
   }
 
-  async create(universityId: string, teacherId: string, dto: CreateCourseDto) {
+  async create(
+    universityId: string,
+    caller: { id: string; role: string; universityId: string | null },
+    dto: CreateCourseDto,
+  ) {
+    // A staff member may only create courses inside their own university.
+    this.assertTenantScope(caller, universityId);
     await this._checkUniversity(universityId);
+    const teacherId = caller.id;
     return this.prisma.course.create({
       data: {
         universityId,
@@ -91,16 +118,16 @@ export class CoursesService {
   async update(
     universityId: string,
     courseId: string,
-    userId: string,
-    userRole: string,
+    caller: { id: string; role: string; universityId: string | null },
     dto: UpdateCourseDto,
   ) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({
       where: { id: courseId, universityId },
     });
     if (!course) throw new NotFoundException('Curso no encontrado');
 
-    if (userRole === 'TEACHER' && course.teacherId !== userId) {
+    if (caller.role === 'TEACHER' && course.teacherId !== caller.id) {
       throw new ForbiddenException('Solo el profesor del curso puede modificarlo');
     }
 
@@ -116,10 +143,16 @@ export class CoursesService {
     });
   }
 
-  async unenroll(universityId: string, courseId: string, studentId: string, userId: string, userRole: string) {
+  async unenroll(
+    universityId: string,
+    courseId: string,
+    studentId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({ where: { id: courseId, universityId } });
     if (!course) throw new NotFoundException('Curso no encontrado');
-    if (userRole === 'TEACHER' && course.teacherId !== userId) {
+    if (caller.role === 'TEACHER' && course.teacherId !== caller.id) {
       throw new ForbiddenException('Solo el profesor del curso puede remover estudiantes');
     }
     const enrollment = await this.prisma.enrollment.findFirst({ where: { courseId, studentId, isActive: true } });
@@ -128,7 +161,8 @@ export class CoursesService {
     return { message: 'Estudiante removido del curso' };
   }
 
-  async getStudentsWithProgress(universityId: string, courseId: string) {
+  async getStudentsWithProgress(universityId: string, courseId: string, caller: { role: string; universityId: string | null }) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({
       where: { id: courseId, universityId },
       include: {
@@ -175,7 +209,8 @@ export class CoursesService {
   // Espacio Contador — vista del profesor sobre la práctica libre de sus
   // estudiantes. Por cada estudiante inscrito (activo) del curso, devuelve sus
   // empresas-cliente de práctica (isPractice) con conteos y última actividad.
-  async getPracticeOverview(universityId: string, courseId: string) {
+  async getPracticeOverview(universityId: string, courseId: string, caller: { role: string; universityId: string | null }) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({
       where: { id: courseId, universityId },
       include: {
@@ -231,16 +266,16 @@ export class CoursesService {
   async remove(
     universityId: string,
     courseId: string,
-    userId: string,
-    userRole: string,
+    caller: { id: string; role: string; universityId: string | null },
   ) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({
       where:   { id: courseId, universityId },
       include: { _count: { select: { exercises: true } } },
     });
     if (!course) throw new NotFoundException('Curso no encontrado');
 
-    if (userRole === 'TEACHER' && course.teacherId !== userId) {
+    if (caller.role === 'TEACHER' && course.teacherId !== caller.id) {
       throw new ForbiddenException('Solo el profesor del curso puede eliminarlo');
     }
 
@@ -253,7 +288,13 @@ export class CoursesService {
     return { message: 'Curso eliminado correctamente' };
   }
 
-  async enroll(universityId: string, courseId: string, dto: EnrollStudentDto) {
+  async enroll(
+    universityId: string,
+    courseId: string,
+    dto: EnrollStudentDto,
+    caller: { role: string; universityId: string | null },
+  ) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({
       where: { id: courseId, universityId },
     });
@@ -286,11 +327,12 @@ export class CoursesService {
 
   async enrollBulk(
     universityId: string, courseId: string, emails: string[],
-    userId: string, userRole: string,
+    caller: { id: string; role: string; universityId: string | null },
   ) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({ where: { id: courseId, universityId } });
     if (!course) throw new NotFoundException('Curso no encontrado');
-    if (userRole === 'TEACHER' && course.teacherId !== userId) {
+    if (caller.role === 'TEACHER' && course.teacherId !== caller.id) {
       throw new ForbiddenException('Solo el profesor del curso puede inscribir estudiantes');
     }
 
@@ -346,7 +388,8 @@ export class CoursesService {
   }
 
   // ── Grades export ─────────────────────────────────────────────────────────
-  async getCourseGrades(universityId: string, courseId: string) {
+  async getCourseGrades(universityId: string, courseId: string, caller: { role: string; universityId: string | null }) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({
       where:   { id: courseId, universityId },
       include: {
@@ -403,7 +446,8 @@ export class CoursesService {
   }
 
   // ── Analytics ──────────────────────────────────────────────────────────────
-  async getCourseAnalytics(universityId: string, courseId: string) {
+  async getCourseAnalytics(universityId: string, courseId: string, caller: { role: string; universityId: string | null }) {
+    this.assertTenantScope(caller, universityId);
     const course = await this.prisma.course.findFirst({
       where:   { id: courseId, universityId },
       include: {

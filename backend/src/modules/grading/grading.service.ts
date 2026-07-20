@@ -13,15 +13,23 @@ export class GradingService {
   ) {}
 
   // ── List all attempts for an exercise (teacher only) ─────────────────────────
-  async listAttempts(courseId: string, exerciseId: string, userId: string, userRole: string) {
+  async listAttempts(
+    courseId: string,
+    exerciseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
     const exercise = await this.prisma.exercise.findFirst({
       where:   { id: exerciseId, courseId },
-      include: { course: { select: { teacherId: true } } },
+      include: { course: { select: { teacherId: true, universityId: true } } },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
 
-    if (userRole === 'TEACHER' && exercise.course.teacherId !== userId) {
+    if (caller.role === 'TEACHER' && exercise.course.teacherId !== caller.id) {
       throw new ForbiddenException('Solo el profesor del curso puede ver los intentos');
+    }
+    // ADMIN restringido a su propia universidad; SUPERADMIN sin restricción.
+    if (caller.role === 'ADMIN' && exercise.course.universityId !== caller.universityId) {
+      throw new NotFoundException('Ejercicio no encontrado');
     }
 
     return this.prisma.exerciseAttempt.findMany({
@@ -113,13 +121,23 @@ export class GradingService {
 
   // ── Get grade for an attempt ──────────────────────────────────────────────────
   async getGrade(attemptId: string, userId: string, userRole: string) {
+    // A un STUDENT NO se le expone `expectedValue` de las rúbricas: para criterios
+    // tipo answer-key (p.ej. account_balance_gte "CODIGO:MONTO") ese valor es la
+    // solución del auto-grading. El staff recibe la rúbrica completa.
+    const rubricsInclude = userRole === 'STUDENT'
+      ? {
+          orderBy: { order: 'asc' as const },
+          select: { id: true, criterion: true, description: true, points: true, order: true },
+        }
+      : { orderBy: { order: 'asc' as const } };
+
     const attempt = await this.prisma.exerciseAttempt.findUnique({
       where:   { id: attemptId },
       include: {
         exercise: {
           select: {
             id: true, title: true, maxScore: true,
-            rubrics: { orderBy: { order: 'asc' } },
+            rubrics: rubricsInclude,
             course:  { select: { teacherId: true } },
           },
         },
