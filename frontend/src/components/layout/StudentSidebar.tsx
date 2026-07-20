@@ -42,6 +42,7 @@ interface Group {
   exact?: boolean;
   path?: string;
   isNotif?: boolean;
+  badge?: number;      // contador (ej. pendientes de calificar del profe)
   children?: Sub[];
   needsExercise?: boolean;
 }
@@ -53,6 +54,7 @@ export function StudentSidebar() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [pending, setPending] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
@@ -74,6 +76,15 @@ export function StudentSidebar() {
     const id = setInterval(fetchUnread, 15_000);
     return () => clearInterval(id);
   }, [pathname]);
+
+  // Solo el profesor: entregas pendientes de calificar (badge del espacio Docencia).
+  useEffect(() => {
+    if (user?.role !== 'TEACHER') return;
+    api.get<any[]>('/api/v1/attempts')
+      .then(({ data }) => setPending((Array.isArray(data) ? data : [])
+        .filter((a) => a.status === 'IN_PROGRESS' || a.status === 'SUBMITTED').length))
+      .catch(() => {});
+  }, [pathname, user?.role]);
 
   // Espacio Contador: empresa-cliente de práctica abierta (si estamos en su workspace).
   const contadorCompanyId = (() => {
@@ -196,7 +207,7 @@ export function StudentSidebar() {
     { key: 'd-cur',  label: 'Mis cursos',              icon: BookOpen,        href: '/profesor/cursos',     path: '/profesor/cursos' },
     { key: 'd-ejer', label: 'Mis ejercicios',          icon: FileText,        href: '/profesor/ejercicios', path: '/profesor/ejercicios' },
     { key: 'd-ses',  label: 'Sesiones de aula',        icon: Presentation,    href: '/profesor/sesiones',   path: '/profesor/sesiones' },
-    { key: 'd-pen',  label: 'Pendientes de calificar', icon: ClipboardCheck,  href: '/profesor/pendientes', path: '/profesor/pendientes' },
+    { key: 'd-pen',  label: 'Pendientes de calificar', icon: ClipboardCheck,  href: '/profesor/pendientes', path: '/profesor/pendientes', badge: pending },
   ];
   const CONTADOR_GROUPS: Group[] = [
     { key: 'c-ing', label: 'Ingresos', icon: ArrowDownCircle, children: [
@@ -282,6 +293,10 @@ export function StudentSidebar() {
           {g.isNotif && unread > 0 && (
             <span className="text-[11px] font-mono font-bold rounded px-1.5 py-0.5 min-w-[18px] text-center leading-none"
               style={{ background: active ? 'rgba(255,255,255,0.25)' : ACCENT, color: '#fff' }}>{unread > 9 ? '9+' : unread}</span>
+          )}
+          {typeof g.badge === 'number' && g.badge > 0 && (
+            <span className="text-[11px] font-mono font-bold rounded px-1.5 py-0.5 min-w-[18px] text-center leading-none"
+              style={{ background: active ? 'rgba(255,255,255,0.25)' : '#F59E0B', color: active ? '#fff' : '#1a1000' }}>{g.badge > 9 ? '9+' : g.badge}</span>
           )}
         </Link>
       );
