@@ -8,7 +8,7 @@ import { api } from '@/lib/api';
 import type { Notification } from '@/types';
 import { Bell, ChevronRight, Search, HelpCircle } from 'lucide-react';
 
-// Mapa de segmentos de ruta → etiqueta legible (breadcrumb estilo SAP/ALEGRA)
+// Mapa de segmentos de ruta → etiqueta legible (breadcrumb jerárquico)
 const SEGMENT_LABELS: Record<string, string> = {
   estudiante:     'Inicio',
   progreso:       'Mi Progreso',

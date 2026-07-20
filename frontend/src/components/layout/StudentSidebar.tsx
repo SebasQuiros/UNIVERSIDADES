@@ -117,7 +117,6 @@ export function StudentSidebar() {
         { label: 'Clientes',            tab: 'clients',  slug: 'clientes' },
         { label: 'Facturas de venta',   tab: 'invoices', slug: 'facturas-venta' },
         { label: 'Pagos recibidos',     tab: 'invoices', slug: 'pagos-recibidos', sub: 'pagos' },
-        { label: 'Facturas recurrentes', slug: 'facturas-recurrentes' },
         { label: 'Notas de crédito',    slug: 'notas-credito' },
         { label: 'Notas de débito',     slug: 'notas-debito' },
         { label: 'Cotizaciones',        slug: 'cotizaciones' },
@@ -132,7 +131,6 @@ export function StudentSidebar() {
         { label: 'Aprovisionamiento (ERP)', tab: 'procurement' },
         { label: 'Facturas de compra',  endsWith: '/compras', slug: 'facturas-compra' },
         { label: 'Órdenes de compra',   slug: 'ordenes-compra' },
-        { label: 'Pagos recurrentes',   slug: 'pagos-recurrentes' },
         { label: 'Recepción de comprobantes', slug: 'recepcion-comprobantes' },
       ],
     },
@@ -142,10 +140,7 @@ export function StudentSidebar() {
         { label: 'Ítems y productos',   tab: 'products', slug: 'productos' },
         { label: 'Valor de inventario', slug: 'valor-inventario' },
         { label: 'Ajustes de inventario', slug: 'ajustes-inventario' },
-        { label: 'Listas de precios',   slug: 'listas-precios' },
-        { label: 'Bodegas',             slug: 'bodegas' },
         { label: 'Categorías',          slug: 'categorias' },
-        { label: 'Atributos',           slug: 'atributos' },
       ],
     },
     {
@@ -384,7 +379,7 @@ export function StudentSidebar() {
           <Link href="/profesor" onClick={() => setOpen(false)}
             className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-all"
             style={isDocencia
-              ? { background: '#0D9488', color: '#fff', boxShadow: '0 2px 12px rgba(13,148,136,0.35)' }
+              ? { background: '#4F46E5', color: '#fff', boxShadow: '0 2px 12px rgba(79,70,229,0.35)' }
               : { color: TXT_FAINT }}>
             <Presentation className="w-4 h-4 flex-shrink-0" /> Docencia
           </Link>
@@ -400,7 +395,7 @@ export function StudentSidebar() {
 
       {isDocencia ? (
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
-          <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(13,148,136,0.12)', border: '1px solid rgba(13,148,136,0.3)', color: '#5EEAD4' }}>
+          <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(79,70,229,0.12)', border: '1px solid rgba(79,70,229,0.3)', color: '#C7D2FE' }}>
             Docencia — administrá tus cursos, ejercicios y sesiones de aula. Con los otros espacios ves el sistema tal como lo usa un estudiante.
           </div>
           <div className="space-y-0.5">{DOCENCIA_TOP.map(renderGroup)}</div>

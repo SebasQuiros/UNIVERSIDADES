@@ -195,7 +195,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
 
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
-  // ── Panel ejecutivo (ALEGRA-style): KPIs, tendencia, IVA, AR/AP ──────────
+  // ── Panel ejecutivo: KPIs, tendencia, IVA, AR/AP ──────────
   // Se renderiza arriba; debajo queda la gamificación existente.
   // El simulador (precio de acción, macro, IA, eventos) vive en su propia
   // sección: /estudiante/simulador.
@@ -960,7 +960,7 @@ export default function ExerciseWorkspacePage() {
   const searchParams = useSearchParams();
   const pingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Deep-link a una pestaña vía ?tab= (para el menú lateral estilo Alegra)
+  // Deep-link a una pestaña vía ?tab= (para el menú lateral)
   useEffect(() => {
     const t = searchParams.get('tab');
     if (t) setActiveTab(t as Tab);

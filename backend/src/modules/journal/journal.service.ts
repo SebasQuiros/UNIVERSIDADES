@@ -112,10 +112,16 @@ export class JournalService {
     }
 
     // 2c. Validate each account: must be level 4, active, belong to company
+    // Fase 5 — fix N+1: antes era 1 findFirst por línea (10 líneas = 10 queries
+    // serializadas). Ahora cargamos TODAS las cuentas del asiento en 1 findMany
+    // con `id: { in: [...] }` y validamos en memoria contra un Map por id.
+    const lineAccounts = await this.prisma.account.findMany({
+      where: { id: { in: dto.lines.map(l => l.accountId) }, companyId },
+    });
+    const accountsById = new Map(lineAccounts.map(a => [a.id, a]));
+
     for (const line of dto.lines) {
-      const account = await this.prisma.account.findFirst({
-        where: { id: line.accountId, companyId },
-      });
+      const account = accountsById.get(line.accountId);
 
       if (!account) {
         throw new BadRequestException(`Cuenta ${line.accountId} no encontrada en esta empresa.`);

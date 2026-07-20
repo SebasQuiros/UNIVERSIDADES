@@ -1035,7 +1035,7 @@ export function JournalTab({ companyId, attemptId }: { companyId: string; readon
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const ent = await api.get<{ entries: JournalEntry[] }>(`/api/v1/companies/${companyId}/journal`);
+      const ent = await api.get<{ entries: JournalEntry[] }>(`/api/v1/companies/${companyId}/journal?limit=200`);
       setEntries(Array.isArray(ent.data) ? ent.data : (ent.data as any).entries ?? []);
     } catch { toast.error('Error al cargar asientos'); }
     finally { setLoading(false); }
@@ -1114,10 +1114,10 @@ export function JournalTab({ companyId, attemptId }: { companyId: string; readon
                   <th className="text-right p-3">Crédito</th>
                 </tr></thead>
                 <tbody>
-                  {entry.lines.map((line, i) => (
+                  {(entry.lines ?? []).map((line, i) => (
                     <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
                       <td className="p-3 text-gray-600">
-                        <span className="font-mono text-gray-400">{line.account.code}</span> {line.account.name}
+                        <span className="font-mono text-gray-400">{line.account?.code ?? '—'}</span> {line.account?.name}
                       </td>
                       <td className="p-3 text-right text-gray-700">
                         {Number(line.debit) > 0 ? `₡${Number(line.debit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
@@ -2086,7 +2086,7 @@ export function SpecialJournalTab({
     setLoading(true);
     try {
       const [ent, acc] = await Promise.all([
-        api.get<any>(`/api/v1/companies/${companyId}/journal`),
+        api.get<any>(`/api/v1/companies/${companyId}/journal?limit=1000`),
         api.get<Account[]>(`/api/v1/companies/${companyId}/accounts`),
       ]);
       const all: JournalEntry[] = Array.isArray(ent.data) ? ent.data : (ent.data?.entries ?? []);
@@ -2115,7 +2115,12 @@ export function SpecialJournalTab({
     if (validLines.length < 2) { toast.error('Se necesitan al menos 2 líneas'); return; }
     setSaving(true);
     try {
-      const ref = `${prefix}-${form.reference || String(entries.length + 1).padStart(3, '0')}`;
+      const maxExisting = entries.reduce((max, e) => {
+        if (!e.reference?.startsWith(`${prefix}-`)) return max;
+        const n = parseInt(e.reference.slice(prefix.length + 1), 10);
+        return Number.isFinite(n) && n > max ? n : max;
+      }, 0);
+      const ref = `${prefix}-${form.reference || String(maxExisting + 1).padStart(3, '0')}`;
       await api.post(`/api/v1/companies/${companyId}/journal`, {
         entryDate:   form.entryDate,
         description: form.description,

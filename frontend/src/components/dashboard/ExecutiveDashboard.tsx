@@ -53,7 +53,7 @@ const ZERO_DATA: DashboardData = {
 
 const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
 
-// ─── KPI "split" card (estilo Alegra: total + Vigentes/Vencidas) ───────────────
+// ─── KPI "split" card (total + Vigentes/Vencidas) ───────────────
 function SplitKpi({
   label, icon: Icon, total, a, b,
 }: {
@@ -170,7 +170,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
   const marginPct = totals.totalSalesBase > 0 ? (totals.grossMargin / totals.totalSalesBase) * 100 : 0;
 
   // Serie para la gráfica: si no hay datos, generamos 6 meses en 0 para que
-  // los EJES se dibujen igual (como Alegra muestra ₡0–₡5 con fechas).
+  // los EJES se dibujen igual (mostrar ₡0–₡5 con fechas).
   const now = new Date();
   const trendData = salesTrend.length > 0
     ? salesTrend
@@ -183,7 +183,7 @@ export function ExecutiveDashboard({ companyId, compact }: { companyId?: string 
   return (
     <div className="space-y-6 lp-in">
 
-      {/* ── KPI row (estilo Alegra) ───────────────────────────── */}
+      {/* ── KPI row ───────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SplitKpi label="Cuentas por cobrar" icon={Coins} total={receivables.outstanding}
           a={{ label: 'Vigentes', value: receivables.outstanding - (receivables.overdue ?? 0), docs: receivables.count - (receivables.overdueCount ?? 0), color: ACCENT }}

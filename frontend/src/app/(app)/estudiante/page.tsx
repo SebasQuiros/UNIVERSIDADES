@@ -322,7 +322,7 @@ export default function EstudianteDashboard() {
 
   const firstName = user?.name?.split(' ')[0] ?? 'Estudiante';
   // Empresa activa del estudiante (si existe); si no hay, el dashboard se
-  // muestra en ceros — igual que Alegra con una cuenta nueva.
+  // muestra en ceros — como una cuenta nueva.
   const activeCompanyId =
     companies.find((c) => c.isCompanyEnabled)?.id ?? companies[0]?.id ?? null;
 
@@ -378,7 +378,7 @@ export default function EstudianteDashboard() {
         </div>
       </div>
 
-      {/* ── Resumen del negocio (siempre visible, estilo Alegra) ── */}
+      {/* ── Resumen del negocio (siempre visible) ── */}
       <section className="mb-10">
         <SectionHeading icon={Wallet} eyebrow="Tu empresa" title="Resumen del negocio" />
         {loading

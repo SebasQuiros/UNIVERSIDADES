@@ -713,6 +713,7 @@ model JournalEntry {
   @@index([invoiceId])
   @@index([sourceType, sourceId])
   @@index([status])
+  @@index([companyId, status, isReversed, entryDate])
   @@map("journal_entries")
 }
 

@@ -183,12 +183,10 @@ export default function RentaPage() {
     api.get<any>(`/api/v1/attempts/${attemptId}/company`)
       .then(({ data }) => setCompanyId(data.id))
       .catch(() => {
-        // Try companies endpoint as fallback
-        api.get<any[]>('/api/v1/companies')
-          .then(({ data }) => {
-            if (data && data.length > 0) setCompanyId(data[0].id);
-          })
-          .catch(() => toast.error('No se encontró la empresa del ejercicio'));
+        // No elegir una empresa arbitraria: podría registrar datos fiscales
+        // contra la empresa equivocada. Dejar companyId en null y avisar.
+        setCompanyId(null);
+        toast.error('No se encontró la empresa del ejercicio');
       });
   }, [attemptId]);
 

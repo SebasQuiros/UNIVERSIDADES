@@ -319,30 +319,41 @@ export class ReportsService {
       orderBy: { code: 'asc' },
     });
 
-    const result = await Promise.all(
-      accounts.map(async account => {
-        // Fetch all journal lines for this account within the date range
-        const lines = await this.prisma.journalLine.findMany({
-          where: {
-            accountId: account.id,
-            companyId,
-            entry: {
-              isReversed: false,
-              status:     'CONFIRMED',  // excluye PENDING/REJECTED
-              entryDate:  { gte: startDate, lte: endDate },
-            },
+    // Fase 5 — fix N+1: antes era 1 findMany por cuenta (Promise.all sobre N
+    // cuentas = N queries). Ahora hacemos UNA sola findMany con
+    // `accountId: { in: [...] }` y agrupamos en memoria por accountId con un Map.
+    const allLines = accounts.length === 0 ? [] : await this.prisma.journalLine.findMany({
+      where: {
+        accountId: { in: accounts.map(a => a.id) },
+        companyId,
+        entry: {
+          isReversed: false,
+          status:     'CONFIRMED',  // excluye PENDING/REJECTED
+          entryDate:  { gte: startDate, lte: endDate },
+        },
+      },
+      include: {
+        entry: {
+          select: {
+            entryNumber: true,
+            description: true,
+            entryDate:   true,
           },
-          include: {
-            entry: {
-              select: {
-                entryNumber: true,
-                description: true,
-                entryDate:   true,
-              },
-            },
-          },
-          orderBy: { entry: { entryDate: 'asc' } },
-        });
+        },
+      },
+      orderBy: { entry: { entryDate: 'asc' } },
+    });
+
+    const linesByAccount = new Map<string, typeof allLines>();
+    for (const line of allLines) {
+      const bucket = linesByAccount.get(line.accountId);
+      if (bucket) bucket.push(line);
+      else linesByAccount.set(line.accountId, [line]);
+    }
+
+    const result = accounts.map(account => {
+        // Journal lines for this account within the date range (agrupadas arriba)
+        const lines = linesByAccount.get(account.id) ?? [];
 
         const debitEntries = lines
           .filter(l => new Decimal(l.debit.toString()).greaterThan(0))
@@ -388,8 +399,7 @@ export class ReportsService {
           balance,
           normalBalance: account.normalBalance,
         };
-      }),
-    );
+      });
 
     // Only return accounts that have at least one movement
     return result.filter(
