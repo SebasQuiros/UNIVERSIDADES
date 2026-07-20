@@ -11,6 +11,7 @@ import {
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
   LogOut, Menu, X, ChevronDown, UserCircle,
   GraduationCap, Calculator, Users, Ticket,
+  LayoutDashboard, FileText, ClipboardCheck, Presentation,
 } from 'lucide-react';
 
 // ── Paleta de marca (azul noche + acento dorado) ───────────────
@@ -187,6 +188,16 @@ export function StudentSidebar() {
   const MULTIEMPRESA_TOP: Group[] = [
     { key: 'm-grp', label: 'Grupos de práctica', icon: Users, href: '/estudiante/multiempresa', path: '/estudiante/multiempresa', exact: true },
   ];
+  // ── Espacio Docencia (solo profesor): sus herramientas de docencia. El profe
+  //    tiene TODO lo del estudiante (los otros 3 espacios) MÁS estos accesos,
+  //    para ver el sistema tal como lo usa un estudiante.
+  const DOCENCIA_TOP: Group[] = [
+    { key: 'd-dash', label: 'Panel docente',           icon: LayoutDashboard, href: '/profesor',            path: '/profesor', exact: true },
+    { key: 'd-cur',  label: 'Mis cursos',              icon: BookOpen,        href: '/profesor/cursos',     path: '/profesor/cursos' },
+    { key: 'd-ejer', label: 'Mis ejercicios',          icon: FileText,        href: '/profesor/ejercicios', path: '/profesor/ejercicios' },
+    { key: 'd-ses',  label: 'Sesiones de aula',        icon: Presentation,    href: '/profesor/sesiones',   path: '/profesor/sesiones' },
+    { key: 'd-pen',  label: 'Pendientes de calificar', icon: ClipboardCheck,  href: '/profesor/pendientes', path: '/profesor/pendientes' },
+  ];
   const CONTADOR_GROUPS: Group[] = [
     { key: 'c-ing', label: 'Ingresos', icon: ArrowDownCircle, children: [
       { label: 'Clientes',          tab: 'clients' },
@@ -221,6 +232,8 @@ export function StudentSidebar() {
   const inExercise = pathname.includes('/ejercicio/');
   const isMultiempresa = pathname.startsWith('/estudiante/multiempresa');
   const isContador = pathname.startsWith('/estudiante/contador');
+  const isDocencia = pathname.startsWith('/profesor');
+  const isTeacher = user?.role === 'TEACHER';
   const subActive = (s: Sub) => {
     if (isContador) {
       if (s.path && pathname.startsWith(s.path)) return true;
@@ -324,7 +337,7 @@ export function StudentSidebar() {
           </div>
           <div>
             <h1 className="text-[15px] font-black text-white tracking-wide leading-none">ContaSJ</h1>
-            <p className="text-[10.5px] mt-1 leading-none" style={{ color: TXT_FAINT }}>{isMultiempresa ? 'Espacio Multiempresa' : isContador ? 'Espacio Contador' : 'Espacio Educación'}</p>
+            <p className="text-[10.5px] mt-1 leading-none" style={{ color: TXT_FAINT }}>{isDocencia ? 'Espacio Docencia' : isMultiempresa ? 'Espacio Multiempresa' : isContador ? 'Espacio Contador' : 'Espacio Educación'}</p>
           </div>
         </Link>
       </div>
@@ -333,7 +346,7 @@ export function StudentSidebar() {
       <div className="lp-in mx-3 mt-3 p-1 rounded-lg space-y-1" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${SIDE_LINE}` }}>
         <Link href="/estudiante" onClick={() => setOpen(false)}
           className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-all"
-          style={(!isContador && !isMultiempresa)
+          style={(!isContador && !isMultiempresa && !isDocencia)
             ? { background: ACCENT, color: '#fff', boxShadow: ACTIVE_GLOW }
             : { color: TXT_FAINT }}>
           <GraduationCap className="w-4 h-4 flex-shrink-0" /> Educación
@@ -352,16 +365,32 @@ export function StudentSidebar() {
             : { color: TXT_FAINT }}>
           <Users className="w-4 h-4 flex-shrink-0" /> Multiempresa
         </Link>
+        {isTeacher && (
+          <Link href="/profesor" onClick={() => setOpen(false)}
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-all"
+            style={isDocencia
+              ? { background: '#0D9488', color: '#fff', boxShadow: '0 2px 12px rgba(13,148,136,0.35)' }
+              : { color: TXT_FAINT }}>
+            <Presentation className="w-4 h-4 flex-shrink-0" /> Docencia
+          </Link>
+        )}
       </div>
 
 
-      {!activeId && !isContador && !isMultiempresa && (
+      {!activeId && !isContador && !isMultiempresa && !isDocencia && (
         <div className="mx-3 mt-2 mb-1 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(37,99,235,0.12)', border: '1px solid rgba(37,99,235,0.3)', color: '#93C5FD' }}>
           Inicia un ejercicio para operar tu empresa.
         </div>
       )}
 
-      {isMultiempresa ? (
+      {isDocencia ? (
+        <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
+          <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(13,148,136,0.12)', border: '1px solid rgba(13,148,136,0.3)', color: '#5EEAD4' }}>
+            Docencia — administrá tus cursos, ejercicios y sesiones de aula. Con los otros espacios ves el sistema tal como lo usa un estudiante.
+          </div>
+          <div className="space-y-0.5">{DOCENCIA_TOP.map(renderGroup)}</div>
+        </nav>
+      ) : isMultiempresa ? (
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
           <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)', color: '#C4B5FD' }}>
             Multiempresa — formá grupos con otros contadores y comerciá entre sus empresas de práctica (compra/venta, inventario, CxC/CxP y asientos reales).

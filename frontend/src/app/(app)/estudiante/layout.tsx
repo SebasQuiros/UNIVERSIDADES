@@ -14,13 +14,17 @@ export default function EstudianteLayout({ children }: { children: React.ReactNo
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
+  // El profesor también puede navegar la vista de estudiante (para ver el
+  // sistema tal como lo usa un estudiante). Solo se bloquea a quien no está
+  // logueado o tiene un rol distinto de STUDENT/TEACHER.
+  const canView = !!user && (user.role === 'STUDENT' || user.role === 'TEACHER');
   useEffect(() => {
     if (!isLoading && !user) router.replace('/login');
-    if (!isLoading && user && user.role !== 'STUDENT') router.replace('/login');
+    if (!isLoading && user && user.role !== 'STUDENT' && user.role !== 'TEACHER') router.replace('/login');
   }, [user, isLoading, router]);
 
   if (isLoading) return <PageSpinner />;
-  if (!user || user.role !== 'STUDENT') return null;
+  if (!canView) return null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { TeacherSidebar } from '@/components/layout/TeacherSidebar';
+import { StudentSidebar } from '@/components/layout/StudentSidebar';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { PageErrorBoundary } from '@/components/ui/ErrorBoundary';
 
@@ -21,7 +21,7 @@ export default function ProfesorLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <TeacherSidebar />
+      <StudentSidebar />
       <main className="flex-1 flex flex-col min-w-0 min-h-0 lg:pt-0 pt-14">
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           <PageErrorBoundary>{children}</PageErrorBoundary>
