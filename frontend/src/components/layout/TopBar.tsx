@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import type { Notification } from '@/types';
 import { Bell, ChevronRight, Search, HelpCircle } from 'lucide-react';
+import { SpaceSwitcher } from './SpaceSwitcher';
 
 // Mapa de segmentos de ruta → etiqueta legible (breadcrumb jerárquico)
 const SEGMENT_LABELS: Record<string, string> = {
@@ -108,6 +109,10 @@ export function TopBar() {
 
       {/* Acciones derecha */}
       <div className="flex items-center gap-1.5 ml-auto xl:ml-0">
+        {/* Selector de espacio (estilo cambio de entidad de Business Central) */}
+        <SpaceSwitcher />
+        <div className="w-px h-6 bg-gray-200 mx-0.5" />
+
         <Link
           href="/estudiante/impuestos"
           className="hidden xl:flex items-center justify-center w-9 h-9 rounded-xl text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
@@ -142,7 +147,7 @@ export function TopBar() {
           </div>
           <div className="hidden 2xl:block leading-tight">
             <p className="text-sm font-semibold text-gray-800 truncate max-w-[140px]">{user?.name}</p>
-            <p className="text-xs text-gray-400">Estudiante</p>
+            <p className="text-xs text-gray-400">{user?.role === 'TEACHER' ? 'Profesor' : 'Estudiante'}</p>
           </div>
         </Link>
       </div>

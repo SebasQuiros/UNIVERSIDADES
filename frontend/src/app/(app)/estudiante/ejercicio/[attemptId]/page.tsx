@@ -1097,33 +1097,8 @@ export default function ExerciseWorkspacePage() {
             <span className="text-sm text-gray-700">{company.name}</span>
           </div>
         )}
-        {company && (
-          <div className="flex items-center gap-1.5 ml-2">
-            <Link
-              href={`/estudiante/ejercicio/${attemptId}/cxc`}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-600 hover:text-blue-700 hover:border-blue-300 transition-colors border border-gray-200 cx-press"
-            >
-              Cuentas por cobrar
-            </Link>
-            <Link
-              href={`/estudiante/ejercicio/${attemptId}/cxp`}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white text-gray-600 hover:text-blue-700 hover:border-blue-300 transition-colors border border-gray-200 cx-press"
-            >
-              Cuentas por pagar
-            </Link>
-            <Link
-              href={`/estudiante/ejercicio/${attemptId}/diario`}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors ring-1 ring-blue-200/60 cx-press"
-            >
-              Libro diario
-            </Link>
-          </div>
-        )}
-        {attempt.status === 'IN_PROGRESS' && company && (
-          <Button onClick={handleSubmit} loading={submitting} size="sm" className="cx-press">
-            <Send className="w-4 h-4" /> Enviar para calificar
-          </Button>
-        )}
+        {/* Subledgers y "Enviar para calificar" ya no viven en el header:
+            se movieron al Resumen del ejercicio (sección "Entregar", parte final). */}
         {attempt.status === 'GRADED' && attempt.score != null && (
           <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl cx-tada">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -1190,6 +1165,29 @@ export default function ExerciseWorkspacePage() {
             {activeTab === 'fixed-assets'       && <FixedAssetsTab       companyId={company.id} />}
             {activeTab === 'payroll'            && <PayrollTab           companyId={company.id} />}
             {activeTab === 'tutor'              && <SocraticTutorPanel   attemptId={attemptId} companyId={company.id} />}
+
+            {/* Sección "Entregar ejercicio" — solo en el Resumen (parte final), no en el header */}
+            {activeTab === 'dashboard' && attempt.status === 'IN_PROGRESS' && company && (
+              <div className="mt-8 rounded-card border border-blue-200/70 bg-white p-5 lg:p-6 shadow-card">
+                <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-[0.13em] text-gold-900">
+                  <Send className="w-4 h-4 text-blue-700" /> Entregar ejercicio
+                </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex-1 min-w-[220px]">
+                    <h3 className="text-base font-bold text-gray-900">¿Terminaste el ejercicio?</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">Revisá tus libros auxiliares antes de entregar. Al enviar, tu trabajo se califica y ya no podrás editarlo.</p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <Link href={`/estudiante/ejercicio/${attemptId}/cxc`} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:text-blue-700 hover:border-blue-300 transition-colors cx-press">Cuentas por cobrar</Link>
+                      <Link href={`/estudiante/ejercicio/${attemptId}/cxp`} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:text-blue-700 hover:border-blue-300 transition-colors cx-press">Cuentas por pagar</Link>
+                      <Link href={`/estudiante/ejercicio/${attemptId}/diario`} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:text-blue-700 hover:border-blue-300 transition-colors cx-press">Libro diario</Link>
+                    </div>
+                  </div>
+                  <Button onClick={handleSubmit} loading={submitting} size="lg" className="cx-press flex-shrink-0">
+                    <Send className="w-4 h-4" /> Enviar para calificar
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

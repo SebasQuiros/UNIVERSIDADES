@@ -352,8 +352,8 @@ export function StudentSidebar() {
         </Link>
       </div>
 
-      {/* Switch de 3 espacios: Educación · Contador · Multiempresa */}
-      <div className="lp-in mx-3 mt-3 p-1 rounded-lg space-y-1" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${SIDE_LINE}` }}>
+      {/* Switch de espacios — solo en móvil; en escritorio vive arriba a la derecha (TopBar) */}
+      <div className="lp-in lg:hidden mx-3 mt-3 p-1 rounded-lg space-y-1" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${SIDE_LINE}` }}>
         <Link href="/estudiante" onClick={() => setOpen(false)}
           className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12.5px] font-semibold transition-all"
           style={(!isContador && !isMultiempresa && !isDocencia)
