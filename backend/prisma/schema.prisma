@@ -590,6 +590,7 @@ model Company {
   accountsReceivable AccountReceivable[]
   accountsPayable    AccountPayable[]
   inventoryLots      InventoryLot[]
+  productCategories  ProductCategory[]
 
   @@index([studentId])
   @@index([exerciseId])
@@ -811,12 +812,18 @@ model Supplier {
 
 model ProductCategory {
   id          String    @id @default(uuid()) @db.Uuid
+  // Scope multi-tenant (phase16): antes era global y cualquier empresa
+  // veía/tocaba las categorías de otras.
+  companyId   String    @map("company_id") @db.Uuid
   name        String
   description String?
   createdAt   DateTime  @default(now()) @map("created_at")
 
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   products Product[]
 
+  @@unique([companyId, name])
+  @@index([companyId])
   @@map("product_categories")
 }
 

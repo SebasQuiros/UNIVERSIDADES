@@ -115,3 +115,18 @@ export class AdjustStockDto {
   @MinLength(2)
   reason: string;
 }
+
+// ── Categorías de producto ────────────────────────────────────────
+export class CreateCategoryDto {
+  @IsString()
+  @MinLength(2, { message: 'El nombre debe tener al menos 2 caracteres' })
+  @MaxLength(60, { message: 'El nombre no puede superar los 60 caracteres' })
+  name: string;
+}
+
+export class UpdateCategoryDto {
+  @IsString()
+  @MinLength(2, { message: 'El nombre debe tener al menos 2 caracteres' })
+  @MaxLength(60, { message: 'El nombre no puede superar los 60 caracteres' })
+  name: string;
+}

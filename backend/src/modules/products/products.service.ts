@@ -4,7 +4,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
-import { CreateProductDto, UpdateProductDto, AdjustStockDto } from './dto/products.dto';
+import {
+  CreateProductDto, UpdateProductDto, AdjustStockDto,
+  CreateCategoryDto, UpdateCategoryDto,
+} from './dto/products.dto';
 
 @Injectable()
 export class ProductsService {
@@ -135,7 +138,97 @@ export class ProductsService {
     });
   }
 
-  async getCategories() {
-    return this.prisma.productCategory.findMany({ orderBy: { name: 'asc' } });
+  // ── Categorías de producto ──────────────────────────────────────
+  // NOTA: en el schema actual `ProductCategory` es una tabla global
+  // (no tiene companyId); la relación por empresa vive en
+  // `Product.categoryId`. Por eso la "pertenencia" se valida como
+  // existencia de la categoría, y los conteos de productos sí se
+  // calculan scoped a la empresa del request.
+
+  async getCategories(companyId: string) {
+    // Scoped a la empresa (phase16). Shape: escalares + `_count.products`
+    // (productos activos de ESTA empresa) para la UI.
+    return this.prisma.productCategory.findMany({
+      where:   { companyId },
+      orderBy: { name: 'asc' },
+      include: {
+        _count: {
+          select: {
+            products: { where: { companyId, isActive: true } },
+          },
+        },
+      },
+    });
+  }
+
+  async createCategory(companyId: string, dto: CreateCategoryDto) {
+    const name = dto.name.trim();
+    if (name.length < 2) {
+      throw new BadRequestException('El nombre debe tener al menos 2 caracteres');
+    }
+
+    // Duplicados por nombre DENTRO de la empresa, case-insensitive.
+    const existing = await this.prisma.productCategory.findFirst({
+      where: { companyId, name: { equals: name, mode: 'insensitive' } },
+    });
+    if (existing) {
+      throw new ConflictException(`Ya existe una categoría llamada "${existing.name}"`);
+    }
+
+    return this.prisma.productCategory.create({ data: { companyId, name } });
+  }
+
+  async renameCategory(companyId: string, categoryId: string, dto: UpdateCategoryDto) {
+    // Pertenencia real: la categoría debe ser de ESTA empresa.
+    const category = await this.prisma.productCategory.findFirst({
+      where: { id: categoryId, companyId },
+    });
+    if (!category) throw new NotFoundException('Categoría no encontrada');
+
+    const name = dto.name.trim();
+    if (name.length < 2) {
+      throw new BadRequestException('El nombre debe tener al menos 2 caracteres');
+    }
+
+    const duplicate = await this.prisma.productCategory.findFirst({
+      where: {
+        companyId,
+        id:   { not: categoryId },
+        name: { equals: name, mode: 'insensitive' },
+      },
+    });
+    if (duplicate) {
+      throw new ConflictException(`Ya existe una categoría llamada "${duplicate.name}"`);
+    }
+
+    return this.prisma.productCategory.update({
+      where: { id: categoryId },
+      data:  { name },
+    });
+  }
+
+  async deleteCategory(companyId: string, categoryId: string) {
+    // Pertenencia real: la categoría debe ser de ESTA empresa.
+    const category = await this.prisma.productCategory.findFirst({
+      where: { id: categoryId, companyId },
+    });
+    if (!category) throw new NotFoundException('Categoría no encontrada');
+
+    return this.prisma.$transaction(async (tx) => {
+      // Cuántos productos quedan desasignados (para la UI).
+      const detachedProducts = await tx.product.count({
+        where: { categoryId, companyId },
+      });
+
+      // NO borrar en cascada: desasignar explícitamente y recién entonces borrar.
+      await tx.product.updateMany({
+        where: { categoryId, companyId },
+        data:  { categoryId: null, updatedAt: new Date() },
+      });
+
+      await tx.productCategory.delete({ where: { id: categoryId } });
+
+      return { ok: true, detachedProducts };
+    });
   }
 }

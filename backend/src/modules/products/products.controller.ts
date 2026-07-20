@@ -3,7 +3,10 @@ import {
   Body, Param, Request, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
-import { CreateProductDto, UpdateProductDto, AdjustStockDto } from './dto/products.dto';
+import {
+  CreateProductDto, UpdateProductDto, AdjustStockDto,
+  CreateCategoryDto, UpdateCategoryDto,
+} from './dto/products.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
 import { CompanyOwnerGuard } from '../../common/guards/company-owner.guard';
 
@@ -12,9 +15,40 @@ import { CompanyOwnerGuard } from '../../common/guards/company-owner.guard';
 export class ProductsController {
   constructor(private readonly svc: ProductsService) {}
 
+  // ── Categorías de producto ──────────────────────────────────────
+  // Rutas literales ('categories/…') declaradas ANTES de las rutas
+  // paramétricas (':id') para que Nest no las capture como id.
+
   @Get('categories')
-  getCategories() {
-    return this.svc.getCategories();
+  getCategories(@Param('companyId') companyId: string) {
+    return this.svc.getCategories(companyId);
+  }
+
+  @Post('categories')
+  @HttpCode(HttpStatus.CREATED)
+  createCategory(
+    @Param('companyId') companyId: string,
+    @Body() dto: CreateCategoryDto,
+  ) {
+    return this.svc.createCategory(companyId, dto);
+  }
+
+  @Patch('categories/:categoryId')
+  renameCategory(
+    @Param('companyId') companyId: string,
+    @Param('categoryId') categoryId: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
+    return this.svc.renameCategory(companyId, categoryId, dto);
+  }
+
+  @Delete('categories/:categoryId')
+  @HttpCode(HttpStatus.OK)
+  deleteCategory(
+    @Param('companyId') companyId: string,
+    @Param('categoryId') categoryId: string,
+  ) {
+    return this.svc.deleteCategory(companyId, categoryId);
   }
 
   @Get()
