@@ -14,6 +14,7 @@ import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import { CatalogoCuentasView } from '@/components/modulo/CatalogoCuentasView';
 import { ValorInventarioView } from '@/components/modulo/ValorInventarioView';
 import { CategoriasView } from '@/components/modulo/CategoriasView';
+import { NotasView } from '@/components/modulo/NotasView';
 import {
   FileText, ShoppingCart, Package, Landmark, BookOpen, Coins,
   ClipboardList, Tag, Warehouse, Scale, RefreshCw, Building2,
@@ -236,6 +237,8 @@ export default function ModuloPage() {
   if (slug === 'catalogo-cuentas') return <CatalogoCuentasView />;
   if (slug === 'valor-inventario') return <ValorInventarioView />;
   if (slug === 'categorias') return <CategoriasView />;
+  if (slug === 'notas-credito') return <NotasView kind="credito" />;
+  if (slug === 'notas-debito') return <NotasView kind="debito" />;
 
   const cfg = C[slug];
 
