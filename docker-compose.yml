@@ -111,8 +111,8 @@ services:
       npx prisma generate;
       npx prisma migrate deploy;
       npx prisma db seed || true;
-      ([ -f /app/dist/src/main.js ] || npm run build) &&
-      node dist/src/main.js"
+      ([ -f /app/dist/main.js ] || npm run build || true);
+      node dist/main.js"
 
   # ── 3. Nginx Reverse Proxy ───────────────────────────────────
   nginx:
