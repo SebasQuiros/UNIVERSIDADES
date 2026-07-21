@@ -63,6 +63,18 @@ export class ExerciseConfigService {
       throw new ForbiddenException('No sos el profesor de este ejercicio.');
     }
 
+    // ── Hook Sesión de Aula: si hay una sesión activa (no DRAFT), la config
+    // queda congelada para no romper el estado de la dinámica en curso. ──────
+    const activeSession = await this.prisma.classSession.findUnique({
+      where:  { exerciseId },
+      select: { status: true },
+    });
+    if (activeSession && activeSession.status !== 'DRAFT') {
+      throw new ForbiddenException(
+        'La configuración está bloqueada: hay una sesión de aula activa para este ejercicio.',
+      );
+    }
+
     // upsert: si por algún motivo no había config aún, la crea con dto + defaults.
     return this.prisma.exerciseConfig.upsert({
       where:  { exerciseId },

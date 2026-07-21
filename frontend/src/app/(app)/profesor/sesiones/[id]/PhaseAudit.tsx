@@ -1,180 +1,111 @@
 'use client';
 
 /**
- * Fase AUDITORÍA — el informe del cruce.
+ * Fase AUDITORÍA — el profesor ve quién audita a quién y cuántos hallazgos
+ * van entrando, y decide cuándo cerrar la auditoría.
  *
- * Doctrina NIA 240: el sistema detecta *diferencias*, nunca "fraude" ni
- * "trampa". Una diferencia puede ser un error, un criterio contable distinto
- * o algo que amerita revisión del docente — son indistinguibles para el
- * sistema. El juicio final es siempre del profesor, no del software. Por eso
- * el vocabulario de esta pantalla es deliberadamente neutral y descriptivo.
+ * Doctrina NIA 240: el sistema reporta *diferencias*, nunca "fraude" — el
+ * detalle de cada hallazgo lo revisa el profesor en la fase de calificación;
+ * acá solo se muestra el conteo (el backend no expone el detalle de hallazgos
+ * al staff en esta fase).
  */
 
-import { useState, type ElementType } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
+import { ARCHETYPE_ICON, ARCHETYPE_LABELS, ARCHETYPE_TINT } from '@/lib/classSession';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { IconTile } from '@/components/ui/IconTile';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
-import { formatDateTime, fmtNum } from '@/lib/utils';
-import {
-  MOCK_COMPANIES, MOCK_AUDIT_FINDINGS, MOCK_AUDITOR_SUBMISSIONS, AUDIT_ASSIGNMENTS,
-  companyName, type AuditCategory, type ReviewPriority,
-} from './_mock';
-import {
-  Info, TrendingUp, Receipt, Percent, Boxes, HelpCircle, CheckCircle2,
-  ShieldCheck, ArrowRight, FileSearch, Trophy, Circle,
-} from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
+import type { DashboardResponse, AuditAssignmentPair } from './types';
+import { Info, FileSearch, ShieldCheck, ArrowRight, Trophy, ArrowRightLeft } from 'lucide-react';
 
-const CATEGORY_META: Record<AuditCategory, { label: string; icon: ElementType }> = {
-  INGRESOS:   { label: 'Ingresos',   icon: TrendingUp },
-  GASTOS:     { label: 'Gastos',     icon: Receipt },
-  IVA:        { label: 'IVA',        icon: Percent },
-  INVENTARIO: { label: 'Inventario', icon: Boxes },
-  OTRO:       { label: 'Otro',       icon: HelpCircle },
-};
+export function PhaseAudit({ session, onChanged }: { session: DashboardResponse; onChanged: () => void }) {
+  const [assignments, setAssignments] = useState<AuditAssignmentPair[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [closing, setClosing] = useState(false);
 
-const PRIORITY_META: Record<ReviewPriority, { label: string; variant: 'slate' | 'gold' | 'red' }> = {
-  BAJA:  { label: 'Prioridad de revisión: baja',  variant: 'slate' },
-  MEDIA: { label: 'Prioridad de revisión: media', variant: 'gold' },
-  ALTA:  { label: 'Prioridad de revisión: alta',  variant: 'red' },
-};
+  const loadAssignments = useCallback(async () => {
+    try {
+      const { data } = await api.get<AuditAssignmentPair[]>(`/api/v1/class-sessions/${session.id}/audit/assignment`);
+      setAssignments(data);
+      setLoadError(null);
+    } catch (err) {
+      setLoadError(getErrorMessage(err));
+    }
+  }, [session.id]);
 
-const fmtMoney = (n: number) => `₡ ${fmtNum(n)}`;
+  useEffect(() => { loadAssignments(); }, [loadAssignments]);
 
-export function PhaseAudit({ onAdvance }: { onAdvance: () => void }) {
-  const [reviewed, setReviewed] = useState<Set<string>>(new Set());
-
-  function toggleReviewed(id: string) {
-    setReviewed((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  async function closeAudit() {
+    setClosing(true);
+    try {
+      const { data } = await api.post<{ findingsReceived: number }>(`/api/v1/class-sessions/${session.id}/close-audit`);
+      toast.success(`Auditoría cerrada — ${data.findingsReceived} hallazgo${data.findingsReceived !== 1 ? 's' : ''} recibido${data.findingsReceived !== 1 ? 's' : ''}`);
+      onChanged();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setClosing(false);
+    }
   }
-
-  const total = MOCK_AUDIT_FINDINGS.length;
-  const reportedCount = MOCK_AUDIT_FINDINGS.filter((f) => f.reportedByAuditor).length;
-  const cleanCompanies = MOCK_COMPANIES.filter((c) => !MOCK_AUDIT_FINDINGS.some((f) => f.auditedCompanyId === c.id)).length;
-  const highPriority = MOCK_AUDIT_FINDINGS.filter((f) => f.reviewPriority === 'ALTA').length;
 
   return (
     <div className="space-y-6">
-      {/* Doctrina: cómo leer este informe */}
       <div className="flex items-start gap-3.5 rounded-card border border-blue-200 bg-blue-50/70 p-5 shadow-card">
         <IconTile icon={Info} tint="#2563EB" size={44} />
         <div className="min-w-0">
-          <p className="text-sm font-bold text-blue-900">Cómo leer este informe</p>
+          <p className="text-sm font-bold text-blue-900">Cómo funciona esta fase</p>
           <p className="mt-1.5 text-sm leading-relaxed text-blue-900/80">
-            El sistema cruza automáticamente las dos puntas de cada transacción entre empresas y señala las
-            <strong> diferencias sin explicar</strong> que encuentra. Una diferencia puede deberse a un error de
-            digitación, a un criterio contable distinto o a algo que amerita revisión — el sistema no puede
-            distinguir la intención detrás de un número, así que no lo intenta. Esa lectura te corresponde a vos.
+            Cada empresa recibió el paquete de estados financieros congelado de otra empresa y puede reportar
+            diferencias concretas, citando cuenta y monto. Cuando el grupo termine, cerrá la auditoría para pasar
+            a calificación.
           </p>
         </div>
       </div>
 
-      {/* Resumen */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Diferencias detectadas" value={String(total)} icon={FileSearch} tint="#1B2E6E" className="cx-pop cx-d1" />
-        <StatCard label="Reportadas por los auditores" value={`${reportedCount}/${total}`} icon={ShieldCheck} tint="#059669" hint="Coinciden con el sistema" className="cx-pop cx-d2" />
-        <StatCard label="Empresas sin diferencias" value={String(cleanCompanies)} icon={CheckCircle2} tint="#2563EB" className="cx-pop cx-d3" />
-        <StatCard label="Prioridad de revisión alta" value={String(highPriority)} icon={Info} tint="#B8860B" hint="Conviene mirarlas primero" className="cx-pop cx-d4" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <StatCard label="Hallazgos reportados" value={String(session.findingsTotal)} icon={FileSearch} tint="#1B2E6E" className="cx-pop cx-d1" />
+        <StatCard label="Pares de auditoría" value={String(assignments?.length ?? session.groups.length)} icon={ArrowRightLeft} tint="#059669" className="cx-pop cx-d2" />
       </div>
 
-      {/* Por empresa */}
-      <div className="space-y-4">
-        {MOCK_COMPANIES.map((company, i) => {
-          const auditorId = AUDIT_ASSIGNMENTS[company.id];
-          const submission = MOCK_AUDITOR_SUBMISSIONS.find((s) => s.auditedCompanyId === company.id);
-          const findings = MOCK_AUDIT_FINDINGS.filter((f) => f.auditedCompanyId === company.id);
-
-          return (
-            <SectionCard
-              key={company.id}
-              icon={FileSearch}
-              iconTint={findings.length === 0 ? '#059669' : '#1B2E6E'}
-              eyebrow={`Auditada por ${companyName(auditorId)}`}
-              title={company.name}
-              flushBody
-              className={`cx-pop cx-d${Math.min(i + 1, 6)}`}
-            >
-              {/* Lo que reportó el equipo auditor */}
-              {submission && (
-                <div className="border-b border-gray-100 bg-gray-50/60 px-6 py-4 lg:px-7">
-                  <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-500">
-                    <ShieldCheck className="h-3.5 w-3.5" /> Reporte del equipo auditor
-                    <span className="font-normal normal-case text-gray-400">· {formatDateTime(submission.submittedAt)}</span>
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    “{submission.note}” <span className="text-gray-400">— reportaron {submission.itemsReported} diferencia{submission.itemsReported !== 1 ? 's' : ''}.</span>
-                  </p>
+      <SectionCard icon={ShieldCheck} iconTint="#1B2E6E" eyebrow="Asignación cruzada" title="Quién audita a quién" flushBody>
+        {assignments === null ? (
+          loadError ? (
+            <div className="p-6 text-sm text-red-600 lg:p-7">{loadError}</div>
+          ) : (
+            <div className="space-y-3 p-6 lg:p-7">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+            </div>
+          )
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {assignments.map((a) => {
+              const Icon = ARCHETYPE_ICON[a.archetype];
+              return (
+                <div key={a.auditorCompanyId} className="flex flex-wrap items-center gap-2.5 px-6 py-3.5 lg:px-7">
+                  <span className="text-sm font-semibold text-gray-800">{a.auditorName}</span>
+                  <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
+                  <IconTile icon={Icon} tint={ARCHETYPE_TINT[a.archetype]} size={30} />
+                  <span className="text-sm font-semibold text-gray-800">{a.auditeeName}</span>
+                  <span className="text-xs text-gray-400">· {ARCHETYPE_LABELS[a.archetype]}</span>
                 </div>
-              )}
-
-              {/* Diferencias detectadas por el sistema */}
-              {findings.length === 0 ? (
-                <div className="flex items-center gap-3 px-6 py-6 lg:px-7">
-                  <IconTile icon={CheckCircle2} tint="#059669" size={40} />
-                  <div>
-                    <p className="text-sm font-bold text-emerald-700">Sin diferencias detectadas</p>
-                    <p className="text-xs text-gray-500">El cruce automático de las dos puntas de cada transacción no encontró nada que señalar.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {findings.map((f) => {
-                    const cat = CATEGORY_META[f.category];
-                    const pri = PRIORITY_META[f.reviewPriority];
-                    const isReviewed = reviewed.has(f.id);
-                    return (
-                      <div key={f.id} className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-start lg:px-7">
-                        <IconTile icon={cat.icon} tint="#1B2E6E" size={38} className="flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                            <Badge variant="blue">{cat.label}</Badge>
-                            <Badge variant={pri.variant}>{pri.label}</Badge>
-                            {f.reportedByAuditor ? (
-                              <Badge variant="emerald"><CheckCircle2 className="h-3 w-3" /> Coincide con el auditor</Badge>
-                            ) : (
-                              <Badge variant="slate"><Circle className="h-3 w-3" /> El auditor no la reportó</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm leading-relaxed text-gray-700">{f.description}</p>
-                          {f.amountDetected != null && (
-                            <p className="mt-1 text-xs font-mono font-semibold text-gray-500 tabular-nums">
-                              Diferencia: {fmtMoney(f.amountDetected)}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => toggleReviewed(f.id)}
-                          className={`flex flex-shrink-0 items-center gap-1.5 self-start rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors cx-press ${
-                            isReviewed
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                              : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          {isReviewed ? 'Revisado por el docente' : 'Marcar como revisado'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </SectionCard>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
 
       <div className="flex flex-col items-center gap-3 rounded-card border border-gray-200/70 bg-white p-5 shadow-card sm:flex-row sm:justify-between">
         <div className="flex items-center gap-3">
           <IconTile icon={Trophy} tint="#B8860B" size={40} />
-          <p className="text-sm text-gray-600">Publicá los resultados cuando hayas terminado de revisar las diferencias con el grupo.</p>
+          <p className="text-sm text-gray-600">Cerrar la auditoría bloquea nuevos hallazgos y habilita la calificación automática.</p>
         </div>
-        <Button onClick={onAdvance} className="w-full cx-press sm:w-auto">
-          Publicar resultados <ArrowRight className="w-4 h-4" />
+        <Button onClick={closeAudit} loading={closing} className="w-full cx-press sm:w-auto">
+          Cerrar auditoría <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
     </div>

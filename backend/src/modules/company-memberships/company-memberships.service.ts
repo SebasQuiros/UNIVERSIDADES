@@ -331,6 +331,23 @@ export class CompanyMembershipsService {
     if (user.role === 'TEACHER') {
       await this._assertExerciseTeacher(company.exerciseId ?? null, user.id);
     }
+
+    // ── Hook Sesión de Aula: no reactivar una empresa mientras su sesión está
+    // congelada (tributación/auditoría/calificación), para no invalidar el
+    // snapshot ya publicado. ─────────────────────────────────────────────────
+    if (dto.enabled) {
+      const link = await this.prisma.classSessionCompany.findUnique({
+        where:  { companyId: company.id },
+        select: { classSession: { select: { status: true } } },
+      });
+      if (link && ['TRIBUTACION', 'AUDITORIA', 'CALIFICACION'].includes(link.classSession.status)) {
+        throw new ForbiddenException(
+          'No se puede reactivar una empresa mientras su sesión de aula está en ' +
+          'tributación, auditoría o calificación.',
+        );
+      }
+    }
+
     const updated = await this.prisma.company.update({
       where: { id: company.id },
       data:  { isCompanyEnabled: dto.enabled },

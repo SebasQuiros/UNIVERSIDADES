@@ -31,6 +31,7 @@ import { PracticeGroupsModule } from './modules/practice-groups/practice-groups.
 import { AttemptsModule }       from './modules/attempts/attempts.module';
 import { TrackingModule }       from './modules/tracking/tracking.module';
 import { GradingModule }        from './modules/grading/grading.module';
+import { ClassSessionsModule }  from './modules/class-sessions/class-sessions.module';
 import { NotificationsModule }  from './modules/notifications/notifications.module';
 import { FixedAssetsModule }    from './modules/fixed-assets/fixed-assets.module';
 import { PayrollModule }        from './modules/payroll/payroll.module';
@@ -93,6 +94,7 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     AttemptsModule,
     TrackingModule,
     GradingModule,
+    ClassSessionsModule,       // "Sesión de Aula" — Kahoot-like sobre Exercise + GROUP companies
     NotificationsModule,
     // Phase 6 — New Features
     FixedAssetsModule,

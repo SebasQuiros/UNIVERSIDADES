@@ -1,194 +1,200 @@
 'use client';
 
-// ── FASE 1 — Andamiaje de maqueta ────────────────────────────────────────────
-// El corazón de "Sesión de Aula": el expediente de auditoría entre pares.
-// Todo el estado (fichas gastadas, evidencia pedida, hallazgos, opinión) vive
-// en `useState` local — no hay backend todavía. En fase 2 esto se vuelve un
-// módulo real (presupuesto persistido por sesión, evidencia servida por el
-// backend, hallazgos y opinión guardados para que el profesor los califique).
-//
-// Lenguaje: nunca se afirma "fraude" ni que alguien "hizo trampa" — un
-// auditor reporta diferencias y hallazgos; probar intención (fraude) requiere
-// más de lo que este ejercicio puede establecer (doctrina NIA 240).
+// El expediente de auditoría entre pares. Doctrina NIA 240: el sistema (y el
+// estudiante) reportan *diferencias*, nunca "fraude" ni "trampa" — probar
+// intención requiere más de lo que este ejercicio puede establecer. El
+// vocabulario de esta pantalla es deliberadamente neutral y descriptivo.
 
-import { useMemo, useState } from 'react';
-import type { ElementType } from 'react';
+import { useState, useEffect, useCallback, type ElementType } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { cn, fmtNum } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
+import { cn, fmtNum, formatDateTime, getErrorMessage } from '@/lib/utils';
+import {
+  FINDING_SECTIONS, FINDING_SECTION_LABELS, ARCHETYPE_LABELS, type FindingSection,
+} from '@/lib/classSession';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { IconTile } from '@/components/ui/IconTile';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { SceneEmptyBox } from '@/components/illustrations';
 import {
-  ArrowLeft, Ticket, Wallet, ChevronDown, ChevronRight, Send, Trash2,
-  CheckCircle2, AlertTriangle, ClipboardList, ScrollText, ShieldCheck,
-  ShieldAlert, ShieldX, ShieldQuestion, FileSearch, Scale, Receipt, Info,
-  Search, Gavel,
+  ArrowLeft, Send, Trash2, Pencil, CheckCircle2, XCircle, HelpCircle,
+  ClipboardList, ScrollText, FileSearch, Scale, Receipt, Info, Gavel, Lock,
 } from 'lucide-react';
-import {
-  MY_AUDIT_ASSIGNMENT, AUDIT_PACKAGE, EVIDENCE_TYPES, FINDING_COST,
-  SEVERITY_LABEL, OPINION_OPTIONS, getEvidenceContent,
-  type EvidenceType, type EvidenceTypeDef, type EvidenceContent,
-  type FindingSeverity, type AuditOpinionType, type AccountLine,
-  type StatementSection, type CashFlowLine,
-} from '../../_mock';
+import type {
+  MeResponse, AuditAssignment, AuditSnapshot, AuditFinding,
+  AccountRow, BalanceSheetReport, IncomeStatementReport, TrialBalanceReport, TaxDeclarationsReport,
+} from '../../types';
 
-// ── Helpers de formato ──────────────────────────────────────────────────────
-function moneyAcct(n: number): string {
-  const formatted = `₡ ${fmtNum(Math.abs(n))}`;
-  return n < 0 ? `(${formatted})` : formatted;
+function moneyAcct(n: number | string): string {
+  const num = Number(n);
+  const formatted = `₡ ${fmtNum(Math.abs(num))}`;
+  return num < 0 ? `(${formatted})` : formatted;
 }
 
-// ── Estado local ─────────────────────────────────────────────────────────────
-interface RequestedEvidence {
-  id: string;
-  type: EvidenceType;
-  optionId: string;
-  label: string;
-  cost: number;
-  content: EvidenceContent;
-}
-
-interface Finding {
-  id: string;
-  accountRef: string;
-  description: string;
-  severity: FindingSeverity;
-  citedEvidenceIds: string[];
-  cost: number;
-}
-
-type DocTab = 'balance' | 'resultados' | 'flujo' | 'notas' | 'declaraciones';
+type DocTab = 'balance' | 'resultados' | 'comprobacion' | 'declaraciones';
 
 const DOC_TABS: { key: DocTab; label: string; icon: ElementType }[] = [
-  { key: 'balance',       label: 'Balance General',      icon: Scale },
-  { key: 'resultados',    label: 'Estado de Resultados', icon: Receipt },
-  { key: 'flujo',         label: 'Flujo de Efectivo',    icon: Wallet },
-  { key: 'notas',         label: 'Notas',                icon: ScrollText },
-  { key: 'declaraciones', label: 'Declaraciones',        icon: FileSearch },
+  { key: 'balance',        label: 'Balance General',           icon: Scale },
+  { key: 'resultados',     label: 'Estado de Resultados',      icon: Receipt },
+  { key: 'comprobacion',   label: 'Balance de Comprobación',   icon: ScrollText },
+  { key: 'declaraciones',  label: 'Declaraciones',              icon: FileSearch },
 ];
 
-const OPINION_ICON: Record<AuditOpinionType, ElementType> = {
-  LIMPIA: ShieldCheck,
-  SALVEDADES: ShieldAlert,
-  ADVERSA: ShieldX,
-  ABSTENCION: ShieldQuestion,
+const TAX_FORM_LABEL: Record<string, string> = {
+  D101_RENTA:     'D-101 · Renta',
+  D104_IVA:       'D-104 · IVA',
+  D103_RETENCION: 'D-103 · Retenciones',
+  D115_DIVIDENDOS:'D-115 · Dividendos',
 };
 
 export default function ExpedienteAuditoriaPage() {
   const { id } = useParams<{ id: string }>();
-  const a = MY_AUDIT_ASSIGNMENT;
+  const { user } = useAuth();
+
+  const [me, setMe] = useState<MeResponse | null>(null);
+  const [assignment, setAssignment] = useState<AuditAssignment | null>(null);
+  const [snapshot, setSnapshot] = useState<AuditSnapshot | null>(null);
+  const [findings, setFindings] = useState<AuditFinding[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
 
   const [docTab, setDocTab] = useState<DocTab>('balance');
-  const [requested, setRequested] = useState<RequestedEvidence[]>([]);
-  const [findings, setFindings] = useState<Finding[]>([]);
-  const [selectedOption, setSelectedOption] = useState<Record<EvidenceType, string>>(
-    () => Object.fromEntries(EVIDENCE_TYPES.map((e) => [e.type, e.options[0]?.id ?? ''])) as Record<EvidenceType, string>,
-  );
-  const [expandedEvidence, setExpandedEvidence] = useState<string | null>(null);
 
-  // Formulario de hallazgo
-  const [fAccount, setFAccount] = useState('');
+  // Formulario de hallazgo (crear o editar)
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [fSection, setFSection] = useState<FindingSection>('BALANCE_SHEET');
+  const [fAccountCode, setFAccountCode] = useState('');
   const [fDescription, setFDescription] = useState('');
-  const [fSeverity, setFSeverity] = useState<FindingSeverity>('MEDIA');
-  const [fCited, setFCited] = useState<string[]>([]);
+  const [fAmount, setFAmount] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  // Opinión
-  const [opinionType, setOpinionType] = useState<AuditOpinionType | null>(null);
-  const [rationale, setRationale] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-
-  const spent = useMemo(
-    () => requested.reduce((s, r) => s + r.cost, 0) + findings.reduce((s, f) => s + f.cost, 0),
-    [requested, findings],
-  );
-  const remaining = a.budgetTotal - spent;
-
-  function requestEvidence(ev: EvidenceTypeDef) {
-    if (submitted) return;
-    const optionId = selectedOption[ev.type];
-    const option = ev.options.find((o) => o.id === optionId);
-    if (!option) return;
-    if (requested.some((r) => r.type === ev.type && r.optionId === optionId)) {
-      toast.error('Ya tenés esa evidencia en el expediente.');
-      return;
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    setSnapshotError(null);
+    try {
+      const [meRes, assignmentRes, findingsRes] = await Promise.all([
+        api.get<MeResponse>(`/api/v1/class-sessions/${id}/me`),
+        api.get<AuditAssignment>(`/api/v1/class-sessions/${id}/audit/assignment`),
+        api.get<AuditFinding[]>(`/api/v1/class-sessions/${id}/audit/findings`),
+      ]);
+      setMe(meRes.data);
+      setAssignment(assignmentRes.data);
+      setFindings(findingsRes.data);
+      try {
+        const { data } = await api.get<AuditSnapshot>(`/api/v1/class-sessions/${id}/audit/snapshot`);
+        setSnapshot(data);
+      } catch (err) {
+        setSnapshotError(getErrorMessage(err));
+      }
+    } catch (err) {
+      setLoadError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
-    if (remaining < ev.cost) {
-      toast.error('No te alcanzan las fichas para esta evidencia.');
-      return;
-    }
-    const content = getEvidenceContent(ev.type, optionId);
-    if (!content) return;
-    const item: RequestedEvidence = {
-      id: `${ev.type}:${optionId}`,
-      type: ev.type,
-      optionId,
-      label: `${ev.label} — ${option.label}`,
-      cost: ev.cost,
-      content,
-    };
-    setRequested((r) => [...r, item]);
-    setExpandedEvidence(item.id);
-    toast.success('Evidencia agregada al expediente.');
+  }, [id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const canWrite = me?.status === 'AUDITORIA';
+
+  function resetForm() {
+    setEditingId(null);
+    setFSection('BALANCE_SHEET');
+    setFAccountCode('');
+    setFDescription('');
+    setFAmount('');
   }
 
-  function removeEvidence(evidenceId: string) {
-    if (submitted) return;
-    if (findings.some((f) => f.citedEvidenceIds.includes(evidenceId))) {
-      toast.error('Primero quitá el hallazgo que cita esta evidencia.');
-      return;
-    }
-    setRequested((r) => r.filter((x) => x.id !== evidenceId));
+  function startEdit(f: AuditFinding) {
+    setEditingId(f.id);
+    setFSection((f.section as FindingSection) ?? 'OTHER');
+    setFAccountCode(f.accountCode ?? '');
+    setFDescription(f.description);
+    setFAmount(f.claimedAmount != null ? String(f.claimedAmount) : '');
   }
 
-  function toggleCite(evidenceId: string) {
-    setFCited((c) => (c.includes(evidenceId) ? c.filter((x) => x !== evidenceId) : [...c, evidenceId]));
-  }
-
-  function submitFinding() {
-    if (submitted) return;
-    if (!fAccount.trim()) { toast.error('Indicá a qué cuenta o partida se refiere el hallazgo.'); return; }
+  async function submitFinding() {
     if (!fDescription.trim()) { toast.error('Describí la diferencia observada.'); return; }
-    if (fCited.length === 0) { toast.error('Todo hallazgo necesita al menos una evidencia citada — sin evidencia, no cuenta.'); return; }
-    if (remaining < FINDING_COST) { toast.error('No te alcanzan las fichas para reportar este hallazgo.'); return; }
-    const finding: Finding = {
-      id: `finding-${Date.now()}`,
-      accountRef: fAccount.trim(),
+    setSubmitting(true);
+    const body = {
+      section: fSection,
+      accountCode: fAccountCode.trim() || undefined,
       description: fDescription.trim(),
-      severity: fSeverity,
-      citedEvidenceIds: [...fCited],
-      cost: FINDING_COST,
+      claimedAmount: fAmount.trim() ? Number(fAmount) : undefined,
     };
-    setFindings((f) => [...f, finding]);
-    setFAccount(''); setFDescription(''); setFSeverity('MEDIA'); setFCited([]);
-    toast.success('Hallazgo agregado al expediente.');
-  }
-
-  function removeFinding(findingId: string) {
-    if (submitted) return;
-    setFindings((f) => f.filter((x) => x.id !== findingId));
-  }
-
-  function submitOpinion() {
-    if (submitted) return;
-    if (!opinionType) { toast.error('Elegí un tipo de opinión.'); return; }
-    if (!rationale.trim()) { toast.error('Justificá tu opinión en un par de líneas.'); return; }
-    if (opinionType === 'LIMPIA' && findings.length > 0) {
-      toast('Reportaste hallazgos pero elegís una opinión limpia — revisá tu criterio antes de emitirla.');
+    try {
+      if (editingId) {
+        await api.patch(`/api/v1/class-sessions/${id}/audit/findings/${editingId}`, body);
+        toast.success('Hallazgo actualizado.');
+      } else {
+        await api.post(`/api/v1/class-sessions/${id}/audit/findings`, body);
+        toast.success('Hallazgo reportado.');
+      }
+      resetForm();
+      const { data } = await api.get<AuditFinding[]>(`/api/v1/class-sessions/${id}/audit/findings`);
+      setFindings(data);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitted(true);
-    toast.success('Opinión emitida. Expediente cerrado.');
+  }
+
+  async function deleteFinding(findingId: string) {
+    try {
+      await api.delete(`/api/v1/class-sessions/${id}/audit/findings/${findingId}`);
+      setFindings((prev) => prev.filter((f) => f.id !== findingId));
+      toast.success('Hallazgo eliminado.');
+      if (editingId === findingId) resetForm();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+        <div className="space-y-6">
+          <Skeleton className="h-16 w-full rounded-card" />
+          <Skeleton className="h-72 w-full rounded-card" />
+          <Skeleton className="h-56 w-full rounded-card" />
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError || !assignment) {
+    return (
+      <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+        <div className="rounded-card border border-gray-200/70 bg-white shadow-card">
+          <EmptyState
+            illustration={<SceneEmptyBox size={180} />}
+            title="El expediente no está disponible"
+            description={loadError ?? 'No se pudo cargar la auditoría.'}
+            action={
+              <Link href={`/estudiante/sesion/${id}`}>
+                <Button variant="secondary"><ArrowLeft className="w-4 h-4" /> Volver a mi sesión</Button>
+              </Link>
+            }
+          />
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
       <Link
-        href={`/estudiante/sesion/${id ?? ''}`}
+        href={`/estudiante/sesion/${id}`}
         className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" /> Volver a mi sesión
@@ -196,51 +202,23 @@ export default function ExpedienteAuditoriaPage() {
 
       <PageHeader
         eyebrow="Expediente de auditoría"
-        title={a.auditeeCompanyName}
-        subtitle={`${a.periodLabel} · comparativo contra ${a.priorPeriodLabel} · no ves los libros vivos, solo lo que la empresa entrega`}
+        title={assignment.auditeeName}
+        subtitle={`${ARCHETYPE_LABELS[assignment.archetype]} · no ves los libros vivos, solo lo que la empresa entrega`}
         icon={FileSearch}
         className="mb-5"
+        actions={!canWrite ? <Badge variant="slate"><Lock className="w-3 h-3" /> Solo lectura</Badge> : undefined}
       />
 
-      {/* Presupuesto de auditoría: siempre visible, duele al bajar */}
-      <div
-        className={cn(
-          'sticky top-0 z-20 -mx-6 lg:-mx-8 mb-6 px-6 lg:px-8 py-3 border-b backdrop-blur transition-colors',
-          submitted
-            ? 'bg-emerald-50/95 border-emerald-200'
-            : remaining <= 2
-              ? 'bg-red-50/95 border-red-200'
-              : remaining <= 5
-                ? 'bg-amber-50/95 border-amber-200'
-                : 'bg-white/95 border-gray-200',
-        )}
-      >
-        <div className="flex items-center gap-3 flex-wrap">
-          <Ticket className={cn('w-5 h-5 flex-shrink-0', submitted ? 'text-emerald-600' : remaining <= 2 ? 'text-red-600' : remaining <= 5 ? 'text-amber-600' : 'text-gold-700')} />
-          <p className="text-sm font-bold text-gray-900 flex-shrink-0">Presupuesto de auditoría</p>
-          <div className="flex-1 min-w-[140px] max-w-xs h-2.5 rounded-full bg-gray-200 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${Math.max(0, (remaining / a.budgetTotal) * 100)}%`,
-                background: submitted ? '#059669' : remaining <= 2 ? '#DC2626' : remaining <= 5 ? '#D97706' : '#B8860B',
-              }}
-            />
-          </div>
-          <p className="text-sm font-mono tabular-nums font-bold flex-shrink-0">
-            <span className={submitted ? 'text-emerald-700' : remaining <= 2 ? 'text-red-700' : remaining <= 5 ? 'text-amber-700' : 'text-gray-900'}>{remaining}</span>
-            <span className="text-gray-400"> / {a.budgetTotal} fichas</span>
+      {/* Doctrina */}
+      <div className="mb-6 flex items-start gap-3.5 rounded-card border border-blue-200 bg-blue-50/70 p-5 shadow-card">
+        <IconTile icon={Info} tint="#2563EB" size={44} />
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-blue-900">Cómo reportar un hallazgo</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-blue-900/80">
+            Un hallazgo es una diferencia concreta entre lo que dice el paquete financiero y lo que esperarías —
+            no una acusación. Describí el hecho, indicá la cuenta o sección afectada y, si aplica, el monto en
+            disputa. El profesor revisa cada hallazgo antes de calificar.
           </p>
-          {!submitted && remaining <= 2 && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-red-700 flex-shrink-0">
-              <AlertTriangle className="w-3.5 h-3.5" /> Casi sin fichas — priorizá
-            </span>
-          )}
-          {submitted && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-emerald-700 flex-shrink-0">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Auditoría cerrada
-            </span>
-          )}
         </div>
       </div>
 
@@ -250,141 +228,47 @@ export default function ExpedienteAuditoriaPage() {
           icon={FileSearch}
           iconTint="#1B2E6E"
           eyebrow="Paquete congelado"
-          title={`Estados financieros — ${AUDIT_PACKAGE.companyName}`}
-          description="Cédula jurídica 3-101-789456. El mismo paquete que recibiría un auditor externo: no incluye acceso a los libros en vivo."
+          title={`Estados financieros — ${assignment.auditeeName}`}
+          description="El mismo paquete que recibiría un auditor externo: no incluye acceso a los libros en vivo."
           flushBody
           className="lp-in"
         >
-          <div className="flex gap-2 flex-wrap px-6 lg:px-7 pt-5">
-            {DOC_TABS.map((t) => {
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => setDocTab(t.key)}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors',
-                    docTab === t.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                  )}
-                >
-                  <Icon className="w-4 h-4" /> {t.label}
-                </button>
-              );
-            })}
-          </div>
-          <div className="px-6 lg:px-7 py-5">
-            {docTab === 'balance' && <BalanceSheetView />}
-            {docTab === 'resultados' && <IncomeStatementView />}
-            {docTab === 'flujo' && <CashFlowView />}
-            {docTab === 'notas' && <NotesView />}
-            {docTab === 'declaraciones' && <TaxFilingsView />}
-          </div>
-        </SectionCard>
-
-        {/* Pedir evidencia */}
-        <SectionCard
-          icon={Search}
-          iconTint="#B8860B"
-          eyebrow="Gasta fichas"
-          title="Pedir evidencia"
-          description="Elegí con cuidado: cada solicitud resta del presupuesto y no se puede deshacer una vez que la citás en un hallazgo."
-          className="lp-in lp-in-d1"
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {EVIDENCE_TYPES.map((ev) => {
-              const Icon = ev.icon;
-              const optId = selectedOption[ev.type];
-              const already = requested.some((r) => r.type === ev.type && r.optionId === optId);
-              const affordable = remaining >= ev.cost;
-              return (
-                <div key={ev.type} className="rounded-xl border border-gray-100 p-4 flex flex-col gap-2.5">
-                  <div className="flex items-start gap-3">
-                    <IconTile icon={Icon} tint="#1B2E6E" size={38} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-gray-900">{ev.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{ev.description}</p>
-                    </div>
-                    <Badge variant="gold" className="flex-shrink-0"><Ticket className="w-3 h-3" /> {ev.cost}</Badge>
-                  </div>
-                  {ev.options.length > 1 ? (
-                    <select
-                      value={optId}
-                      onChange={(e) => setSelectedOption((s) => ({ ...s, [ev.type]: e.target.value }))}
-                      disabled={submitted}
-                      className="w-full text-sm rounded-lg border border-gray-200 px-2.5 py-1.5 outline-none focus:border-blue-500"
-                    >
-                      {ev.options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                    </select>
-                  ) : (
-                    <p className="text-xs text-gray-400">{ev.options[0]?.label}</p>
-                  )}
-                  <Button
-                    size="sm"
-                    variant={already ? 'secondary' : 'outline'}
-                    disabled={submitted || already || !affordable}
-                    onClick={() => requestEvidence(ev)}
-                    className="self-start"
-                  >
-                    {already
-                      ? <><CheckCircle2 className="w-3.5 h-3.5" /> Ya la pediste</>
-                      : !affordable
-                        ? 'No te alcanza'
-                        : 'Pedir evidencia'}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-
-        {/* Evidencia obtenida */}
-        <SectionCard
-          icon={ClipboardList}
-          iconTint="#2563EB"
-          eyebrow={`${requested.length} obtenida${requested.length !== 1 ? 's' : ''}`}
-          title="Evidencia obtenida"
-          flushBody
-          className="lp-in lp-in-d2"
-        >
-          {requested.length === 0 ? (
-            <div className="px-6 lg:px-7 py-8">
+          {!snapshot ? (
+            <div className="px-6 py-8 lg:px-7">
               <EmptyState
                 illustration={<SceneEmptyBox size={140} />}
-                title="Todavía no pediste evidencia"
-                description="Lo que pidas aparece acá. Solo la evidencia que aparece acá se puede citar en un hallazgo."
+                title="El snapshot todavía no está listo"
+                description={snapshotError ?? 'Tu profesor todavía no publicó los estados financieros de esta empresa.'}
+                action={<Button variant="secondary" onClick={load}>Reintentar</Button>}
               />
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {requested.map((r) => {
-                const isOpen = expandedEvidence === r.id;
-                return (
-                  <div key={r.id} className="px-6 lg:px-7 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setExpandedEvidence((x) => (x === r.id ? null : r.id))}
-                        className="flex-1 flex items-center gap-2.5 text-left min-w-0"
-                      >
-                        {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-                        <span className="flex-1 min-w-0 text-sm font-semibold text-gray-800 truncate">{r.label}</span>
-                      </button>
-                      <Badge variant="gold" className="flex-shrink-0"><Ticket className="w-3 h-3" /> {r.cost}</Badge>
-                      {!submitted && (
-                        <button
-                          onClick={() => removeEvidence(r.id)}
-                          className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                          title="Quitar evidencia"
-                          type="button"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+            <>
+              <div className="flex gap-2 flex-wrap px-6 lg:px-7 pt-5">
+                {DOC_TABS.map((t) => {
+                  const Icon = t.icon;
+                  return (
+                    <button
+                      key={t.key}
+                      onClick={() => setDocTab(t.key)}
+                      className={cn(
+                        'flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-colors',
+                        docTab === t.key ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
                       )}
-                    </div>
-                    {isOpen && <div className="mt-3 pl-6"><EvidenceContentView content={r.content} /></div>}
-                  </div>
-                );
-              })}
-            </div>
+                    >
+                      <Icon className="w-4 h-4" /> {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="px-6 lg:px-7 py-5">
+                <p className="mb-4 text-xs text-gray-400">Publicado {formatDateTime(snapshot.publishedAt)}</p>
+                {docTab === 'balance' && <BalanceSheetView data={snapshot.balanceSheet} />}
+                {docTab === 'resultados' && <IncomeStatementView data={snapshot.incomeStatement} />}
+                {docTab === 'comprobacion' && <TrialBalanceView data={snapshot.trialBalance} />}
+                {docTab === 'declaraciones' && <TaxFilingsView data={snapshot.taxDeclarations} />}
+              </div>
+            </>
           )}
         </SectionCard>
 
@@ -392,165 +276,126 @@ export default function ExpedienteAuditoriaPage() {
         <SectionCard
           icon={Gavel}
           iconTint="#B8860B"
-          eyebrow={`Cuesta ${FINDING_COST} fichas`}
+          eyebrow={editingId ? 'Editando hallazgo' : 'Nuevo hallazgo'}
           title="Reportar un hallazgo"
-          description="Un hallazgo es una diferencia o dificultad concreta — no una acusación. Tiene que citar al menos una evidencia obtenida."
-          className="lp-in lp-in-d3"
+          description="Citá la sección afectada y describí el hecho concreto — evitá afirmar intención."
+          className="lp-in lp-in-d1"
         >
-          {requested.length === 0 ? (
-            <p className="text-sm text-gray-500">Primero pedí evidencia arriba: sin evidencia citada, un hallazgo no cuenta.</p>
+          {!canWrite ? (
+            <p className="text-sm text-gray-500">
+              Esta auditoría ya cerró — podés ver los hallazgos reportados, pero no agregar ni editar.
+            </p>
           ) : (
             <div className="flex flex-col gap-3">
-              <label className="block">
-                <span className="text-xs font-semibold text-gray-600 mb-1 block">Cuenta o partida</span>
-                <input
-                  value={fAccount}
-                  onChange={(e) => setFAccount(e.target.value)}
-                  disabled={submitted}
-                  placeholder="Ej. Cuentas por Cobrar Comerciales — Constructora Rivas Hermanos S.A."
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition disabled:opacity-60"
-                />
-              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-xs font-semibold text-gray-600 mb-1 block">Sección</span>
+                  <select
+                    value={fSection}
+                    onChange={(e) => setFSection(e.target.value as FindingSection)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                  >
+                    {FINDING_SECTIONS.map((s) => <option key={s} value={s}>{FINDING_SECTION_LABELS[s]}</option>)}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-gray-600 mb-1 block">Cuenta (opcional)</span>
+                  <input
+                    value={fAccountCode}
+                    onChange={(e) => setFAccountCode(e.target.value)}
+                    placeholder="Ej. 1103"
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                  />
+                </label>
+              </div>
               <label className="block">
                 <span className="text-xs font-semibold text-gray-600 mb-1 block">Diferencia observada</span>
                 <textarea
                   value={fDescription}
                   onChange={(e) => setFDescription(e.target.value)}
-                  disabled={submitted}
                   rows={3}
-                  placeholder="Describí el hecho concreto: qué dice un documento y qué dice otro. Evitá afirmar fraude o intención — reportá la diferencia."
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition resize-none disabled:opacity-60"
+                  placeholder="Describí el hecho concreto: qué dice el paquete y qué esperarías ver. Evitá afirmar fraude o intención — reportá la diferencia."
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition resize-none"
                 />
               </label>
-              <div>
-                <span className="text-xs font-semibold text-gray-600 mb-1.5 block">Severidad</span>
-                <div className="flex gap-2">
-                  {(Object.keys(SEVERITY_LABEL) as FindingSeverity[]).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      disabled={submitted}
-                      onClick={() => setFSeverity(s)}
-                      className={cn(
-                        'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
-                        fSeverity === s ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300',
-                      )}
-                    >
-                      {SEVERITY_LABEL[s]}
-                    </button>
-                  ))}
-                </div>
+              <label className="block max-w-xs">
+                <span className="text-xs font-semibold text-gray-600 mb-1 block">Monto en disputa (opcional, ₡)</span>
+                <input
+                  type="number"
+                  value={fAmount}
+                  onChange={(e) => setFAmount(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                />
+              </label>
+              <div className="flex gap-2">
+                <Button onClick={submitFinding} loading={submitting} variant="outline" className="self-start">
+                  <Send className="w-4 h-4" /> {editingId ? 'Guardar cambios' : 'Reportar hallazgo'}
+                </Button>
+                {editingId && (
+                  <Button variant="ghost" onClick={resetForm} className="self-start">Cancelar edición</Button>
+                )}
               </div>
-              <div>
-                <span className="text-xs font-semibold text-gray-600 mb-1.5 block">Evidencia citada (obligatoria)</span>
-                <div className="flex flex-col gap-1.5">
-                  {requested.map((r) => (
-                    <label key={r.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={fCited.includes(r.id)}
-                        disabled={submitted}
-                        onChange={() => toggleCite(r.id)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      {r.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <Button onClick={submitFinding} disabled={submitted} variant="outline" className="self-start">
-                <Send className="w-4 h-4" /> Reportar hallazgo ({FINDING_COST} fichas)
-              </Button>
-            </div>
-          )}
-
-          {findings.length > 0 && (
-            <div className="mt-6 pt-5 border-t border-gray-100 flex flex-col gap-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
-                {findings.length} hallazgo{findings.length !== 1 ? 's' : ''} reportado{findings.length !== 1 ? 's' : ''}
-              </p>
-              {findings.map((f) => (
-                <div key={f.id} className="rounded-xl border border-amber-100 bg-amber-50/60 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{f.accountRef}</p>
-                      <p className="text-sm text-gray-600 mt-0.5">{f.description}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <Badge variant={f.severity === 'ALTA' ? 'red' : f.severity === 'MEDIA' ? 'amber' : 'slate'}>{SEVERITY_LABEL[f.severity]}</Badge>
-                      {!submitted && (
-                        <button onClick={() => removeFinding(f.id)} className="text-gray-300 hover:text-red-500 transition-colors" title="Quitar hallazgo" type="button">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {f.citedEvidenceIds.map((evId) => {
-                      const ev = requested.find((r) => r.id === evId);
-                      return ev ? (
-                        <span key={evId} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-white border border-amber-200 text-amber-800">
-                          <ClipboardList className="w-3 h-3" /> {ev.label}
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              ))}
             </div>
           )}
         </SectionCard>
 
-        {/* Emitir opinión */}
-        <SectionCard icon={ScrollText} iconTint="#1B2E6E" eyebrow="Conclusión formal" title="Emitir opinión" className="lp-in lp-in-d4">
-          {submitted ? (
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-5">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                <p className="text-sm font-bold text-emerald-900">
-                  Auditoría cerrada — {OPINION_OPTIONS.find((o) => o.type === opinionType)?.label}
-                </p>
-              </div>
-              <p className="text-sm text-emerald-800">{rationale}</p>
+        {/* Hallazgos reportados */}
+        <SectionCard
+          icon={ClipboardList}
+          iconTint="#2563EB"
+          eyebrow={`${findings.length} hallazgo${findings.length !== 1 ? 's' : ''}`}
+          title="Hallazgos reportados"
+          flushBody
+          className="lp-in lp-in-d2"
+        >
+          {findings.length === 0 ? (
+            <div className="px-6 lg:px-7 py-8">
+              <EmptyState
+                illustration={<SceneEmptyBox size={140} />}
+                title="Todavía no reportaste hallazgos"
+                description="Revisá el paquete financiero de arriba y reportá lo que encuentres."
+              />
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {OPINION_OPTIONS.map((o) => {
-                  const Icon = OPINION_ICON[o.type];
-                  const active = opinionType === o.type;
-                  return (
-                    <button
-                      key={o.type}
-                      type="button"
-                      onClick={() => setOpinionType(o.type)}
-                      className={cn(
-                        'text-left rounded-xl border p-3.5 transition-all',
-                        active ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100' : 'border-gray-200 hover:border-blue-300',
-                      )}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className={cn('w-4 h-4 flex-shrink-0', active ? 'text-blue-600' : 'text-gray-400')} />
-                        <span className="text-sm font-bold text-gray-900">{o.label}</span>
+            <div className="divide-y divide-gray-100">
+              {findings.map((f) => {
+                const mine = f.createdById === user?.id;
+                return (
+                  <div key={f.id} className="px-6 lg:px-7 py-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                          <Badge variant="blue">{FINDING_SECTION_LABELS[f.section as FindingSection] ?? f.section}</Badge>
+                          {f.accountCode && <Badge variant="slate">Cuenta {f.accountCode}</Badge>}
+                          {f.matched === true && <Badge variant="emerald"><CheckCircle2 className="w-3 h-3" /> Coincide con el sistema</Badge>}
+                          {f.matched === false && <Badge variant="red"><XCircle className="w-3 h-3" /> No coincide</Badge>}
+                          {f.matched == null && <Badge variant="slate"><HelpCircle className="w-3 h-3" /> Pendiente de revisión</Badge>}
+                        </div>
+                        <p className="text-sm text-gray-700">{f.description}</p>
+                        {f.claimedAmount != null && (
+                          <p className="mt-1 text-xs font-mono font-semibold text-gray-500 tabular-nums">
+                            Monto en disputa: {moneyAcct(f.claimedAmount)}
+                          </p>
+                        )}
+                        {f.matchDetail && (
+                          <p className="mt-1 text-xs italic text-gray-400">{f.matchDetail}</p>
+                        )}
                       </div>
-                      <p className="text-xs text-gray-500 leading-relaxed">{o.description}</p>
-                    </button>
-                  );
-                })}
-              </div>
-              <label className="block">
-                <span className="text-xs font-semibold text-gray-600 mb-1 block">Justificación de tu opinión</span>
-                <textarea
-                  value={rationale}
-                  onChange={(e) => setRationale(e.target.value)}
-                  rows={3}
-                  placeholder="Resumí, en un par de líneas, por qué llegaste a esta opinión — apoyate en los hallazgos que reportaste."
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition resize-none"
-                />
-              </label>
-              <Button onClick={submitOpinion} variant="gold" className="self-start">
-                <Gavel className="w-4 h-4" /> Emitir opinión y cerrar auditoría
-              </Button>
+                      {canWrite && mine && (
+                        <div className="flex flex-shrink-0 items-center gap-1">
+                          <button onClick={() => startEdit(f)} className="rounded-lg p-1.5 text-gray-300 hover:bg-blue-50 hover:text-blue-600 transition-colors" title="Editar">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => deleteFinding(f.id)} className="rounded-lg p-1.5 text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </SectionCard>
@@ -563,301 +408,170 @@ export default function ExpedienteAuditoriaPage() {
 
 function ColumnHeader() {
   return (
-    <div className="grid grid-cols-[1fr_7rem_7rem] gap-2 px-3.5 text-[11px] font-semibold text-gray-400">
+    <div className="grid grid-cols-[1fr_7rem] gap-2 px-3.5 text-[11px] font-semibold text-gray-400">
       <span />
-      <span className="text-right">Actual</span>
-      <span className="text-right">Anterior</span>
+      <span className="text-right">Saldo</span>
     </div>
   );
 }
 
-function LineRow({ line }: { line: AccountLine }) {
+function LineRow({ row }: { row: AccountRow }) {
   return (
-    <div className="grid grid-cols-[1fr_7rem_7rem] gap-2 items-center px-3.5 py-1.5 text-sm">
+    <div className="grid grid-cols-[1fr_7rem] gap-2 items-center px-3.5 py-1.5 text-sm">
       <span className="text-gray-600 truncate">
-        {line.code && <span className="font-mono text-xs text-gray-400 mr-1.5">{line.code}</span>}
-        {line.name}
+        <span className="font-mono text-xs text-gray-400 mr-1.5">{row.code}</span>
+        {row.name}
       </span>
-      <span className="text-right font-mono tabular-nums text-gray-900">{moneyAcct(line.current)}</span>
-      <span className="text-right font-mono tabular-nums text-gray-400 text-xs">{moneyAcct(line.prior)}</span>
+      <span className="text-right font-mono tabular-nums text-gray-900">{moneyAcct(row.balance)}</span>
     </div>
   );
 }
 
-function TotalLine({ label, current, prior, tone }: { label: string; current: number; prior: number; tone?: 'emerald' | 'blue' | 'slate' }) {
+function TotalLine({ label, value, tone }: { label: string; value: number | string; tone?: 'emerald' | 'blue' | 'slate' | 'red' }) {
   return (
     <div
       className={cn(
-        'grid grid-cols-[1fr_7rem_7rem] gap-2 items-center px-3.5 py-2 rounded-xl font-bold text-sm',
-        tone === 'emerald' ? 'bg-emerald-50 text-emerald-900' : tone === 'blue' ? 'bg-blue-50 text-blue-900' : 'bg-gray-50 text-gray-800',
+        'flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl font-bold text-sm',
+        tone === 'emerald' ? 'bg-emerald-50 text-emerald-900'
+          : tone === 'blue' ? 'bg-blue-50 text-blue-900'
+          : tone === 'red' ? 'bg-red-50 text-red-700'
+          : 'bg-gray-50 text-gray-800',
       )}
     >
       <span>{label}</span>
-      <span className="text-right font-mono tabular-nums">{moneyAcct(current)}</span>
-      <span className="text-right font-mono tabular-nums text-xs opacity-60">{moneyAcct(prior)}</span>
+      <span className="text-right font-mono tabular-nums">{moneyAcct(value)}</span>
     </div>
   );
 }
 
-function SectionTable({ sections }: { sections: StatementSection[] }) {
-  return (
-    <div className="space-y-3">
-      {sections.map((sec) => (
-        <div key={sec.title} className="rounded-xl border border-gray-100 overflow-hidden">
-          <p className="bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-500 border-b border-gray-100">{sec.title}</p>
-          <div className="divide-y divide-gray-50">
-            {sec.lines.map((l) => <LineRow key={l.code} line={l} />)}
-          </div>
-          <div className="border-t border-gray-100">
-            <TotalLine label={`Total ${sec.title.toLowerCase()}`} current={sec.totalCurrent} prior={sec.totalPrior} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function BalanceSheetView() {
-  const bs = AUDIT_PACKAGE.balanceSheet;
-  return (
-    <div className="space-y-5">
-      <p className="text-xs text-gray-400">Al {bs.asOfCurrent} · comparativo al {bs.asOfPrior}</p>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-blue-700 mb-2">Activos</p>
-          <ColumnHeader />
-          <div className="mt-1.5"><SectionTable sections={bs.assetSections} /></div>
-          <TotalLine label="Total activos" current={bs.totalAssetsCurrent} prior={bs.totalAssetsPrior} tone="blue" />
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-red-600 mb-2">Pasivos</p>
-          <ColumnHeader />
-          <div className="mt-1.5"><SectionTable sections={bs.liabilitySections} /></div>
-          <p className="text-xs font-bold uppercase tracking-wide text-gray-600 mt-4 mb-2">Patrimonio</p>
-          <SectionTable sections={bs.equitySections} />
-          <TotalLine label="Total pasivo + patrimonio" current={bs.totalLiabEquityCurrent} prior={bs.totalLiabEquityPrior} tone="slate" />
-        </div>
-      </div>
-      <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
-        <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> El balance cuadra en ambos períodos: Activo = Pasivo + Patrimonio.
-      </div>
-    </div>
-  );
-}
-
-function IncomeStatementView() {
-  const inc = AUDIT_PACKAGE.incomeStatement;
-  const opIncomeCurrent = inc.totalIncomeCurrent - inc.totalExpensesCurrent;
-  const opIncomePrior = inc.totalIncomePrior - inc.totalExpensesPrior;
-  return (
-    <div className="space-y-3">
-      <p className="text-xs text-gray-400">Período {inc.periodCurrent} · comparativo {inc.periodPrior}</p>
-      <ColumnHeader />
-      <div className="rounded-xl border border-gray-100 overflow-hidden">
-        <p className="bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 border-b border-emerald-100">Ingresos</p>
-        <div className="divide-y divide-gray-50">{inc.income.map((l) => <LineRow key={l.code} line={l} />)}</div>
-      </div>
-      <div className="rounded-xl border border-gray-100 overflow-hidden">
-        <p className="bg-red-50 px-3.5 py-1.5 text-xs font-semibold text-red-600 border-b border-red-100">Gastos de operación</p>
-        <div className="divide-y divide-gray-50">{inc.expenses.map((l) => <LineRow key={l.code} line={l} />)}</div>
-        <div className="border-t border-gray-100">
-          <TotalLine label="Total gastos de operación" current={inc.totalExpensesCurrent} prior={inc.totalExpensesPrior} />
-        </div>
-      </div>
-      <TotalLine label="Utilidad de operación" current={opIncomeCurrent} prior={opIncomePrior} tone="blue" />
-      <LineRow line={{ code: '', name: 'Gastos financieros', current: inc.financialExpenseCurrent, prior: inc.financialExpensePrior }} />
-      <LineRow line={{ code: '', name: 'Impuesto sobre la renta (estimado)', current: inc.incomeTaxCurrent, prior: inc.incomeTaxPrior }} />
-      <TotalLine label="Utilidad neta" current={inc.netIncomeCurrent} prior={inc.netIncomePrior} tone="emerald" />
-    </div>
-  );
-}
-
-function CashFlowBlock({ title, lines, total }: { title: string; lines: CashFlowLine[]; total: number }) {
+function AccountSection({ title, rows, total }: { title: string; rows: AccountRow[]; total: string }) {
+  if (rows.length === 0) return null;
   return (
     <div className="rounded-xl border border-gray-100 overflow-hidden">
       <p className="bg-gray-50 px-3.5 py-1.5 text-xs font-semibold text-gray-500 border-b border-gray-100">{title}</p>
       <div className="divide-y divide-gray-50">
-        {lines.map((l, i) => (
-          <div key={i} className="grid grid-cols-[1fr_7rem_7rem] gap-2 items-center px-3.5 py-1.5 text-sm">
-            <span className="text-gray-600">{l.label}</span>
-            <span className="text-right font-mono tabular-nums text-gray-900">{moneyAcct(l.amount)}</span>
-            <span />
-          </div>
-        ))}
+        {rows.map((r) => <LineRow key={r.id} row={r} />)}
       </div>
-      <div className="grid grid-cols-[1fr_7rem_7rem] gap-2 items-center px-3.5 py-2 bg-gray-50/70 font-bold text-sm">
-        <span className="text-gray-800">Efectivo neto — {title.toLowerCase()}</span>
-        <span className="text-right font-mono tabular-nums text-gray-900">{moneyAcct(total)}</span>
-        <span />
+      <div className="border-t border-gray-100 p-1.5">
+        <TotalLine label={`Total ${title.toLowerCase()}`} value={total} />
       </div>
     </div>
   );
 }
 
-function CashFlowView() {
-  const cf = AUDIT_PACKAGE.cashFlow;
+function BalanceSheetView({ data }: { data: BalanceSheetReport | null }) {
+  if (!data) return <p className="text-sm text-gray-400">Sin datos.</p>;
   return (
-    <div className="space-y-4">
-      <ColumnHeader />
-      <CashFlowBlock title="Actividades de operación" lines={cf.operating} total={cf.operatingTotal} />
-      <CashFlowBlock title="Actividades de inversión" lines={cf.investing} total={cf.investingTotal} />
-      <CashFlowBlock title="Actividades de financiamiento" lines={cf.financing} total={cf.financingTotal} />
-      <div className="grid grid-cols-[1fr_7rem_7rem] gap-2 items-center px-3.5 py-2 rounded-xl bg-blue-50 text-blue-900 font-bold text-sm">
-        <span>Variación neta de efectivo</span>
-        <span className="text-right font-mono tabular-nums">{moneyAcct(cf.netChange)}</span>
-        <span />
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-blue-700 mb-2">Activos</p>
+          <ColumnHeader />
+          <div className="mt-1.5"><AccountSection title="Activo" rows={data.assets.accounts} total={data.assets.total} /></div>
+          <div className="mt-2"><TotalLine label="Total activos" value={data.totals.totalAssets} tone="blue" /></div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-red-600 mb-2">Pasivos</p>
+            <ColumnHeader />
+            <div className="mt-1.5"><AccountSection title="Pasivo" rows={data.liabilities.accounts} total={data.liabilities.total} /></div>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-600 mb-2">Patrimonio</p>
+            <AccountSection title="Patrimonio" rows={data.equity.accounts} total={data.equity.total} />
+          </div>
+          <TotalLine label="Total pasivo + patrimonio" value={data.totals.totalLiabEquity} tone="slate" />
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-xl bg-gray-50 px-3.5 py-2.5">
-          <p className="text-xs text-gray-400">Efectivo al inicio</p>
-          <p className="font-mono font-bold tabular-nums text-gray-800">{moneyAcct(cf.cashBeginning)}</p>
-        </div>
-        <div className="rounded-xl bg-gray-50 px-3.5 py-2.5">
-          <p className="text-xs text-gray-400">Efectivo al cierre</p>
-          <p className="font-mono font-bold tabular-nums text-gray-800">{moneyAcct(cf.cashEnding)}</p>
-        </div>
+      <div className={cn(
+        'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm',
+        data.totals.isBalanced ? 'border-emerald-100 bg-emerald-50 text-emerald-800' : 'border-red-100 bg-red-50 text-red-700',
+      )}>
+        {data.totals.isBalanced ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <XCircle className="w-4 h-4 flex-shrink-0" />}
+        {data.totals.isBalanced
+          ? 'El balance cuadra: Activo = Pasivo + Patrimonio.'
+          : `El balance no cuadra: diferencia de ${moneyAcct(data.totals.difference)}.`}
       </div>
     </div>
   );
 }
 
-function NotesView() {
+function IncomeStatementView({ data }: { data: IncomeStatementReport | null }) {
+  if (!data) return <p className="text-sm text-gray-400">Sin datos.</p>;
   return (
     <div className="space-y-3">
-      {AUDIT_PACKAGE.notes.map((n) => (
-        <div key={n.id} className="rounded-xl border border-gray-100 p-4">
-          <p className="text-sm font-bold text-gray-900 mb-1">{n.title}</p>
-          <p className="text-sm text-gray-600 leading-relaxed">{n.body}</p>
-        </div>
-      ))}
+      <ColumnHeader />
+      <AccountSection title="Ingresos" rows={data.income.accounts} total={data.income.total} />
+      <AccountSection title="Gastos" rows={data.expenses.accounts} total={data.expenses.total} />
+      <TotalLine label="Utilidad neta" value={data.totals.netIncome} tone={data.totals.isProfit ? 'emerald' : 'red'} />
     </div>
   );
 }
 
-function TaxFilingsView() {
+function TrialBalanceView({ data }: { data: TrialBalanceReport | null }) {
+  if (!data) return <p className="text-sm text-gray-400">Sin datos.</p>;
+  const rows = data.rows.filter((r) => Number(r.totalDebit) !== 0 || Number(r.totalCredit) !== 0);
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {AUDIT_PACKAGE.taxFilings.map((t) => (
-        <div key={t.id} className="rounded-xl border border-gray-100 p-4">
+    <div className="space-y-3">
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+              <th className="p-2.5 text-left">Cuenta</th>
+              <th className="p-2.5 text-right">Débito</th>
+              <th className="p-2.5 text-right">Crédito</th>
+              <th className="p-2.5 text-right">Saldo</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td className="p-2.5 text-gray-700"><span className="font-mono text-xs text-gray-400 mr-1.5">{r.code}</span>{r.name}</td>
+                <td className="p-2.5 text-right font-mono tabular-nums">{moneyAcct(r.totalDebit)}</td>
+                <td className="p-2.5 text-right font-mono tabular-nums">{moneyAcct(r.totalCredit)}</td>
+                <td className="p-2.5 text-right font-mono font-semibold tabular-nums">{moneyAcct(r.balance)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className={cn(
+        'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm',
+        data.totals.isBalanced ? 'border-emerald-100 bg-emerald-50 text-emerald-800' : 'border-red-100 bg-red-50 text-red-700',
+      )}>
+        {data.totals.isBalanced ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <XCircle className="w-4 h-4 flex-shrink-0" />}
+        {data.totals.isBalanced
+          ? 'Débitos y créditos cuadran.'
+          : `Diferencia de ${moneyAcct(data.totals.difference)} entre débitos y créditos.`}
+      </div>
+    </div>
+  );
+}
+
+function TaxFilingsView({ data }: { data: TaxDeclarationsReport | null }) {
+  const list = data?.declaraciones ?? [];
+  if (list.length === 0) {
+    return <p className="text-sm text-gray-400">{data?.nota ?? 'Sin declaraciones registradas.'}</p>;
+  }
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {list.map((t) => (
+        <div key={t.type} className="rounded-xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-2">
-            <Badge variant="blue">{t.form}</Badge>
-            <Badge variant={t.status === 'PRESENTADA' ? 'emerald' : 'amber'}>{t.status === 'PRESENTADA' ? 'Presentada' : 'Pendiente'}</Badge>
+            <Badge variant="blue">{TAX_FORM_LABEL[t.type] ?? t.type}</Badge>
+            <Badge variant={t.presentada ? 'emerald' : 'amber'}>{t.presentada ? 'Presentada' : 'Pendiente'}</Badge>
           </div>
-          <p className="text-sm font-semibold text-gray-900">{t.label}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{t.period}</p>
-          <p className="text-xs text-gray-400">Presentada: {t.filedAt}</p>
-          <p className="mt-2 text-base font-mono font-bold tabular-nums text-gray-900">{moneyAcct(t.amount)}</p>
+          {t.presentada ? (
+            <>
+              {t.period && <p className="text-xs text-gray-400">Período: {t.period}</p>}
+              {t.referenceNo && <p className="text-xs text-gray-400">Referencia: {t.referenceNo}</p>}
+              {t.submittedAt && <p className="text-xs text-gray-400">Presentada: {formatDateTime(t.submittedAt)}</p>}
+            </>
+          ) : (
+            <p className="text-xs text-gray-400">Esta empresa todavía no la presentó.</p>
+          )}
         </div>
       ))}
-    </div>
-  );
-}
-
-// ── Contenido de evidencia (renderer por tipo) ──────────────────────────────
-
-function EvidenceNote({ note }: { note: string }) {
-  return (
-    <div className="flex items-start gap-2 px-3.5 py-2.5 bg-blue-50/60 border-t border-blue-100">
-      <Info className="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5" />
-      <p className="text-xs text-blue-800 leading-relaxed">{note}</p>
-    </div>
-  );
-}
-
-function Field({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div>
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className={cn('text-gray-900', strong ? 'font-bold' : 'font-medium')}>{value}</p>
-    </div>
-  );
-}
-
-function EvidenceContentView({ content }: { content: EvidenceContent }) {
-  if (content.kind === 'LEDGER') {
-    return (
-      <div className="rounded-xl border border-gray-100 overflow-hidden">
-        <p className="bg-gray-50 px-3.5 py-2 text-xs font-semibold text-gray-600 border-b border-gray-100">{content.accountLabel}</p>
-        <div className="divide-y divide-gray-50">
-          {content.rows.map((row, i) => (
-            <div key={i} className="grid grid-cols-[6rem_1fr_7rem] gap-2 items-center px-3.5 py-1.5 text-sm">
-              <span className="text-xs text-gray-400 font-mono">{row.date}</span>
-              <span className="text-gray-700 truncate">{row.description}</span>
-              <span className="text-right font-mono tabular-nums text-gray-900">{moneyAcct(row.debit || row.credit)}</span>
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-[6rem_1fr_7rem] gap-2 items-center px-3.5 py-2 bg-gray-50/70 font-bold text-sm">
-          <span />
-          <span className="text-gray-800">Total</span>
-          <span className="text-right font-mono tabular-nums">{moneyAcct(content.total)}</span>
-        </div>
-        <EvidenceNote note={content.note} />
-      </div>
-    );
-  }
-
-  if (content.kind === 'CONFIRMATION') {
-    const diff = content.bookBalance - content.confirmedBalance;
-    return (
-      <div className="rounded-xl border border-gray-100 p-4 space-y-2.5">
-        <p className="text-xs text-gray-400">Carta de confirmación · {content.letterDate} · firma: {content.signedBy}</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg bg-gray-50 px-3 py-2">
-            <p className="text-xs text-gray-400">Según libros del auditado</p>
-            <p className="font-mono font-bold tabular-nums text-gray-900">{moneyAcct(content.bookBalance)}</p>
-          </div>
-          <div className="rounded-lg bg-gray-50 px-3 py-2">
-            <p className="text-xs text-gray-400">Según {content.counterparty}</p>
-            <p className="font-mono font-bold tabular-nums text-gray-900">{moneyAcct(content.confirmedBalance)}</p>
-          </div>
-        </div>
-        <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 flex items-center justify-between">
-          <span className="text-xs font-semibold text-amber-800">Diferencia sin explicar</span>
-          <span className="font-mono font-bold tabular-nums text-amber-800">{moneyAcct(diff)}</span>
-        </div>
-        <EvidenceNote note={content.note} />
-      </div>
-    );
-  }
-
-  if (content.kind === 'INVOICE') {
-    return (
-      <div className="rounded-xl border border-gray-100 p-4 space-y-2">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <Field label="Comprobante" value={`#${content.number}`} />
-          <Field label="Fecha" value={content.date} />
-          <Field label="Cliente" value={content.client} />
-          <Field label="Condición" value={content.condition} />
-          <Field label="Estado en Hacienda" value={content.haciendaStatus} />
-          <Field label="Monto neto" value={moneyAcct(content.netAmount)} />
-          <Field label="IVA" value={moneyAcct(content.iva)} />
-          <Field label="Total" value={moneyAcct(content.total)} strong />
-        </div>
-        <EvidenceNote note={content.note} />
-      </div>
-    );
-  }
-
-  // BANK_STATEMENT
-  return (
-    <div className="rounded-xl border border-gray-100 overflow-hidden">
-      <p className="bg-gray-50 px-3.5 py-2 text-xs font-semibold text-gray-600 border-b border-gray-100">Cuenta corriente · {content.periodLabel}</p>
-      <div className="divide-y divide-gray-50">
-        {content.rows.map((row, i) => (
-          <div key={i} className="grid grid-cols-[6rem_1fr_7rem] gap-2 items-center px-3.5 py-1.5 text-sm">
-            <span className="text-xs text-gray-400 font-mono">{row.date}</span>
-            <span className="text-gray-700 truncate">{row.description}</span>
-            <span className={cn('text-right font-mono tabular-nums', row.amount < 0 ? 'text-red-600' : 'text-emerald-700')}>{moneyAcct(row.amount)}</span>
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-[6rem_1fr_7rem] gap-2 items-center px-3.5 py-2 bg-gray-50/70 font-bold text-sm">
-        <span />
-        <span className="text-gray-800">Saldo final del período</span>
-        <span className="text-right font-mono tabular-nums">{moneyAcct(content.endingBalance)}</span>
-      </div>
-      <EvidenceNote note={content.note} />
     </div>
   );
 }

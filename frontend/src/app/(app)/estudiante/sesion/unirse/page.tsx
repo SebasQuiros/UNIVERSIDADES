@@ -1,29 +1,32 @@
 'use client';
 
-// ── FASE 1 — Andamiaje de maqueta ────────────────────────────────────────────
-// Pantalla para unirse a una "Sesión de Aula" con el código de 6 caracteres que
-// el profesor proyecta (estilo Kahoot). No llama a `api`: valida contra
-// `VALID_JOIN_CODE` en `_mock.ts`. En fase 2 esto se reemplaza por
-// `api.post('/api/v1/class-sessions/join', { code })` (contrato a definir con
-// backend-engineer).
+// Pantalla para unirse a una "Sesión de Aula" con el código de 6 caracteres
+// que el profesor proyecta (estilo Kahoot). `POST /api/v1/class-sessions/join`.
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn, getErrorMessage } from '@/lib/utils';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { IconTile } from '@/components/ui/IconTile';
 import { SceneWelcome } from '@/components/illustrations';
-import { KeyRound, ArrowLeft, Loader2, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
-import { MOCK_SESSION, VALID_JOIN_CODE } from '../_mock';
+import { KeyRound, ArrowLeft, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
 const CODE_LEN = 6;
 type Status = 'idle' | 'invalid' | 'joining' | 'joined';
+
+interface JoinResponse {
+  classSessionId: string;
+  participantId: string;
+  status: string;
+}
 
 export default function UnirseSesionPage() {
   const router = useRouter();
   const [digits, setDigits] = useState<string[]>(Array(CODE_LEN).fill(''));
   const [status, setStatus] = useState<Status>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   const code = digits.join('');
@@ -60,30 +63,24 @@ export default function UnirseSesionPage() {
     focusBox(Math.min(text.length, CODE_LEN) - 1);
   };
 
-  const submit = useCallback(() => {
+  const submit = useCallback(async () => {
     if (code.length !== CODE_LEN || status === 'joining' || status === 'joined') return;
     setStatus('joining');
-    // Andamiaje: simula latencia de red antes de "confirmar" el código.
-    setTimeout(() => {
-      if (code === VALID_JOIN_CODE) {
-        setStatus('joined');
-        setTimeout(() => router.push(`/estudiante/sesion/${MOCK_SESSION.id}`), 700);
-      } else {
-        setStatus('invalid');
-      }
-    }, 800);
+    setErrorMsg(null);
+    try {
+      const { data } = await api.post<JoinResponse>('/api/v1/class-sessions/join', { code });
+      setStatus('joined');
+      setTimeout(() => router.push(`/estudiante/sesion/${data.classSessionId}`), 700);
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err));
+      setStatus('invalid');
+    }
   }, [code, status, router]);
 
   // Auto-envío cuando las 6 casillas están completas.
   useEffect(() => {
     if (code.length === CODE_LEN && status === 'idle') submit();
   }, [code, status, submit]);
-
-  const fillDemoCode = () => {
-    setDigits(VALID_JOIN_CODE.split(''));
-    setStatus('idle');
-    focusBox(CODE_LEN - 1);
-  };
 
   return (
     <div className="flex-1 flex items-center justify-center p-6 lg:p-8 bg-[#F4F6F8]">
@@ -157,7 +154,7 @@ export default function UnirseSesionPage() {
                 )}
                 {status === 'invalid' && (
                   <p className="flex items-center gap-2 text-sm font-medium text-red-600">
-                    <XCircle className="w-4 h-4" /> Ese código no es válido. Pedile el código actualizado a tu profesor.
+                    <XCircle className="w-4 h-4" /> {errorMsg ?? 'Ese código no es válido. Pedile el código actualizado a tu profesor.'}
                   </p>
                 )}
               </div>
@@ -170,15 +167,6 @@ export default function UnirseSesionPage() {
               >
                 Unirme a la sesión
               </Button>
-
-              {/* Andamiaje de fase 1: código de prueba visible para recorrer la maqueta. */}
-              <button
-                onClick={fillDemoCode}
-                className="mt-5 flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-600 transition-colors"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Modo maqueta (fase 1): usar el código de prueba <code className="font-mono font-semibold">{VALID_JOIN_CODE}</code>
-              </button>
             </div>
 
             <SceneWelcome size={200} className="hidden md:block lp-drift justify-self-center" />

@@ -246,6 +246,9 @@ model User {
   activityLogs       ActivityLog[]
   sessionTrackings   SessionTracking[]
   taxDeclarations    TaxDeclaration[]
+  teacherClassSessions        ClassSession[]             @relation("TeacherClassSessions")
+  classSessionParticipations  ClassSessionParticipant[]  @relation("StudentClassSessionParticipations")
+  classSessionFindings        ClassSessionAuditFinding[] @relation("UserClassSessionFindings")
 
   @@index([email])
   @@index([universityId])
@@ -319,6 +322,7 @@ model Exercise {
   config       ExerciseConfig?
   companies    Company[]            @relation("ExerciseCompanies")
   competencies ExerciseCompetency[]
+  classSession ClassSession?
 
   @@index([courseId])
   @@index([teacherId])
@@ -590,6 +594,8 @@ model Company {
   accountsReceivable AccountReceivable[]
   accountsPayable    AccountPayable[]
   inventoryLots      InventoryLot[]
+  classSessionCompany        ClassSessionCompany?
+  classSessionParticipations ClassSessionParticipant[]
 
   @@index([studentId])
   @@index([exerciseId])
@@ -1713,4 +1719,150 @@ model AccountPayable {
   @@index([companyId, status])
   @@index([supplierName])
   @@map("accounts_payable")
+}
+
+// ================================================================
+//  BLOQUE 17 — SESIÓN DE AULA (Fase 2b)
+// ================================================================
+//
+// Simulación de aula en vivo (estilo Kahoot) sobre un Exercise en
+// modo GROUP: el profesor abre una sesión con código de unión, los
+// estudiantes se agrupan en empresas (arquetipos), operan, tributan,
+// y se auditan entre sí (derangement auditor↔auditado). El snapshot
+// de EEFF/declaraciones queda congelado en columnas propias
+// (ClassSessionCompany.snapshot*) para que el guard de auditoría
+// nunca necesite leer tablas operativas de la empresa auditada.
+
+enum ClassSessionStatus {
+  DRAFT
+  LOBBY
+  EN_CURSO
+  TRIBUTACION
+  AUDITORIA
+  CALIFICACION
+  FINALIZADA
+  CANCELADA
+}
+
+enum ClassSessionArchetype {
+  FERRETERIA
+  AGENCIA_PUBLICIDAD
+  BUFETE_CONTABLE
+  DISTRIBUIDOR
+}
+
+model ClassSession {
+  id            String             @id @default(uuid()) @db.Uuid
+  exerciseId    String             @unique @map("exercise_id") @db.Uuid   // 1:1 con Exercise
+  teacherId     String             @map("teacher_id") @db.Uuid            // denormalizado (mismo criterio que Exercise.teacherId)
+  code          String             @unique @db.VarChar(6)                 // código de unión proyectable
+  status        ClassSessionStatus @default(DRAFT)
+  minGroupSize  Int                @default(3) @map("min_group_size")
+  maxGroupSize  Int                @default(6) @map("max_group_size")
+  settings      Json               @default("{}")                        // pesos del score, etc.
+  startedAt     DateTime?          @map("started_at")
+  closedOpsAt   DateTime?          @map("closed_ops_at")
+  snapshotAt    DateTime?          @map("snapshot_at")
+  auditClosedAt DateTime?          @map("audit_closed_at")
+  finalizedAt   DateTime?          @map("finalized_at")
+  cancelledAt   DateTime?          @map("cancelled_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt      @map("updated_at")
+
+  exercise     Exercise                       @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  teacher      User                           @relation("TeacherClassSessions", fields: [teacherId], references: [id])
+  companies    ClassSessionCompany[]
+  participants ClassSessionParticipant[]
+  assignments  ClassSessionAuditAssignment[]
+
+  @@index([teacherId])
+  @@index([status])
+  @@map("class_sessions")
+}
+
+// Un participante = un estudiante dentro de ESTA sesión. companyId queda
+// NULL hasta que el profesor lo asigna a un grupo (o el auto-assign).
+model ClassSessionParticipant {
+  id             String   @id @default(uuid()) @db.Uuid
+  classSessionId String   @map("class_session_id") @db.Uuid
+  studentId      String   @map("student_id") @db.Uuid
+  companyId      String?  @map("company_id") @db.Uuid          // NULL hasta asignación a grupo
+  joinedAt       DateTime @default(now()) @map("joined_at")
+  lastPingAt     DateTime @default(now()) @map("last_ping_at")
+
+  classSession ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  student      User         @relation("StudentClassSessionParticipations", fields: [studentId], references: [id], onDelete: Cascade)
+  company      Company?     @relation(fields: [companyId], references: [id])
+
+  @@unique([classSessionId, studentId])   // idempotencia del join
+  @@index([classSessionId])
+  @@index([companyId])
+  @@map("class_session_participants")
+}
+
+model ClassSessionCompany {
+  id             String                @id @default(uuid()) @db.Uuid
+  classSessionId String                @map("class_session_id") @db.Uuid
+  companyId      String                @unique @map("company_id") @db.Uuid  // la Company GROUP ya existe
+  archetype      ClassSessionArchetype
+
+  // Snapshot inmutable — se llenan UNA vez en publish-snapshot, nunca se sobreescriben.
+  snapshotTrialBalance    Json?     @map("snapshot_trial_balance")
+  snapshotBalanceSheet    Json?     @map("snapshot_balance_sheet")
+  snapshotIncomeStatement Json?     @map("snapshot_income_statement")
+  snapshotTaxDeclarations Json?     @map("snapshot_tax_declarations")
+  snapshotPublishedAt     DateTime? @map("snapshot_published_at")
+
+  oracleDiscrepancies Json? @map("oracle_discrepancies")  // discrepancias reales calculadas por el oráculo
+
+  accountingScore Decimal? @db.Decimal(5, 2) @map("accounting_score")
+  auditScore      Decimal? @db.Decimal(5, 2) @map("audit_score")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  classSession ClassSession                 @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  company      Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  asAuditor    ClassSessionAuditAssignment? @relation("Auditor")
+  asAuditee    ClassSessionAuditAssignment? @relation("Auditee")
+
+  @@index([classSessionId])
+  @@map("class_session_companies")
+}
+
+// Cada empresa audita EXACTAMENTE a otra, y es auditada por EXACTAMENTE otra
+// (derangement aleatorio calculado al publicar el snapshot).
+model ClassSessionAuditAssignment {
+  id               String   @id @default(uuid()) @db.Uuid
+  classSessionId   String   @map("class_session_id") @db.Uuid
+  auditorCompanyId String   @unique @map("auditor_company_id") @db.Uuid  // cada empresa audita a UNA
+  auditeeCompanyId String   @unique @map("auditee_company_id") @db.Uuid  // y es auditada por UNA
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  classSession ClassSession               @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+  auditor      ClassSessionCompany        @relation("Auditor", fields: [auditorCompanyId], references: [companyId], onDelete: Cascade)
+  auditee      ClassSessionCompany        @relation("Auditee", fields: [auditeeCompanyId], references: [companyId], onDelete: Cascade)
+  findings     ClassSessionAuditFinding[]
+
+  @@index([classSessionId])
+  @@map("class_session_audit_assignments")
+}
+
+model ClassSessionAuditFinding {
+  id            String   @id @default(uuid()) @db.Uuid
+  assignmentId  String   @map("assignment_id") @db.Uuid
+  createdById   String   @map("created_by") @db.Uuid   // miembro de la empresa auditora
+  section       String                                 // 'BALANCE_SHEET'|'INCOME_STATEMENT'|'TAX_D101'|'TAX_D104'|'TAX_D103'|'TAX_D115'|'OTHER'
+  accountCode   String?  @map("account_code")
+  description   String   @db.Text
+  claimedAmount Decimal? @db.Decimal(15, 2) @map("claimed_amount")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  matched     Boolean? // null = aún no evaluado por el oráculo
+  matchDetail String?  @db.Text @map("match_detail")
+
+  assignment ClassSessionAuditAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  createdBy  User                        @relation("UserClassSessionFindings", fields: [createdById], references: [id])
+
+  @@index([assignmentId])
+  @@map("class_session_audit_findings")
 }
