@@ -264,7 +264,7 @@ export default function AiAssistant({ companyId, attemptId }: AiAssistantProps) 
           {!isMinimized && (
             <>
               {/* Conversación */}
-              <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#F4F6F8]">
+              <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#FBF8F1]">
                 {messages.map((msg) => (
                   <div
                     key={msg.id}

@@ -12,8 +12,38 @@ export class ExercisesService {
     private readonly email: EmailService,
   ) {}
 
-  async findAll(courseId: string, role?: string) {
-    await this._checkCourse(courseId);
+  // Rubric projection for STUDENTS: exposes only what the student UI needs to
+  // render the enunciado / progress checklist (id, criterion, description,
+  // points, order). It deliberately OMITS `expectedValue`, which for
+  // answer-key criteria (e.g. account_balance_gte "CODE:AMOUNT") is the
+  // expected auto-grading result — i.e. the solution. Staff get the full row.
+  private static readonly STUDENT_RUBRIC_SELECT = {
+    id:          true,
+    criterion:   true,
+    description: true,
+    points:      true,
+    order:       true,
+  } as const;
+
+  private rubricsInclude(role?: string) {
+    return role === 'STUDENT'
+      ? { orderBy: { order: 'asc' as const }, select: ExercisesService.STUDENT_RUBRIC_SELECT }
+      : { orderBy: { order: 'asc' as const } };
+  }
+
+  async findAll(
+    courseId: string,
+    caller?: { role?: string; universityId?: string | null },
+  ) {
+    const role = caller?.role;
+    const course = await this._checkCourse(courseId);
+
+    // ADMIN sólo lista ejercicios de cursos de su propia universidad; el listado
+    // de staff incluye el answer-key (expectedValue) de cada rúbrica.
+    if (role === 'ADMIN' && course.universityId !== (caller?.universityId ?? null)) {
+      throw new NotFoundException('Curso no encontrado');
+    }
+
     return this.prisma.exercise.findMany({
       where:   {
         courseId,
@@ -21,14 +51,19 @@ export class ExercisesService {
         ...(role !== 'STUDENT' && { isArchived: false }),
       },
       include: {
-        rubrics: { orderBy: { order: 'asc' } },
+        rubrics: this.rubricsInclude(role),
         _count:  { select: { attempts: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(courseId: string, exerciseId: string, role?: string) {
+  async findOne(
+    courseId: string,
+    exerciseId: string,
+    caller?: { role?: string; universityId?: string | null },
+  ) {
+    const role = caller?.role;
     const where: any = { id: exerciseId, courseId };
     if (role === 'STUDENT') {
       where.isPublished = true;
@@ -37,17 +72,47 @@ export class ExercisesService {
     const exercise = await this.prisma.exercise.findFirst({
       where,
       include: {
-        rubrics:  { orderBy: { order: 'asc' } },
+        rubrics:  this.rubricsInclude(role),
         teacher:  { select: { id: true, name: true, email: true } },
+        course:   { select: { universityId: true } },
         _count:   { select: { attempts: true } },
       },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
+
+    // ADMIN sólo puede ver ejercicios de su propia universidad (el answer-key
+    // completo va en la rúbrica de staff). SUPERADMIN sin restricción; TEACHER y
+    // STUDENT quedan acotados por scoping/role — la lectura de un TEACHER de otra
+    // universidad no expone `expectedValue` de forma distinta al resto de staff,
+    // pero mantenemos el comportamiento previo para no romper flujos legítimos.
+    if (role === 'ADMIN' && exercise.course.universityId !== (caller?.universityId ?? null)) {
+      throw new NotFoundException('Ejercicio no encontrado');
+    }
+
     return exercise;
   }
 
-  async create(courseId: string, teacherId: string, dto: CreateExerciseDto) {
-    await this._checkCourse(courseId);
+  async create(
+    courseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+    dto: CreateExerciseDto,
+  ) {
+    const course = await this._checkCourse(courseId);
+
+    // Ownership/tenant of the target course before creating anything under it:
+    //  · TEACHER → must own the course.
+    //  · ADMIN   → course must belong to the caller's university.
+    //  · SUPERADMIN → unrestricted.
+    if (caller.role === 'TEACHER' && course.teacherId !== caller.id) {
+      throw new ForbiddenException('Solo el profesor del curso puede crear ejercicios en él');
+    }
+    if (caller.role === 'ADMIN' && course.universityId !== caller.universityId) {
+      throw new NotFoundException('Curso no encontrado');
+    }
+
+    // El ejercicio se ancla al profesor dueño del curso (no al ADMIN que lo crea),
+    // para que el ownership por TEACHER siga siendo coherente.
+    const teacherId = course.teacherId;
 
     // Fase 1: cada Exercise nuevo recibe ExerciseConfig con defaults del schema.
     // Esto garantiza que el toggle engine tenga registro de config siempre,
@@ -88,18 +153,16 @@ export class ExercisesService {
   async update(
     courseId: string,
     exerciseId: string,
-    userId: string,
-    userRole: string,
+    caller: { id: string; role: string; universityId: string | null },
     dto: UpdateExerciseDto,
   ) {
     const exercise = await this.prisma.exercise.findFirst({
-      where: { id: exerciseId, courseId },
+      where:   { id: exerciseId, courseId },
+      include: { course: { select: { universityId: true } } },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
 
-    if (userRole === 'TEACHER' && exercise.teacherId !== userId) {
-      throw new ForbiddenException('Solo el profesor del ejercicio puede modificarlo');
-    }
+    this.assertExerciseAccess(caller, exercise, exercise.course.universityId, 'modificarlo');
 
     if (exercise.isPublished) {
       throw new BadRequestException('No se puede editar un ejercicio ya publicado');
@@ -121,14 +184,17 @@ export class ExercisesService {
     });
   }
 
-  async archive(courseId: string, exerciseId: string, userId: string, userRole: string) {
+  async archive(
+    courseId: string,
+    exerciseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
     const exercise = await this.prisma.exercise.findFirst({
-      where: { id: exerciseId, courseId },
+      where:   { id: exerciseId, courseId },
+      include: { course: { select: { universityId: true } } },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
-    if (userRole === 'TEACHER' && exercise.teacherId !== userId) {
-      throw new ForbiddenException('Solo el profesor del ejercicio puede archivarlo');
-    }
+    this.assertExerciseAccess(caller, exercise, exercise.course.universityId, 'archivarlo');
     await this.prisma.exercise.update({
       where: { id: exerciseId },
       data:  { isArchived: true, updatedAt: new Date() },
@@ -136,15 +202,18 @@ export class ExercisesService {
     return { message: 'Ejercicio archivado' };
   }
 
-  async remove(courseId: string, exerciseId: string, userId: string, userRole: string) {
+  async remove(
+    courseId: string,
+    exerciseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
     const exercise = await this.prisma.exercise.findFirst({
-      where: { id: exerciseId, courseId },
+      where:   { id: exerciseId, courseId },
+      include: { course: { select: { universityId: true } } },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
 
-    if (userRole === 'TEACHER' && exercise.teacherId !== userId) {
-      throw new ForbiddenException('Solo el profesor del ejercicio puede eliminarlo');
-    }
+    this.assertExerciseAccess(caller, exercise, exercise.course.universityId, 'eliminarlo');
 
     // JournalLine has a direct company_id FK without onDelete:Cascade,
     // so we must delete them before the ExerciseAttempt → Company cascade fires.
@@ -173,16 +242,21 @@ export class ExercisesService {
   }
 
   // ── Publish ───────────────────────────────────────────────────────────────────
-  async publish(courseId: string, exerciseId: string, userId: string, userRole: string) {
+  async publish(
+    courseId: string,
+    exerciseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
     const exercise = await this.prisma.exercise.findFirst({
       where:   { id: exerciseId, courseId },
-      include: { rubrics: true },
+      include: {
+        rubrics: true,
+        course:  { select: { universityId: true } },
+      },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
 
-    if (userRole === 'TEACHER' && exercise.teacherId !== userId) {
-      throw new ForbiddenException('Solo el profesor del ejercicio puede publicarlo');
-    }
+    this.assertExerciseAccess(caller, exercise, exercise.course.universityId, 'publicarlo');
 
     if (exercise.isPublished) {
       throw new BadRequestException('El ejercicio ya está publicado');
@@ -356,7 +430,31 @@ export class ExercisesService {
   }
 
   private async _checkCourse(courseId: string) {
-    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    const course = await this.prisma.course.findUnique({
+      where:  { id: courseId },
+      select: { id: true, teacherId: true, universityId: true },
+    });
     if (!course) throw new NotFoundException('Curso no encontrado');
+    return course;
+  }
+
+  // Ownership/tenant guard for staff operating on an existing exercise.
+  //  · TEACHER   → must own the exercise (exercise.teacherId === caller.id).
+  //  · ADMIN     → must belong to the same university as the exercise's course.
+  //  · SUPERADMIN → unrestricted.
+  //  · Other roles are gated upstream by @Roles; not handled here.
+  // `exerciseUniversityId` comes from the exercise's course.universityId.
+  private assertExerciseAccess(
+    caller: { id: string; role: string; universityId: string | null },
+    exercise: { teacherId: string },
+    exerciseUniversityId: string | null,
+    action: string,
+  ) {
+    if (caller.role === 'TEACHER' && exercise.teacherId !== caller.id) {
+      throw new ForbiddenException(`Solo el profesor del ejercicio puede ${action}`);
+    }
+    if (caller.role === 'ADMIN' && exerciseUniversityId !== caller.universityId) {
+      throw new NotFoundException('Ejercicio no encontrado');
+    }
   }
 }

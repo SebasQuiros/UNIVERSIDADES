@@ -171,8 +171,8 @@ function EntryRow({
   const [open,    setOpen]    = useState(false);
   const [working, setWorking] = useState<'confirm' | 'reject' | null>(null);
 
-  const totalDebit  = entry.lines.reduce((s, l) => s + Number(l.debit),  0);
-  const totalCredit = entry.lines.reduce((s, l) => s + Number(l.credit), 0);
+  const totalDebit  = (entry.lines ?? []).reduce((s, l) => s + Number(l.debit),  0);
+  const totalCredit = (entry.lines ?? []).reduce((s, l) => s + Number(l.credit), 0);
 
   async function confirm() {
     setWorking('confirm');
@@ -240,11 +240,11 @@ function EntryRow({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {entry.lines.map((l) => (
+                  {(entry.lines ?? []).map((l) => (
                     <tr key={l.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3.5">
-                        <span className="font-mono text-xs text-gray-500 mr-2">{l.account.code}</span>
-                        <span className="text-gray-900 font-medium">{l.account.name}</span>
+                        <span className="font-mono text-xs text-gray-500 mr-2">{l.account?.code ?? '—'}</span>
+                        <span className="text-gray-900 font-medium">{l.account?.name}</span>
                       </td>
                       <td className="px-5 py-3.5 text-gray-500 text-xs">{l.description ?? '—'}</td>
                       <td className="px-5 py-3.5 text-right tabular-nums font-mono text-gray-900">

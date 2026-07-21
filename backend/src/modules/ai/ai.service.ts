@@ -1,6 +1,8 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { assertCompanyAccess } from '../../common/auth/company-access.helper';
+import { REDIS_CLIENT } from '../../redis/redis.module';
 /* eslint-disable @typescript-eslint/no-var-requires */
 // @ts-ignore
 const AnthropicPkg = (() => { try { return require('@anthropic-ai/sdk'); } catch { return null; } })();
@@ -41,6 +43,10 @@ export interface AiSuggestDto {
   mode?: AiMode;
   companyId?: string;
   attemptId?: string;
+  // Usuario autenticado (id). Se usa para verificar acceso a `companyId` antes
+  // de leer contexto de empresa (evita IDOR). Opcional para no romper la ruta
+  // legacy/chat sin empresa.
+  userId?: string;
   context: AiContext;
   // Legacy fields (backwards compat)
   question?: string;
@@ -53,6 +59,7 @@ export class AiService {
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
 
   // ── Legacy endpoint kept intact ─────────────────────────────────────────────
@@ -87,7 +94,7 @@ export class AiService {
     const systemPrompt = this.buildSystemPrompt(mode, ctx);
 
     // Build user message per mode
-    const userMessage = await this.buildUserMessage(mode, ctx, dto.companyId);
+    const userMessage = await this.buildUserMessage(mode, ctx, dto.companyId, dto.userId);
 
     // Build messages array (chat mode supports history)
     const messages: { role: 'user' | 'assistant'; content: string }[] = [];
@@ -171,10 +178,15 @@ dilo honestamente. Máximo 300 palabras. ${companyName}${tabInfo}`;
   }
 
   // ── User messages ────────────────────────────────────────────────────────────
-  private async buildUserMessage(mode: AiMode, ctx: AiContext, companyId?: string): Promise<string> {
+  private async buildUserMessage(mode: AiMode, ctx: AiContext, companyId?: string, userId?: string): Promise<string> {
     let companyContext = '';
 
     if (companyId) {
+      // Verificar acceso ANTES de leer datos de la empresa (evita IDOR: un
+      // estudiante no puede pedir contexto de una empresa ajena). Mismo helper
+      // canónico (INDIVIDUAL + GROUP) y misma firma que el resto de services;
+      // `redis` reusa el core cacheado (fail-open a DB). Lanza Forbidden/NotFound.
+      await assertCompanyAccess(this.prisma, companyId, userId as string, { redis: this.redis });
       companyContext = await this.fetchCompanyContext(companyId);
     }
 

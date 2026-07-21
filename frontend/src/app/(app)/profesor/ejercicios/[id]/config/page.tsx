@@ -190,11 +190,11 @@ export default function ExerciseConfigPage() {
   }
 
   if (loading) {
-    return <div className="flex-1 flex justify-center bg-[#F4F6F8] py-20"><Spinner size="lg" /></div>;
+    return <div className="flex-1 flex justify-center bg-[#FBF8F1] py-20"><Spinner size="lg" /></div>;
   }
   if (!config) {
     return (
-      <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+      <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
         <div className="mx-auto max-w-3xl rounded-card border border-gray-200/70 bg-white shadow-card">
           <EmptyState
             illustration={<SceneSearchEmpty size={190} className="cx-float" />}
@@ -211,7 +211,7 @@ export default function ExerciseConfigPage() {
     : `/profesor/ejercicios/${id}`;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
       <div className="mx-auto max-w-3xl space-y-6">
 
         {/* Breadcrumb */}

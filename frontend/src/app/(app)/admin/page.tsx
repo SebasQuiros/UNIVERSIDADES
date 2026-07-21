@@ -78,7 +78,7 @@ export default function AdminDashboard() {
   // Renderizamos el shell siempre y usamos skeletons donde van los datos,
   // en lugar de tapar toda la pantalla con un spinner centrado.
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       {/* Cabecera */}
       <PageHeader
         eyebrow="Panel de administración"

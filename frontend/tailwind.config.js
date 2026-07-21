@@ -41,8 +41,8 @@ module.exports = {
         mono: ['JetBrains Mono', 'monospace'],
       },
       borderRadius: {
-        // Radio de tarjeta del lenguaje landing (24px).
-        card: '1.5rem',
+        // Radio de tarjeta "documento contable" (14px) — menos burbuja que Alegra.
+        card: '0.875rem',
       },
       boxShadow: {
         // Sombras suaves compartidas, calcadas del landing.

@@ -153,7 +153,7 @@ export default function ProgresoPage() {
   }, []);
 
   if (loading) return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       <ProgresoSkeleton />
     </div>
   );
@@ -175,7 +175,7 @@ export default function ProgresoPage() {
   const LevelIcon = game ? levelIcon(game.level.index) : Sparkles;
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
 
       {/* Cabecera */}
       <PageHeader

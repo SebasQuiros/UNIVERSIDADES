@@ -258,7 +258,7 @@ export default function D101Page() {
   const stepErrors = getStepErrors();
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8]" ref={topRef}>
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1]" ref={topRef}>
       {/* Encabezado TRIBU-CR unificado */}
       <TribuHeader
         code="D-101"

@@ -15,16 +15,16 @@ export class ExercisesController {
 
   @Get()
   findAll(@Param('courseId') courseId: string, @CurrentUser() user: any) {
-    return this.svc.findAll(courseId, user?.role);
+    return this.svc.findAll(courseId, user);
   }
 
   @Get(':id')
   findOne(
     @Param('courseId') courseId: string,
     @Param('id') id: string,
-    @CurrentUser() user: { role: string },
+    @CurrentUser() user: any,
   ) {
-    return this.svc.findOne(courseId, id, user.role);
+    return this.svc.findOne(courseId, id, user);
   }
 
   @Post()
@@ -35,7 +35,7 @@ export class ExercisesController {
     @CurrentUser() user: any,
     @Body() dto: CreateExerciseDto,
   ) {
-    return this.svc.create(courseId, user.id, dto);
+    return this.svc.create(courseId, user, dto);
   }
 
   /** POST /courses/:courseId/exercises/from-template — create from a saved template */
@@ -58,7 +58,7 @@ export class ExercisesController {
     @CurrentUser() user: any,
     @Body() dto: UpdateExerciseDto,
   ) {
-    return this.svc.update(courseId, id, user.id, user.role, dto);
+    return this.svc.update(courseId, id, user, dto);
   }
 
   @Patch(':id/archive')
@@ -69,7 +69,7 @@ export class ExercisesController {
     @Param('id') id: string,
     @CurrentUser() user: any,
   ) {
-    return this.svc.archive(courseId, id, user.id, user.role);
+    return this.svc.archive(courseId, id, user);
   }
 
   /** PATCH /courses/:courseId/exercises/:id/toggle-template — mark/unmark as template */
@@ -92,7 +92,7 @@ export class ExercisesController {
     @Param('id') id: string,
     @CurrentUser() user: any,
   ) {
-    return this.svc.remove(courseId, id, user.id, user.role);
+    return this.svc.remove(courseId, id, user);
   }
 
   @Post(':id/publish')
@@ -103,7 +103,7 @@ export class ExercisesController {
     @Param('id') id: string,
     @CurrentUser() user: any,
   ) {
-    return this.svc.publish(courseId, id, user.id, user.role);
+    return this.svc.publish(courseId, id, user);
   }
 }
 

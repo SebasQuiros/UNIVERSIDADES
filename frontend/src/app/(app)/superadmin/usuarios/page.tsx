@@ -221,7 +221,7 @@ export default function UsuariosPage() {
   const hasFilters = Boolean(search || roleFilter || uniFilter);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       {resetUser && (
         <ResetPwdModal user={resetUser} onClose={() => setResetUser(null)} />
       )}

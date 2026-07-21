@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #F3F4F6;
+  --background: #FBF8F1;
   --foreground: #0f172a;
 
   /* CSQ Brand Palette */
@@ -27,7 +27,7 @@
   --gold-900: #8A6608;
 
   /* Radios y sombras compartidas (lenguaje del landing) */
-  --radius-card:      1.5rem;
+  --radius-card:      0.875rem;
   --shadow-soft:      0 10px 30px rgba(15, 38, 87, 0.25);
   --shadow-card:      0 4px 16px rgba(27, 46, 110, 0.06);
   --shadow-card-hover:0 24px 48px rgba(27, 46, 110, 0.12);

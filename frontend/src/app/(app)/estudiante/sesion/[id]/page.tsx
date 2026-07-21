@@ -81,7 +81,7 @@ export default function MiSesionPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
         <div className="space-y-6">
           <Skeleton className="h-16 w-full rounded-card" />
           <Skeleton className="h-40 w-full rounded-card" />
@@ -93,7 +93,7 @@ export default function MiSesionPage() {
 
   if (loadError || !me) {
     return (
-      <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+      <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
         <div className="rounded-card border border-gray-200/70 bg-white shadow-card">
           <EmptyState
             illustration={<SceneEmptyBox size={180} />}
@@ -111,7 +111,7 @@ export default function MiSesionPage() {
   }
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       <PageHeader
         eyebrow="Sesión de aula"
         title={me.company?.name ?? 'Tu sesión'}

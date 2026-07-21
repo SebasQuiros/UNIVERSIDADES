@@ -19,6 +19,7 @@ import { SuppliersModule }      from './modules/suppliers/suppliers.module';
 import { BankModule }           from './modules/bank/bank.module';
 import { ProductsModule }       from './modules/products/products.module';
 import { InvoicesModule }       from './modules/invoices/invoices.module';
+import { CreditNotesModule }    from './modules/credit-notes/credit-notes.module';
 import { UniversitiesModule }   from './modules/universities/universities.module';
 import { CoursesModule }        from './modules/courses/courses.module';
 import { ExercisesModule }      from './modules/exercises/exercises.module';
@@ -80,6 +81,7 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     SuppliersModule,
     ProductsModule,
     InvoicesModule,
+    CreditNotesModule,         // Phase 17 — Notas de crédito y débito (event-driven)
     BankModule,
     // Phase 5 — Academic System
     UniversitiesModule,

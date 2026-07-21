@@ -11,6 +11,10 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
+import { CatalogoCuentasView } from '@/components/modulo/CatalogoCuentasView';
+import { ValorInventarioView } from '@/components/modulo/ValorInventarioView';
+import { CategoriasView } from '@/components/modulo/CategoriasView';
+import { NotasView } from '@/components/modulo/NotasView';
 import {
   FileText, ShoppingCart, Package, Landmark, BookOpen, Coins,
   ClipboardList, Tag, Warehouse, Scale, RefreshCw, Building2,
@@ -227,11 +231,20 @@ const AREA_TINT: Record<string, string> = {
 export default function ModuloPage() {
   const params = useParams();
   const slug = String(params.slug ?? '');
+
+  // ── Slugs con backend real: se pintan con su propio componente ──
+  // (resuelven la empresa del attempt activo y hacen su fetch).
+  if (slug === 'catalogo-cuentas') return <CatalogoCuentasView />;
+  if (slug === 'valor-inventario') return <ValorInventarioView />;
+  if (slug === 'categorias') return <CategoriasView />;
+  if (slug === 'notas-credito') return <NotasView kind="credito" />;
+  if (slug === 'notas-debito') return <NotasView kind="debito" />;
+
   const cfg = C[slug];
 
   if (!cfg) {
     return (
-      <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F4F6F8]">
+      <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#FBF8F1]">
         <div className="max-w-lg mx-auto mt-10">
           <Card>
             <EmptyState
@@ -261,7 +274,7 @@ export default function ModuloPage() {
   });
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#F4F6F8]">
+    <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#FBF8F1]">
       <div className="max-w-6xl mx-auto">
 
         {/* Cabecera */}

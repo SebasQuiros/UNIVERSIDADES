@@ -3,6 +3,7 @@ const nextConfig = {
   output: 'standalone',
   experimental: {
     missingSuspenseWithCSRBailout: false,
+    optimizePackageImports: ['lucide-react', 'recharts', 'date-fns'],
   },
 
   // Proxy de API — el navegador llama a /api/* y Next.js lo redirige al backend

@@ -31,7 +31,7 @@ export class GradingController {
     @Param('exerciseId') exerciseId: string,
     @CurrentUser() user: any,
   ) {
-    return this.svc.listAttempts(courseId, exerciseId, user.id, user.role);
+    return this.svc.listAttempts(courseId, exerciseId, user);
   }
 
   // POST /attempts/:id/grade

@@ -396,7 +396,7 @@ export default function CursosPage() {
   const totalExercises = courses.reduce((s, c) => s + (c._count?.exercises ?? 0), 0);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F4F6F8] p-6 lg:p-8">
+    <div className="flex-1 overflow-y-auto bg-[#FBF8F1] p-6 lg:p-8">
       {toDelete && (
         <DeleteCourseModal
           course={toDelete}

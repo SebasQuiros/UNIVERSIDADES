@@ -1,8 +1,9 @@
 import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { AiService, AiSuggestDto } from './ai.service';
-import { IsString, MaxLength, IsOptional, IsObject, IsIn } from 'class-validator';
+import { IsString, MaxLength, IsOptional, IsObject, IsIn, IsUUID } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
+import { CurrentUser } from '../auth/decorators/auth.decorators';
 
 // ── Legacy DTO (backwards compat) ────────────────────────────────────────────
 class AskDto {
@@ -27,8 +28,7 @@ class SuggestDto implements AiSuggestDto {
   mode?: AiSuggestDto['mode'];
 
   @IsOptional()
-  @IsString()
-  @MaxLength(36)
+  @IsUUID('4')
   companyId?: string;
 
   @IsOptional()
@@ -70,8 +70,9 @@ export class AiController {
    */
   @Post('suggest')
   @Throttle({ medium: { ttl: 60_000, limit: 10 } })
-  async suggest(@Body() dto: SuggestDto) {
+  async suggest(@Body() dto: SuggestDto, @CurrentUser() user: { id: string; role: string; universityId?: string }) {
     // Legacy fallback: if no mode/context, treat as a plain chat question
+    // (never carries companyId, so no company-context access check applies).
     if (!dto.mode && !dto.context && dto.question) {
       return this.svc.getSuggestion(dto.question, {
         tab: dto.tab ?? 'contabilidad',
@@ -79,11 +80,13 @@ export class AiController {
       });
     }
 
-    // New multi-mode path
+    // New multi-mode path. Se pasa el userId autenticado para que el service
+    // verifique acceso a `companyId` antes de leer contexto de empresa (IDOR).
     return this.svc.suggest({
       mode: dto.mode,
       companyId: dto.companyId,
       attemptId: dto.attemptId,
+      userId: user.id,
       context: dto.context ?? {
         message: dto.question,
         tab: dto.tab,

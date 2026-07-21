@@ -119,7 +119,7 @@ export default function SuperAdminDashboard() {
     new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC', maximumFractionDigits: 0 }).format(n);
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       {/* Cabecera — visible siempre, incluso mientras cargan los datos */}
       <PageHeader
         eyebrow="Consola global"

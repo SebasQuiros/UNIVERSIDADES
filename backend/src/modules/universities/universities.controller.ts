@@ -8,10 +8,11 @@ import {
   CreateUniversityUserDto, UpdateUserRoleDto,
 } from './dto/universities.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
+import { UniversityScopeGuard } from '../../common/guards/university-scope.guard';
 import { Roles, Public, CurrentUser } from '../auth/decorators/auth.decorators';
 
 @Controller('universities')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, UniversityScopeGuard)
 export class UniversitiesController {
   constructor(private readonly svc: UniversitiesService) {}
 
@@ -24,8 +25,8 @@ export class UniversitiesController {
 
   @Get()
   @Roles('ADMIN', 'SUPERADMIN')
-  findAll() {
-    return this.svc.findAll();
+  findAll(@CurrentUser() user: { role: string; universityId: string | null }) {
+    return this.svc.findAll(user);
   }
 
   @Get('mine')

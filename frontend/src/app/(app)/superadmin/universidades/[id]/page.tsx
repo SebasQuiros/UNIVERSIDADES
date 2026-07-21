@@ -230,7 +230,7 @@ function EditUniversityModal({
 
 function DetailSkeleton() {
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       <Skeleton className="h-4 w-56 mb-6" />
       <Skeleton className="h-24 w-full rounded-card mb-8" />
       <Skeleton className="h-44 w-full rounded-card mb-8" />
@@ -321,7 +321,7 @@ export default function UniversidadDetailPage() {
   const courses = university.courses ?? [];
 
   return (
-    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#F4F6F8]">
+    <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
       {resetUser && (
         <ResetPwdModal user={resetUser} onClose={() => setResetUser(null)} />
       )}
