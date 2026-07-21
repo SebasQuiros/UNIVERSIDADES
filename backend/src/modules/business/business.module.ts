@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { BusinessEventsService } from './business-events.service';
 import { JournalModule } from '../journal/journal.module';
 import { AccountingModule } from '../accounting/accounting.module';
+import { InventoryModule } from '../inventory/inventory.module';
 import { ARRecordsService } from '../accounts-receivable/ar-records.service';
 import { APRecordsService } from '../accounts-payable/ap-records.service';
 
@@ -20,7 +21,7 @@ import { APRecordsService } from '../accounts-payable/ap-records.service';
  * ────────────────────────────────────────────────────────────────
  */
 @Module({
-  imports:   [JournalModule, AccountingModule],
+  imports:   [JournalModule, AccountingModule, InventoryModule],
   providers: [BusinessEventsService, ARRecordsService, APRecordsService],
   exports:   [BusinessEventsService, ARRecordsService, APRecordsService],
 })

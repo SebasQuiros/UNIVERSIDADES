@@ -578,6 +578,8 @@ model Company {
   bankTransactions  BankTransaction[]
   journalSequence   JournalSequence?  @relation("JournalSequenceCompany")
   invoiceSequence   InvoiceSequence?  @relation("InvoiceSequenceCompany")
+  creditNoteSequence CreditNoteSequence? @relation("CreditNoteSequenceCompany")
+  debitNoteSequence  DebitNoteSequence?  @relation("DebitNoteSequenceCompany")
   journalLines      JournalLine[]     @relation("JournalLineCompany")
   fixedAssets       FixedAsset[]
   employees         Employee[]
@@ -591,6 +593,8 @@ model Company {
   accountsPayable    AccountPayable[]
   inventoryLots      InventoryLot[]
   productCategories  ProductCategory[]
+  creditNotes        CreditNote[]
+  debitNotes         DebitNote[]
 
   @@index([studentId])
   @@index([exerciseId])
@@ -758,6 +762,26 @@ model InvoiceSequence {
   @@map("invoice_sequences")
 }
 
+// Atomic credit-note consecutive number per company — same pattern as InvoiceSequence
+model CreditNoteSequence {
+  companyId  String  @id @map("company_id") @db.Uuid
+  lastNumber Int     @default(0) @map("last_number")
+
+  company Company @relation("CreditNoteSequenceCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("credit_note_sequences")
+}
+
+// Atomic debit-note consecutive number per company — same pattern as InvoiceSequence
+model DebitNoteSequence {
+  companyId  String  @id @map("company_id") @db.Uuid
+  lastNumber Int     @default(0) @map("last_number")
+
+  company Company @relation("DebitNoteSequenceCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("debit_note_sequences")
+}
+
 // ================================================================
 //  BLOQUE 6 — CLIENTES Y PROVEEDORES
 // ================================================================
@@ -856,6 +880,8 @@ model Product {
   invoiceItems InvoiceItem[]
   movements    InventoryMovement[]
   lots         InventoryLot[]
+  creditNoteLines CreditNoteLine[]  @relation("CreditNoteLineProduct")
+  debitNoteLines  DebitNoteLine[]   @relation("DebitNoteLineProduct")
 
   @@index([companyId])
   @@index([cabysCode])
@@ -964,6 +990,8 @@ model Invoice {
   invoicePayments     InvoicePayment[]
   arPayments          ArPayment[]
   accountReceivable   AccountReceivable?
+  creditNotes         CreditNote[]
+  debitNotes          DebitNote[]
 
   @@unique([companyId, consecutiveNumber])
   @@index([companyId])
@@ -1721,4 +1749,130 @@ model AccountPayable {
   @@index([companyId, status])
   @@index([supplierName])
   @@map("accounts_payable")
+}
+
+// ================================================================
+//  BLOQUE 17 — NOTAS DE CRÉDITO Y DÉBITO (Phase 17)
+//
+//  Documentos que ajustan una factura electrónica ya emitida:
+//    · Nota de Crédito (NC) → REVERSA parcial de una venta (devolución,
+//      descuento, anulación). Reduce lo que el cliente debe (o devuelve
+//      efectivo). Contablemente: D Ventas + D IVA débito ... C CxC/Caja.
+//      Si hubo devolución de mercadería, además restaura inventario y
+//      revierte el COGS.
+//    · Nota de Débito (ND) → AUMENTA lo que el cliente debe (intereses,
+//      cargos, ajuste al alza). Contablemente: D CxC ... C Ventas +
+//      C IVA débito. Nunca toca inventario.
+//
+//  Ambas cuelgan de una Invoice origen (misma empresa) y disparan su
+//  asiento vía BusinessEventsService (patrón event-driven canónico),
+//  con idempotencia por (source_type, source_id) en journal_entries.
+//  Consecutivo atómico por empresa (misma mecánica que invoice_sequences).
+// ================================================================
+
+enum CreditDebitNoteStatus {
+  DRAFT
+  ISSUED
+}
+
+model CreditNote {
+  id          String                @id @default(uuid()) @db.Uuid
+  companyId   String                @map("company_id") @db.Uuid
+  // Factura origen (misma empresa). Requerida: una NC siempre corrige una FE.
+  invoiceId   String                @map("invoice_id") @db.Uuid
+  number      Int                                        // consecutivo por empresa
+  issueDate   DateTime              @map("issue_date")
+  reason      String?
+  subtotal    Decimal               @default(0) @db.Decimal(15, 2)
+  tax         Decimal               @default(0) @db.Decimal(15, 2)
+  total       Decimal               @default(0) @db.Decimal(15, 2)
+  status      CreditDebitNoteStatus @default(DRAFT)
+  // Si true, la NC implica devolución de mercadería: restaura stock y
+  // revierte COGS de las líneas con producto. Si false (descuento/ajuste),
+  // NO toca inventario.
+  restoreInventory Boolean          @default(false) @map("restore_inventory")
+  createdById String                @map("created_by_id") @db.Uuid
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt      @map("updated_at")
+
+  company Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoice Invoice          @relation(fields: [invoiceId], references: [id])
+  lines   CreditNoteLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@index([invoiceId])
+  @@index([status])
+  @@map("credit_notes")
+}
+
+model CreditNoteLine {
+  id           String   @id @default(uuid()) @db.Uuid
+  creditNoteId String   @map("credit_note_id") @db.Uuid
+  productId    String?  @map("product_id") @db.Uuid
+  lineNo       Int      @map("line_no")
+  description  String
+  quantity     Decimal  @db.Decimal(15, 3)
+  unit         String   @default("Unid")
+  unitPrice    Decimal  @map("unit_price") @db.Decimal(15, 2)
+  taxRate      Decimal  @map("tax_rate")   @db.Decimal(5, 2)
+  taxAmount    Decimal  @map("tax_amount") @db.Decimal(15, 2)
+  subtotal     Decimal  @db.Decimal(15, 2)
+  total        Decimal  @db.Decimal(15, 2)
+  cabysCode    String?  @map("cabys_code")
+
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  product    Product?   @relation("CreditNoteLineProduct", fields: [productId], references: [id])
+
+  @@index([creditNoteId])
+  @@map("credit_note_lines")
+}
+
+model DebitNote {
+  id          String                @id @default(uuid()) @db.Uuid
+  companyId   String                @map("company_id") @db.Uuid
+  // Factura origen (misma empresa). Requerida: una ND siempre carga sobre una FE.
+  invoiceId   String                @map("invoice_id") @db.Uuid
+  number      Int                                        // consecutivo por empresa
+  issueDate   DateTime              @map("issue_date")
+  reason      String?
+  subtotal    Decimal               @default(0) @db.Decimal(15, 2)
+  tax         Decimal               @default(0) @db.Decimal(15, 2)
+  total       Decimal               @default(0) @db.Decimal(15, 2)
+  status      CreditDebitNoteStatus @default(DRAFT)
+  createdById String                @map("created_by_id") @db.Uuid
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt      @map("updated_at")
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoice Invoice         @relation(fields: [invoiceId], references: [id])
+  lines   DebitNoteLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@index([invoiceId])
+  @@index([status])
+  @@map("debit_notes")
+}
+
+model DebitNoteLine {
+  id          String   @id @default(uuid()) @db.Uuid
+  debitNoteId String   @map("debit_note_id") @db.Uuid
+  productId   String?  @map("product_id") @db.Uuid
+  lineNo      Int      @map("line_no")
+  description String
+  quantity    Decimal  @db.Decimal(15, 3)
+  unit        String   @default("Unid")
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(15, 2)
+  taxRate     Decimal  @map("tax_rate")   @db.Decimal(5, 2)
+  taxAmount   Decimal  @map("tax_amount") @db.Decimal(15, 2)
+  subtotal    Decimal  @db.Decimal(15, 2)
+  total       Decimal  @db.Decimal(15, 2)
+  cabysCode   String?  @map("cabys_code")
+
+  debitNote DebitNote @relation(fields: [debitNoteId], references: [id], onDelete: Cascade)
+  product   Product?  @relation("DebitNoteLineProduct", fields: [productId], references: [id])
+
+  @@index([debitNoteId])
+  @@map("debit_note_lines")
 }
