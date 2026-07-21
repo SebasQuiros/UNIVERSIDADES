@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CompanyMembershipsService } from '../company-memberships/company-memberships.service';
 import { ReportsService } from '../reports/reports.service';
 import { ClassSessionsOracleService } from './class-sessions-oracle.service';
+import { ringAssignments } from './class-sessions.logic';
 import {
   CreateClassSessionDto, CreateSessionGroupDto, UpdateArchetypeDto,
   StartSessionDto, CancelSessionDto, JoinClassSessionDto,
@@ -113,9 +114,10 @@ export class ClassSessionsService {
     }
 
     // Reintenta ante colisión de código (unique).
-    for (let attempt = 0; attempt < 6; attempt++) {
+    let session: Awaited<ReturnType<typeof this.prisma.classSession.create>> | null = null;
+    for (let attempt = 0; attempt < 6 && !session; attempt++) {
       try {
-        return await this.prisma.classSession.create({
+        session = await this.prisma.classSession.create({
           data: {
             exerciseId,
             teacherId: user.id,
@@ -137,7 +139,22 @@ export class ClassSessionsService {
         throw err;
       }
     }
-    throw new ConflictException('No se pudo generar un código único. Intentá de nuevo.');
+    if (!session) {
+      throw new ConflictException('No se pudo generar un código único. Intentá de nuevo.');
+    }
+
+    // La sesión REQUIERE modo GROUP + comercio B2B automático. Lo forzamos en la
+    // config del ejercicio ahora (estamos en DRAFT, antes del lobby, así que el
+    // hook de bloqueo aún no aplica). Así el profesor no tiene que recordarlo y
+    // `start` no falla luego por config faltante o incoherente — y queda alineado
+    // con `createGroupCompany`, que tolera config nula.
+    await this.prisma.exerciseConfig.upsert({
+      where:  { exerciseId },
+      create: { exerciseId, companyMode: 'GROUP', autoTransactionsBetweenCompanies: true },
+      update: { companyMode: 'GROUP', autoTransactionsBetweenCompanies: true },
+    });
+
+    return session;
   }
 
   async getForExercise(exerciseId: string, user: AuthUser) {
@@ -419,10 +436,7 @@ export class ClassSessionsService {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-    return arr.map((auditor, i) => ({
-      auditor,
-      auditee: arr[(i + 1) % arr.length],
-    }));
+    return ringAssignments(arr);
   }
 
   /** Últimas declaraciones SUBMITTED de la empresa (por los userId de sus miembros). */

@@ -1,6 +1,7 @@
 import {
   Controller, Get, Post, Param, Body, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ClassSessionsService } from './class-sessions.service';
 import { JwtAuthGuard, RolesGuard } from '../auth/guards/auth.guards';
 import { CurrentUser, Roles } from '../auth/decorators/auth.decorators';
@@ -15,9 +16,14 @@ type AuthUser = { id: string; role: string; universityId?: string | null };
 export class ClassSessionsParticipantsController {
   constructor(private readonly svc: ClassSessionsService) {}
 
+  // Throttle dedicado y estricto: el código de unión es de 6 chars sobre un
+  // alfabeto de 32 símbolos (~10⁹ combinaciones). 10 intentos/min por IP hacen
+  // la enumeración por fuerza bruta impracticable (defensa en profundidad sobre
+  // el throttle global). Solo funciona en fase LOBBY, además.
   @Post('class-sessions/join')
   @HttpCode(HttpStatus.OK)
   @Roles('STUDENT')
+  @Throttle({ medium: { limit: 10, ttl: 60000 } })
   join(@CurrentUser() user: AuthUser, @Body() dto: JoinClassSessionDto) {
     return this.svc.join(user, dto);
   }
