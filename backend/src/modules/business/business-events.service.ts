@@ -64,6 +64,9 @@ export interface RecordSaleInput extends BaseEventInput {
   total:             number;
   totalCost:         number;
   paymentType:       PaymentType;
+  /** Vencimiento de la venta a crédito (issueDate + creditDays). Se propaga
+   *  al AR record para el aging vigente/vencida. */
+  dueDate?:          Date;
 }
 
 export interface RecordPurchaseInput extends BaseEventInput {
@@ -230,6 +233,7 @@ export class BusinessEventsService {
               invoiceId:  input.invoiceId,
               customerId: input.customerId,
               total:      input.total,
+              dueDate:    input.dueDate,
             },
             tx,
           );

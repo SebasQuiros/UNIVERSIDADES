@@ -982,6 +982,8 @@ model Invoice {
   haciendaMessage       String?       @map("hacienda_message") @db.Text
   notes                 String?
   issueDate             DateTime      @map("issue_date")
+  dueDate               DateTime?     @map("due_date")
+  creditDays            Int?          @map("credit_days")
   issuedAt              DateTime?     @map("issued_at")
   createdById           String        @map("created_by_id") @db.Uuid
   createdAt             DateTime      @default(now()) @map("created_at")

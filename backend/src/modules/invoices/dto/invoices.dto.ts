@@ -70,6 +70,15 @@ export class CreateInvoiceDto {
   @IsIn(['CASH', 'CREDIT'])
   saleCondition?: string;
 
+  // Días de crédito para calcular el vencimiento de una venta a crédito.
+  // Si no viene, se usa el `creditDays` del cliente (default 0). Se computa
+  // dueDate = issueDate + creditDays días en la creación de la factura.
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(365)
+  creditDays?: number;
+
   @IsArray()
   @ArrayMinSize(1, { message: 'La factura debe tener al menos una línea' })
   @ValidateNested({ each: true })

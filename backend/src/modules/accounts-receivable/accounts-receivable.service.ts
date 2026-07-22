@@ -34,6 +34,7 @@ export class AccountsReceivableService {
       },
       select: {
         issueDate:  true,
+        dueDate:    true,
         balanceDue: true,
         clientId:   true,
       },
@@ -49,12 +50,18 @@ export class AccountsReceivableService {
       const balance = new Decimal(inv.balanceDue.toString());
       totalOutstanding = totalOutstanding.plus(balance);
 
-      const daysDiff = Math.floor(
-        (today.getTime() - inv.issueDate.getTime()) / (1000 * 60 * 60 * 24),
-      );
-      if (daysDiff > oldestDays) oldestDays = daysDiff;
+      // Vencimiento real: dueDate cuando existe, si no la fecha de emisión
+      // (fallback para facturas previas a la migración phase18).
+      const maturity = inv.dueDate ?? inv.issueDate;
+      // Días de mora contra el vencimiento, piso 0 (una factura vigente no
+      // tiene días de mora negativos).
+      const daysOverdue = Math.max(0, Math.floor(
+        (today.getTime() - maturity.getTime()) / (1000 * 60 * 60 * 24),
+      ));
+      if (daysOverdue > oldestDays) oldestDays = daysOverdue;
 
-      if (daysDiff > 30) {
+      // Vencida = hoy > dueDate; Vigente = hoy <= dueDate.
+      if (daysOverdue > 0) {
         overdueAmount = overdueAmount.plus(balance);
       } else {
         currentAmount = currentAmount.plus(balance);
@@ -103,9 +110,13 @@ export class AccountsReceivableService {
         clientMap.set(clientKey, { clientName, clientId: clientKey, invoices: [] });
       }
 
-      const daysDiff = Math.floor(
-        (today.getTime() - inv.issueDate.getTime()) / (1000 * 60 * 60 * 24),
-      );
+      // Vencimiento real: dueDate cuando existe, si no la fecha de emisión
+      // (fallback para facturas previas a la migración phase18).
+      const maturity = inv.dueDate ?? inv.issueDate;
+      // Días de mora contra el vencimiento, piso 0 (vigente => 0 días).
+      const daysDiff = Math.max(0, Math.floor(
+        (today.getTime() - maturity.getTime()) / (1000 * 60 * 60 * 24),
+      ));
 
       const paid    = new Decimal(inv.paidAmount.toString());
       const balance = new Decimal(inv.balanceDue.toString());
@@ -114,7 +125,7 @@ export class AccountsReceivableService {
         id:          inv.id,
         number:      inv.consecutiveNumber,
         date:        inv.issueDate.toISOString().split('T')[0],
-        dueDate:     inv.issueDate.toISOString().split('T')[0],
+        dueDate:     maturity.toISOString().split('T')[0],
         amount:      Number(new Decimal(inv.total.toString()).toFixed(2)),
         paid:        Number(paid.toFixed(2)),
         balance:     Number(balance.toFixed(2)),
