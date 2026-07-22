@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, BarChart, Bar, Cell,
+  RadialBarChart, RadialBar, PolarAngleAxis,
 } from 'recharts';
 import {
   Coins, CreditCard, Receipt, TrendingUp, Landmark,
@@ -31,6 +32,8 @@ interface DashboardData {
 const ACCENT = '#2563EB';
 const ACCENT_D = '#1D4ED8';
 const ACCENT_L = '#60A5FA';
+const GOLD = '#D4A017';        // acento dorado de marca (positivo / destacado)
+const SLATE = '#94A3B8';       // serie neutra (costos)
 const RED = '#DC2626';
 const INK = '#03080F';
 
@@ -127,6 +130,32 @@ function MiniStat({ label, value, icon: Icon }: { label: string; value: string |
   );
 }
 
+// ─── Tarjeta de gráfico (encabezado consistente estilo dashboard ejecutivo) ────
+function ChartCard({ title, subtitle, right, className = '', children }: {
+  title: string; subtitle?: string; right?: React.ReactNode; className?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className={`${CARD} ${className}`} style={CARD_SH}>
+      <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-1">
+        <div className="min-w-0">
+          <h3 className="text-sm font-bold text-gray-900 truncate">{title}</h3>
+          {subtitle && <p className="text-[11px] text-gray-400 mt-0.5 truncate">{subtitle}</p>}
+        </div>
+        {right && <div className="flex-shrink-0">{right}</div>}
+      </div>
+      <div className="px-3 pb-3 pt-1">{children}</div>
+    </div>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
+      <i className="w-2 h-2 rounded-[2px]" style={{ background: color }} />{label}
+    </span>
+  );
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────────
 export function ExecutiveDashboard({ companyId, compact, initialData }: { companyId?: string | null; compact?: boolean; initialData?: DashboardData | null }) {
   const [data, setData]       = useState<DashboardData | null>(initialData ?? null);
@@ -185,6 +214,20 @@ export function ExecutiveDashboard({ companyId, compact, initialData }: { compan
       });
   const hasSales = salesTrend.some((p) => p.total > 0);
 
+  // ── Datos derivados para los gráficos ejecutivos ──
+  const cxcVenc = receivables.overdue ?? 0;
+  const cxpVenc = payables.overdue ?? 0;
+  const agingData = [
+    { name: 'Por cobrar', vigente: Math.max(0, receivables.outstanding - cxcVenc), vencida: cxcVenc },
+    { name: 'Por pagar',  vigente: Math.max(0, payables.outstanding - cxpVenc),   vencida: cxpVenc },
+  ];
+  const plData = [
+    { name: 'Ingresos', value: Math.max(0, totals.totalSales),     fill: ACCENT_D },
+    { name: 'Costos',   value: Math.max(0, totals.totalPurchases), fill: SLATE },
+    { name: 'Utilidad', value: Math.max(0, totals.grossMargin),    fill: totals.grossMargin >= 0 ? GOLD : RED },
+  ];
+  const radialData = [{ name: 'Margen', value: Math.max(0, Math.min(100, Math.abs(marginPct))), fill: totals.grossMargin >= 0 ? GOLD : RED }];
+
   return (
     <div className="space-y-6 lp-in">
 
@@ -206,44 +249,116 @@ export function ExecutiveDashboard({ companyId, compact, initialData }: { compan
           b={{ label: 'Margen neto', value: `${marginPct.toFixed(1)}%` }} />
       </div>
 
-      {/* ── Total de ventas (gráfica full-width, con ejes aunque esté vacía) ── */}
-      <div className={CARD} style={CARD_SH}>
-        <div className="flex items-center justify-between px-5 pt-4 pb-2">
-          <div>
-            <h3 className="text-sm font-bold text-gray-900">Total de ventas</h3>
-            <p className="text-xs text-gray-400">Últimos 6 meses · impuestos incluidos</p>
-          </div>
-          <div className="text-right">
-            <div className="text-lg font-bold text-gray-900 font-mono tabular-nums">{fmtCRCfull(totals.totalSales)}</div>
-          </div>
-        </div>
-        <div className="px-2 pb-3">
-          <ResponsiveContainer width="100%" height={230}>
+      {/* ── Fila 1: tendencia de ventas (2/3) + gauge de margen (1/3) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <ChartCard className="lg:col-span-2" title="Ventas del período"
+          subtitle="Tendencia mensual · impuestos incluidos"
+          right={<span className="text-lg font-bold text-gray-900 font-mono tabular-nums">{fmtCRCfull(totals.totalSales)}</span>}>
+          <ResponsiveContainer width="100%" height={224}>
             <AreaChart data={trendData} margin={{ top: 8, right: 12, left: 6, bottom: 0 }}>
               <defs>
                 <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={ACCENT} stopOpacity={0.22} />
+                  <stop offset="0%" stopColor={ACCENT} stopOpacity={0.24} />
                   <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F0" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false}
-                width={44}
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: SLATE }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: SLATE }} axisLine={false} tickLine={false} width={44}
                 domain={[0, (dataMax: number) => (dataMax > 0 ? Math.ceil(dataMax) : 5)]}
                 tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `₡${v}`} />
               {hasSales && (
                 <Tooltip formatter={(v: any) => [fmtCRCfull(v), 'Ventas']}
                   contentStyle={{ borderRadius: 8, border: '1px solid #E2E8F0', fontSize: 12 }} />
               )}
-              <Area type="monotone" dataKey="total" stroke={ACCENT} strokeWidth={2.5} fill="url(#salesGrad)" dot={false} />
+              <Area type="monotone" dataKey="total" stroke={ACCENT} strokeWidth={2.5} fill="url(#salesGrad)"
+                dot={{ r: 2.5, fill: ACCENT, strokeWidth: 0 }} activeDot={{ r: 4 }} />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </ChartCard>
+
+        <ChartCard title="Margen del período" subtitle="Utilidad sobre ventas">
+          <div className="relative">
+            <ResponsiveContainer width="100%" height={176}>
+              <RadialBarChart innerRadius="72%" outerRadius="100%" data={radialData} startAngle={90} endAngle={-270}>
+                <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+                <RadialBar background={{ fill: '#EEF1F0' }} dataKey="value" cornerRadius={9} />
+              </RadialBarChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[26px] font-bold font-mono tabular-nums leading-none" style={{ color: totals.grossMargin >= 0 ? GOLD : RED }}>
+                {marginPct.toFixed(1)}%
+              </span>
+              <span className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">margen neto</span>
+            </div>
+          </div>
+          <div className="text-center pb-1">
+            <span className="text-sm font-bold font-mono tabular-nums" style={{ color: totals.grossMargin >= 0 ? ACCENT_D : RED }}>
+              {fmtCRCfull(totals.grossMargin)}
+            </span>
+            <span className="text-[11px] text-gray-400 ml-1.5">utilidad</span>
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* ── Fila 2: antigüedad de cartera + resultado + posición de IVA ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <ChartCard title="Antigüedad de cartera" subtitle="Saldos por cobrar y por pagar"
+          right={<div className="flex gap-2.5"><LegendDot color={ACCENT} label="Vigente" /><LegendDot color={RED} label="Vencida" /></div>}>
+          <ResponsiveContainer width="100%" height={158}>
+            <BarChart data={agingData} layout="vertical" margin={{ top: 4, right: 12, left: 4, bottom: 0 }} barSize={20}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F0" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: SLATE }} axisLine={false} tickLine={false}
+                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} width={72} />
+              <Tooltip formatter={(v: any, n: any) => [fmtCRCfull(v), n === 'vigente' ? 'Vigente' : 'Vencida']}
+                contentStyle={{ borderRadius: 8, border: '1px solid #E2E8F0', fontSize: 12 }} />
+              <Bar dataKey="vigente" stackId="a" fill={ACCENT} radius={[4, 0, 0, 4]} />
+              <Bar dataKey="vencida" stackId="a" fill={RED} radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Resultado del período" subtitle="Ingresos · costos · utilidad">
+          <ResponsiveContainer width="100%" height={158}>
+            <BarChart data={plData} margin={{ top: 8, right: 6, left: 6, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F0" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: SLATE }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: SLATE }} axisLine={false} tickLine={false} width={42}
+                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+              <Tooltip formatter={(v: any) => fmtCRCfull(v)}
+                contentStyle={{ borderRadius: 8, border: '1px solid #E2E8F0', fontSize: 12 }} />
+              <Bar dataKey="value" radius={[5, 5, 0, 0]}>
+                {plData.map((dp, i) => <Cell key={i} fill={dp.fill} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Posición de IVA (D-104)" subtitle="Débito vs crédito fiscal">
+          <ResponsiveContainer width="100%" height={126}>
+            <BarChart data={[{ name: 'Débito', value: tax.ivaCobrado }, { name: 'Crédito', value: tax.ivaPagado }]}
+              margin={{ top: 6, right: 6, left: 6, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F0" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: SLATE }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: SLATE }} axisLine={false} tickLine={false} width={42}
+                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
+              <Bar dataKey="value" radius={[5, 5, 0, 0]}>
+                {[ACCENT_D, ACCENT_L].map((c, i) => <Cell key={i} fill={c} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <div className={`mx-2 mt-1 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between ${
+            ivaToPay ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-700'
+          }`}>
+            <span>{ivaToPay ? 'Impuesto a pagar' : 'Saldo a favor'}</span>
+            <span className="font-bold font-mono tabular-nums">{fmtCRCfull(Math.abs(tax.ivaPosition))}</span>
+          </div>
+        </ChartCard>
       </div>
 
       {!compact && (<>
-      {/* ── Mini stats ──────────────────────────────────────────── */}
+      {/* ── Mini stats ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MiniStat label="Facturas" value={totals.invoices} icon={FileText} />
         <MiniStat label="Clientes activos" value={totals.clients} icon={Users} />
@@ -251,61 +366,35 @@ export function ExecutiveDashboard({ companyId, compact, initialData }: { compan
         <MiniStat label="Asientos contables" value={totals.journalEntries} icon={BookOpen} />
       </div>
 
-      {/* ── IVA position + recent invoices ─────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className={CARD + ' p-4'} style={CARD_SH}>
-          <h3 className="text-sm font-bold text-gray-900 mb-1">Posición de IVA (D-104)</h3>
-          <p className="text-xs text-gray-400 mb-3">Débito vs crédito fiscal</p>
-          <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={[{ name: 'Débito', value: tax.ivaCobrado }, { name: 'Crédito', value: tax.ivaPagado }]}
-              margin={{ top: 6, right: 6, left: 6, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F0" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} width={42}
-                domain={[0, (dataMax: number) => (dataMax > 0 ? Math.ceil(dataMax) : 5)]}
-                tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
-              <Bar dataKey="value" radius={[5, 5, 0, 0]}>
-                {[ACCENT_D, ACCENT_L].map((c, i) => <Cell key={i} fill={c} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <div className={`mt-3 px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between ${
-            ivaToPay ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-700'
-          }`}>
-            <span>{ivaToPay ? 'Impuesto a pagar' : 'Saldo a favor'}</span>
-            <span className="font-bold font-mono tabular-nums">{fmtCRCfull(Math.abs(tax.ivaPosition))}</span>
-          </div>
+      {/* ── Facturas recientes ── */}
+      <div className={CARD + ' overflow-hidden'} style={CARD_SH}>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-gray-900">Facturas recientes</h3>
+          <Receipt className="w-4 h-4 text-gray-300" />
         </div>
-
-        <div className={'lg:col-span-2 ' + CARD + ' overflow-hidden'} style={CARD_SH}>
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-gray-900">Facturas recientes</h3>
-            <Receipt className="w-4 h-4 text-gray-300" />
-          </div>
-          {recentInvoices.length === 0 ? (
-            <div className="px-5 py-10 text-center text-sm text-gray-400">Aún no hay facturas registradas.</div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {recentInvoices.map((inv) => (
-                <div key={inv.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/60 transition-colors">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-4 h-4 text-blue-700" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-gray-900 truncate">{inv.clientName}</div>
-                      <div className="text-xs text-gray-400 font-mono">#{inv.consecutiveNumber}</div>
-                    </div>
+        {recentInvoices.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-gray-400">Aún no hay facturas registradas.</div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {recentInvoices.map((inv) => (
+              <div key={inv.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/60 transition-colors">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-blue-700" />
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <div className="text-sm font-bold text-gray-900 font-mono tabular-nums">{fmtCRC(Number(inv.total))}</div>
-                    <StatusPill status={inv.status} />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 truncate">{inv.clientName}</div>
+                    <div className="text-xs text-gray-400 font-mono">#{inv.consecutiveNumber}</div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-sm font-bold text-gray-900 font-mono tabular-nums">{fmtCRC(Number(inv.total))}</div>
+                  <StatusPill status={inv.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       </>)}
     </div>
