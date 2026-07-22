@@ -593,7 +593,7 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [validating, setValidating]   = useState<string | null>(null);
   const [validation, setValidation]   = useState<{ invoiceId: string; result: ValidationResult } | null>(null);
-  const [form, setForm] = useState({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '' });
+  const [form, setForm] = useState({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '', saleCondition: 'CASH', creditDays: '' });
   const [lines, setLines] = useState([{ productId: '', description: '', quantity: '1', unitPrice: '', taxRate: '13', cabysCode: '' }]);
   const [query, setQuery]   = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'issued' | 'draft'>('all');
@@ -661,6 +661,8 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
       await api.post(`/api/v1/companies/${companyId}/invoices`, {
         clientId: form.clientId,
         issueDate: form.issueDate,
+        saleCondition: form.saleCondition,
+        creditDays: form.saleCondition === 'CREDIT' && form.creditDays ? Number(form.creditDays) : undefined,
         notes: form.notes || undefined,
         currency: form.currency,
         exchangeRate: form.currency === 'USD' && form.exchangeRate ? Number(form.exchangeRate) : undefined,
@@ -677,7 +679,7 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
       toast.success('Factura creada como borrador');
       setShowModal(false);
       setLines([{ productId: '', description: '', quantity: '1', unitPrice: '', taxRate: '13', cabysCode: '' }]);
-      setForm({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '' });
+      setForm({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '', saleCondition: 'CASH', creditDays: '' });
       load();
     } catch (err) { toast.error(getErrorMessage(err)); }
     finally { setSaving(false); }
@@ -1083,6 +1085,33 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
               </select>
             </div>
             <Input label="Fecha emisión" type="date" value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} />
+
+            {/* Condición de venta: contado (debita Caja) o crédito (debita CxC + vencimiento) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">Condición de venta</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([['CASH', 'Contado'], ['CREDIT', 'Crédito']] as const).map(([val, lbl]) => (
+                  <button key={val} type="button" onClick={() => setForm({ ...form, saleCondition: val })}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                      form.saleCondition === val
+                        ? 'bg-blue-600 text-white border-transparent'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-blue-300'
+                    }`}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+              {form.saleCondition === 'CREDIT' && (
+                <div className="mt-1.5">
+                  <label className="text-xs font-medium text-gray-600">Días de crédito</label>
+                  <input type="number" min="0" max="365" value={form.creditDays}
+                    onChange={(e) => setForm({ ...form, creditDays: e.target.value })}
+                    placeholder="Ej: 30 — vacío usa los del cliente"
+                    className="w-full mt-1 rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="text-[11px] text-gray-400 mt-1">A crédito debita Cuentas por cobrar; el vencimiento = fecha de emisión + días de crédito.</p>
+                </div>
+              )}
+            </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">

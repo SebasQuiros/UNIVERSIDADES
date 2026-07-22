@@ -108,7 +108,7 @@ export function StudentSidebar() {
       children: [
         { label: 'Clientes',            tab: 'clients',  slug: 'clientes' },
         { label: 'Facturas de venta',   tab: 'invoices', slug: 'facturas-venta' },
-        { label: 'Pagos recibidos',     tab: 'invoices', slug: 'pagos-recibidos', sub: 'pagos' },
+        { label: 'Pagos recibidos',     endsWith: '/cxc', slug: 'pagos-recibidos' },
         { label: 'Notas de crédito',    slug: 'notas-credito' },
         { label: 'Notas de débito',     slug: 'notas-debito' },
         { label: 'Cotizaciones',        slug: 'cotizaciones' },
