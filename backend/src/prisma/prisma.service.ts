@@ -12,6 +12,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         { emit: 'stdout', level: 'error' },
         { emit: 'stdout', level: 'warn' },
       ],
+      // Timeout de transacciones interactivas ampliado: el pooler de Supabase
+      // (us-east-2) suma latencia por round-trip y operaciones pesadas como
+      // emitir factura (asiento + inventario FIFO + COGS + espejo inter-company)
+      // superaban el default de 5s → "Transaction already closed" (500).
+      // 15s da margen amplio sin dejar conexiones colgadas de más.
+      transactionOptions: { maxWait: 10000, timeout: 15000 },
     });
   }
 

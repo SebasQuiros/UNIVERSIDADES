@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { formatDate, getErrorMessage, esc } from '@/lib/utils';
@@ -8,6 +8,9 @@ import { exportToExcel } from '@/lib/excel';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { IconTile } from '@/components/ui/IconTile';
 import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
 import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import toast from 'react-hot-toast';
@@ -17,8 +20,59 @@ import {
   X, ChevronRight, AlertCircle, Truck,
   Printer, Landmark, Upload,
   Scale, ClipboardList, ClipboardCheck, Download,
-  Lightbulb, Search,
+  Lightbulb, Search, Mail, Contact, Receipt, FileCheck2,
+  FileClock, Wallet,
 } from 'lucide-react';
+
+// ─── Brand palette (azul-noche + dorado) ──────────────────────────────────────
+const BRAND_BLUE   = '#2563EB';
+const BRAND_BLUE_D = '#1D4ED8';
+const BRAND_GOLD   = '#D4A017';
+const CARD_SHADOW  = { boxShadow: '0 4px 16px rgba(27,46,110,0.06)' };
+
+// ─── Module header (icon + title + subtitle + primary action) ──────────────────
+// Encabezado consistente para los módulos del workspace. Mantiene la identidad
+// azul-noche/dorado y deja el CTA primario alineado a la derecha.
+function ModuleHeader({
+  icon, tint = BRAND_BLUE, title, subtitle, action,
+}: {
+  icon: React.ElementType; tint?: string; title: string; subtitle: string; action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex items-start gap-3.5 min-w-0">
+        <IconTile icon={icon} tint={tint} size={46} />
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold text-gray-900 tracking-tight leading-tight">{title}</h2>
+          <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
+        </div>
+      </div>
+      {action && <div className="flex-shrink-0">{action}</div>}
+    </div>
+  );
+}
+
+// ─── Compact stat tile (KPI row) ───────────────────────────────────────────────
+// Tarjeta de KPI compacta para las filas de resumen: etiqueta, valor grande en
+// mono/tabular-nums y un IconTile a la derecha.
+function StatTile({
+  label, value, icon, tint = BRAND_BLUE, valueColor,
+}: {
+  label: string; value: string; icon: React.ElementType; tint?: string; valueColor?: string;
+}) {
+  return (
+    <div className="bg-white rounded-card border border-gray-200/70 p-4" style={CARD_SHADOW}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide truncate">{label}</p>
+          <p className="mt-2 text-2xl font-bold font-mono tabular-nums leading-none tracking-tight"
+            style={{ color: valueColor ?? '#111827' }}>{value}</p>
+        </div>
+        <IconTile icon={icon} tint={tint} size={38} />
+      </div>
+    </div>
+  );
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export interface Client  { id: string; name: string; email: string | null; identification: string | null; isActive: boolean; }
@@ -109,6 +163,7 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', identification: '', idType: '01', phone: '' });
+  const [query, setQuery] = useState('');
 
   const load = useCallback(() => {
     api.get<Client[]>(`/api/v1/companies/${companyId}/clients`)
@@ -139,10 +194,24 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
     finally { setSaving(false); }
   }
 
+  // ── KPIs derivados de la data ya cargada (sin fetches nuevos) ──
+  const withEmail = useMemo(() => clients.filter((c) => !!c.email).length, [clients]);
+  const withId    = useMemo(() => clients.filter((c) => !!c.identification).length, [clients]);
+
+  // ── Búsqueda 100% client-side sobre la lista ya cargada ──
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter((c) =>
+      c.name.toLowerCase().includes(q) ||
+      (c.email ?? '').toLowerCase().includes(q) ||
+      (c.identification ?? '').toLowerCase().includes(q));
+  }, [clients, query]);
+
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
   return (
-    <div>
+    <div className="space-y-5">
       {showModal && (
         <Modal title="Nuevo Cliente" onClose={() => setShowModal(false)}>
           <form onSubmit={handleCreate} className="space-y-4">
@@ -170,31 +239,98 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
         </Modal>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">{clients.length} cliente{clients.length !== 1 ? 's' : ''}</p>
-        {!readonly && (
+      {/* ── Encabezado de módulo ── */}
+      <ModuleHeader
+        icon={Users}
+        title="Clientes"
+        subtitle="Directorio de clientes de la empresa de práctica"
+        action={!readonly && (
           <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo cliente</Button>
         )}
+      />
+
+      {/* ── Fila de KPIs / resumen ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatTile label="Total de clientes" value={String(clients.length)} icon={Users} tint={BRAND_BLUE} />
+        <StatTile label="Con correo" value={String(withEmail)} icon={Mail} tint={BRAND_BLUE_D} />
+        <StatTile label="Con identificación" value={String(withId)} icon={Contact} tint={BRAND_GOLD} />
       </div>
 
       {clients.length === 0 ? (
-        <div className="text-center py-10">
-          <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No hay clientes aún</p>
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <Users className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title="Aún no hay clientes"
+            description="Registra tu primer cliente para poder emitir facturas de venta a su nombre."
+            action={!readonly && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo cliente</Button>
+            )}
+          />
         </div>
       ) : (
-        <div className="space-y-2">
-          {clients.map((c) => (
-            <div key={c.id} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-700 font-semibold text-sm flex-shrink-0">
-                {c.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
-                <p className="text-xs text-gray-500">{c.email ?? c.identification ?? '—'}</p>
-              </div>
+        <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+          {/* ── Barra de herramientas: buscador client-side ── */}
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por nombre, correo o identificación…"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
+              />
             </div>
-          ))}
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
+              {filtered.length} de {clients.length}
+            </span>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Sin resultados para “{query}”.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] text-gray-500 uppercase tracking-wide bg-gray-50/60 border-b border-gray-100">
+                    <th className="text-left font-semibold px-4 py-2.5">Cliente</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Correo</th>
+                    <th className="text-right font-semibold px-4 py-2.5">Identificación</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((c) => (
+                    <tr key={c.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-semibold text-gray-900 truncate">{c.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {c.email
+                          ? <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-gray-400" />{c.email}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {c.identification
+                          ? <span className="font-mono tabular-nums text-gray-600">{c.identification}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -454,10 +590,13 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
   const [saving, setSaving]     = useState(false);
   const [issuing, setIssuing]   = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [validating, setValidating]   = useState<string | null>(null);
   const [validation, setValidation]   = useState<{ invoiceId: string; result: ValidationResult } | null>(null);
-  const [form, setForm] = useState({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '' });
+  const [form, setForm] = useState({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '', saleCondition: 'CASH', creditDays: '' });
   const [lines, setLines] = useState([{ productId: '', description: '', quantity: '1', unitPrice: '', taxRate: '13', cabysCode: '' }]);
+  const [query, setQuery]   = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'issued' | 'draft'>('all');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -522,6 +661,8 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
       await api.post(`/api/v1/companies/${companyId}/invoices`, {
         clientId: form.clientId,
         issueDate: form.issueDate,
+        saleCondition: form.saleCondition,
+        creditDays: form.saleCondition === 'CREDIT' && form.creditDays ? Number(form.creditDays) : undefined,
         notes: form.notes || undefined,
         currency: form.currency,
         exchangeRate: form.currency === 'USD' && form.exchangeRate ? Number(form.exchangeRate) : undefined,
@@ -538,7 +679,7 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
       toast.success('Factura creada como borrador');
       setShowModal(false);
       setLines([{ productId: '', description: '', quantity: '1', unitPrice: '', taxRate: '13', cabysCode: '' }]);
-      setForm({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '' });
+      setForm({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '', saleCondition: 'CASH', creditDays: '' });
       load();
     } catch (err) { toast.error(getErrorMessage(err)); }
     finally { setSaving(false); }
@@ -571,6 +712,25 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
       toast.success('XML descargado correctamente');
     } catch (err) { toast.error(getErrorMessage(err)); }
     finally { setDownloadingXml(null); }
+  }
+
+  // Descarga el PDF real de la factura (el que genera el backend con pdf-lib + QR).
+  async function handleDownloadPdf(inv: Invoice) {
+    setDownloadingPdf(inv.id);
+    try {
+      const response = await api.get(
+        `/api/v1/companies/${companyId}/invoices/${inv.id}/pdf`,
+        { responseType: 'blob' },
+      );
+      const url  = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `FE-${inv.consecutiveNumber}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('PDF descargado correctamente');
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setDownloadingPdf(null); }
   }
 
   async function handleValidate(inv: Invoice) {
@@ -824,10 +984,38 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
     win.document.close();
   }
 
+  // ── Helpers de estado (reutilizan la misma semántica que la tabla) ──
+  const isIssued = (s: string) => s === 'ISSUED' || s === 'ACCEPTED';
+  const isDraftS = (s: string) => s === 'DRAFT';
+
+  // ── KPIs derivados de la data ya cargada (sin fetches nuevos) ──
+  const issuedCount = useMemo(() => invoices.filter((i) => isIssued(i.status)).length, [invoices]);
+  const draftCount  = useMemo(() => invoices.filter((i) => isDraftS(i.status)).length, [invoices]);
+  const totalBilled = useMemo(
+    () => invoices.filter((i) => isIssued(i.status)).reduce((sum, i) => sum + Number(i.total || 0), 0),
+    [invoices],
+  );
+
+  // ── Filtros 100% client-side sobre la lista ya cargada ──
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return invoices.filter((inv) => {
+      if (statusFilter === 'issued' && !isIssued(inv.status)) return false;
+      if (statusFilter === 'draft'  && !isDraftS(inv.status)) return false;
+      if (!q) return true;
+      return (
+        inv.consecutiveNumber.toLowerCase().includes(q) ||
+        inv.clientName.toLowerCase().includes(q)
+      );
+    });
+  }, [invoices, query, statusFilter]);
+
+  const fmtCRC0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
   return (
-    <div>
+    <div className="space-y-5">
       {/* ── Validation modal ─────────────────────────────────── */}
       {validation && (
         <Modal title="Validacion Hacienda v4.4" onClose={() => setValidation(null)}>
@@ -898,6 +1086,33 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
             </div>
             <Input label="Fecha emisión" type="date" value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} />
 
+            {/* Condición de venta: contado (debita Caja) o crédito (debita CxC + vencimiento) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">Condición de venta</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([['CASH', 'Contado'], ['CREDIT', 'Crédito']] as const).map(([val, lbl]) => (
+                  <button key={val} type="button" onClick={() => setForm({ ...form, saleCondition: val })}
+                    className={`px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                      form.saleCondition === val
+                        ? 'bg-blue-600 text-white border-transparent'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-blue-300'
+                    }`}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+              {form.saleCondition === 'CREDIT' && (
+                <div className="mt-1.5">
+                  <label className="text-xs font-medium text-gray-600">Días de crédito</label>
+                  <input type="number" min="0" max="365" value={form.creditDays}
+                    onChange={(e) => setForm({ ...form, creditDays: e.target.value })}
+                    placeholder="Ej: 30 — vacío usa los del cliente"
+                    className="w-full mt-1 rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="text-[11px] text-gray-400 mt-1">A crédito debita Cuentas por cobrar; el vencimiento = fecha de emisión + días de crédito.</p>
+                </div>
+              )}
+            </div>
+
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-gray-700">Líneas</label>
@@ -918,7 +1133,7 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
                     </div>
                     <input value={line.description} onChange={(e) => updateLine(i, 'description', e.target.value)}
                       placeholder="Descripción de la línea *" className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <input type="number" value={line.quantity} onChange={(e) => updateLine(i, 'quantity', e.target.value)}
                         placeholder="Cant." min="0.001" step="0.001" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       <input type="number" value={line.unitPrice} onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
@@ -927,9 +1142,13 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
                         className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
                         {[0,1,2,4,8,13].map((r) => <option key={r} value={r}>IVA {r}%</option>)}
                       </select>
-                      <input value={line.cabysCode} onChange={(e) => updateLine(i, 'cabysCode', e.target.value)}
-                        placeholder="CABYS (13d)" maxLength={13} className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
+                    {/* Selector CABYS: busca y desglosa código + descripción (Hacienda); fija también la tasa de IVA. */}
+                    <CabysSearch
+                      value={line.cabysCode}
+                      onSelect={(item: CabysItem) => setLines((prev) => prev.map((l, idx) =>
+                        idx === i ? { ...l, cabysCode: item.codigo, taxRate: String(item.impuesto) } : l))}
+                    />
                   </div>
                 ))}
               </div>
@@ -943,85 +1162,168 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
         </Modal>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">{invoices.length} factura{invoices.length !== 1 ? 's' : ''}</p>
-        {!readonly && (
+      {/* ── Encabezado de módulo ── */}
+      <ModuleHeader
+        icon={Receipt}
+        title="Facturas de venta"
+        subtitle="Emisión de comprobantes electrónicos (Hacienda v4.4)"
+        action={!readonly && (
           <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nueva factura</Button>
         )}
+      />
+
+      {/* ── Fila de KPIs / resumen ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatTile label="Facturas" value={String(invoices.length)} icon={FileText} tint={BRAND_BLUE} />
+        <StatTile label="Total facturado" value={fmtCRC0(totalBilled)} icon={Wallet} tint={BRAND_GOLD} valueColor={BRAND_BLUE_D} />
+        <StatTile label="Emitidas" value={String(issuedCount)} icon={FileCheck2} tint={BRAND_BLUE_D} />
+        <StatTile label="Borradores" value={String(draftCount)} icon={FileClock} tint="#94A3B8" />
       </div>
 
       {invoices.length === 0 ? (
-        <div className="text-center py-10">
-          <FileText className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No hay facturas aún</p>
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <Receipt className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title="Aún no hay facturas"
+            description="Crea tu primera factura de venta. Se guardará como borrador y podrás emitirla cuando esté lista."
+            action={!readonly && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nueva factura</Button>
+            )}
+          />
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-              <th className="text-left pb-3">Número</th>
-              <th className="text-left pb-3">Cliente</th>
-              <th className="text-left pb-3">Fecha</th>
-              <th className="text-right pb-3">Total</th>
-              <th className="text-right pb-3">Estado</th>
-              <th className="pb-3"></th>
-            </tr></thead>
-            <tbody className="divide-y divide-gray-100">
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-gray-50">
-                  <td className="py-3 font-mono text-xs text-blue-700">{inv.consecutiveNumber}</td>
-                  <td className="py-3 text-gray-700">{inv.clientName}</td>
-                  <td className="py-3 text-gray-500">{formatDate(inv.issueDate)}</td>
-                  <td className="py-3 text-right text-gray-700 font-medium">
-                    ₡{Number(inv.total).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3 text-right">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      inv.status === 'ACCEPTED' || inv.status === 'ISSUED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                      inv.status === 'DRAFT'    ? 'bg-gray-100 text-gray-600 border border-gray-200' :
-                      'bg-red-50 text-red-700 border border-red-200'
-                    }`}>{inv.status === 'DRAFT' ? 'Borrador' : inv.status === 'ACCEPTED' || inv.status === 'ISSUED' ? 'Emitida' : inv.status}</span>
-                  </td>
-                  <td className="py-3 text-right">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => handlePrintInvoice(inv)} title="Imprimir / PDF"
-                        className="p-1.5 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Printer className="w-3.5 h-3.5" />
-                      </button>
-                      {(inv.status === 'ISSUED' || inv.status === 'ACCEPTED') && (
-                        <>
-                          <button
-                            onClick={() => handleDownloadXml(inv)}
-                            disabled={downloadingXml === inv.id}
-                            title="Descargar XML Hacienda v4.4"
-                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors disabled:opacity-40">
-                            {downloadingXml === inv.id
-                              ? <Spinner />
-                              : <Download className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            onClick={() => handleValidate(inv)}
-                            disabled={validating === inv.id}
-                            title="Validar formato Hacienda"
-                            className="p-1.5 text-gray-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-40">
-                            {validating === inv.id
-                              ? <Spinner />
-                              : <ClipboardCheck className="w-3.5 h-3.5" />}
-                          </button>
-                        </>
-                      )}
-                      {!readonly && inv.status === 'DRAFT' && (
-                        <Button size="sm" variant="secondary" onClick={() => handleIssue(inv.id)}
-                          loading={issuing === inv.id}>
-                          <Send className="w-3 h-3" /> Emitir
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+        <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+          {/* ── Barra de herramientas: buscador + filtro de estado (client-side) ── */}
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por número o cliente…"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
+              />
+            </div>
+            <div className="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50 p-0.5">
+              {([
+                { key: 'all',    label: 'Todas'      },
+                { key: 'issued', label: 'Emitidas'   },
+                { key: 'draft',  label: 'Borradores' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setStatusFilter(opt.key)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                    statusFilter === opt.key
+                      ? 'bg-white text-blue-700 shadow-sm border border-gray-200'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}>
+                  {opt.label}
+                </button>
               ))}
-            </tbody>
-          </table>
+            </div>
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
+              {filtered.length} de {invoices.length}
+            </span>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Sin facturas que coincidan con el filtro.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] text-gray-500 uppercase tracking-wide bg-gray-50/60 border-b border-gray-100">
+                    <th className="text-left font-semibold px-4 py-2.5">Número</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Cliente</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Fecha</th>
+                    <th className="text-right font-semibold px-4 py-2.5">Total</th>
+                    <th className="text-center font-semibold px-4 py-2.5">Estado</th>
+                    <th className="text-right font-semibold px-4 py-2.5">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((inv) => (
+                    <tr key={inv.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            <FileText className="w-4 h-4 text-blue-700" />
+                          </div>
+                          <span className="font-mono text-xs font-semibold text-blue-700">{inv.consecutiveNumber}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">{inv.clientName}</td>
+                      <td className="px-4 py-3 text-gray-500">{formatDate(inv.issueDate)}</td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-gray-900">
+                        ₡{Number(inv.total).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {isIssued(inv.status)
+                          ? <Badge variant="blue">Emitida</Badge>
+                          : isDraftS(inv.status)
+                            ? <Badge variant="slate">Borrador</Badge>
+                            : <Badge variant="red">{inv.status}</Badge>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          <button onClick={() => handlePrintInvoice(inv)} title="Imprimir / PDF"
+                            className="p-1.5 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+                            <Printer className="w-3.5 h-3.5" />
+                          </button>
+                          {(inv.status === 'ISSUED' || inv.status === 'ACCEPTED') && (
+                            <>
+                              <button
+                                onClick={() => handleDownloadXml(inv)}
+                                disabled={downloadingXml === inv.id}
+                                title="Descargar XML Hacienda v4.4"
+                                className="p-1.5 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40">
+                                {downloadingXml === inv.id
+                                  ? <Spinner />
+                                  : <Download className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                onClick={() => handleDownloadPdf(inv)}
+                                disabled={downloadingPdf === inv.id}
+                                title="Descargar factura en PDF"
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40">
+                                {downloadingPdf === inv.id
+                                  ? <Spinner />
+                                  : <FileText className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                onClick={() => handleValidate(inv)}
+                                disabled={validating === inv.id}
+                                title="Validar formato Hacienda"
+                                className="p-1.5 text-gray-400 hover:text-gold-900 hover:bg-gold-50 rounded-lg transition-colors disabled:opacity-40">
+                                {validating === inv.id
+                                  ? <Spinner />
+                                  : <ClipboardCheck className="w-3.5 h-3.5" />}
+                              </button>
+                            </>
+                          )}
+                          {!readonly && inv.status === 'DRAFT' && (
+                            <Button size="sm" variant="secondary" onClick={() => handleIssue(inv.id)}
+                              loading={issuing === inv.id}>
+                              <Send className="w-3 h-3" /> Emitir
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -129,6 +129,18 @@ export class InvoicesService {
 
     const total = subtotal.plus(tax);
 
+    // ── Vencimiento por días de crédito ──────────────────────────
+    // creditDays: lo que mande el DTO, si no el del cliente, si no 0.
+    // Para CRÉDITO, dueDate = issueDate + creditDays días. Para CONTADO,
+    // dueDate = issueDate (vence el mismo día — no genera CxC de todos modos).
+    const issueDate      = new Date(dto.issueDate);
+    const saleCondition  = (dto.saleCondition as any) ?? 'CASH';
+    const creditDays     = dto.creditDays ?? client.creditDays ?? 0;
+    const dueDate        = new Date(issueDate);
+    if (saleCondition === 'CREDIT') {
+      dueDate.setDate(dueDate.getDate() + creditDays);
+    }
+
     return this.prisma.$transaction(async (tx) => {
       // ── Atomic consecutive number — same pattern as journal_sequences ─────
       // INSERT ... ON CONFLICT DO UPDATE ensures a single row per company and
@@ -155,7 +167,9 @@ export class InvoicesService {
           consecutiveNumber,
           status:            'DRAFT',
           haciendaStatus:    'PENDING',
-          issueDate:         new Date(dto.issueDate),
+          issueDate,
+          dueDate,
+          creditDays,
           subtotal,
           tax,
           total,
@@ -164,7 +178,7 @@ export class InvoicesService {
           // Persist currency / FX / sale condition cuando vienen del cliente.
           currency:          dto.currency      ?? 'CRC',
           exchangeRate:      dto.exchangeRate  ?? 1,
-          saleCondition:     (dto.saleCondition as any) ?? 'CASH',
+          saleCondition,
         },
       });
 
@@ -516,6 +530,9 @@ export class InvoicesService {
           totalCost:         totalCost.toNumber(),
           paymentType:       invoice.saleCondition === 'CASH' ? 'CASH' : 'CREDIT',
           date:              invoice.issueDate,
+          // Vencimiento real de la venta a crédito → viaja hasta el AR record
+          // para que el aging use este dueDate y no la fecha de emisión.
+          dueDate:           invoice.dueDate ?? undefined,
         });
 
         // ── Cimiento A (FASE 2a) — outbox del espejo inter-company ──────
