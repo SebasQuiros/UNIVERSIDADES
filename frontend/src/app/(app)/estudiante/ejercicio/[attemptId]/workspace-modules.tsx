@@ -454,6 +454,7 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
   const [saving, setSaving]     = useState(false);
   const [issuing, setIssuing]   = useState<string | null>(null);
   const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [validating, setValidating]   = useState<string | null>(null);
   const [validation, setValidation]   = useState<{ invoiceId: string; result: ValidationResult } | null>(null);
   const [form, setForm] = useState({ clientId: '', issueDate: new Date().toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '' });
@@ -571,6 +572,25 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
       toast.success('XML descargado correctamente');
     } catch (err) { toast.error(getErrorMessage(err)); }
     finally { setDownloadingXml(null); }
+  }
+
+  // Descarga el PDF real de la factura (el que genera el backend con pdf-lib + QR).
+  async function handleDownloadPdf(inv: Invoice) {
+    setDownloadingPdf(inv.id);
+    try {
+      const response = await api.get(
+        `/api/v1/companies/${companyId}/invoices/${inv.id}/pdf`,
+        { responseType: 'blob' },
+      );
+      const url  = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `FE-${inv.consecutiveNumber}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('PDF descargado correctamente');
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setDownloadingPdf(null); }
   }
 
   async function handleValidate(inv: Invoice) {
@@ -918,7 +938,7 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
                     </div>
                     <input value={line.description} onChange={(e) => updateLine(i, 'description', e.target.value)}
                       placeholder="Descripción de la línea *" className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <input type="number" value={line.quantity} onChange={(e) => updateLine(i, 'quantity', e.target.value)}
                         placeholder="Cant." min="0.001" step="0.001" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       <input type="number" value={line.unitPrice} onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
@@ -927,9 +947,13 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
                         className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
                         {[0,1,2,4,8,13].map((r) => <option key={r} value={r}>IVA {r}%</option>)}
                       </select>
-                      <input value={line.cabysCode} onChange={(e) => updateLine(i, 'cabysCode', e.target.value)}
-                        placeholder="CABYS (13d)" maxLength={13} className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
+                    {/* Selector CABYS: busca y desglosa código + descripción (Hacienda); fija también la tasa de IVA. */}
+                    <CabysSearch
+                      value={line.cabysCode}
+                      onSelect={(item: CabysItem) => setLines((prev) => prev.map((l, idx) =>
+                        idx === i ? { ...l, cabysCode: item.codigo, taxRate: String(item.impuesto) } : l))}
+                    />
                   </div>
                 ))}
               </div>
@@ -998,6 +1022,15 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
                             {downloadingXml === inv.id
                               ? <Spinner />
                               : <Download className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={() => handleDownloadPdf(inv)}
+                            disabled={downloadingPdf === inv.id}
+                            title="Descargar factura en PDF"
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40">
+                            {downloadingPdf === inv.id
+                              ? <Spinner />
+                              : <FileText className="w-3.5 h-3.5" />}
                           </button>
                           <button
                             onClick={() => handleValidate(inv)}
