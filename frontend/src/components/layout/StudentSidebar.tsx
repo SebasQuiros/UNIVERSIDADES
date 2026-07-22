@@ -196,15 +196,15 @@ export function StudentSidebar() {
     { key: 'd-pen',  label: 'Pendientes de calificar', icon: ClipboardCheck,  href: '/profesor/pendientes', path: '/profesor/pendientes', badge: pending },
   ];
   const CONTADOR_GROUPS: Group[] = [
-    { key: 'c-ing', label: 'Ventas y cobros', icon: Coins, children: [
+    { key: 'c-ing', label: 'Ciclo de ingresos', icon: Coins, children: [
       { label: 'Clientes',          tab: 'clients' },
-      { label: 'Facturas de venta', tab: 'invoices' },
+      { label: 'Facturas emitidas', tab: 'invoices' },
     ]},
-    { key: 'c-gas', label: 'Compras y pagos', icon: Wallet, children: [
+    { key: 'c-gas', label: 'Ciclo de egresos', icon: Wallet, children: [
       { label: 'Proveedores', tab: 'suppliers' },
     ]},
-    { key: 'c-inv', label: 'Existencias', icon: Package, children: [
-      { label: 'Productos', tab: 'products' },
+    { key: 'c-inv', label: 'Inventario', icon: Package, children: [
+      { label: 'Catálogo de productos', tab: 'products' },
     ]},
     { key: 'c-ban', label: 'Tesorería', icon: Landmark, children: [
       { label: 'Bancos y cajas', tab: 'bank' },
