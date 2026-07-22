@@ -73,6 +73,15 @@ function SplitKpi({
         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">{label}</span>
       </div>
       <div className="mt-3 text-2xl font-bold text-gray-900 font-mono tabular-nums leading-none tracking-tight">{fmtCRCfull(total)}</div>
+      {/* Barra de composición vigente/vencida (mini-viz tipo Power BI) */}
+      {(a.value + b.value) > 0 ? (
+        <div className="mt-3 flex h-2 rounded-full overflow-hidden bg-gray-100">
+          <div style={{ width: `${(a.value / (a.value + b.value)) * 100}%`, background: a.color }} />
+          <div style={{ width: `${(b.value / (a.value + b.value)) * 100}%`, background: b.color }} />
+        </div>
+      ) : (
+        <div className="mt-3 h-2 rounded-full bg-gray-100" />
+      )}
       <div className="mt-3 grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
         {[a, b].map((r, i) => (
           <div key={i}>
@@ -88,29 +97,80 @@ function SplitKpi({
   );
 }
 
-// ─── KPI simple (total + 2 sub-datos) ──────────────────────────────────────────
-function DualKpi({
-  label, icon: Icon, total, totalColor, a, b,
-}: {
-  label: string; icon: React.ElementType; total: number; totalColor?: string;
-  a: { label: string; value: string }; b: { label: string; value: string };
+// ─── KPI de IVA (total + mini-barras débito/crédito) ───────────────────────────
+function IvaKpi({ label, total, totalColor, debito, credito }: {
+  label: string; total: number; totalColor?: string; debito: number; credito: number;
 }) {
+  const max = Math.max(debito, credito, 1);
+  const rows = [
+    { l: 'Débito fiscal',  v: debito,  c: ACCENT_D },
+    { l: 'Crédito fiscal', v: credito, c: ACCENT_L },
+  ];
   return (
     <div className={CARD + ' p-4'} style={CARD_SH}>
       <div className="flex items-center gap-2">
         <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${ACCENT}18` }}>
-          <Icon style={{ color: ACCENT, width: 14, height: 14 }} />
+          <Landmark style={{ color: ACCENT, width: 14, height: 14 }} />
         </span>
         <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">{label}</span>
       </div>
       <div className="mt-3 text-2xl font-bold font-mono tabular-nums leading-none tracking-tight" style={{ color: totalColor ?? '#111827' }}>{fmtCRCfull(total)}</div>
-      <div className="mt-3 grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
-        {[a, b].map((r, i) => (
+      <div className="mt-3 space-y-2 pt-3 border-t border-gray-100">
+        {rows.map((r, i) => (
           <div key={i}>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-mono">{r.label}</p>
-            <p className="text-[13px] font-bold text-gray-800 font-mono tabular-nums mt-1">{r.value}</p>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="text-gray-400 uppercase tracking-wide font-mono">{r.l}</span>
+              <span className="font-bold text-gray-800 font-mono tabular-nums">{fmtCRCfull(r.v)}</span>
+            </div>
+            <div className="mt-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${(r.v / max) * 100}%`, background: r.c }} />
+            </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── KPI de utilidad (total + sparkline de tendencia + margen) ─────────────────
+function MarginKpi({ label, total, totalColor, ingresos, margenPct, trend }: {
+  label: string; total: number; totalColor?: string; ingresos: number; margenPct: number;
+  trend: Array<{ label: string; total: number }>;
+}) {
+  const hasTrend = trend.some((p) => p.total > 0);
+  return (
+    <div className={CARD + ' p-4'} style={CARD_SH}>
+      <div className="flex items-center gap-2">
+        <span className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${ACCENT}18` }}>
+          <TrendingUp style={{ color: ACCENT, width: 14, height: 14 }} />
+        </span>
+        <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">{label}</span>
+      </div>
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <div className="text-2xl font-bold font-mono tabular-nums leading-none tracking-tight" style={{ color: totalColor ?? '#111827' }}>{fmtCRCfull(total)}</div>
+        <div className="w-20 h-9 flex-shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={trend} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={GOLD} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={GOLD} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="total" stroke={hasTrend ? GOLD : '#CBD5E1'} strokeWidth={2} fill="url(#sparkGrad)" dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+        <div>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide font-mono">Ingresos</p>
+          <p className="text-[13px] font-bold text-gray-800 font-mono tabular-nums mt-1">{fmtCRCfull(ingresos)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide font-mono">Margen neto</p>
+          <p className="text-[13px] font-bold font-mono tabular-nums mt-1" style={{ color: margenPct >= 0 ? ACCENT_D : RED }}>{margenPct.toFixed(1)}%</p>
+        </div>
       </div>
     </div>
   );
@@ -239,14 +299,12 @@ export function ExecutiveDashboard({ companyId, compact, initialData }: { compan
         <SplitKpi label="Cuentas por pagar" icon={CreditCard} total={payables.outstanding}
           a={{ label: 'Vigentes', value: payables.outstanding - (payables.overdue ?? 0), docs: payables.count - (payables.overdueCount ?? 0), color: ACCENT }}
           b={{ label: 'Vencidas', value: payables.overdue ?? 0, docs: payables.overdueCount ?? 0, color: RED }} />
-        <DualKpi label={ivaToPay ? 'IVA por pagar · D-104' : 'IVA a favor · D-104'} icon={Landmark}
-          total={Math.abs(tax.ivaPosition)}
-          a={{ label: 'Débito fiscal', value: fmtCRCfull(tax.ivaCobrado) }}
-          b={{ label: 'Crédito fiscal', value: fmtCRCfull(tax.ivaPagado) }} />
-        <DualKpi label="Utilidad del período" icon={TrendingUp}
+        <IvaKpi label={ivaToPay ? 'IVA por pagar · D-104' : 'IVA a favor · D-104'}
+          total={Math.abs(tax.ivaPosition)} totalColor={ivaToPay ? RED : ACCENT_D}
+          debito={tax.ivaCobrado} credito={tax.ivaPagado} />
+        <MarginKpi label="Utilidad del período"
           total={totals.grossMargin} totalColor={totals.grossMargin >= 0 ? ACCENT_D : RED}
-          a={{ label: 'Ingresos', value: fmtCRCfull(totals.totalSales) }}
-          b={{ label: 'Margen neto', value: `${marginPct.toFixed(1)}%` }} />
+          ingresos={totals.totalSales} margenPct={marginPct} trend={trendData} />
       </div>
 
       {/* ── Fila 1: tendencia de ventas (2/3) + gauge de margen (1/3) ── */}
