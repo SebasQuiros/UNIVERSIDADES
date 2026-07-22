@@ -112,6 +112,10 @@ export default function D104Page() {
   const router = useRouter();
   const params = useSearchParams();
   const existingId = params.get('id');
+  // companyId: se pasa desde la Sesión de Aula GROUP para anclar la declaración a
+  // la empresa del grupo (cierra la fuga del snapshot de auditoría). En el portal
+  // general no viene → la declaración queda anclada solo al usuario (histórico).
+  const companyId = params.get('companyId');
 
   const now = new Date();
   const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -181,7 +185,7 @@ export default function D104Page() {
         await api.patch(`/api/v1/tax-declarations/${declId}`, { formData });
       } else {
         const { data } = await api.post<any>('/api/v1/tax-declarations', {
-          type: 'D104_IVA', period, formData,
+          type: 'D104_IVA', period, formData, ...(companyId ? { companyId } : {}),
         });
         setDeclId(data.id);
       }
@@ -228,7 +232,7 @@ export default function D104Page() {
 
       if (!id) {
         const { data } = await api.post<any>('/api/v1/tax-declarations', {
-          type: 'D104_IVA', period, formData,
+          type: 'D104_IVA', period, formData, ...(companyId ? { companyId } : {}),
         });
         id = data.id;
         setDeclId(id);

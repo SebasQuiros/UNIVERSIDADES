@@ -116,6 +116,10 @@ export default function D101Page() {
   const router = useRouter();
   const params = useSearchParams();
   const existingId = params.get('id');
+  // companyId: se pasa desde la Sesión de Aula GROUP para anclar la declaración a
+  // la empresa del grupo (cierra la fuga del snapshot de auditoría). En el portal
+  // general no viene → la declaración queda anclada solo al usuario (histórico).
+  const companyId = params.get('companyId');
 
   const [step, setStep]     = useState(0);
   const [period, setPeriod] = useState('2025-2026');
@@ -183,7 +187,7 @@ export default function D101Page() {
         await api.patch(`/api/v1/tax-declarations/${declId}`, { formData });
       } else {
         const { data } = await api.post<any>('/api/v1/tax-declarations', {
-          type: 'D101_RENTA', period, formData,
+          type: 'D101_RENTA', period, formData, ...(companyId ? { companyId } : {}),
         });
         setDeclId(data.id);
       }
@@ -224,7 +228,7 @@ export default function D101Page() {
       const formData = toNumeric(form);
       if (!id) {
         const { data } = await api.post<any>('/api/v1/tax-declarations', {
-          type: 'D101_RENTA', period, formData,
+          type: 'D101_RENTA', period, formData, ...(companyId ? { companyId } : {}),
         });
         id = data.id;
         setDeclId(id);

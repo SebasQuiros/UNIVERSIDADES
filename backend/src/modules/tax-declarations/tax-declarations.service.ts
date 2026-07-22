@@ -2,7 +2,7 @@ import {
   Injectable, Inject, NotFoundException, ForbiddenException, BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { TaxDeclarationType, TaxDeclarationStatus } from '@prisma/client';
+import { TaxDeclarationType, TaxDeclarationStatus, ClassSessionStatus } from '@prisma/client';
 import { CreateTaxDeclarationDto, SubmitTaxDeclarationDto } from './dto/tax-declarations.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
@@ -64,16 +64,48 @@ export class TaxDeclarationsService {
   // ── Crear borrador ────────────────────────────────────────────────
   async create(userId: string, dto: CreateTaxDeclarationDto) {
     const result = this.calculate(dto.type, dto.formData ?? {});
+    const companyId = await this.resolveDeclarationCompany(userId, dto.companyId);
     return this.prisma.taxDeclaration.create({
       data: {
         userId,
-        type:     dto.type,
-        period:   dto.period,
-        status:   TaxDeclarationStatus.DRAFT,
-        formData: (dto.formData ?? {}) as any,
-        result:   result as any,
+        companyId,
+        type:      dto.type,
+        period:    dto.period,
+        status:    TaxDeclarationStatus.DRAFT,
+        formData:  (dto.formData ?? {}) as any,
+        result:    result as any,
       },
     });
+  }
+
+  /**
+   * Empresa a la que pertenece la declaración.
+   *   - Si viene `companyId` explícito (frontend de la Sesión de Aula pasa el de
+   *     la empresa del grupo), verificamos acceso y lo usamos.
+   *   - Si NO viene, salvaguarda: si el usuario es miembro de EXACTAMENTE una
+   *     empresa GROUP cuya sesión está operando/tributando, anclamos ahí
+   *     automáticamente. Sin esta red, una D-104 presentada desde el portal
+   *     general (sidebar) o un borrador de EN_CURSO quedaría sin anclar y el
+   *     oráculo la vería como no presentada → falso `iva_subdeclarado` que hunde
+   *     la nota. Con 0 o varias sesiones activas queda sin anclar (flujo histórico).
+   */
+  private async resolveDeclarationCompany(
+    userId: string,
+    explicitCompanyId?: string,
+  ): Promise<string | null> {
+    if (explicitCompanyId) {
+      await assertCompanyAccess(this.prisma, explicitCompanyId, userId, { redis: this.redis });
+      return explicitCompanyId;
+    }
+    const activeGroups = await this.prisma.classSessionCompany.findMany({
+      where: {
+        classSession: { status: { in: [ClassSessionStatus.EN_CURSO, ClassSessionStatus.TRIBUTACION] } },
+        company:      { memberships: { some: { userId } } },
+      },
+      select: { companyId: true },
+      take:   2,
+    });
+    return activeGroups.length === 1 ? activeGroups[0].companyId : null;
   }
 
   // ── Actualizar borrador ───────────────────────────────────────────

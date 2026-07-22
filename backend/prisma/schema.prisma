@@ -601,6 +601,7 @@ model Company {
   productCategories  ProductCategory[]
   creditNotes        CreditNote[]
   debitNotes         DebitNote[]
+  taxDeclarations    TaxDeclaration[]
 
   @@index([studentId])
   @@index([exerciseId])
@@ -1610,6 +1611,11 @@ enum TaxDeclarationStatus {
 model TaxDeclaration {
   id          String               @id @default(uuid()) @db.Uuid
   userId      String               @map("user_id") @db.Uuid
+  // Empresa a la que pertenece la declaración. NULL = flujo histórico del portal
+  // general (anclado solo a userId). En Sesión de Aula GROUP se ancla a la empresa
+  // del grupo para que el snapshot de auditoría no mezcle declaraciones de otras
+  // empresas del mismo estudiante (práctica, ejercicios individuales).
+  companyId   String?              @map("company_id") @db.Uuid
   type        TaxDeclarationType
   period      String               // "2026-03" para D-104 | "2025-2026" para D-101
   status      TaxDeclarationStatus @default(DRAFT)
@@ -1621,9 +1627,11 @@ model TaxDeclaration {
   updatedAt   DateTime             @updatedAt      @map("updated_at")
 
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
   attachments TaxAttachment[]
 
   @@index([userId])
+  @@index([companyId])
   @@index([type])
   @@index([period])
   @@map("tax_declarations")

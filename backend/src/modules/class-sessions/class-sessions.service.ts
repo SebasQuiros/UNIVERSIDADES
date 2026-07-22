@@ -255,10 +255,24 @@ export class ClassSessionsService {
     if (session.status !== ClassSessionStatus.LOBBY) {
       throw new ConflictException('Solo se puede expulsar durante el lobby.');
     }
-    const deleted = await this.prisma.classSessionParticipant.deleteMany({
-      where: { id: participantId, classSessionId: id },
+    const participant = await this.prisma.classSessionParticipant.findFirst({
+      where:  { id: participantId, classSessionId: id },
+      select: { id: true, studentId: true, companyId: true },
     });
-    if (deleted.count === 0) throw new NotFoundException('Participante no encontrado.');
+    if (!participant) throw new NotFoundException('Participante no encontrado.');
+
+    // Borrado atómico: sacar al estudiante del participante Y de la membresía de
+    // la empresa del grupo. Si solo se borra el participante, la CompanyMembership
+    // queda huérfana → el expulsado conserva acceso a los libros del grupo (el
+    // guard concede acceso GROUP vía membership) y seguiría siendo calificado.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.classSessionParticipant.delete({ where: { id: participant.id } });
+      if (participant.companyId) {
+        await tx.companyMembership.deleteMany({
+          where: { companyId: participant.companyId, userId: participant.studentId },
+        });
+      }
+    });
     return { ok: true };
   }
 
@@ -291,16 +305,31 @@ export class ClassSessionsService {
       throw new BadRequestException('No hay grupos creados.');
     }
     if (!dto.force) {
-      const counts = await this.prisma.classSessionParticipant.groupBy({
-        by: ['companyId'],
-        where: { classSessionId: id, companyId: { not: null } },
-        _count: true,
-      });
-      const small = counts.filter(c => c._count < session.minGroupSize);
+      // Comparamos contra TODOS los grupos, no solo los que ya tienen algún
+      // participante: el groupBy omite las empresas con 0 participantes, así que
+      // un grupo vacío nunca se marcaba como pequeño y la sesión arrancaba con
+      // grupos-cáscara (que luego rompen el anillo de auditoría).
+      const [groups, counts] = await Promise.all([
+        this.prisma.classSessionCompany.findMany({
+          where:  { classSessionId: id },
+          select: { companyId: true },
+        }),
+        this.prisma.classSessionParticipant.groupBy({
+          by: ['companyId'],
+          where: { classSessionId: id, companyId: { not: null } },
+          _count: true,
+        }),
+      ]);
+      const countByCompany = new Map<string, number>(
+        counts.map(c => [c.companyId as string, c._count as number]),
+      );
+      const small = groups.filter(
+        g => (countByCompany.get(g.companyId) ?? 0) < session.minGroupSize,
+      );
       if (small.length > 0) {
         throw new BadRequestException(
-          `Hay ${small.length} grupo(s) por debajo del mínimo de ${session.minGroupSize}. ` +
-          'Reasigná o arrancá con force=true.',
+          `Hay ${small.length} grupo(s) por debajo del mínimo de ${session.minGroupSize} ` +
+          '(incluye grupos vacíos). Reasigná o arrancá con force=true.',
         );
       }
     }
@@ -399,12 +428,28 @@ export class ClassSessionsService {
     }
 
     // 2) Crea las asignaciones de auditoría (derangement cíclico) si no existen.
+    //    Solo entran al anillo las empresas CON miembros: una empresa vacía (grupo
+    //    sin participantes, p.ej. si el profe arrancó con force) no puede auditar
+    //    ni ser auditada de forma significativa y desbalancearía el derangement
+    //    (una empresa real quedaría sin auditor y otra auditaría una cáscara).
+    const memberCounts = await this.prisma.companyMembership.groupBy({
+      by: ['companyId'],
+      where: { companyId: { in: companies.map(c => c.companyId) } },
+      _count: true,
+    });
+    const populated = new Set(
+      memberCounts.filter(m => m._count > 0).map(m => m.companyId),
+    );
+    const ringCompanyIds = companies
+      .map(c => c.companyId)
+      .filter(cid => populated.has(cid));
+
     const existingAssignments = await this.prisma.classSessionAuditAssignment.count({
       where: { classSessionId: id },
     });
     let assignments = existingAssignments;
-    if (existingAssignments === 0 && companies.length >= 2) {
-      const ring = this.buildDerangement(companies.map(c => c.companyId));
+    if (existingAssignments === 0 && ringCompanyIds.length >= 2) {
+      const ring = this.buildDerangement(ringCompanyIds);
       await this.prisma.classSessionAuditAssignment.createMany({
         data: ring.map(pair => ({
           classSessionId:   id,
@@ -439,16 +484,19 @@ export class ClassSessionsService {
     return ringAssignments(arr);
   }
 
-  /** Últimas declaraciones SUBMITTED de la empresa (por los userId de sus miembros). */
+  /**
+   * Últimas declaraciones SUBMITTED de la empresa, ancladas por companyId.
+   *
+   * El frontend de la Sesión de Aula (fase TRIBUTACION) enlaza a las páginas D-10x
+   * pasando el companyId del grupo, y `TaxDeclarationsService.create` lo ancla
+   * (fase 18). Escopamos por companyId — NO por los userId de los miembros — para
+   * que el snapshot no mezcle declaraciones de OTRAS empresas del mismo estudiante
+   * (práctica, ejercicios individuales). Esta fuente alimenta el oráculo
+   * (readReportedDebito D-104 / D-101), por lo que debe ser exactamente esta empresa.
+   */
   private async collectTaxDeclarations(companyId: string) {
-    const members = await this.prisma.companyMembership.findMany({
-      where: { companyId }, select: { userId: true },
-    });
-    const memberIds = members.map(m => m.userId);
-    if (memberIds.length === 0) return { declaraciones: [], nota: 'La empresa no tiene miembros.' };
-
     const decls = await this.prisma.taxDeclaration.findMany({
-      where:   { userId: { in: memberIds }, status: 'SUBMITTED' },
+      where:   { companyId, status: 'SUBMITTED' },
       orderBy: { submittedAt: 'desc' },
       select:  { type: true, period: true, result: true, referenceNo: true, submittedAt: true },
     });
@@ -571,11 +619,20 @@ export class ClassSessionsService {
 
   async join(user: AuthUser, dto: JoinClassSessionDto) {
     const session = await this.prisma.classSession.findUnique({
-      where: { code: dto.code.toUpperCase() },
+      where:   { code: dto.code.toUpperCase() },
+      include: { exercise: { select: { course: { select: { universityId: true } } } } },
     });
     if (!session) throw new NotFoundException('Código inválido.');
     if (session.status !== ClassSessionStatus.LOBBY) {
       throw new ConflictException('La sesión ya no admite nuevos participantes.');
+    }
+    // Aislamiento multi-tenant: el código de unión no es un secreto perfecto
+    // (6 chars), así que validamos que el estudiante pertenezca a la universidad
+    // de la sesión. Sin esto, un alumno de otra universidad podría colarse por
+    // código y terminar comerciando/auditando en un aula ajena.
+    const sessionUniversityId = session.exercise?.course?.universityId ?? null;
+    if (user.universityId && sessionUniversityId && user.universityId !== sessionUniversityId) {
+      throw new ForbiddenException('Esta sesión de aula pertenece a otra universidad.');
     }
     // Idempotente: si ya se unió, devuelve el existente.
     const participant = await this.prisma.classSessionParticipant.upsert({

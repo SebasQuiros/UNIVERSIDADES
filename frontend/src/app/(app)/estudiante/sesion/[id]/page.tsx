@@ -319,6 +319,13 @@ function MiEmpresaPhase({ me, waitingToStart }: { me: MeResponse; waitingToStart
 }
 
 // ── TRIBUTACIÓN ──────────────────────────────────────────────────────────────
+const DECLARACIONES = [
+  { code: 'd104', label: 'D-104 IVA' },
+  { code: 'd101', label: 'D-101 Renta' },
+  { code: 'd103', label: 'D-103 Retenciones' },
+  { code: 'd115', label: 'D-115 Dividendos' },
+] as const;
+
 function TributacionPhase({ me }: { me: MeResponse }) {
   return (
     <div className="flex flex-col gap-5">
@@ -334,6 +341,28 @@ function TributacionPhase({ me }: { me: MeResponse }) {
           </p>
         </div>
       </div>
+      {/* Enlaces a las declaraciones ANCLADAS a la empresa del grupo (companyId):
+          así lo que presente el equipo entra al snapshot de auditoría de ESTA
+          empresa y no se mezcla con otras declaraciones del estudiante. */}
+      {me.companyId && (
+        <div className="rounded-card border border-gray-100 bg-white p-5 shadow-card">
+          <p className="text-sm font-bold text-gray-800">Presentá las declaraciones de tu empresa</p>
+          <p className="mt-1 text-xs text-gray-500">
+            Quedan ancladas a {me.company?.name ?? 'tu empresa'} para la auditoría cruzada.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {DECLARACIONES.map(d => (
+              <Link
+                key={d.code}
+                href={`/estudiante/impuestos/${d.code}?companyId=${me.companyId}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gold-300 hover:bg-gold-50"
+              >
+                <ExternalLink className="h-4 w-4 text-gold-700" /> {d.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

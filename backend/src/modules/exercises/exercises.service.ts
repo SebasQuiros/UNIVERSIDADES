@@ -216,12 +216,22 @@ export class ExercisesService {
     this.assertExerciseAccess(caller, exercise, exercise.course.universityId, 'eliminarlo');
 
     // JournalLine has a direct company_id FK without onDelete:Cascade,
-    // so we must delete them before the ExerciseAttempt → Company cascade fires.
-    const attempts = await this.prisma.exerciseAttempt.findMany({
-      where:  { exerciseId },
-      select: { company: { select: { id: true } } },
+    // so we must delete them before the Company cascade fires.
+    // El cascade dispara por DOS caminos: ExerciseAttempt→Company (empresas
+    // INDIVIDUAL, attemptId set) y Exercise→Company (empresas GROUP de Sesión de
+    // Aula, exerciseId set). Debemos recolectar AMBOS conjuntos: las GROUP no
+    // tienen attempt, así que derivarlas solo del intento las dejaba fuera y su
+    // JournalLine sin borrar → violación FK RESTRICT (500) al borrar el ejercicio.
+    const companies = await this.prisma.company.findMany({
+      where: {
+        OR: [
+          { exerciseId },              // empresas GROUP (Sesión de Aula)
+          { attempt: { exerciseId } }, // empresas INDIVIDUAL (vía intento)
+        ],
+      },
+      select: { id: true },
     });
-    const companyIds = attempts.flatMap(a => a.company ? [a.company.id] : []);
+    const companyIds = companies.map(c => c.id);
 
     await this.prisma.$transaction(async (tx) => {
       if (companyIds.length > 0) {

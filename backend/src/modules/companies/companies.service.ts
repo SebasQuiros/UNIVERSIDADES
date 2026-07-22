@@ -99,12 +99,38 @@ export class CompaniesService {
   // /companies/:companyId/* — el profesor puede VER las empresas de sus
   // estudiantes para calificar.
   async findByAttempt(attemptId: string, userId: string, userRole = 'STUDENT', universityId?: string | null) {
-    const company = await this.prisma.company.findUnique({
+    let company: any = await this.prisma.company.findUnique({
       where: { attemptId },
       include: {
         student: { select: { universityId: true } },
       },
     });
+
+    // Sesión de Aula (GROUP): la empresa NO cuelga del intento (attemptId null)
+    // sino del ejercicio, y el alumno es miembro vía CompanyMembership. Si no hay
+    // empresa directa, resolvemos la GROUP donde el estudiante del intento es
+    // miembro — así el workspace del grupo (compras, renta) no recibe 404 ni cae
+    // al alta de una empresa individual espuria.
+    if (!company) {
+      const attempt = await this.prisma.exerciseAttempt.findUnique({
+        where:  { id: attemptId },
+        select: { exerciseId: true, studentId: true },
+      });
+      if (attempt) {
+        company = await this.prisma.company.findFirst({
+          where: {
+            exerciseId:  attempt.exerciseId,
+            mode:        'GROUP',
+            memberships: { some: { userId: attempt.studentId } },
+          },
+          include: {
+            student:  { select: { universityId: true } },
+            exercise: { select: { course: { select: { universityId: true } } } },
+          },
+        });
+      }
+    }
+
     if (!company) throw new NotFoundException('Empresa no encontrada para este intento');
 
     // SUPERADMIN: acceso global
@@ -123,9 +149,12 @@ export class CompaniesService {
       return company;
     }
 
-    // TEACHER / ADMIN: solo si pertenece a su misma universidad
+    // TEACHER / ADMIN: solo si pertenece a su misma universidad. La universidad
+    // sale del estudiante (INDIVIDUAL) o del curso del ejercicio (GROUP, sin dueño).
     if (userRole === 'TEACHER' || userRole === 'ADMIN') {
-      if (universityId && company.student?.universityId !== universityId) {
+      const ownerUniversityId =
+        company.student?.universityId ?? company.exercise?.course?.universityId ?? null;
+      if (universityId && ownerUniversityId !== universityId) {
         throw new ForbiddenException('No tienes acceso a empresas de otras universidades');
       }
       return company;

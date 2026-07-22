@@ -91,6 +91,22 @@ export class AttemptsService {
 
     this._assertAccess(attempt, userId, userRole);
 
+    // Sesión de Aula (GROUP): la empresa del grupo cuelga del ejercicio, no del
+    // intento (attemptId null), así que `attempt.company` viene null. La
+    // resolvemos vía CompanyMembership para que el workspace no muestre el alta de
+    // una empresa individual espuria (showSetup = IN_PROGRESS && !company).
+    if (!attempt.company) {
+      const group = await this.prisma.company.findFirst({
+        where: {
+          exerciseId:  attempt.exerciseId,
+          mode:        'GROUP',
+          memberships: { some: { userId: attempt.studentId } },
+        },
+        select: { id: true, name: true },
+      });
+      if (group) (attempt as any).company = group;
+    }
+
     // M1: no filtrar la clave de respuestas al alumno. Para criterios answer-key
     // (p.ej. account_balance_gte "CODIGO:MONTO") `expectedValue` es la solución
     // del auto-grading. El STUDENT recibe la rúbrica SIN `expectedValue`; el staff

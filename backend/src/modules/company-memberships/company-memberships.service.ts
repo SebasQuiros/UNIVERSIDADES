@@ -11,6 +11,7 @@ import {
 } from './dto/company-memberships.dto';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 import { invalidateCompanyCore } from '../../common/company/company-core';
+import { AccountsService } from '../accounts/accounts.service';
 
 /**
  * Service para companies en modo GROUP y manejo de miembros (Fase 1).
@@ -33,6 +34,7 @@ export class CompanyMembershipsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(REDIS_CLIENT) private readonly redis: any,
+    private readonly accounts: AccountsService,
   ) {}
 
   // ────────────────────────────────────────────────────────────
@@ -72,7 +74,7 @@ export class CompanyMembershipsService {
       legalId = `3-101-9${String(Date.now()).slice(-5)}${count}`.slice(0, 18);
     }
 
-    return this.prisma.company.create({
+    const company = await this.prisma.company.create({
       data: {
         exerciseId,
         mode:               CompanyMode.GROUP,
@@ -83,6 +85,25 @@ export class CompanyMembershipsService {
         legalId,
       },
     });
+
+    // Inicialización contable de la empresa (igual que CompaniesService.create/
+    // createPractice): sin plan de cuentas + período abierto, la fase EN_CURSO es
+    // inoperable — no se puede facturar (invoices exige 1.1.02.01/4.1.01.01/2.1.02.01)
+    // ni asentar (journal exige accountId de la empresa) ni comerciar B2B.
+    await this.accounts.seedChartOfAccounts(company.id);
+    const y = new Date().getFullYear();
+    await this.prisma.accountingPeriod.create({
+      data: {
+        companyId: company.id,
+        name:      `Año ${y}`,
+        type:      'ANNUAL',
+        startDate: new Date(`${y}-01-01`),
+        endDate:   new Date(`${y}-12-31`),
+        status:    'OPEN',
+      },
+    });
+
+    return company;
   }
 
   /**

@@ -1,5 +1,5 @@
 import {
-  IsEnum, IsString, IsOptional, IsNumber, IsIn, MaxLength, Min, ValidateNested,
+  IsEnum, IsString, IsOptional, IsNumber, IsIn, IsUUID, MaxLength, Min, ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TaxDeclarationType } from '@prisma/client';
@@ -99,6 +99,15 @@ export class CreateTaxDeclarationDto {
 
   @IsString()
   period: string; // "2026-03" o "2025-2026"
+
+  // Empresa a la que pertenece la declaración (opcional). Se usa en Sesión de
+  // Aula GROUP para anclar la declaración a la empresa del grupo; sin él, el
+  // flujo histórico del portal general queda anclado solo al usuario.
+  // @IsUUID: si llega un string no-UUID, el cast contra company.id (@db.Uuid)
+  // reventaría en Prisma con un 500; validar acá lo convierte en 400 limpio.
+  @IsOptional()
+  @IsUUID()
+  companyId?: string;
 
   @IsOptional()
   formData?: D104FormDto | D101FormDto;
