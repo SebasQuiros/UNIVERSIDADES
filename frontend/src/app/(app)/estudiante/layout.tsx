@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { StudentSidebar } from '@/components/layout/StudentSidebar';
 import { TopBar } from '@/components/layout/TopBar';
 import { CommandPalette } from '@/components/layout/CommandPalette';
-import { PageSpinner } from '@/components/ui/Spinner';
+import { AppShellSkeleton } from '@/components/layout/AppShellSkeleton';
 import { PageErrorBoundary } from '@/components/ui/ErrorBoundary';
 import AiAssistant from '@/components/ai/AiAssistant';
 
@@ -23,7 +23,7 @@ export default function EstudianteLayout({ children }: { children: React.ReactNo
     if (!isLoading && user && user.role !== 'STUDENT' && user.role !== 'TEACHER') router.replace('/login');
   }, [user, isLoading, router]);
 
-  if (isLoading) return <PageSpinner />;
+  if (isLoading) return <AppShellSkeleton />;
   if (!canView) return null;
 
   return (
