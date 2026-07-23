@@ -7,14 +7,14 @@ import { formatDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
 import { IconTile } from '@/components/ui/IconTile';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ArtLedger, SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
+import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   Calculator, Building2, Plus, ChevronRight, Receipt, FileText, Users,
-  Search, Trash2, X, Sparkles,
+  Search, Trash2, X, Briefcase,
 } from 'lucide-react';
 
 interface PracticeCompany {
@@ -25,8 +25,6 @@ interface PracticeCompany {
   createdAt: string;
   _count: { invoices: number; journalEntries: number; clients: number };
 }
-
-const GOLD = '#D4A017';
 
 const ACTIVITIES = [
   'Comercio al por menor',
@@ -76,48 +74,47 @@ export default function ContadorPage() {
     }
   };
 
+  const totals = useMemo(() => ({
+    invoices:      companies.reduce((s, c) => s + c._count.invoices, 0),
+    journalEntries: companies.reduce((s, c) => s + c._count.journalEntries, 0),
+    clients:       companies.reduce((s, c) => s + c._count.clients, 0),
+  }), [companies]);
+
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
       {/* Encabezado */}
       <PageHeader
-        eyebrow="Espacio Contador"
-        title="Practicá como contador"
-        subtitle="Gestioná varias empresas-cliente sin nota. Perfecto para replicar ejercicios del libro."
+        eyebrow="Mis empresas"
+        title="Mis empresas-clientes"
+        subtitle="Administrá las empresas a las que les llevás la contabilidad."
         icon={Calculator}
-        iconTint="#B8860B"
+        iconTint="#1B2E6E"
         actions={(
-          <Button variant="gold" onClick={() => setShowForm(true)}>
-            <Plus className="w-4 h-4" /> Nueva empresa de práctica
+          <Button variant="primary" onClick={() => setShowForm(true)}>
+            <Plus className="w-4 h-4" /> Nueva empresa
           </Button>
         )}
-        className="lp-in"
       />
 
-      {/* Hero: taller de contabilidad */}
-      <Card variant="onDark" className="lp-in lp-in-d1 mt-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-5 px-6 lg:px-7 py-6">
-          <div className="flex-1 min-w-0">
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500 mb-1.5">
-              Ciclo contable completo
-            </p>
-            <h2 className="text-lg font-bold leading-snug">Tu taller de contabilidad, a tu ritmo.</h2>
-            <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
-              Catálogo de cuentas, asientos, mayor, balances y estados financieros. Sin límite y sin calificación.
-            </p>
-          </div>
-          <ArtLedger size={160} className="lp-drift flex-shrink-0" />
+      {/* KPIs */}
+      {companies.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+          <StatCard label="Empresas activas" value={String(companies.length)} icon={Briefcase} tint="#1B2E6E" />
+          <StatCard label="Facturas totales" value={String(totals.invoices)} icon={Receipt} tint="#2563EB" />
+          <StatCard label="Asientos registrados" value={String(totals.journalEntries)} icon={FileText} tint="#D4A017" />
+          <StatCard label="Clientes gestionados" value={String(totals.clients)} icon={Users} tint="#1D4ED8" />
         </div>
-      </Card>
+      )}
 
       {/* Buscador */}
       {companies.length > 0 && (
-        <div className="relative w-full sm:w-72 mt-6 mb-6">
+        <div className="relative w-full sm:w-72 mt-6 mb-4">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar empresa-cliente…"
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-100 outline-none transition"
+            placeholder="Buscar empresa…"
+            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition"
           />
         </div>
       )}
@@ -125,74 +122,76 @@ export default function ContadorPage() {
       {loading ? (
         <div className="flex justify-center py-20"><Spinner size="lg" /></div>
       ) : filtered.length === 0 ? (
-        <Card className="lp-in">
+        <div className="bg-white border border-gray-200/70 shadow-card rounded-card">
           <EmptyState
             illustration={
               companies.length === 0
-                ? <SceneEmptyBox size={220} className="lp-drift" />
-                : <SceneSearchEmpty size={220} className="lp-drift" />
+                ? <SceneEmptyBox size={200} />
+                : <SceneSearchEmpty size={200} />
             }
-            title={companies.length === 0 ? 'Aún no tenés empresas de práctica' : 'Sin resultados'}
+            title={companies.length === 0 ? 'Aún no tenés empresas registradas' : 'Sin resultados'}
             description={
               companies.length === 0
-                ? 'Creá una empresa-cliente para practicar el ciclo contable completo a tu ritmo: catálogo de cuentas, asientos, mayor, balances y estados financieros. Sin límite y sin calificación.'
+                ? 'Registrá una empresa-cliente para empezar a llevar su contabilidad: catálogo de cuentas, asientos, mayor, balances y estados financieros.'
                 : 'Probá con otra búsqueda.'
             }
             action={companies.length === 0 ? (
-              <Button variant="gold" onClick={() => setShowForm(true)}>
-                <Plus className="w-4 h-4" /> Crear mi primera empresa
+              <Button variant="primary" onClick={() => setShowForm(true)}>
+                <Plus className="w-4 h-4" /> Registrar mi primera empresa
               </Button>
             ) : undefined}
           />
-        </Card>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((c, i) => (
-            <div key={c.id}
-              className={`group bg-white border border-gray-200/70 shadow-card rounded-card p-5 flex flex-col gap-4 lp-card-pro lp-in lp-in-d${Math.min(i + 1, 5)}`}>
-              <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center font-bold flex-shrink-0 text-white" style={{ background: GOLD }}>
-                  {c.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">{c.name}</h3>
-                  {c.legalId && <p className="text-xs text-gray-500 mt-0.5">Cédula: {c.legalId}</p>}
-                  {c.economicActivity && <p className="text-xs text-gray-400 mt-0.5 truncate">{c.economicActivity}</p>}
-                </div>
-                <button
-                  onClick={() => handleDelete(c)}
-                  title="Eliminar"
-                  className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-red-500 flex-shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full self-start" style={{ background: 'rgba(212,160,23,0.14)', color: '#8a6d0f' }}>
-                <Sparkles className="w-3 h-3" /> Práctica libre · sin nota
-              </span>
-
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { icon: Receipt,  n: c._count.invoices,      l: 'Facturas' },
-                  { icon: FileText, n: c._count.journalEntries, l: 'Asientos' },
-                  { icon: Users,    n: c._count.clients,        l: 'Clientes' },
-                ].map((k, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1 p-2.5 bg-gray-50 rounded-xl border border-gray-100">
-                    <k.icon className="w-4 h-4 text-amber-600" />
-                    <p className="text-sm font-bold text-gray-900 leading-none font-mono tabular-nums">{k.n}</p>
-                    <p className="text-[11px] text-gray-400">{k.l}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-auto">
-                <span className="text-xs text-gray-400">Creada {formatDate(c.createdAt)}</span>
-                <Link href={`/estudiante/contador/${c.id}`}>
-                  <Button size="sm" variant="secondary">Abrir <ChevronRight className="w-3.5 h-3.5" /></Button>
-                </Link>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white border border-gray-200/70 shadow-card rounded-card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left text-[11px] uppercase tracking-wide text-gray-400">
+                <th className="px-5 py-3 font-semibold">Empresa</th>
+                <th className="px-5 py-3 font-semibold">Cédula</th>
+                <th className="px-5 py-3 font-semibold">Actividad</th>
+                <th className="px-5 py-3 font-semibold text-right">Facturas</th>
+                <th className="px-5 py-3 font-semibold text-right">Asientos</th>
+                <th className="px-5 py-3 font-semibold text-right">Clientes</th>
+                <th className="px-5 py-3 font-semibold">Creada</th>
+                <th className="px-5 py-3 font-semibold text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <tr key={c.id} className="border-b border-gray-50 last:border-0 hover:bg-blue-50/40 transition-colors">
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 text-white"
+                        style={{ background: 'linear-gradient(135deg,#2563EB,#1D4ED8)' }}>
+                        {c.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-gray-900 truncate">{c.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-gray-500 font-mono tabular-nums">{c.legalId ?? '—'}</td>
+                  <td className="px-5 py-3 text-gray-500 truncate max-w-[180px]">{c.economicActivity ?? '—'}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.invoices}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.journalEntries}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.clients}</td>
+                  <td className="px-5 py-3 text-gray-400 text-xs">{formatDate(c.createdAt)}</td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/estudiante/contador/${c.id}`}>
+                        <Button size="sm" variant="secondary">Abrir <ChevronRight className="w-3.5 h-3.5" /></Button>
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(c)}
+                        title="Eliminar"
+                        className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -296,8 +295,8 @@ function NewPracticeModal({
             <input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="San José, Costa Rica" className={INPUT} />
           </Field>
 
-          <div className="flex items-center gap-2 p-3 rounded-xl text-xs" style={{ background: 'rgba(212,160,23,0.10)', color: '#8a6d0f' }}>
-            <Sparkles className="w-4 h-4 flex-shrink-0" />
+          <div className="flex items-center gap-2 p-3 rounded-xl text-xs bg-blue-50 text-blue-700">
+            <Building2 className="w-4 h-4 flex-shrink-0" />
             Se creará con el catálogo de cuentas base listo para empezar a registrar.
           </div>
 

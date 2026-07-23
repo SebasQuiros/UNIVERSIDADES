@@ -14,6 +14,7 @@ import { IconTile } from '@/components/ui/IconTile';
 import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
 import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import toast from 'react-hot-toast';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, Legend as RLegend } from 'recharts';
 import {
   Building2, Users, Package, FileText, FileSpreadsheet,
   BookOpen, BarChart2, CheckCircle2, Send, Plus, Trash2,
@@ -23,6 +24,7 @@ import {
   Lightbulb, Search, Mail, Contact, Receipt, FileCheck2,
   FileClock, Wallet, FileSignature, PackageCheck, SlidersHorizontal,
   PackagePlus, PackageMinus, ArrowRightCircle,
+  TrendingUp, TrendingDown, Minus,
 } from 'lucide-react';
 
 // ─── Brand palette (azul-noche + dorado) ──────────────────────────────────────
@@ -1598,10 +1600,22 @@ export function LedgerTab({ companyId }: { companyId: string }) {
 }
 // ─── Reports tab ──────────────────────────────────────────────────────────────
 export function ReportsTab({ companyId, companyName }: { companyId: string; companyName?: string }) {
+  const [subTab, setSubTab] = useState<'resumen' | 'estados'>('resumen');
   const [report, setReport] = useState<'balance-sheet' | 'income-statement'>('balance-sheet');
   const [data, setData]     = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+
+  useEffect(() => {
+    setAnalysis(null);
+    setAnalysisLoading(true);
+    api.get(`/api/v1/companies/${companyId}/reports/financial-analysis`)
+      .then(({ data: d }) => setAnalysis(d))
+      .catch(() => toast.error('Error al cargar el resumen financiero'))
+      .finally(() => setAnalysisLoading(false));
+  }, [companyId]);
 
   function load(type: typeof report) {
     setReport(type);
@@ -1833,6 +1847,25 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
 
   return (
     <div>
+      {/* ── Sub-tabs: Resumen | Estados Financieros ── */}
+      <div className="flex gap-1 mb-6 border-b border-gray-200">
+        {([
+          { id: 'resumen', label: 'Resumen' },
+          { id: 'estados', label: 'Estados Financieros' },
+        ] as const).map(({ id, label }) => (
+          <button key={id} onClick={() => setSubTab(id)}
+            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
+              subTab === id ? 'text-blue-700 border-blue-600' : 'text-gray-400 border-transparent hover:text-gray-600'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === 'resumen' ? (
+        <FinancialSummaryPanel analysis={analysis} loading={analysisLoading} />
+      ) : (
+      <div>
       <div className="flex items-center justify-between gap-2 mb-6 flex-wrap">
       <div className="flex gap-2">
         {([
@@ -1970,9 +2003,280 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
           })()}
         </div>
       )}
+      </div>
+      )}
     </div>
   );
 }
+
+// ─── Resumen financiero (sub-tab por defecto de ReportsTab) ────────────────────
+const FA_BLUE = '#2563EB';
+const FA_BLUE_D = '#1D4ED8';
+const FA_GOLD = '#D4A017';
+const FA_SLATE = '#94A3B8';
+const FA_RED = '#DC2626';
+const FA_CARD = 'bg-white rounded-card border border-gray-200/70';
+const FA_SHADOW = { boxShadow: '0 4px 16px rgba(27,46,110,0.06)' };
+
+function faFmt(v: string | number | null | undefined): string {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '—';
+  return '₡' + n.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function faPct(v: string | number | null | undefined, digits = 1): string {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '—';
+  return `${n.toFixed(digits)}%`;
+}
+
+function FaVarianceBadge({ value, label }: { value: string | number | null | undefined; label?: string }) {
+  if (value === null || value === undefined || value === '') {
+    return <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-400">Sin datos previos</span>;
+  }
+  const n = Number(value);
+  if (!Number.isFinite(n)) return <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-400">—</span>;
+  const positive = n > 0;
+  const flat = n === 0;
+  const Icon = flat ? Minus : positive ? TrendingUp : TrendingDown;
+  const cls = flat ? 'bg-gray-100 text-gray-500' : positive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600';
+  return (
+    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full font-mono tabular-nums ${cls}`}>
+      <Icon className="w-3 h-3" />{positive ? '+' : ''}{n.toFixed(2)}%{label ? <span className="font-normal ml-0.5">{label}</span> : null}
+    </span>
+  );
+}
+
+function FaKpiTile({ label, value, variance, compareLabel }: {
+  label: string; value: string; variance?: string | number | null; compareLabel?: string;
+}) {
+  return (
+    <div className={FA_CARD + ' p-4'} style={FA_SHADOW}>
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">{label}</p>
+      <p className="mt-2 text-xl font-bold text-gray-900 font-mono tabular-nums tracking-tight">{value}</p>
+      <div className="mt-2">
+        <FaVarianceBadge value={variance} label={compareLabel ? `vs ${compareLabel}` : undefined} />
+      </div>
+    </div>
+  );
+}
+
+function FaCard({ title, subtitle, children, className = '' }: { title: string; subtitle?: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`${FA_CARD} ${className}`} style={FA_SHADOW}>
+      <div className="px-5 pt-4 pb-1">
+        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-[11px] text-gray-400 mt-0.5">{subtitle}</p>}
+      </div>
+      <div className="px-5 pb-4 pt-2">{children}</div>
+    </div>
+  );
+}
+
+function FaLineRow({ label, amount, pct, indent }: { label: string; amount: string; pct?: string; indent?: boolean }) {
+  return (
+    <div className={`flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0 ${indent ? 'pl-3' : ''}`}>
+      <span className="text-xs text-gray-600">{label}</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold text-gray-800 font-mono tabular-nums">{amount}</span>
+        {pct && <span className="text-[10px] text-gray-400 font-mono tabular-nums w-12 text-right">{pct}</span>}
+      </div>
+    </div>
+  );
+}
+
+// Badge semántico para tags de ratios (Óptimo/Aceptable/Bajo/Moderado/Alto/Negativo)
+function FaRatioBadge({ tag, goodTags }: { tag: string | null | undefined; goodTags: string[] }) {
+  if (!tag) return <span className="text-[11px] text-gray-400">Sin dato</span>;
+  const isGood = goodTags.includes(tag);
+  const cls = isGood ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600';
+  return <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}>{tag}</span>;
+}
+
+function FinancialSummaryPanel({ analysis, loading }: { analysis: any; loading: boolean }) {
+  if (loading) {
+    return <div className="flex justify-center py-16"><Spinner /></div>;
+  }
+  if (!analysis) {
+    return (
+      <div className="flex items-center gap-3 p-5 bg-red-50 border border-red-100 rounded-card text-red-600 text-sm">
+        <AlertCircle className="w-5 h-5" /> No se pudo cargar el resumen financiero.
+      </div>
+    );
+  }
+
+  const bs = analysis.balanceSheet ?? {};
+  const is = analysis.incomeStatement ?? {};
+  const ratios = analysis.ratios ?? {};
+  const cmp = analysis.comparison;
+  const dist = bs.distribution ?? {};
+
+  const assetDonut = [
+    { name: 'Activo Corriente', value: Number(dist.currentAssetsPct ?? 0), color: FA_BLUE },
+    { name: 'Activo No Corriente', value: Number(dist.nonCurrentAssetsPct ?? 0), color: FA_BLUE_D },
+  ];
+  const structDonut = [
+    { name: 'Pasivo Corriente', value: Number(dist.currentLiabilitiesPct ?? 0), color: FA_RED },
+    { name: 'Pasivo No Corriente', value: Number(dist.nonCurrentLiabilitiesPct ?? 0), color: '#F59E0B' },
+    { name: 'Patrimonio', value: Number(dist.equityPct ?? 0), color: FA_GOLD },
+  ];
+
+  const donutTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null;
+    const p = payload[0];
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-2.5 py-1.5 text-[11px]">
+        <span className="font-semibold" style={{ color: p.payload.color }}>{p.name}</span>: {faPct(p.value)}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* KPI row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <FaKpiTile label="Activo Total" value={faFmt(bs.totalAssets)}
+          variance={cmp?.variance?.totalAssets} compareLabel={cmp?.label} />
+        <FaKpiTile label="Pasivo Total" value={faFmt(bs.totalLiabilities)}
+          variance={cmp?.variance?.totalLiabilities} compareLabel={cmp?.label} />
+        <FaKpiTile label="Patrimonio" value={faFmt(bs.adjustedEquity)}
+          variance={cmp?.variance?.adjustedEquity} compareLabel={cmp?.label} />
+        <div className={FA_CARD + ' p-4'} style={FA_SHADOW}>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide font-mono truncate">Índice de Liquidez</p>
+          <p className="mt-2 text-xl font-bold text-gray-900 font-mono tabular-nums tracking-tight">
+            {ratios.currentRatio !== null && ratios.currentRatio !== undefined ? Number(ratios.currentRatio).toFixed(2) : '—'}
+          </p>
+          <div className="mt-2">
+            <FaRatioBadge tag={ratios.currentRatioTag} goodTags={['Óptimo', 'Aceptable']} />
+          </div>
+        </div>
+      </div>
+
+      {/* Main grid: left 2/3, right 1/3 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left panel */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FaCard title="Balance General" subtitle="Estructura del activo">
+              <FaLineRow label="Activo Corriente" amount={faFmt(bs.currentAssets)} pct={faPct(dist.currentAssetsPct)} />
+              <FaLineRow label="Activo No Corriente" amount={faFmt(bs.nonCurrentAssets)} pct={faPct(dist.nonCurrentAssetsPct)} />
+              <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
+                <span className="text-xs font-bold text-gray-900">Total Activo</span>
+                <span className="text-xs font-bold text-blue-700 font-mono tabular-nums">{faFmt(bs.totalAssets)}</span>
+              </div>
+            </FaCard>
+            <FaCard title="Pasivo y Patrimonio" subtitle="Estructura de financiamiento">
+              <FaLineRow label="Pasivo Corriente" amount={faFmt(bs.currentLiabilities)} pct={faPct(dist.currentLiabilitiesPct)} />
+              <FaLineRow label="Pasivo No Corriente" amount={faFmt(bs.nonCurrentLiabilities)} pct={faPct(dist.nonCurrentLiabilitiesPct)} />
+              <FaLineRow label="Patrimonio" amount={faFmt(bs.adjustedEquity)} pct={faPct(dist.equityPct)} />
+              <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
+                <span className="text-xs font-bold text-gray-900">Total Pasivo + Patrimonio</span>
+                <span className="text-xs font-bold text-blue-700 font-mono tabular-nums">
+                  {faFmt(Number(bs.totalLiabilities ?? 0) + Number(bs.adjustedEquity ?? 0))}
+                </span>
+              </div>
+            </FaCard>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FaCard title="Resultado del Período" subtitle="Ingresos, gastos y utilidad">
+              <FaLineRow label="Ingresos Totales" amount={faFmt(is.totalIncome)} />
+              <FaLineRow label="Costos y Gastos" amount={faFmt(is.totalExpenses)} />
+              <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
+                <span className={`text-xs font-bold ${Number(is.netIncome) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                  {Number(is.netIncome) >= 0 ? 'Utilidad del Período' : 'Pérdida del Período'}
+                </span>
+                <span className={`text-xs font-bold font-mono tabular-nums ${Number(is.netIncome) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                  {faFmt(is.netIncome)}
+                </span>
+              </div>
+            </FaCard>
+            <FaCard title="Distribución del Activo" subtitle="Corriente vs. no corriente">
+              <div className="h-[132px] -mt-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={assetDonut} dataKey="value" nameKey="name" innerRadius={38} outerRadius={58} paddingAngle={2}>
+                      {assetDonut.map((d, i) => <Cell key={i} fill={d.color} />)}
+                    </Pie>
+                    <RTooltip content={donutTooltip} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-col gap-1 mt-1">
+                {assetDonut.map((d) => (
+                  <span key={d.name} className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
+                    <i className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: d.color }} />
+                    {d.name} <span className="font-mono tabular-nums text-gray-700 font-semibold ml-auto">{faPct(d.value)}</span>
+                  </span>
+                ))}
+              </div>
+            </FaCard>
+          </div>
+        </div>
+
+        {/* Right panel */}
+        <div className="space-y-6">
+          <FaCard title="Indicadores Financieros" subtitle="Liquidez, endeudamiento y rentabilidad">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-600">Liquidez Corriente</p>
+                  <p className="text-sm font-bold text-gray-900 font-mono tabular-nums">
+                    {ratios.currentRatio !== null && ratios.currentRatio !== undefined ? Number(ratios.currentRatio).toFixed(2) : '—'}
+                  </p>
+                </div>
+                <FaRatioBadge tag={ratios.currentRatioTag} goodTags={['Óptimo', 'Aceptable']} />
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                <div>
+                  <p className="text-xs text-gray-600">Endeudamiento Total</p>
+                  <p className="text-sm font-bold text-gray-900 font-mono tabular-nums">{faPct(ratios.debtRatio)}</p>
+                </div>
+                <FaRatioBadge tag={ratios.debtRatioTag} goodTags={['Bajo', 'Moderado']} />
+              </div>
+              <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                <div>
+                  <p className="text-xs text-gray-600">Margen Neto</p>
+                  <p className="text-sm font-bold text-gray-900 font-mono tabular-nums">{faPct(ratios.netMargin)}</p>
+                </div>
+                <FaRatioBadge tag={ratios.netMarginTag} goodTags={['Óptimo', 'Aceptable']} />
+              </div>
+              {ratios.roe !== null && ratios.roe !== undefined && (
+                <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                  <p className="text-xs text-gray-600">ROE (Rentabilidad s/ Patrimonio)</p>
+                  <p className="text-sm font-bold text-gray-900 font-mono tabular-nums">{faPct(ratios.roe)}</p>
+                </div>
+              )}
+            </div>
+          </FaCard>
+
+          <FaCard title="Estructura Financiera" subtitle="Pasivo corriente, no corriente y patrimonio">
+            <div className="h-[150px] -mt-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={structDonut} dataKey="value" nameKey="name" innerRadius={38} outerRadius={58} paddingAngle={2}>
+                    {structDonut.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  </Pie>
+                  <RTooltip content={donutTooltip} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-col gap-1 mt-1">
+              {structDonut.map((d) => (
+                <span key={d.name} className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
+                  <i className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: d.color }} />
+                  {d.name} <span className="font-mono tabular-nums text-gray-700 font-semibold ml-auto">{faPct(d.value)}</span>
+                </span>
+              ))}
+            </div>
+          </FaCard>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Bank tab ─────────────────────────────────────────────────────────────────
 export function BankTab({ companyId, readonly }: { companyId: string; readonly: boolean }) {
   const [txs, setTxs]           = useState<BankTx[]>([]);
