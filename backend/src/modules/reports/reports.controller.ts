@@ -46,6 +46,12 @@ export class ReportsController {
     return this.svc.getIncomeStatement(id, f);
   }
 
+  // ── Estados y Análisis: ratios + comparativo vs período anterior ──────────
+  @Get('financial-analysis')
+  financialAnalysis(@Param('companyId') id: string, @Query() f: ReportFilterDto) {
+    return this.svc.getFinancialAnalysis(id, f);
+  }
+
   @Get('journal-book')
   journalBook(@Param('companyId') id: string, @Query() f: ReportFilterDto) {
     return this.svc.getJournalBook(id, f);

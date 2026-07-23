@@ -234,6 +234,160 @@ export class ReportsService {
     };
   }
 
+  // ── 3.5 FINANCIAL ANALYSIS — Estados y Análisis (ratios + comparativo) ──
+  //
+  // Reusa getBalanceSheet/getIncomeStatement para los totales (evita divergir
+  // de esos números) y clasifica Corriente/No Corriente por PREFIJO DE CÓDIGO
+  // (1.1.*/1.2.* activos, 2.1.*/2.2.* pasivos) — el catálogo por defecto ya
+  // nombra las cuentas así ("Activo Corriente"/"Activo No Corriente"), no
+  // hace falta un campo nuevo ni migración.
+  async getFinancialAnalysis(companyId: string, filter: ReportFilterDto) {
+    const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
+
+    const [balanceSheet, incomeStatement] = await Promise.all([
+      this.getBalanceSheet(companyId, filter),
+      this.getIncomeStatement(companyId, filter),
+    ]);
+
+    // Desglose Corriente/No Corriente — misma ventana acumulada que usa
+    // getBalanceSheet (desde el origen hasta endDate).
+    const inception = new Date('2000-01-01');
+    const allAccounts = await this.getAccountBalances(companyId, inception, endDate, ['ASSET', 'LIABILITY']);
+    const leaf = allAccounts.filter(a => !a.isHeader);
+
+    const sumBy = (pred: (code: string) => boolean) =>
+      leaf.filter(a => pred(a.code)).reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
+
+    const currentAssets      = sumBy(c => c.startsWith('1.1'));
+    const nonCurrentAssets   = sumBy(c => c.startsWith('1.2'));
+    const currentLiabilities = sumBy(c => c.startsWith('2.1'));
+    const nonCurrentLiabs    = sumBy(c => c.startsWith('2.2'));
+
+    const totalAssets      = new Decimal(balanceSheet.totals.totalAssets);
+    const totalLiabilities = new Decimal(balanceSheet.totals.totalLiabilities);
+    const adjustedEquity   = new Decimal(balanceSheet.totals.adjustedEquity);
+    const totalIncome      = new Decimal(incomeStatement.totals.totalIncome);
+    const netIncome        = new Decimal(incomeStatement.totals.netIncome);
+
+    const safeDiv = (a: Decimal, b: Decimal) => b.isZero() ? null : a.dividedBy(b);
+    const pct = (a: Decimal, b: Decimal) => b.isZero() ? null : a.dividedBy(b).times(100).toFixed(1);
+
+    const currentRatio = safeDiv(currentAssets, currentLiabilities);
+    const debtRatio     = safeDiv(totalLiabilities, totalAssets);
+    const netMargin     = safeDiv(netIncome, totalIncome);
+    const roe           = safeDiv(netIncome, adjustedEquity);
+
+    const tagCurrentRatio = currentRatio === null ? null
+      : currentRatio.greaterThanOrEqualTo('1.5') ? 'Óptimo'
+      : currentRatio.greaterThanOrEqualTo('1')   ? 'Aceptable' : 'Bajo';
+    const tagDebtRatio = debtRatio === null ? null
+      : debtRatio.lessThanOrEqualTo('0.4') ? 'Bajo'
+      : debtRatio.lessThanOrEqualTo('0.7') ? 'Moderado' : 'Alto';
+    const tagNetMargin = netMargin === null ? null
+      : netMargin.greaterThanOrEqualTo('0.10') ? 'Óptimo'
+      : netMargin.greaterThanOrEqualTo('0')     ? 'Aceptable' : 'Negativo';
+
+    // ── Comparativo vs período anterior ──────────────────────────
+    // Con periodId: el período contable inmediatamente anterior (mismo
+    // ciclo). Sin periodId (rango libre): snapshot un mes calendario antes
+    // del corte, como aproximación rápida — mismo criterio que usa el resto
+    // del sistema para "vs mes anterior".
+    let previousLabel: string | null = null;
+    let previousEndDate: Date | null = null;
+    let previousStartDate: Date | null = null;
+
+    if (period) {
+      const prevPeriod = await this.prisma.accountingPeriod.findFirst({
+        where: { companyId, endDate: { lt: period.startDate } },
+        orderBy: { endDate: 'desc' },
+      });
+      if (prevPeriod) {
+        previousLabel = prevPeriod.name ?? null;
+        previousStartDate = prevPeriod.startDate;
+        previousEndDate = prevPeriod.endDate;
+      }
+    } else {
+      previousEndDate = new Date(endDate);
+      previousEndDate.setMonth(previousEndDate.getMonth() - 1);
+      previousStartDate = new Date(startDate);
+      previousStartDate.setMonth(previousStartDate.getMonth() - 1);
+    }
+
+    let comparison: any = null;
+    if (previousEndDate && previousStartDate) {
+      const [prevAssetsLiab, prevIncomeExpense] = await Promise.all([
+        this.getAccountBalances(companyId, inception, previousEndDate, ['ASSET', 'LIABILITY', 'EQUITY']),
+        this.getAccountBalances(companyId, previousStartDate, previousEndDate, ['INCOME', 'EXPENSE']),
+      ]);
+      const prevLeaf = prevAssetsLiab.filter(a => !a.isHeader);
+      const prevTotalAssets      = prevLeaf.filter(a => a.type === 'ASSET').reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
+      const prevTotalLiabilities = prevLeaf.filter(a => a.type === 'LIABILITY').reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
+      const prevTotalEquity      = prevLeaf.filter(a => a.type === 'EQUITY').reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
+      const prevIncome  = prevIncomeExpense.filter(a => !a.isHeader && a.type === 'INCOME').reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
+      const prevExpense = prevIncomeExpense.filter(a => !a.isHeader && a.type === 'EXPENSE').reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
+      const prevNetIncome = prevIncome.minus(prevExpense);
+      const prevAdjustedEquity = prevTotalEquity.plus(prevNetIncome);
+
+      const variance = (curr: Decimal, prev: Decimal) => prev.isZero() ? null : curr.minus(prev).dividedBy(prev.abs()).times(100).toFixed(2);
+
+      comparison = {
+        label: previousLabel,
+        asOfDate: previousEndDate,
+        totalAssets:      prevTotalAssets.toFixed(2),
+        totalLiabilities: prevTotalLiabilities.toFixed(2),
+        adjustedEquity:   prevAdjustedEquity.toFixed(2),
+        netIncome:        prevNetIncome.toFixed(2),
+        variance: {
+          totalAssets:      variance(totalAssets, prevTotalAssets),
+          totalLiabilities: variance(totalLiabilities, prevTotalLiabilities),
+          adjustedEquity:   variance(adjustedEquity, prevAdjustedEquity),
+          netIncome:        variance(netIncome, prevNetIncome),
+        },
+      };
+    }
+
+    return {
+      reportType:  'FINANCIAL_ANALYSIS',
+      company:     await this.getCompanyInfo(companyId),
+      period:      period ?? { startDate, endDate },
+      generatedAt: new Date(),
+      balanceSheet: {
+        totalAssets:          totalAssets.toFixed(2),
+        totalLiabilities:     totalLiabilities.toFixed(2),
+        adjustedEquity:       adjustedEquity.toFixed(2),
+        currentAssets:        currentAssets.toFixed(2),
+        nonCurrentAssets:     nonCurrentAssets.toFixed(2),
+        currentLiabilities:   currentLiabilities.toFixed(2),
+        nonCurrentLiabilities: nonCurrentLiabs.toFixed(2),
+        // % de cada bloque relativo a SU PROPIO total (activo vs pasivo+patrimonio),
+        // no relativo a un único "gran total" — si el balance cuadra, ambos grupos
+        // suman 100% cada uno por separado (no 100% combinado entre los 5).
+        distribution: {
+          currentAssetsPct:        pct(currentAssets, totalAssets),
+          nonCurrentAssetsPct:     pct(nonCurrentAssets, totalAssets),
+          currentLiabilitiesPct:   pct(currentLiabilities, totalLiabilities.plus(adjustedEquity)),
+          nonCurrentLiabilitiesPct: pct(nonCurrentLiabs, totalLiabilities.plus(adjustedEquity)),
+          equityPct:               pct(adjustedEquity, totalLiabilities.plus(adjustedEquity)),
+        },
+      },
+      incomeStatement: {
+        totalIncome:   totalIncome.toFixed(2),
+        totalExpenses: incomeStatement.totals.totalExpenses,
+        netIncome:     netIncome.toFixed(2),
+      },
+      ratios: {
+        currentRatio:    currentRatio === null ? null : currentRatio.toFixed(2),
+        currentRatioTag: tagCurrentRatio,
+        debtRatio:       debtRatio === null ? null : debtRatio.times(100).toFixed(1),
+        debtRatioTag:    tagDebtRatio,
+        netMargin:       netMargin === null ? null : netMargin.times(100).toFixed(1),
+        netMarginTag:    tagNetMargin,
+        roe:             roe === null ? null : roe.times(100).toFixed(1),
+      },
+      comparison,
+    };
+  }
+
   // ── 4. JOURNAL BOOK — Libro Diario ────────────────────────────
   async getJournalBook(companyId: string, filter: ReportFilterDto) {
     const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
