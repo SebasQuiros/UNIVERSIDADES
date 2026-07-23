@@ -20,6 +20,9 @@ import { BankModule }           from './modules/bank/bank.module';
 import { ProductsModule }       from './modules/products/products.module';
 import { InvoicesModule }       from './modules/invoices/invoices.module';
 import { CreditNotesModule }    from './modules/credit-notes/credit-notes.module';
+import { QuotesModule }         from './modules/quotes/quotes.module';
+import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
+import { InventoryAdjustmentsModule } from './modules/inventory-adjustments/inventory-adjustments.module';
 import { UniversitiesModule }   from './modules/universities/universities.module';
 import { CoursesModule }        from './modules/courses/courses.module';
 import { ExercisesModule }      from './modules/exercises/exercises.module';
@@ -82,6 +85,9 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     ProductsModule,
     InvoicesModule,
     CreditNotesModule,         // Phase 17 — Notas de crédito y débito (event-driven)
+    QuotesModule,              // Phase 19 — Cotizaciones/presupuestos (pre-venta, sin asiento)
+    PurchaseOrdersModule,      // Phase 19 — Órdenes de compra a proveedor + recepción (sin asiento)
+    InventoryAdjustmentsModule, // Phase 19 — Ajustes manuales de inventario (event-driven)
     BankModule,
     // Phase 5 — Academic System
     UniversitiesModule,

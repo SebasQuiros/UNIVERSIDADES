@@ -71,6 +71,12 @@ export class CreatePurchaseInvoiceDto {
   @ValidateNested({ each: true })
   @Type(() => PurchaseInvoiceLineDto)
   lines?: PurchaseInvoiceLineDto[];
+
+  // Fase 19 — referencia opcional a la orden de compra que originó esta
+  // factura (ciclo compras: PO → recepción → factura real del proveedor).
+  @IsOptional()
+  @IsUUID('4')
+  purchaseOrderId?: string;
 }
 
 export class PurchaseInvoiceFilterDto {

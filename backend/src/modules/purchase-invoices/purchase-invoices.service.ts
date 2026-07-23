@@ -78,8 +78,19 @@ export class PurchaseInvoicesService {
           total,
           description: dto.description ?? null,
           isAccepted,
+          purchaseOrderId: dto.purchaseOrderId ?? null,
         },
       });
+
+      // Fase 19 — si viene de una orden de compra RECEIVED, la marcamos
+      // INVOICED. No rompe el flujo si la orden no existe/no está en ese
+      // estado (compras normales sin orden previa siguen funcionando igual).
+      if (dto.purchaseOrderId) {
+        await tx.purchaseOrder.updateMany({
+          where: { id: dto.purchaseOrderId, companyId, status: 'RECEIVED' },
+          data:  { status: 'INVOICED' },
+        });
+      }
 
       // ── Inventario FIFO (Fase 2) ───────────────────────────────
       // Si vienen líneas con productId Y autoInventory está activo Y la

@@ -78,11 +78,15 @@ const CHART: Array<{
   { code:'4.2',        name:'Ingresos No Operativos',          type:'INCOME',    normal:'CREDIT', level:2, parent:'4',       isHeader:true  },
   { code:'4.2.01',     name:'Otros Ingresos',                  type:'INCOME',    normal:'CREDIT', level:3, parent:'4.2',     isHeader:true  },
   { code:'4.2.01.01',  name:'Intereses Ganados',               type:'INCOME',    normal:'CREDIT', level:4, parent:'4.2.01',  isHeader:false },
+  // Fase 19 — ajustes manuales de inventario (sobrante/corrección al alza).
+  { code:'4.2.01.02',  name:'Ajuste de Inventario — Sobrante', type:'INCOME',    normal:'CREDIT', level:4, parent:'4.2.01',  isHeader:false },
   // ── 5. GASTOS ────────────────────────────────────────────────
   { code:'5',          name:'GASTOS',                          type:'EXPENSE',   normal:'DEBIT',  level:1, parent:null,      isHeader:true  },
   { code:'5.1',        name:'Costo de Ventas',                 type:'EXPENSE',   normal:'DEBIT',  level:2, parent:'5',       isHeader:true  },
   { code:'5.1.01',     name:'Costo de Mercadería Vendida',     type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'5.1',     isHeader:true  },
   { code:'5.1.01.01',  name:'CMV - Mercadería',                type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.1.01',  isHeader:false },
+  // Fase 19 — ajustes manuales de inventario (merma/conteo físico/daño).
+  { code:'5.1.01.02',  name:'Ajuste de Inventario — Merma',    type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.1.01',  isHeader:false },
   { code:'5.2',        name:'Gastos de Operación',             type:'EXPENSE',   normal:'DEBIT',  level:2, parent:'5',       isHeader:true  },
   { code:'5.2.01',     name:'Gastos Administrativos',          type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'5.2',     isHeader:true  },
   { code:'5.2.01.01',  name:'Sueldos y Salarios',              type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },

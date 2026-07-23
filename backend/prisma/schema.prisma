@@ -602,6 +602,12 @@ model Company {
   creditNotes        CreditNote[]
   debitNotes         DebitNote[]
   taxDeclarations    TaxDeclaration[]
+  // ── Phase 19: Quotes, Purchase Orders, Inventory Adjustments ──────
+  quotes                Quote[]
+  quoteSequence         QuoteSequence?         @relation("QuoteSequenceCompany")
+  purchaseOrders        PurchaseOrder[]
+  purchaseOrderSequence PurchaseOrderSequence? @relation("PurchaseOrderSequenceCompany")
+  inventoryAdjustments  InventoryAdjustment[]
 
   @@index([studentId])
   @@index([exerciseId])
@@ -813,6 +819,7 @@ model Client {
   invoices Invoice[]
   payments Payment[]
   accountsReceivable AccountReceivable[]
+  quotes   Quote[]
 
   @@index([companyId])
   @@map("clients")
@@ -831,7 +838,8 @@ model Supplier {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt      @map("updated_at")
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchaseOrders PurchaseOrder[]
 
   @@index([companyId])
   @@map("suppliers")
@@ -889,6 +897,9 @@ model Product {
   lots         InventoryLot[]
   creditNoteLines CreditNoteLine[]  @relation("CreditNoteLineProduct")
   debitNoteLines  DebitNoteLine[]   @relation("DebitNoteLineProduct")
+  quoteLines           QuoteLine[]           @relation("QuoteLineProduct")
+  purchaseOrderLines   PurchaseOrderLine[]   @relation("PurchaseOrderLineProduct")
+  inventoryAdjustments InventoryAdjustment[] @relation("InventoryAdjustmentProduct")
 
   @@index([companyId])
   @@index([cabysCode])
@@ -1001,6 +1012,8 @@ model Invoice {
   accountReceivable   AccountReceivable?
   creditNotes         CreditNote[]
   debitNotes          DebitNote[]
+  // Phase 19: cotización que dio origen a esta factura (si se creó vía convert).
+  quote               Quote?               @relation("QuoteConvertedInvoice")
 
   @@unique([companyId, consecutiveNumber])
   @@index([companyId])
@@ -1393,16 +1406,22 @@ model PurchaseInvoice {
   // una compra espejo (los NULL son distintos en Postgres, así que las compras
   // normales del estudiante no colisionan). Ver InterCompanyMirror (outbox).
   sourceInvoiceId String? @unique @map("source_invoice_id") @db.Uuid
+  // Phase 19: referencia opcional a la orden de compra que originó esta
+  // factura (ciclo compras: PO → recepción → factura real del proveedor).
+  // NULL para compras registradas sin orden previa (comportamiento histórico).
+  purchaseOrderId String? @map("purchase_order_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt      @map("updated_at")
 
   company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   attempt        ExerciseAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+  purchaseOrder  PurchaseOrder?   @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
   apPayments     ApPayment[]
   accountPayable AccountPayable?
 
   @@index([companyId])
   @@index([attemptId])
+  @@index([purchaseOrderId])
   @@map("purchase_invoices")
 }
 
@@ -2037,4 +2056,202 @@ model DebitNoteLine {
 
   @@index([debitNoteId])
   @@map("debit_note_lines")
+}
+
+// ================================================================
+//  BLOQUE 20 — PHASE 19: COTIZACIONES, ORDENES DE COMPRA, AJUSTES
+//  DE INVENTARIO
+//
+//  Tres features independientes, agrupadas en una sola migracion:
+//
+//    - Quote (cotizacion/presupuesto): propuesta de venta a un cliente
+//      ANTES de facturar. NO afecta el Diario ni el inventario. Al
+//      convertirse (convert), nace una Invoice real via InvoicesService
+//      (misma factura DRAFT que el estudiante emite luego a mano).
+//
+//    - PurchaseOrder (orden de compra a proveedor externo real): ciclo
+//      espejo de las cotizaciones pero del lado de compras. DRAFT ->
+//      ISSUED -> RECEIVED (recepcion de mercancia: suma stock + crea
+//      lote FIFO, SIN asiento) -> INVOICED (cuando se registra la
+//      PurchaseInvoice real que si genera el asiento). Distinto del
+//      modulo `procurement` (ProcurementOrder), que es aprovisionamiento
+//      ENTRE EMPRESAS del curso -- no se reutiliza ni se toca aca.
+//
+//    - InventoryAdjustment: merma/conteo fisico/correccion manual de
+//      stock. A diferencia de las dos anteriores, SI genera asiento
+//      contable (cambia el valor del inventario) via BusinessEventsService
+//      (RecordInventoryAdjustmentInput), con trazabilidad sourceType/
+//      sourceId (V-5) hacia journal_entries.
+// ================================================================
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED
+}
+
+// Atomic quote consecutive number per company -- same pattern as InvoiceSequence.
+model QuoteSequence {
+  companyId  String @id @map("company_id") @db.Uuid
+  lastNumber Int    @default(0) @map("last_number")
+
+  company Company @relation("QuoteSequenceCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("quote_sequences")
+}
+
+model Quote {
+  id                 String      @id @default(uuid()) @db.Uuid
+  companyId          String      @map("company_id") @db.Uuid
+  clientId           String      @map("client_id") @db.Uuid
+  quoteNumber        Int         @map("quote_number")            // consecutivo por empresa
+  issueDate          DateTime    @map("issue_date")
+  validUntil         DateTime    @map("valid_until")             // vencimiento de la oferta
+  status             QuoteStatus @default(DRAFT)
+  currency           String      @default("CRC")
+  exchangeRate       Decimal     @default(1) @map("exchange_rate") @db.Decimal(10, 4)
+  subtotal           Decimal     @default(0) @db.Decimal(15, 2)
+  taxTotal           Decimal     @default(0) @map("tax_total") @db.Decimal(15, 2)
+  total              Decimal     @default(0) @db.Decimal(15, 2)
+  notes              String?
+  // Factura real generada al convertir (SENT/ACCEPTED -> CONVERTED). NULL
+  // mientras no se convierte. @unique: una cotizacion se convierte a lo
+  // sumo una vez.
+  convertedInvoiceId String?     @unique @map("converted_invoice_id") @db.Uuid
+  createdById        String      @map("created_by_id") @db.Uuid
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt      @map("updated_at")
+
+  company          Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client           Client      @relation(fields: [clientId], references: [id])
+  convertedInvoice Invoice?    @relation("QuoteConvertedInvoice", fields: [convertedInvoiceId], references: [id])
+  lines            QuoteLine[]
+
+  @@unique([companyId, quoteNumber])
+  @@index([companyId])
+  @@index([clientId])
+  @@index([status])
+  @@map("quotes")
+}
+
+model QuoteLine {
+  id          String  @id @default(uuid()) @db.Uuid
+  quoteId     String  @map("quote_id") @db.Uuid
+  productId   String? @map("product_id") @db.Uuid
+  lineNo      Int     @map("line_no")
+  description String
+  quantity    Decimal @db.Decimal(15, 3)
+  unit        String  @default("Unid")
+  unitPrice   Decimal @map("unit_price") @db.Decimal(15, 2)
+  taxRate     Decimal @map("tax_rate")   @db.Decimal(5, 2)
+  taxAmount   Decimal @map("tax_amount") @db.Decimal(15, 2)
+  subtotal    Decimal @db.Decimal(15, 2)
+  total       Decimal @db.Decimal(15, 2)
+  cabysCode   String? @map("cabys_code")
+
+  quote   Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product Product? @relation("QuoteLineProduct", fields: [productId], references: [id])
+
+  @@index([quoteId])
+  @@map("quote_lines")
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ISSUED
+  RECEIVED
+  CANCELLED
+  INVOICED
+}
+
+// Atomic purchase-order consecutive number per company.
+model PurchaseOrderSequence {
+  companyId  String @id @map("company_id") @db.Uuid
+  lastNumber Int    @default(0) @map("last_number")
+
+  company Company @relation("PurchaseOrderSequenceCompany", fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("purchase_order_sequences")
+}
+
+model PurchaseOrder {
+  id           String              @id @default(uuid()) @db.Uuid
+  companyId    String              @map("company_id") @db.Uuid
+  supplierId   String              @map("supplier_id") @db.Uuid
+  orderNumber  Int                 @map("order_number")           // consecutivo por empresa
+  issueDate    DateTime            @map("issue_date")
+  expectedDate DateTime?           @map("expected_date")
+  status       PurchaseOrderStatus @default(DRAFT)
+  currency     String              @default("CRC")
+  exchangeRate Decimal             @default(1) @map("exchange_rate") @db.Decimal(10, 4)
+  subtotal     Decimal             @default(0) @db.Decimal(15, 2)
+  taxTotal     Decimal             @default(0) @map("tax_total") @db.Decimal(15, 2)
+  total        Decimal             @default(0) @db.Decimal(15, 2)
+  notes        String?
+  createdById  String              @map("created_by_id") @db.Uuid
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt      @map("updated_at")
+
+  company          Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  supplier         Supplier            @relation(fields: [supplierId], references: [id])
+  lines            PurchaseOrderLine[]
+  purchaseInvoices PurchaseInvoice[]
+
+  @@unique([companyId, orderNumber])
+  @@index([companyId])
+  @@index([supplierId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id              String  @id @default(uuid()) @db.Uuid
+  purchaseOrderId String  @map("purchase_order_id") @db.Uuid
+  productId       String? @map("product_id") @db.Uuid
+  lineNo          Int     @map("line_no")
+  description     String
+  quantity        Decimal @db.Decimal(15, 3)
+  unitCost        Decimal @map("unit_cost") @db.Decimal(15, 2)
+  taxRate         Decimal @map("tax_rate")  @db.Decimal(5, 2)
+  lineTotal       Decimal @map("line_total") @db.Decimal(15, 2)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product?      @relation("PurchaseOrderLineProduct", fields: [productId], references: [id])
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_lines")
+}
+
+enum InventoryAdjustmentType {
+  INCREASE
+  DECREASE
+}
+
+// Historial de ajustes manuales de inventario (merma, conteo fisico, dano,
+// correccion al alza). Cada fila queda enlazada al asiento que genero via
+// sourceType='inventory_adjustment' / sourceId=this.id (V-5 trazabilidad).
+model InventoryAdjustment {
+  id          String                   @id @default(uuid()) @db.Uuid
+  companyId   String                   @map("company_id") @db.Uuid
+  productId   String                   @map("product_id") @db.Uuid
+  type        InventoryAdjustmentType
+  quantity    Decimal                  @db.Decimal(15, 3)
+  unitCost    Decimal                  @map("unit_cost")   @db.Decimal(15, 2)
+  totalValue  Decimal                  @map("total_value") @db.Decimal(15, 2)
+  reason      String
+  // Enlace al asiento generado (journal_entries.source_type/source_id).
+  sourceType  String?                  @map("source_type")
+  sourceId    String?                  @map("source_id")
+  createdById String                   @map("created_by_id") @db.Uuid
+  createdAt   DateTime                 @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product Product @relation("InventoryAdjustmentProduct", fields: [productId], references: [id])
+
+  @@index([companyId])
+  @@index([productId])
+  @@map("inventory_adjustments")
 }

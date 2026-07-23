@@ -145,6 +145,26 @@ export interface RecordDebitNoteInput extends BaseEventInput {
 }
 
 /**
+ * Ajuste manual de inventario (merma, conteo físico, daño, sobrante,
+ * corrección al alza). A diferencia de cotizaciones/órdenes de compra, SÍ
+ * genera asiento — cambia el valor del inventario.
+ *
+ *   INCREASE → D Inventario / C Ajuste de inventario (ingreso)
+ *   DECREASE → D Gasto por ajuste de inventario / C Inventario
+ */
+export interface RecordInventoryAdjustmentInput extends BaseEventInput {
+  /** Id del InventoryAdjustment (sourceId para idempotencia/trazabilidad V-5). */
+  adjustmentId: string;
+  productId:    string;
+  productName:  string;
+  adjustmentType: 'INCREASE' | 'DECREASE';
+  quantity:     number;
+  /** Costo total del movimiento (unitCost * quantity, ya redondeado a 2 decimales). */
+  totalValue:   number;
+  reason:       string;
+}
+
+/**
  * Evento de negocio tipado (Accounting Manifest §6). `dispatch()` es la
  * puerta única de escritura contable automática; cada `type` mapea a su
  * handler de dominio. Los escritores directos (nómina/cierre/depreciación)
@@ -156,7 +176,8 @@ export type BusinessEvent =
   | ({ type: 'PAYMENT_RECEIVED' }    & RecordCollectionInput)
   | ({ type: 'PAYMENT_MADE' }        & RecordPaymentInput)
   | ({ type: 'CREDIT_NOTE_ISSUED' }  & RecordCreditNoteInput)
-  | ({ type: 'DEBIT_NOTE_ISSUED' }   & RecordDebitNoteInput);
+  | ({ type: 'DEBIT_NOTE_ISSUED' }   & RecordDebitNoteInput)
+  | ({ type: 'INVENTORY_ADJUSTED' }  & RecordInventoryAdjustmentInput);
 
 @Injectable()
 export class BusinessEventsService {
@@ -186,6 +207,7 @@ export class BusinessEventsService {
       case 'PAYMENT_MADE':       return this.recordPayment(event);
       case 'CREDIT_NOTE_ISSUED': return this.recordCreditNote(event);
       case 'DEBIT_NOTE_ISSUED':  return this.recordDebitNote(event);
+      case 'INVENTORY_ADJUSTED': return this.recordInventoryAdjustment(event);
       default: {
         const _exhaustive: never = event;
         throw new Error(`Evento de negocio no soportado: ${(_exhaustive as any)?.type}`);
@@ -598,6 +620,73 @@ export class BusinessEventsService {
           }
         }
       },
+    );
+  }
+
+  /**
+   * Evento "ajuste de inventario": merma, conteo físico, daño (DECREASE) o
+   * sobrante/corrección al alza (INCREASE). A diferencia de cotizaciones y
+   * órdenes de compra, SÍ cambia el valor del inventario y por lo tanto
+   * SIEMPRE genera asiento (no depende del AccountingMode de venta/compra —
+   * usa el mismo `_runEvent` que respeta MANUAL/AUTOMATIC/HYBRID igual que
+   * el resto de eventos).
+   *
+   * Asiento:
+   *   DECREASE → D Gasto por ajuste de inventario (5.1.01.02) / C Inventario (1.1.03.01)
+   *   INCREASE → D Inventario (1.1.03.01) / C Ajuste de inventario — ingreso (4.2.01.02)
+   *
+   * Idempotente por sourceType='inventory_adjustment', sourceId=adjustmentId.
+   */
+  async recordInventoryAdjustment(input: RecordInventoryAdjustmentInput) {
+    const mode = await this.modeResolver.forCompany(input.companyId);
+    const ref  = `Ajuste de inventario — ${input.productName} (${input.reason})`;
+
+    const lines: JournalLineSpec[] = input.adjustmentType === 'DECREASE'
+      ? [
+          {
+            accountCode: ACCOUNT_CODES.INVENTORY_ADJUSTMENT_EXPENSE,
+            debit:       input.totalValue,
+            credit:      0,
+            description: ref,
+          },
+          {
+            accountCode: ACCOUNT_CODES.INVENTORY,
+            debit:       0,
+            credit:      input.totalValue,
+            description: `Salida de inventario — ${ref}`,
+          },
+        ]
+      : [
+          {
+            accountCode: ACCOUNT_CODES.INVENTORY,
+            debit:       input.totalValue,
+            credit:      0,
+            description: `Entrada de inventario — ${ref}`,
+          },
+          {
+            accountCode: ACCOUNT_CODES.INVENTORY_ADJUSTMENT_INCOME,
+            debit:       0,
+            credit:      input.totalValue,
+            description: ref,
+          },
+        ];
+
+    const spec: JournalEntrySpec = {
+      sourceType:  'inventory_adjustment',
+      description: `Ajuste de inventario (${input.adjustmentType === 'DECREASE' ? 'merma' : 'sobrante'}) — ${input.productName}: ${input.reason}`,
+      lines,
+    };
+
+    return this._runEvent(
+      mode,
+      input,
+      spec,
+      JournalSource.ADJUSTMENT,
+      { sourceId: input.adjustmentId },
+      async () => { /* sin side-effects adicionales — el movimiento FIFO ya
+                       se aplicó antes de dispatchar el evento (mismo orden
+                       que credit-notes: primero el movimiento físico, luego
+                       el asiento dentro de la misma transacción). */ },
     );
   }
 
