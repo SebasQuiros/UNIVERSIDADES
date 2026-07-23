@@ -79,6 +79,10 @@ async function bootstrap() {
     methods:     'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
     allowedHeaders: 'Content-Type,Authorization,X-Requested-With',
+    // Frontend (Vercel) y backend (Railway) son orígenes distintos → el navegador
+    // hace un preflight OPTIONS por cada request. Cachearlo 24h elimina ese
+    // round-trip extra (~180-585ms medidos) en todas las llamadas siguientes.
+    maxAge: 86400,
   });
 
   app.useGlobalPipes(new ValidationPipe({

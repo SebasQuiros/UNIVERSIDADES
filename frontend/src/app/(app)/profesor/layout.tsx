@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { StudentSidebar } from '@/components/layout/StudentSidebar';
 import { TopBar } from '@/components/layout/TopBar';
-import { PageSpinner } from '@/components/ui/Spinner';
+import { AppShellSkeleton } from '@/components/layout/AppShellSkeleton';
 import { PageErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 export default function ProfesorLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,7 @@ export default function ProfesorLayout({ children }: { children: React.ReactNode
     if (!isLoading && user && user.role !== 'TEACHER') router.replace('/login');
   }, [user, isLoading, router]);
 
-  if (isLoading) return <PageSpinner />;
+  if (isLoading) return <AppShellSkeleton />;
   if (!user || user.role !== 'TEACHER') return null;
 
   return (
