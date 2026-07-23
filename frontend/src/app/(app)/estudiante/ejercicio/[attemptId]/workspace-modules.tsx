@@ -21,7 +21,8 @@ import {
   Printer, Landmark, Upload,
   Scale, ClipboardList, ClipboardCheck, Download,
   Lightbulb, Search, Mail, Contact, Receipt, FileCheck2,
-  FileClock, Wallet,
+  FileClock, Wallet, FileSignature, PackageCheck, SlidersHorizontal,
+  PackagePlus, PackageMinus, ArrowRightCircle,
 } from 'lucide-react';
 
 // ─── Brand palette (azul-noche + dorado) ──────────────────────────────────────
@@ -3261,6 +3262,874 @@ export function PayrollTab({ companyId }: { companyId: string }) {
               </div>
             ))
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Quotes (Cotizaciones / Presupuestos) tab ─────────────────────────────────
+export interface Quote {
+  id: string; consecutiveNumber?: string; number?: string; status: string;
+  issueDate: string; validUntil: string; total: number | string; clientName?: string;
+  client?: { id: string; name: string };
+  notes?: string | null; currency?: string; exchangeRate?: number | string;
+  lines?: Array<{ description: string; quantity: number; unitPrice: number; taxRate?: number; cabysCode?: string; total?: number }>;
+}
+
+const QUOTE_STATUS_BADGE: Record<string, { variant: 'blue' | 'slate' | 'gold' | 'red'; label: string }> = {
+  DRAFT:     { variant: 'slate', label: 'Borrador' },
+  SENT:      { variant: 'blue',  label: 'Enviada'  },
+  ACCEPTED:  { variant: 'gold',  label: 'Aceptada' },
+  REJECTED:  { variant: 'red',   label: 'Rechazada' },
+  EXPIRED:   { variant: 'slate', label: 'Vencida'  },
+  CONVERTED: { variant: 'blue',  label: 'Convertida' },
+};
+
+export function QuotesTab({ companyId, readonly, attemptId }: { companyId: string; readonly: boolean; attemptId?: string }) {
+  const [quotes, setQuotes]     = useState<Quote[]>([]);
+  const [clients, setClients]   = useState<Client[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [sendingId, setSendingId]     = useState<string | null>(null);
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [form, setForm] = useState({
+    clientId: '', issueDate: new Date().toISOString().split('T')[0],
+    validUntil: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0],
+    notes: '', currency: 'CRC', exchangeRate: '',
+  });
+  const [lines, setLines] = useState([{ productId: '', description: '', quantity: '1', unitPrice: '', taxRate: '13', cabysCode: '' }]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [q, cli, prod] = await Promise.all([
+        api.get<Quote[] | { quotes: Quote[] }>(`/api/v1/companies/${companyId}/quotes`),
+        api.get<Client[]>(`/api/v1/companies/${companyId}/clients`),
+        api.get<Product[]>(`/api/v1/companies/${companyId}/products`),
+      ]);
+      const list: Quote[] = Array.isArray(q.data) ? q.data : ((q.data as any)?.quotes ?? []);
+      setQuotes(list);
+      setClients(Array.isArray(cli.data) ? cli.data.filter((c) => c.isActive) : []);
+      setProducts(Array.isArray(prod.data) ? prod.data.filter((p) => p.isActive) : []);
+    } catch { toast.error('Error al cargar cotizaciones'); }
+    finally { setLoading(false); }
+  }, [companyId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function addLine() { setLines([...lines, { productId: '', description: '', quantity: '1', unitPrice: '', taxRate: '13', cabysCode: '' }]); }
+  function removeLine(i: number) { setLines(lines.filter((_, idx) => idx !== i)); }
+  function updateLine(i: number, field: string, val: string) {
+    setLines(lines.map((l, idx) => {
+      if (idx !== i) return l;
+      const newLine = { ...l, [field]: val };
+      if (field === 'productId' && val) {
+        const prod = products.find((p) => p.id === val);
+        if (prod) {
+          newLine.description = prod.name;
+          newLine.unitPrice   = String(prod.price);
+          newLine.cabysCode   = prod.cabysCode ?? '';
+          newLine.taxRate     = String(prod.taxRate ?? 13);
+        }
+      }
+      return newLine;
+    }));
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.clientId) { toast.error('Selecciona un cliente'); return; }
+    const filledLines = lines.filter((l) => l.description);
+    if (filledLines.length === 0) { toast.error('Agrega al menos una línea'); return; }
+    const badCabys = filledLines.findIndex((l) => !/^\d{13}$/.test((l.cabysCode || '').trim()));
+    if (badCabys >= 0) {
+      toast.error(`Línea ${badCabys + 1}: el código CABYS debe tener exactamente 13 dígitos. Seleccioná un producto del catálogo o ingresá un CABYS válido.`);
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post(`/api/v1/companies/${companyId}/quotes`, {
+        clientId: form.clientId,
+        issueDate: form.issueDate,
+        validUntil: form.validUntil,
+        notes: form.notes || undefined,
+        currency: form.currency,
+        exchangeRate: form.currency === 'USD' && form.exchangeRate ? Number(form.exchangeRate) : undefined,
+        lines: filledLines.map((l) => ({
+          productId:   l.productId || undefined,
+          description: l.description,
+          quantity:    Number(l.quantity) || 1,
+          unitPrice:   Number(l.unitPrice) || 0,
+          taxRate:     Number(l.taxRate) || 0,
+          cabysCode:   l.cabysCode.trim(),
+        })),
+      });
+      if (attemptId) api.post(`/api/v1/attempts/${attemptId}/track`, { event: 'QUOTE_CREATED' }).catch(() => {});
+      toast.success('Cotización creada como borrador');
+      setShowModal(false);
+      setLines([{ productId: '', description: '', quantity: '1', unitPrice: '', taxRate: '13', cabysCode: '' }]);
+      setForm({ clientId: '', issueDate: new Date().toISOString().split('T')[0], validUntil: new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0], notes: '', currency: 'CRC', exchangeRate: '' });
+      load();
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setSaving(false); }
+  }
+
+  async function handleSend(id: string) {
+    setSendingId(id);
+    try {
+      await api.post(`/api/v1/companies/${companyId}/quotes/${id}/send`);
+      toast.success('Cotización enviada');
+      load();
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setSendingId(null); }
+  }
+
+  async function handleConvert(q: Quote) {
+    setConvertingId(q.id);
+    try {
+      await api.post(`/api/v1/companies/${companyId}/quotes/${q.id}/convert`);
+      toast.success('Cotización convertida a factura. Ve a "Facturas" para emitirla.');
+      load();
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setConvertingId(null); }
+  }
+
+  const clientNameOf = (q: Quote) => q.clientName ?? q.client?.name ?? '—';
+  const numberOf = (q: Quote) => q.consecutiveNumber ?? q.number ?? q.id.slice(0, 8);
+
+  const draftCount = useMemo(() => quotes.filter((q) => q.status === 'DRAFT').length, [quotes]);
+  const acceptedCount = useMemo(() => quotes.filter((q) => q.status === 'ACCEPTED' || q.status === 'SENT').length, [quotes]);
+  const convertedTotal = useMemo(
+    () => quotes.filter((q) => q.status === 'CONVERTED').reduce((s, q) => s + Number(q.total || 0), 0),
+    [quotes],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return quotes;
+    return quotes.filter((qt) =>
+      numberOf(qt).toLowerCase().includes(q) || clientNameOf(qt).toLowerCase().includes(q));
+  }, [quotes, query]);
+
+  const fmtCRC0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
+
+  return (
+    <div className="space-y-5">
+      {showModal && (
+        <Modal title="Nueva Cotización" onClose={() => setShowModal(false)}>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">Moneda</label>
+              <div className="flex gap-2">
+                {['CRC', 'USD'].map((cur) => (
+                  <button key={cur} type="button"
+                    onClick={() => setForm({ ...form, currency: cur })}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${form.currency === cur ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}>
+                    {cur === 'CRC' ? '₡ Colones (CRC)' : '$ Dólares (USD)'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {form.currency === 'USD' && (
+              <ExchangeRateWidget onRateLoaded={(venta) => setForm((prev) => ({ ...prev, exchangeRate: String(venta) }))} />
+            )}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">Cliente *</label>
+              <select value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Selecciona un cliente...</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Fecha emisión" type="date" value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} />
+              <Input label="Válida hasta" type="date" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} />
+            </div>
+            <Input label="Notas" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas opcionales" />
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">Líneas</label>
+                <button type="button" onClick={addLine} className="text-xs text-blue-700 hover:text-blue-700">+ Agregar línea</button>
+              </div>
+              <div className="space-y-3">
+                {lines.map((line, i) => (
+                  <div key={i} className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+                    <div className="flex gap-2">
+                      <select value={line.productId} onChange={(e) => updateLine(i, 'productId', e.target.value)}
+                        className="flex-1 rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="">Seleccionar producto...</option>
+                        {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <button type="button" onClick={() => removeLine(i)} className="text-gray-400 hover:text-red-600 px-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <input value={line.description} onChange={(e) => updateLine(i, 'description', e.target.value)}
+                      placeholder="Descripción de la línea *" className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <input type="number" value={line.quantity} onChange={(e) => updateLine(i, 'quantity', e.target.value)}
+                        placeholder="Cant." min="0.001" step="0.001" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      <input type="number" value={line.unitPrice} onChange={(e) => updateLine(i, 'unitPrice', e.target.value)}
+                        placeholder="Precio" min="0" step="0.01" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      <select value={line.taxRate} onChange={(e) => updateLine(i, 'taxRate', e.target.value)}
+                        className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        {[0,1,2,4,8,13].map((r) => <option key={r} value={r}>IVA {r}%</option>)}
+                      </select>
+                    </div>
+                    <CabysSearch
+                      value={line.cabysCode}
+                      onSelect={(item: CabysItem) => setLines((prev) => prev.map((l, idx) =>
+                        idx === i ? { ...l, cabysCode: item.codigo, taxRate: String(item.impuesto) } : l))}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancelar</Button>
+              <Button type="submit" loading={saving} className="flex-1">Crear borrador</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      <ModuleHeader
+        icon={FileSignature}
+        title="Cotizaciones"
+        subtitle="Presupuestos para clientes, convertibles en factura"
+        action={!readonly && (
+          <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nueva cotización</Button>
+        )}
+      />
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatTile label="Cotizaciones" value={String(quotes.length)} icon={FileSignature} tint={BRAND_BLUE} />
+        <StatTile label="Borradores" value={String(draftCount)} icon={FileClock} tint="#94A3B8" />
+        <StatTile label="Enviadas / Aceptadas" value={String(acceptedCount)} icon={Send} tint={BRAND_GOLD} />
+        <StatTile label="Convertido a factura" value={fmtCRC0(convertedTotal)} icon={ArrowRightCircle} tint={BRAND_BLUE_D} valueColor={BRAND_BLUE_D} />
+      </div>
+
+      {quotes.length === 0 ? (
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <FileSignature className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title="Aún no hay cotizaciones"
+            description="Crea una cotización para tus clientes. Al aceptarla, podrás convertirla en factura con un clic."
+            action={!readonly && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nueva cotización</Button>
+            )}
+          />
+        </div>
+      ) : (
+        <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por número o cliente…"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
+              />
+            </div>
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
+              {filtered.length} de {quotes.length}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] text-gray-500 uppercase tracking-wide bg-gray-50/60 border-b border-gray-100">
+                  <th className="text-left font-semibold px-4 py-2.5">Número</th>
+                  <th className="text-left font-semibold px-4 py-2.5">Cliente</th>
+                  <th className="text-left font-semibold px-4 py-2.5">Válida hasta</th>
+                  <th className="text-right font-semibold px-4 py-2.5">Total</th>
+                  <th className="text-center font-semibold px-4 py-2.5">Estado</th>
+                  <th className="text-right font-semibold px-4 py-2.5">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map((q) => {
+                  const badge = QUOTE_STATUS_BADGE[q.status] ?? { variant: 'slate' as const, label: q.status };
+                  return (
+                    <tr key={q.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            <FileSignature className="w-4 h-4 text-blue-700" />
+                          </div>
+                          <span className="font-mono text-xs font-semibold text-blue-700">{numberOf(q)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">{clientNameOf(q)}</td>
+                      <td className="px-4 py-3 text-gray-500">{formatDate(q.validUntil)}</td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-gray-900">
+                        ₡{Number(q.total).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={badge.variant}>
+                          {q.status === 'CONVERTED' && <CheckCircle2 className="w-3 h-3" />}
+                          {badge.label}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          {!readonly && q.status === 'DRAFT' && (
+                            <Button size="sm" variant="secondary" onClick={() => handleSend(q.id)} loading={sendingId === q.id}>
+                              <Send className="w-3 h-3" /> Enviar
+                            </Button>
+                          )}
+                          {!readonly && (q.status === 'SENT' || q.status === 'ACCEPTED') && (
+                            <Button size="sm" onClick={() => handleConvert(q)} loading={convertingId === q.id}>
+                              <ArrowRightCircle className="w-3 h-3" /> Convertir a factura
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Purchase Orders tab (Órdenes de compra + Recepción de bienes) ───────────
+export interface PurchaseOrder {
+  id: string; consecutiveNumber?: string; number?: string; status: string;
+  issueDate: string; expectedDate?: string | null; total: number | string;
+  supplierName?: string; supplier?: { id: string; name: string };
+  notes?: string | null; currency?: string; exchangeRate?: number | string;
+  lines?: Array<{ description: string; quantity: number; unitCost: number; taxRate?: number; total?: number }>;
+}
+
+const PO_STATUS_BADGE: Record<string, { variant: 'blue' | 'slate' | 'gold' | 'red'; label: string }> = {
+  DRAFT:     { variant: 'slate', label: 'Borrador'  },
+  ISSUED:    { variant: 'blue',  label: 'Emitida'   },
+  RECEIVED:  { variant: 'gold',  label: 'Recibida'  },
+  CANCELLED: { variant: 'red',   label: 'Cancelada' },
+  INVOICED:  { variant: 'blue',  label: 'Facturada' },
+};
+
+export function PurchaseOrdersTab({ companyId, readonly, attemptId, focusReceiving }: {
+  companyId: string; readonly: boolean; attemptId?: string; focusReceiving?: boolean;
+}) {
+  const [orders, setOrders]     = useState<PurchaseOrder[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [issuingId, setIssuingId]     = useState<string | null>(null);
+  const [receivingId, setReceivingId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [form, setForm] = useState({
+    supplierId: '', issueDate: new Date().toISOString().split('T')[0],
+    expectedDate: '', notes: '', currency: 'CRC', exchangeRate: '',
+  });
+  const [lines, setLines] = useState([{ productId: '', description: '', quantity: '1', unitCost: '', taxRate: '13' }]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [po, sup, prod] = await Promise.all([
+        api.get<PurchaseOrder[] | { purchaseOrders: PurchaseOrder[] }>(`/api/v1/companies/${companyId}/purchase-orders`),
+        api.get<Supplier[]>(`/api/v1/companies/${companyId}/suppliers`),
+        api.get<Product[]>(`/api/v1/companies/${companyId}/products`),
+      ]);
+      const list: PurchaseOrder[] = Array.isArray(po.data) ? po.data : ((po.data as any)?.purchaseOrders ?? []);
+      setOrders(list);
+      setSuppliers(Array.isArray(sup.data) ? sup.data.filter((s) => s.isActive) : []);
+      setProducts(Array.isArray(prod.data) ? prod.data.filter((p) => p.isActive) : []);
+    } catch { toast.error('Error al cargar órdenes de compra'); }
+    finally { setLoading(false); }
+  }, [companyId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  function addLine() { setLines([...lines, { productId: '', description: '', quantity: '1', unitCost: '', taxRate: '13' }]); }
+  function removeLine(i: number) { setLines(lines.filter((_, idx) => idx !== i)); }
+  function updateLine(i: number, field: string, val: string) {
+    setLines(lines.map((l, idx) => {
+      if (idx !== i) return l;
+      const newLine = { ...l, [field]: val };
+      if (field === 'productId' && val) {
+        const prod = products.find((p) => p.id === val);
+        if (prod) {
+          newLine.description = prod.name;
+          newLine.unitCost    = String(prod.price);
+          newLine.taxRate     = String(prod.taxRate ?? 13);
+        }
+      }
+      return newLine;
+    }));
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.supplierId) { toast.error('Selecciona un proveedor'); return; }
+    const filledLines = lines.filter((l) => l.description);
+    if (filledLines.length === 0) { toast.error('Agrega al menos una línea'); return; }
+    setSaving(true);
+    try {
+      await api.post(`/api/v1/companies/${companyId}/purchase-orders`, {
+        supplierId: form.supplierId,
+        issueDate: form.issueDate,
+        expectedDate: form.expectedDate || undefined,
+        notes: form.notes || undefined,
+        currency: form.currency,
+        exchangeRate: form.currency === 'USD' && form.exchangeRate ? Number(form.exchangeRate) : undefined,
+        lines: filledLines.map((l) => ({
+          productId:   l.productId || undefined,
+          description: l.description,
+          quantity:    Number(l.quantity) || 1,
+          unitCost:    Number(l.unitCost) || 0,
+          taxRate:     Number(l.taxRate) || 0,
+        })),
+      });
+      if (attemptId) api.post(`/api/v1/attempts/${attemptId}/track`, { event: 'PURCHASE_ORDER_CREATED' }).catch(() => {});
+      toast.success('Orden de compra creada como borrador');
+      setShowModal(false);
+      setLines([{ productId: '', description: '', quantity: '1', unitCost: '', taxRate: '13' }]);
+      setForm({ supplierId: '', issueDate: new Date().toISOString().split('T')[0], expectedDate: '', notes: '', currency: 'CRC', exchangeRate: '' });
+      load();
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setSaving(false); }
+  }
+
+  async function handleIssue(id: string) {
+    setIssuingId(id);
+    try {
+      await api.post(`/api/v1/companies/${companyId}/purchase-orders/${id}/issue`);
+      toast.success('Orden de compra emitida');
+      load();
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setIssuingId(null); }
+  }
+
+  async function handleReceive(id: string) {
+    setReceivingId(id);
+    try {
+      await api.post(`/api/v1/companies/${companyId}/purchase-orders/${id}/receive`);
+      toast.success('Bienes recibidos: inventario actualizado');
+      load();
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setReceivingId(null); }
+  }
+
+  const supplierNameOf = (o: PurchaseOrder) => o.supplierName ?? o.supplier?.name ?? '—';
+  const numberOf = (o: PurchaseOrder) => o.consecutiveNumber ?? o.number ?? o.id.slice(0, 8);
+
+  const pendingReceive = useMemo(() => orders.filter((o) => o.status === 'ISSUED'), [orders]);
+  const receivedTotal = useMemo(
+    () => orders.filter((o) => o.status === 'RECEIVED').reduce((s, o) => s + Number(o.total || 0), 0),
+    [orders],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let list = orders;
+    if (q) list = list.filter((o) => numberOf(o).toLowerCase().includes(q) || supplierNameOf(o).toLowerCase().includes(q));
+    // Si venimos de "Recepción de bienes" (?sub=recepcion), priorizamos las
+    // pendientes de recibir (ISSUED) al frente de la lista.
+    if (focusReceiving) {
+      return [...list].sort((a, b) => (a.status === 'ISSUED' ? -1 : 0) - (b.status === 'ISSUED' ? -1 : 0));
+    }
+    return list;
+  }, [orders, query, focusReceiving]);
+
+  const fmtCRC0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
+
+  return (
+    <div className="space-y-5">
+      {showModal && (
+        <Modal title="Nueva Orden de Compra" onClose={() => setShowModal(false)}>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">Moneda</label>
+              <div className="flex gap-2">
+                {['CRC', 'USD'].map((cur) => (
+                  <button key={cur} type="button"
+                    onClick={() => setForm({ ...form, currency: cur })}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${form.currency === cur ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}>
+                    {cur === 'CRC' ? '₡ Colones (CRC)' : '$ Dólares (USD)'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {form.currency === 'USD' && (
+              <ExchangeRateWidget onRateLoaded={(venta) => setForm((prev) => ({ ...prev, exchangeRate: String(venta) }))} />
+            )}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">Proveedor *</label>
+              <select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })}
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Selecciona un proveedor...</option>
+                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Fecha emisión" type="date" value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} />
+              <Input label="Fecha esperada" type="date" value={form.expectedDate} onChange={(e) => setForm({ ...form, expectedDate: e.target.value })} />
+            </div>
+            <Input label="Notas" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas opcionales" />
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">Líneas</label>
+                <button type="button" onClick={addLine} className="text-xs text-blue-700 hover:text-blue-700">+ Agregar línea</button>
+              </div>
+              <div className="space-y-3">
+                {lines.map((line, i) => (
+                  <div key={i} className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+                    <div className="flex gap-2">
+                      <select value={line.productId} onChange={(e) => updateLine(i, 'productId', e.target.value)}
+                        className="flex-1 rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="">Seleccionar producto...</option>
+                        {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <button type="button" onClick={() => removeLine(i)} className="text-gray-400 hover:text-red-600 px-1">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <input value={line.description} onChange={(e) => updateLine(i, 'description', e.target.value)}
+                      placeholder="Descripción de la línea *" className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <input type="number" value={line.quantity} onChange={(e) => updateLine(i, 'quantity', e.target.value)}
+                        placeholder="Cant." min="0.001" step="0.001" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      <input type="number" value={line.unitCost} onChange={(e) => updateLine(i, 'unitCost', e.target.value)}
+                        placeholder="Costo unit." min="0" step="0.01" className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      <select value={line.taxRate} onChange={(e) => updateLine(i, 'taxRate', e.target.value)}
+                        className="rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        {[0,1,2,4,8,13].map((r) => <option key={r} value={r}>IVA {r}%</option>)}
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancelar</Button>
+              <Button type="submit" loading={saving} className="flex-1">Crear borrador</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      <ModuleHeader
+        icon={PackageCheck}
+        title="Órdenes de compra"
+        subtitle="Aprovisionamiento a proveedores y recepción de bienes"
+        action={!readonly && (
+          <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nueva orden</Button>
+        )}
+      />
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatTile label="Total de órdenes" value={String(orders.length)} icon={PackageCheck} tint={BRAND_BLUE} />
+        <StatTile label="Pendientes de recibir" value={String(pendingReceive.length)} icon={Truck} tint={BRAND_GOLD} />
+        <StatTile label="Valor recibido" value={fmtCRC0(receivedTotal)} icon={Wallet} tint={BRAND_BLUE_D} valueColor={BRAND_BLUE_D} />
+      </div>
+
+      {orders.length === 0 ? (
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <PackageCheck className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title="Aún no hay órdenes de compra"
+            description="Crea una orden de compra para tus proveedores. Al recibir los bienes se actualiza el inventario."
+            action={!readonly && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nueva orden</Button>
+            )}
+          />
+        </div>
+      ) : (
+        <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por número o proveedor…"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
+              />
+            </div>
+            {focusReceiving && (
+              <span className="text-xs font-semibold text-gold-900 bg-gold-50 border border-gold-100 rounded-full px-2.5 py-1">
+                Recepción de bienes: mostrando pendientes primero
+              </span>
+            )}
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
+              {filtered.length} de {orders.length}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] text-gray-500 uppercase tracking-wide bg-gray-50/60 border-b border-gray-100">
+                  <th className="text-left font-semibold px-4 py-2.5">Número</th>
+                  <th className="text-left font-semibold px-4 py-2.5">Proveedor</th>
+                  <th className="text-left font-semibold px-4 py-2.5">Fecha</th>
+                  <th className="text-right font-semibold px-4 py-2.5">Total</th>
+                  <th className="text-center font-semibold px-4 py-2.5">Estado</th>
+                  <th className="text-right font-semibold px-4 py-2.5">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map((o) => {
+                  const badge = PO_STATUS_BADGE[o.status] ?? { variant: 'slate' as const, label: o.status };
+                  return (
+                    <tr key={o.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                            <PackageCheck className="w-4 h-4 text-blue-700" />
+                          </div>
+                          <span className="font-mono text-xs font-semibold text-blue-700">{numberOf(o)}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-900">{supplierNameOf(o)}</td>
+                      <td className="px-4 py-3 text-gray-500">{formatDate(o.issueDate)}</td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-gray-900">
+                        ₡{Number(o.total).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={badge.variant}>
+                          {o.status === 'RECEIVED' && <PackageCheck className="w-3 h-3" />}
+                          {badge.label}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          {!readonly && o.status === 'DRAFT' && (
+                            <Button size="sm" variant="secondary" onClick={() => handleIssue(o.id)} loading={issuingId === o.id}>
+                              <Send className="w-3 h-3" /> Emitir
+                            </Button>
+                          )}
+                          {!readonly && o.status === 'ISSUED' && (
+                            <Button size="sm" onClick={() => handleReceive(o.id)} loading={receivingId === o.id}>
+                              <PackageCheck className="w-3 h-3" /> Recibir
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Inventory Adjustments tab (Ajustes de inventario) ───────────────────────
+export interface InventoryAdjustment {
+  id: string; productId: string; type: 'INCREASE' | 'DECREASE';
+  quantity: number | string; unitCost?: number | string | null; totalValue: number | string;
+  reason: string; createdAt: string;
+  product?: { id: string; name: string };
+}
+
+export function InventoryAdjustmentsTab({ companyId, readonly }: { companyId: string; readonly: boolean }) {
+  const [adjustments, setAdjustments] = useState<InventoryAdjustment[]>([]);
+  const [products, setProducts]       = useState<Product[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [showModal, setShowModal]     = useState(false);
+  const [saving, setSaving]           = useState(false);
+  const [form, setForm] = useState({ productId: '', type: 'INCREASE' as 'INCREASE' | 'DECREASE', quantity: '', unitCost: '', reason: '' });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [adj, prod] = await Promise.all([
+        api.get<InventoryAdjustment[] | { adjustments: InventoryAdjustment[] }>(`/api/v1/companies/${companyId}/inventory/adjustments`),
+        api.get<Product[]>(`/api/v1/companies/${companyId}/products`),
+      ]);
+      const list: InventoryAdjustment[] = Array.isArray(adj.data) ? adj.data : ((adj.data as any)?.adjustments ?? []);
+      setAdjustments(list);
+      setProducts(Array.isArray(prod.data) ? prod.data.filter((p) => p.isActive) : []);
+    } catch { toast.error('Error al cargar ajustes de inventario'); }
+    finally { setLoading(false); }
+  }, [companyId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.productId) { toast.error('Selecciona un producto'); return; }
+    if (!form.quantity || Number(form.quantity) <= 0) { toast.error('La cantidad debe ser mayor a cero'); return; }
+    if (!form.reason.trim()) { toast.error('El motivo es requerido'); return; }
+    if (form.type === 'INCREASE' && (!form.unitCost || Number(form.unitCost) <= 0)) {
+      toast.error('El costo unitario es obligatorio para un ajuste de entrada (INCREASE)');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post(`/api/v1/companies/${companyId}/inventory/adjustments`, {
+        productId: form.productId,
+        type: form.type,
+        quantity: Number(form.quantity),
+        reason: form.reason,
+        unitCost: form.type === 'INCREASE' ? Number(form.unitCost) : undefined,
+      });
+      toast.success('Ajuste de inventario registrado');
+      setShowModal(false);
+      setForm({ productId: '', type: 'INCREASE', quantity: '', unitCost: '', reason: '' });
+      load();
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setSaving(false); }
+  }
+
+  const productNameOf = (a: InventoryAdjustment) => a.product?.name ?? products.find((p) => p.id === a.productId)?.name ?? '—';
+
+  const netValue = useMemo(() => adjustments.reduce((s, a) =>
+    s + (a.type === 'INCREASE' ? Number(a.totalValue || 0) : -Number(a.totalValue || 0)), 0), [adjustments]);
+  const increaseCount = useMemo(() => adjustments.filter((a) => a.type === 'INCREASE').length, [adjustments]);
+  const decreaseCount = useMemo(() => adjustments.filter((a) => a.type === 'DECREASE').length, [adjustments]);
+
+  const fmtCRC0 = (n: number) => (n < 0 ? '-' : '') + '₡' + Math.abs(Number(n || 0)).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
+
+  return (
+    <div className="space-y-5">
+      {showModal && (
+        <Modal title="Nuevo Ajuste de Inventario" onClose={() => setShowModal(false)}>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">Producto *</label>
+              <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })}
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Selecciona un producto...</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-gray-700">Tipo de ajuste *</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setForm({ ...form, type: 'INCREASE' })}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                    form.type === 'INCREASE' ? 'bg-blue-600 text-white border-transparent' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-300'
+                  }`}>
+                  <PackagePlus className="w-4 h-4" /> Entrada
+                </button>
+                <button type="button" onClick={() => setForm({ ...form, type: 'DECREASE' })}
+                  className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold border transition-colors ${
+                    form.type === 'DECREASE' ? 'bg-red-600 text-white border-transparent' : 'bg-white text-gray-600 border-gray-300 hover:border-red-300'
+                  }`}>
+                  <PackageMinus className="w-4 h-4" /> Salida
+                </button>
+              </div>
+            </div>
+            <Input label="Cantidad *" type="number" min="0.001" step="0.001" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" />
+            {form.type === 'INCREASE' && (
+              <Input label="Costo unitario *" type="number" min="0.01" step="0.01" value={form.unitCost} onChange={(e) => setForm({ ...form, unitCost: e.target.value })} placeholder="0.00" />
+            )}
+            <Input label="Motivo *" value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Ej: Conteo físico, merma, donación..." />
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancelar</Button>
+              <Button type="submit" loading={saving} className="flex-1">Registrar ajuste</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      <ModuleHeader
+        icon={SlidersHorizontal}
+        title="Ajustes de inventario"
+        subtitle="Correcciones manuales de existencias: entradas y salidas"
+        action={!readonly && (
+          <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo ajuste</Button>
+        )}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatTile label="Total de ajustes" value={String(adjustments.length)} icon={SlidersHorizontal} tint={BRAND_BLUE} />
+        <StatTile label="Entradas / Salidas" value={`${increaseCount} / ${decreaseCount}`} icon={PackagePlus} tint={BRAND_GOLD} />
+        <StatTile label="Valor neto ajustado" value={fmtCRC0(netValue)} icon={Wallet} tint={BRAND_BLUE_D} valueColor={netValue < 0 ? '#DC2626' : BRAND_BLUE_D} />
+      </div>
+
+      {adjustments.length === 0 ? (
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <SlidersHorizontal className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title="Aún no hay ajustes de inventario"
+            description="Registra un ajuste cuando el conteo físico no coincida con el sistema, o por mermas, donaciones u otros motivos."
+            action={!readonly && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo ajuste</Button>
+            )}
+          />
+        </div>
+      ) : (
+        <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] text-gray-500 uppercase tracking-wide bg-gray-50/60 border-b border-gray-100">
+                  <th className="text-left font-semibold px-4 py-2.5">Fecha</th>
+                  <th className="text-left font-semibold px-4 py-2.5">Producto</th>
+                  <th className="text-center font-semibold px-4 py-2.5">Tipo</th>
+                  <th className="text-right font-semibold px-4 py-2.5">Cantidad</th>
+                  <th className="text-right font-semibold px-4 py-2.5">Costo unit.</th>
+                  <th className="text-right font-semibold px-4 py-2.5">Valor total</th>
+                  <th className="text-left font-semibold px-4 py-2.5">Motivo</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {[...adjustments].reverse().map((a) => (
+                  <tr key={a.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                    <td className="px-4 py-3 text-gray-500">{formatDate(a.createdAt)}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900">{productNameOf(a)}</td>
+                    <td className="px-4 py-3 text-center">
+                      {a.type === 'INCREASE'
+                        ? <Badge variant="blue"><PackagePlus className="w-3 h-3" /> Entrada</Badge>
+                        : <Badge variant="red"><PackageMinus className="w-3 h-3" /> Salida</Badge>}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-gray-700">{Number(a.quantity)}</td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums text-gray-500">
+                      {a.unitCost != null ? `₡${Number(a.unitCost).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono tabular-nums font-semibold text-gray-900">
+                      ₡{Number(a.totalValue).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 max-w-[240px] truncate">{a.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

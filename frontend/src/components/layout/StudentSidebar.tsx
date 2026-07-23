@@ -111,7 +111,7 @@ export function StudentSidebar() {
         { label: 'Cobros',              endsWith: '/cxc', slug: 'pagos-recibidos' },
         { label: 'Notas de crédito',    slug: 'notas-credito' },
         { label: 'Notas de débito',     slug: 'notas-debito' },
-        { label: 'Presupuestos',        slug: 'cotizaciones' },
+        { label: 'Presupuestos',        tab: 'quotes', slug: 'cotizaciones' },
       ],
     },
     {
@@ -121,8 +121,8 @@ export function StudentSidebar() {
         { label: 'Solicitudes de compra', tab: 'purchase-proposals' },
         { label: 'Requerimientos',      tab: 'procurement' },
         { label: 'Facturas recibidas',  endsWith: '/compras', slug: 'facturas-compra' },
-        { label: 'Órdenes de compra',   slug: 'ordenes-compra' },
-        { label: 'Recepción de bienes', slug: 'recepcion-comprobantes' },
+        { label: 'Órdenes de compra',   tab: 'purchase-orders', slug: 'ordenes-compra' },
+        { label: 'Recepción de bienes', tab: 'purchase-orders', slug: 'recepcion-comprobantes', sub: 'recepcion' },
       ],
     },
     {
@@ -130,7 +130,7 @@ export function StudentSidebar() {
       children: [
         { label: 'Catálogo de productos', tab: 'products', slug: 'productos' },
         { label: 'Valorización',         slug: 'valor-inventario' },
-        { label: 'Ajustes',              slug: 'ajustes-inventario' },
+        { label: 'Ajustes',              tab: 'inventory-adjustments', slug: 'ajustes-inventario' },
         { label: 'Categorías',           slug: 'categorias' },
       ],
     },

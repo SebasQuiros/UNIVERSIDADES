@@ -31,6 +31,7 @@ import {
   Scale, ClipboardList, ClipboardCheck, Lock, Download, MessageCircle,
   Lightbulb, ShoppingCart, Search, LineChart, Inbox, GraduationCap,
   Trophy, PlayCircle, Receipt, FolderOpen, XCircle, Target,
+  FileSignature, PackageCheck, SlidersHorizontal,
 } from 'lucide-react';
 import { PurchaseProposalsInbox } from '@/components/business/PurchaseProposalsInbox';
 import { ProcurementOrders } from '@/components/business/ProcurementOrders';
@@ -40,6 +41,7 @@ import {
   ClientsTab, ProductsTab, SuppliersTab, InvoicesTab, JournalTab, LedgerTab,
   ReportsTab, BankTab, MayorizacionTab, BalanceComprobacionTab, SpecialJournalTab,
   FixedAssetsTab, PayrollTab,
+  QuotesTab, PurchaseOrdersTab, InventoryAdjustmentsTab,
 } from './workspace-modules';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -49,7 +51,8 @@ interface Company { id: string; name: string; legalId: string | null; email: str
 type Tab = 'dashboard' | 'clients' | 'suppliers' | 'products' | 'invoices' | 'journal' | 'ledger' | 'bank'
          | 'mayorizacion' | 'balance-comprobacion' | 'ajustes' | 'balance-ajustado'
          | 'reports' | 'asientos-cierre' | 'balanza-post-cierre' | 'activity'
-         | 'fixed-assets' | 'payroll' | 'purchase-proposals' | 'procurement' | 'tutor';
+         | 'fixed-assets' | 'payroll' | 'purchase-proposals' | 'procurement' | 'tutor'
+         | 'quotes' | 'purchase-orders' | 'inventory-adjustments';
 
 function TabButton({ id, active, onClick, icon: Icon, label, count }: {
   id: Tab; active: boolean; onClick: () => void; icon: React.ElementType; label: string; count?: number;
@@ -1011,12 +1014,15 @@ export default function ExerciseWorkspacePage() {
     { id: 'dashboard',             label: 'Resumen',              icon: TrendingUp     },
     // Maestros
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'clients'   as Tab, label: 'Clientes',    icon: Users   }] : []),
+    ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'quotes'    as Tab, label: 'Cotizaciones', icon: FileSignature }] : []),
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'suppliers' as Tab, label: 'Proveedores', icon: Truck   }] : []),
+    ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'purchase-orders' as Tab, label: 'Órdenes de compra', icon: PackageCheck }] : []),
     // Modo Empresarial: propuestas de compra recibidas de ventas de otras empresas del curso
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'purchase-proposals' as Tab, label: 'Propuestas de compra', icon: Inbox }] : []),
     // Modo ERP (F2.3): órdenes de aprovisionamiento entre empresas del curso
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'procurement' as Tab, label: 'Aprovisionamiento (ERP)', icon: Truck }] : []),
     ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVOICING_ONLY' ? [{ id: 'products' as Tab, label: 'Productos', icon: Package }] : []),
+    ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVOICING_ONLY' ? [{ id: 'inventory-adjustments' as Tab, label: 'Ajustes de inventario', icon: SlidersHorizontal }] : []),
     // 1. Transacciones
     ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVENTORY_ONLY' ? [{ id: 'invoices' as Tab, label: '1. Facturas',  icon: FileText  }] : []),
     { id: 'bank'                 as Tab, label: '2. Bancos',              icon: Landmark       },
@@ -1129,7 +1135,10 @@ export default function ExerciseWorkspacePage() {
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'dashboard' && <DashboardTab  companyId={company.id} attempt={attempt} />}
             {activeTab === 'clients'   && <ClientsTab    companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
+            {activeTab === 'quotes'    && <QuotesTab     companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'suppliers' && <SuppliersTab  companyId={company.id} readonly={isReadonly} />}
+            {activeTab === 'purchase-orders' && <PurchaseOrdersTab companyId={company.id} readonly={isReadonly} attemptId={attemptId} focusReceiving={searchParams.get('sub') === 'recepcion'} />}
+            {activeTab === 'inventory-adjustments' && <InventoryAdjustmentsTab companyId={company.id} readonly={isReadonly} />}
             {activeTab === 'purchase-proposals' && <PurchaseProposalsInbox companyId={company.id} />}
             {activeTab === 'procurement' && <ProcurementOrders companyId={company.id} exerciseId={attempt.exerciseId} />}
             {activeTab === 'products'  && <ProductsTab   companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
