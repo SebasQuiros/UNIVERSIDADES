@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -58,6 +58,11 @@ export function StudentSidebar() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
+  // Un solo fetch inicial: resuelve activeId y (si es profesor) pending desde
+  // la MISMA respuesta — antes eran 2 GET /attempts idénticos disparados a la
+  // vez en cada montaje (login, cambio de usuario), duplicando la consulta
+  // justo cuando el cache de sesión del backend está frío.
+  const didMount = useRef(false);
   useEffect(() => {
     api.get<any[]>('/api/v1/attempts').then(({ data }) => {
       const list = Array.isArray(data) ? data : [];
@@ -66,12 +71,17 @@ export function StudentSidebar() {
         ?? list.find((x) => x.status === 'NOT_STARTED')
         ?? list[0];
       setActiveId(a?.id ?? null);
+      if (user?.role === 'TEACHER') {
+        setPending(list.filter((x) => x.status === 'IN_PROGRESS' || x.status === 'SUBMITTED').length);
+      }
     }).catch(() => {});
+    didMount.current = true;
   }, []);
 
-  // Solo el profesor: entregas pendientes de calificar (badge del espacio Docencia).
+  // Solo el profesor: mantener "pending" al día al navegar (después del montaje
+  // inicial, que ya lo resolvió arriba con el mismo fetch).
   useEffect(() => {
-    if (user?.role !== 'TEACHER') return;
+    if (!didMount.current || user?.role !== 'TEACHER') return;
     api.get<any[]>('/api/v1/attempts')
       .then(({ data }) => setPending((Array.isArray(data) ? data : [])
         .filter((a) => a.status === 'IN_PROGRESS' || a.status === 'SUBMITTED').length))

@@ -50,6 +50,15 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy) {
   // sacar 1 query a la DB de TODO request autenticado.
   private static readonly AUTH_USER_TTL_SECONDS = 30;
 
+  // "Single-flight": cuando el usuario recién cambia de cuenta, el layout del
+  // frontend dispara 3-4 requests casi simultáneas (auth/me, attempts x2,
+  // notificaciones...) — TODAS llegan antes de que la primera termine de
+  // escribir el cache Redis, así que sin esto cada una repetiría su propia
+  // consulta a Postgres para el MISMO authId ("cache stampede"). Este Map
+  // hace que las requests concurrentes para el mismo authId compartan una
+  // sola promesa en vuelo en vez de multiplicar la consulta a la DB.
+  private static readonly inFlight = new Map<string, Promise<any>>();
+
   private redisUsable(): boolean {
     return !!this.redis && (this.redis.isOpen === true || this.redis.isReady === true);
   }
@@ -73,6 +82,19 @@ export class SupabaseJwtStrategy extends PassportStrategy(Strategy) {
       // Redis no disponible → resolvemos contra la DB (comportamiento actual).
     }
 
+    // Cache miss — si ya hay una resolución en vuelo para este mismo authId
+    // (otra request concurrente llegó primero), esperamos esa en vez de
+    // lanzar otra consulta idéntica a la DB.
+    const existing = SupabaseJwtStrategy.inFlight.get(authId);
+    if (existing) return existing;
+
+    const resolution = this.resolveFromDb(authId, email, payload, cacheKey)
+      .finally(() => SupabaseJwtStrategy.inFlight.delete(authId));
+    SupabaseJwtStrategy.inFlight.set(authId, resolution);
+    return resolution;
+  }
+
+  private async resolveFromDb(authId: string, email: string | undefined, payload: any, cacheKey: string) {
     // 1 — Usuario ya enlazado por authId
     let user = await this.prisma.user.findUnique({ where: { authId } });
     // Solo el camino feliz (encontrado por authId) es cacheable; el primer-login
