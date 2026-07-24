@@ -990,6 +990,10 @@ model Invoice {
   balanceDue            Decimal       @default(0) @map("balance_due") @db.Decimal(15,2)
   xml                   String?       @db.Text
   pdfUrl                String?       @map("pdf_url")
+  // Respaldo del PDF en la BD (mismo patrón que `xml` arriba) — el archivo en
+  // disco de Railway se pierde en cada redeploy (contenedor efímero); esto
+  // permite regenerarlo en el momento si se perdió (ver getPdfPath()).
+  pdfData               Bytes?        @map("pdf_data")
   haciendaResponse      Json?         @map("hacienda_response")
   haciendaMessage       String?       @map("hacienda_message") @db.Text
   notes                 String?

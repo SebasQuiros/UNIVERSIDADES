@@ -48,7 +48,11 @@ export class BankReconciliationController {
 
   @Post('bank-accounts/:bankAccountId/statements/upload')
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FileInterceptor('file', { storage: undefined })) // memory storage
+  // Límite de tamaño explícito (mitigación defense-in-depth): `xlsx` parsea
+  // este archivo y tiene una vulnerabilidad ReDoS/prototype-pollution SIN fix
+  // disponible (GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9) — acotar el tamaño
+  // reduce la superficie de un archivo maliciosamente grande/complejo.
+  @UseInterceptors(FileInterceptor('file', { storage: undefined, limits: { fileSize: 5 * 1024 * 1024 } })) // memory storage, máx 5MB
   uploadStatement(
     @Param('companyId')     companyId: string,
     @Param('bankAccountId') bankAccountId: string,

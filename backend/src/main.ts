@@ -3,6 +3,10 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { initSentry } from './common/monitoring/sentry';
+
+// Antes de todo lo demás — no-op sin SENTRY_DSN configurado.
+initSentry();
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const compression  = require('compression');
 // eslint-disable-next-line @typescript-eslint/no-var-requires

@@ -64,10 +64,11 @@ export class InvoicesController {
     return this.svc.duplicate(companyId, id, req.user.id);
   }
 
-  // GET — serve PDF file
-  // TODO(production): PDFs are stored on the local container filesystem.
-  // Replace with object storage (S3/MinIO/R2) before multi-instance or
-  // stateless deployment. See invoices.service → getPdfPath().
+  // GET — serve PDF file. El disco es efímero (Railway); getPdfPath()
+  // regenera el archivo desde el respaldo en BD (pdfData) si ya no está.
+  // Sigue sin ser multi-réplica-safe (cada instancia tiene su propio disco) —
+  // para eso hace falta almacenamiento compartido real (S3/R2/volumen
+  // compartido), pero cubre el caso real hoy: 1 réplica + redeploys.
   @Get(':id/pdf')
   async getPdf(
     @Param('companyId') companyId: string,

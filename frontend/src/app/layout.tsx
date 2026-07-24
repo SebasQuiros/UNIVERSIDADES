@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import NextTopLoader from 'nextjs-toploader';
 import './globals.css';
 import { PwaInstallPrompt } from '@/components/ui/PwaInstallPrompt';
+import { MonitoringInit } from '@/components/ui/MonitoringInit';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           zIndex={1600}
         />
         {children}
+        <MonitoringInit />
         <PwaInstallPrompt />
         <script
           dangerouslySetInnerHTML={{

@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
+import { captureError } from '../monitoring/sentry';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -108,6 +109,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         `[${errorId}] ${request.method} ${request.url} → ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+      // No-op sin SENTRY_DSN — ver common/monitoring/sentry.ts.
+      captureError(exception, { errorId, method: request.method, path: request.url });
     } else if (status === 401 || status === 403) {
       this.logger.warn(`[${errorId}] ${request.method} ${request.url} → ${status}`);
     }

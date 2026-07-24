@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { captureError } from '@/lib/monitoring';
 
 interface Props {
   children: React.ReactNode;
@@ -37,10 +38,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // In production you'd send this to a monitoring service (Sentry, etc.)
     if (process.env.NODE_ENV === 'development') {
       console.error('[ErrorBoundary]', error, info.componentStack);
     }
+    captureError(error, { componentStack: info.componentStack, context: this.props.context });
   }
 
   handleReset = () => {
@@ -102,6 +103,7 @@ export class PageErrorBoundary extends React.Component<
       // eslint-disable-next-line no-console
       console.error('[PageErrorBoundary]', error, info.componentStack);
     }
+    captureError(error, { componentStack: info.componentStack });
   }
 
   render() {

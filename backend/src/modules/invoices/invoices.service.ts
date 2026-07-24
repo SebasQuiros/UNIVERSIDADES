@@ -431,6 +431,7 @@ export class InvoicesService {
             clave,
             xml:             xmlContent,
             pdfUrl:          pdfPath,
+            pdfData:         pdfBuffer, // respaldo en BD — ver getPdfPath()
             haciendaMessage: haciendaResult.message,
             balanceDue:      invoice.total,
           },
@@ -670,17 +671,25 @@ export class InvoicesService {
   }
 
   // ── Serve PDF file ────────────────────────────────────────────
+  // El archivo en disco es efímero (Railway lo pierde en cada redeploy —
+  // contenedor sin volumen persistente). Si ya no está pero SÍ tenemos el
+  // respaldo en BD (`pdfData`, guardado en issue()), lo regeneramos en disco
+  // al vuelo — self-healing, transparente para quien pide el PDF.
   async getPdfPath(companyId: string, invoiceId: string): Promise<string> {
     const invoice = await this.prisma.invoice.findFirst({
       where:  { id: invoiceId, companyId },
-      select: { pdfUrl: true, status: true },
+      select: { pdfUrl: true, pdfData: true, status: true },
     });
     if (!invoice) throw new NotFoundException('Factura no encontrada');
     if (!invoice.pdfUrl || invoice.status === 'DRAFT') {
       throw new BadRequestException('El PDF no está disponible. La factura aún no ha sido emitida.');
     }
     if (!fs.existsSync(invoice.pdfUrl)) {
-      throw new NotFoundException('El archivo PDF no se encontró en el servidor.');
+      if (!invoice.pdfData) {
+        throw new NotFoundException('El archivo PDF no se encontró en el servidor.');
+      }
+      fs.mkdirSync(path.dirname(invoice.pdfUrl), { recursive: true });
+      fs.writeFileSync(invoice.pdfUrl, invoice.pdfData);
     }
     return invoice.pdfUrl;
   }

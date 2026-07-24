@@ -45,5 +45,9 @@ RUN test -f dist/main.js || (echo "ERROR: dist/main.js no fue generado" && exit 
 
 EXPOSE 3001
 
-# Correr migraciones y arrancar
-CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node prisma/seed.js && node dist/main"]
+# Correr migraciones y arrancar. El seed (crea cuentas demo con contraseñas
+# conocidas — admin@contafacil.cr, etc.) NUNCA debe correr solo en producción:
+# ahora es opt-in explícito vía RUN_SEED=true (para un ambiente de staging/demo
+# a propósito), no el comportamiento por defecto. Sin esa variable, el
+# contenedor solo migra y arranca.
+CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && ([ \"$RUN_SEED\" = \"true\" ] && node prisma/seed.js || true) && node dist/main"]
