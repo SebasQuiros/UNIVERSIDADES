@@ -10,11 +10,12 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { IconTile } from '@/components/ui/IconTile';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Badge } from '@/components/ui/Badge';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   Calculator, Building2, Plus, ChevronRight, Receipt, FileText, Users,
-  Search, Trash2, X, Briefcase,
+  Search, Trash2, X, Briefcase, Contact, CalendarDays, ArrowRight,
 } from 'lucide-react';
 
 interface PracticeCompany {
@@ -31,6 +32,7 @@ export default function ContadorPage() {
   const [loading, setLoading]     = useState(true);
   const [query, setQuery]         = useState('');
   const [showForm, setShowForm]   = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,6 +69,11 @@ export default function ContadorPage() {
     journalEntries: companies.reduce((s, c) => s + c._count.journalEntries, 0),
     clients:       companies.reduce((s, c) => s + c._count.clients, 0),
   }), [companies]);
+
+  const selected = useMemo(
+    () => companies.find((c) => c.id === selectedId) ?? null,
+    [companies, selectedId],
+  );
 
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
@@ -131,55 +138,142 @@ export default function ContadorPage() {
           />
         </div>
       ) : (
-        <div className="bg-white border border-gray-200/70 shadow-card rounded-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 text-left text-[11px] uppercase tracking-wide text-gray-400">
-                <th className="px-5 py-3 font-semibold">Empresa</th>
-                <th className="px-5 py-3 font-semibold">Cédula</th>
-                <th className="px-5 py-3 font-semibold">Actividad</th>
-                <th className="px-5 py-3 font-semibold text-right">Facturas</th>
-                <th className="px-5 py-3 font-semibold text-right">Asientos</th>
-                <th className="px-5 py-3 font-semibold text-right">Clientes</th>
-                <th className="px-5 py-3 font-semibold">Creada</th>
-                <th className="px-5 py-3 font-semibold text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c) => (
-                <tr key={c.id} className="border-b border-gray-50 last:border-0 hover:bg-blue-50/40 transition-colors">
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 text-white"
-                        style={{ background: 'linear-gradient(135deg,#2563EB,#1D4ED8)' }}>
-                        {c.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-semibold text-gray-900 truncate">{c.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3 text-gray-500 font-mono tabular-nums">{c.legalId ?? '—'}</td>
-                  <td className="px-5 py-3 text-gray-500 truncate max-w-[180px]">{c.economicActivity ?? '—'}</td>
-                  <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.invoices}</td>
-                  <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.journalEntries}</td>
-                  <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.clients}</td>
-                  <td className="px-5 py-3 text-gray-400 text-xs">{formatDate(c.createdAt)}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <Link href={`/estudiante/contador/${c.id}`}>
-                        <Button size="sm" variant="secondary">Abrir <ChevronRight className="w-3.5 h-3.5" /></Button>
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(c)}
-                        title="Eliminar"
-                        className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+        <div className="flex items-start gap-6">
+          <div className="flex-1 min-w-0 bg-white border border-gray-200/70 shadow-card rounded-card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left text-[11px] uppercase tracking-wide text-gray-400">
+                  <th className="px-5 py-3 font-semibold">Empresa</th>
+                  <th className="px-5 py-3 font-semibold">Cédula</th>
+                  <th className="px-5 py-3 font-semibold">Actividad</th>
+                  <th className="px-5 py-3 font-semibold text-right">Facturas</th>
+                  <th className="px-5 py-3 font-semibold text-right">Asientos</th>
+                  <th className="px-5 py-3 font-semibold text-right">Clientes</th>
+                  <th className="px-5 py-3 font-semibold">Creada</th>
+                  <th className="px-5 py-3 font-semibold text-right">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => setSelectedId(c.id)}
+                    className={`border-b border-gray-50 last:border-0 cursor-pointer transition-colors ${
+                      c.id === selectedId
+                        ? 'bg-blue-50/70 border-l-2 border-l-blue-600'
+                        : 'hover:bg-blue-50/40 border-l-2 border-l-transparent'
+                    }`}
+                  >
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 text-white"
+                          style={{ background: 'linear-gradient(135deg,#2563EB,#1D4ED8)' }}>
+                          {c.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-semibold text-gray-900 truncate">{c.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-gray-500 font-mono tabular-nums">{c.legalId ?? '—'}</td>
+                    <td className="px-5 py-3 text-gray-500 truncate max-w-[180px]">{c.economicActivity ?? '—'}</td>
+                    <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.invoices}</td>
+                    <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.journalEntries}</td>
+                    <td className="px-5 py-3 text-right font-mono tabular-nums text-gray-700">{c._count.clients}</td>
+                    <td className="px-5 py-3 text-gray-400 text-xs">{formatDate(c.createdAt)}</td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        <Link href={`/estudiante/contador/${c.id}`}>
+                          <Button size="sm" variant="secondary">Abrir <ChevronRight className="w-3.5 h-3.5" /></Button>
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(c)}
+                          title="Eliminar"
+                          className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Panel de detalle */}
+          <div className="hidden xl:block w-80 flex-shrink-0 sticky top-6">
+            <div className="bg-white border border-gray-200/70 shadow-card rounded-card overflow-hidden">
+              {!selected ? (
+                <div className="p-8 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
+                    <Building2 className="w-5 h-5 text-gray-300" />
+                  </div>
+                  <p className="text-sm text-gray-400">Seleccioná una empresa para ver su detalle.</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="p-5 border-b border-gray-100 flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0 text-white"
+                      style={{ background: 'linear-gradient(135deg,#2563EB,#1D4ED8)' }}>
+                      {selected.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-gray-900 truncate">{selected.name}</p>
+                      <Badge variant="emerald">Activa</Badge>
+                    </div>
+                  </div>
+
+                  <div className="p-5 space-y-3 text-sm">
+                    <div className="flex items-start gap-2">
+                      <Contact className="w-4 h-4 text-gray-300 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-gray-400">Identificación</p>
+                        <p className="text-gray-700 font-mono">{selected.legalId ?? '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Briefcase className="w-4 h-4 text-gray-300 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-gray-400">Actividad económica</p>
+                        <p className="text-gray-700">{selected.economicActivity ?? '—'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CalendarDays className="w-4 h-4 text-gray-300 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[11px] uppercase tracking-wide text-gray-400">Fecha de creación</p>
+                        <p className="text-gray-700">{formatDate(selected.createdAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 px-5 pb-5">
+                    <div className="text-center p-2 rounded-lg bg-gray-50">
+                      <p className="font-bold text-gray-900 tabular-nums">{selected._count.invoices}</p>
+                      <p className="text-[10px] text-gray-400">Facturas</p>
+                    </div>
+                    <div className="text-center p-2 rounded-lg bg-gray-50">
+                      <p className="font-bold text-gray-900 tabular-nums">{selected._count.journalEntries}</p>
+                      <p className="text-[10px] text-gray-400">Asientos</p>
+                    </div>
+                    <div className="text-center p-2 rounded-lg bg-gray-50">
+                      <p className="font-bold text-gray-900 tabular-nums">{selected._count.clients}</p>
+                      <p className="text-[10px] text-gray-400">Clientes</p>
+                    </div>
+                  </div>
+
+                  <div className="p-5 pt-0 space-y-2">
+                    <Link href={`/estudiante/contador/${selected.id}`} className="block">
+                      <Button variant="primary" className="w-full justify-center">
+                        Ir a la empresa <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                    <Button variant="secondary" className="w-full justify-center" onClick={() => handleDelete(selected)}>
+                      <Trash2 className="w-4 h-4" /> Eliminar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -169,8 +169,8 @@ export function StudentSidebar() {
 
   const LEARN: Group[] = [
     { key: 'sim',  label: 'Simulador financiero', icon: LineChart,  href: '/estudiante/simulador', path: '/estudiante/simulador' },
-    { key: 'prog', label: 'Mi progreso',          icon: TrendingUp, href: '/estudiante/progreso',  path: '/estudiante/progreso' },
     { key: 'emp',  label: 'Mis empresas',         icon: Building2,  href: '/estudiante/empresas',  path: '/estudiante/empresas' },
+    { key: 'prog', label: 'Mi progreso',          icon: TrendingUp, href: '/estudiante/progreso',  path: '/estudiante/progreso' },
     { key: 'notif',label: 'Notificaciones',       icon: Bell,       href: '/estudiante/notificaciones', path: '/estudiante/notificaciones', isNotif: true },
   ];
 

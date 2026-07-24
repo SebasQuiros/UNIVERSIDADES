@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, getErrorMessage, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { IconTile } from '@/components/ui/IconTile';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ArtInventory } from '@/components/illustrations';
 import toast from 'react-hot-toast';
-import { Inbox, Truck, Receipt, Check, X } from 'lucide-react';
+import { Inbox, Truck, Receipt, Check, X, Search, Wallet, Users } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Cada propuesta es una PurchaseInvoice PENDING generada por la venta de otra
@@ -57,6 +59,7 @@ export function PurchaseProposalsInbox({ companyId }: { companyId: string }) {
   const [proposals, setProposals] = useState<PurchaseProposal[]>([]);
   const [loading, setLoading]     = useState(true);
   const [busyId, setBusyId]       = useState<string | null>(null);
+  const [query, setQuery]         = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -101,30 +104,48 @@ export function PurchaseProposalsInbox({ companyId }: { companyId: string }) {
     }
   };
 
+  const totalAmount = useMemo(() => proposals.reduce((s, p) => s + (p.total ?? 0), 0), [proposals]);
+  const supplierCount = useMemo(
+    () => new Set(proposals.map((p) => p.supplierCedula || p.supplierName)).size,
+    [proposals],
+  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return proposals;
+    return proposals.filter(
+      (p) =>
+        p.supplierName?.toLowerCase().includes(q) ||
+        p.supplierCedula?.toLowerCase().includes(q) ||
+        p.invoiceNumber?.toLowerCase().includes(q),
+    );
+  }, [proposals, query]);
+
   return (
     <div className="flex flex-col gap-5">
-      {/* Encabezado explicativo */}
-      <div className="flex items-start gap-3.5">
-        <div className="relative">
-          <IconTile icon={Inbox} tint="#1B2E6E" size={46} />
-          {proposals.length > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-gold-500 cx-ping" aria-hidden />
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-gold-600 border border-white" />
-            </span>
-          )}
+      <PageHeader
+        eyebrow="Modo empresarial"
+        title="Propuestas de compra"
+        subtitle="Cuando otra empresa del curso te vende, recibís una propuesta de compra pendiente. Al aceptarla se registra el inventario, el asiento contable y la cuenta por pagar."
+        icon={Inbox}
+        iconTint="#1B2E6E"
+      />
+
+      {!loading && proposals.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard label="Propuestas pendientes" value={String(proposals.length)} icon={Inbox} tint="#1B2E6E" />
+          <StatCard label="Monto total" value={money(totalAmount)} icon={Wallet} tint="#D4A017" />
+          <StatCard label="Proveedores" value={String(supplierCount)} icon={Users} tint="#2563EB" />
         </div>
-        <div>
-          <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900 mb-0.5">
-            Modo empresarial
-          </p>
-          <h2 className="text-lg font-bold text-gray-900 tracking-tight">Propuestas de compra</h2>
-          <p className="text-gray-500 text-sm mt-1 max-w-2xl leading-relaxed">
-            Cuando otra empresa del curso te vende, recibís una propuesta de compra pendiente. Al
-            aceptarla se registra el inventario, el asiento contable y la cuenta por pagar.
-          </p>
-        </div>
-      </div>
+      )}
+
+      {!loading && proposals.length > 0 && (
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por proveedor, cédula o número de factura…"
+          icon={<Search className="w-4 h-4" />}
+        />
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -138,9 +159,16 @@ export function PurchaseProposalsInbox({ companyId }: { companyId: string }) {
             description="Aparecerán aquí cuando otra empresa del curso te venda en Modo Empresarial. Revisá los montos antes de aceptar: el asiento se registra al confirmar."
           />
         </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <EmptyState
+            title="Sin resultados"
+            description="Ninguna propuesta coincide con la búsqueda."
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {proposals.map((p, i) => {
+          {filtered.map((p, i) => {
             const busy = busyId === p.id;
             return (
               <div

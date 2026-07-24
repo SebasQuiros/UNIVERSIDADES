@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -11,11 +11,12 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ArtInvoice, SceneEmptyBox } from '@/components/illustrations';
+import { Badge } from '@/components/ui/Badge';
+import { ArtInvoice, SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import {
-  ArrowLeft, ShoppingCart, Plus, RefreshCw,
+  ArrowLeft, ShoppingCart, Plus, RefreshCw, Search,
   AlertTriangle, CheckCircle2, Info, TrendingDown, TrendingUp,
-  FileText, Building2,
+  FileText, Building2, Receipt, Wallet,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -144,6 +145,7 @@ export default function ComprasPage() {
   const [saving,    setSaving]    = useState(false);
   const [showForm,  setShowForm]  = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [query, setQuery] = useState('');
 
   // ── Load company tied to this attempt ─────────────────────────────
   useEffect(() => {
@@ -246,6 +248,15 @@ export default function ComprasPage() {
   const debitoTotal = summary?.liquidacion.debitoFiscal  ?? 0;
   const creditoTotal = summary?.liquidacion.creditoFiscal ?? 0;
 
+  const filteredInvoices = useMemo(() => invoices.filter(inv =>
+    !query.trim() ||
+    inv.supplierName.toLowerCase().includes(query.toLowerCase()) ||
+    inv.invoiceNumber.toLowerCase().includes(query.toLowerCase()) ||
+    (inv.supplierCedula ?? '').includes(query)), [invoices, query]);
+
+  const totalFacturas = invoices.length;
+  const montoTotal = invoices.reduce((s, inv) => s + Number(inv.total), 0);
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50/60">
       <div className="max-w-5xl mx-auto px-6 lg:px-10 py-8 space-y-7">
@@ -273,6 +284,34 @@ export default function ComprasPage() {
             </Button>
           }
         />
+
+        {/* ── KPIs ───────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            label="Facturas recibidas"
+            value={String(totalFacturas)}
+            hint="Registradas en el libro de compras"
+            icon={Receipt}
+            tint="#1B2E6E"
+            className="cx-pop cx-d1"
+          />
+          <StatCard
+            label="Monto total"
+            value={`₡ ${fmtMoney(montoTotal)}`}
+            hint="Subtotal + IVA de todas las facturas"
+            icon={ShoppingCart}
+            tint="#2563EB"
+            className="cx-pop cx-d2"
+          />
+          <StatCard
+            label="IVA crédito fiscal (período)"
+            value={`₡ ${fmtMoney(creditoTotal)}`}
+            hint="Acumulado en el período seleccionado"
+            icon={Wallet}
+            tint="#D4A017"
+            className="cx-pop cx-d3"
+          />
+        </div>
 
         {/* ── Banda del módulo (nota pedagógica) ─────────────────────────── */}
         <Card variant="onDark" className="cx-pop">
@@ -695,13 +734,26 @@ export default function ComprasPage() {
           flushBody
           className="cx-pop cx-d2"
           action={
-            <button
-              onClick={loadInvoices}
-              className="p-1.5 text-gray-400 hover:text-blue-700 rounded-lg hover:bg-gray-100 transition-colors cx-press"
-              title="Actualizar facturas"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              {invoices.length > 0 && (
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder="Buscar proveedor, factura, cédula…"
+                    className="w-56 pl-8 pr-3 py-1.5 text-xs rounded-xl border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
+                  />
+                </div>
+              )}
+              <button
+                onClick={loadInvoices}
+                className="p-1.5 text-gray-400 hover:text-blue-700 rounded-lg hover:bg-gray-100 transition-colors cx-press"
+                title="Actualizar facturas"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           }
         >
           {loading ? (
@@ -721,6 +773,13 @@ export default function ComprasPage() {
               }
               className="py-14"
             />
+          ) : filteredInvoices.length === 0 ? (
+            <EmptyState
+              illustration={<SceneSearchEmpty size={160} className="lp-drift" />}
+              title="Sin resultados"
+              description="No hay facturas que coincidan con la búsqueda."
+              className="py-14"
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -737,7 +796,7 @@ export default function ComprasPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {invoices.map(inv => (
+                  {filteredInvoices.map(inv => (
                     <tr key={inv.id} className="hover:bg-blue-50/40 transition-colors">
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900 text-xs">{inv.supplierName}</p>
@@ -751,9 +810,7 @@ export default function ComprasPage() {
                         ₡ {fmtMoney(inv.subtotal)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-block bg-blue-50 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                          {(Number(inv.taxRate) * 100).toFixed(0)}%
-                        </span>
+                        <Badge variant="blue">{(Number(inv.taxRate) * 100).toFixed(0)}%</Badge>
                       </td>
                       <td className="px-4 py-3 text-right font-mono tabular-nums text-xs font-bold text-emerald-700">
                         ₡ {fmtMoney(inv.taxAmount)}
@@ -763,13 +820,13 @@ export default function ComprasPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {inv.isAccepted ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold">
+                          <Badge variant="emerald">
                             <CheckCircle2 className="w-3 h-3" /> Aceptada
-                          </span>
+                          </Badge>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-xs text-red-600 font-semibold">
+                          <Badge variant="red">
                             <AlertTriangle className="w-3 h-3" /> Rechazada
-                          </span>
+                          </Badge>
                         )}
                       </td>
                     </tr>

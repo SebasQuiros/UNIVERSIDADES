@@ -68,6 +68,9 @@ export function CategoriasView() {
   // Mutación en curso sobre una fila (renombrar / eliminar)
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // Buscador (solo filtra client-side sobre la lista ya cargada)
+  const [query, setQuery] = useState('');
+
   const fetchCategories = async (companyId: string): Promise<Category[]> => {
     const res = await api.get<Category[]>(`/api/v1/companies/${companyId}/products/categories`);
     return Array.isArray(res.data) ? res.data : [];
@@ -233,7 +236,7 @@ export function CategoriasView() {
       title="Categorías"
       subtitle="Organizá tus productos y servicios en categorías."
       icon={FolderTree}
-      iconTint="#6D28D9"
+      iconTint="#1B2E6E"
       className="mb-6"
     />
   );
@@ -304,6 +307,9 @@ export function CategoriasView() {
   const { categories } = state;
   const totalProducts = categories.reduce((acc, c) => acc + (c._count?.products ?? 0), 0);
   const unusedCount = categories.filter((c) => (c._count?.products ?? 0) === 0).length;
+  const filteredCategories = query.trim()
+    ? categories.filter((c) => c.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : categories;
 
   return (
     <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#FBF8F1]">
@@ -312,37 +318,52 @@ export function CategoriasView() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <StatCard label="Categorías" value={categories.length.toLocaleString('es-CR')} icon={FolderTree} tint="#6D28D9" className="cx-pop cx-d1" />
+          <StatCard label="Categorías" value={categories.length.toLocaleString('es-CR')} icon={FolderTree} tint="#1B2E6E" className="cx-pop cx-d1" />
           <StatCard label="Productos categorizados" value={totalProducts.toLocaleString('es-CR')} icon={Package} tint="#2563EB" className="cx-pop cx-d2" />
           <StatCard label="Categorías sin uso" value={unusedCount.toLocaleString('es-CR')} icon={Tag} tint="#B8860B" className="cx-pop cx-d3" />
         </div>
 
         {/* Lista + alta */}
         <SectionCard flushBody className="cx-pop cx-d2">
-          {/* Toolbar: crear categoría */}
-          <form
-            onSubmit={handleCreate}
-            className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 flex-wrap"
-          >
-            <input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Nombre de la nueva categoría"
-              aria-label="Nombre de la nueva categoría"
-              maxLength={NAME_MAX}
-              disabled={creating}
-              className="h-9 px-3 rounded-xl flex-1 min-w-[180px] max-w-sm bg-gray-50 border border-gray-200 outline-none text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-400 focus:bg-white transition-colors disabled:opacity-60"
-            />
-            <Button type="submit" size="sm" loading={creating} className="cx-press">
-              {!creating && <Plus className="w-4 h-4" />} Nueva categoría
-            </Button>
-          </form>
+          {/* Toolbar: crear categoría + buscador */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 flex-wrap">
+            <form onSubmit={handleCreate} className="flex items-center gap-3 flex-1 min-w-[220px]">
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Nombre de la nueva categoría"
+                aria-label="Nombre de la nueva categoría"
+                maxLength={NAME_MAX}
+                disabled={creating}
+                className="h-9 px-3 rounded-xl flex-1 min-w-[180px] max-w-sm bg-gray-50 border border-gray-200 outline-none text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-400 focus:bg-white transition-colors disabled:opacity-60"
+              />
+              <Button type="submit" size="sm" loading={creating} className="cx-press">
+                {!creating && <Plus className="w-4 h-4" />} Nueva categoría
+              </Button>
+            </form>
+
+            {categories.length > 5 && (
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar categoría…"
+                aria-label="Buscar categoría"
+                className="h-9 px-3 rounded-xl w-full sm:w-56 bg-gray-50 border border-gray-200 outline-none text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-400 focus:bg-white transition-colors"
+              />
+            )}
+          </div>
 
           {categories.length === 0 ? (
             <EmptyState
               illustration={<SceneEmptyBox size={180} className="cx-float" />}
               title="Aún no hay categorías"
               description="Agrupá tus ítems para reportes más claros. Creá la primera con el campo de arriba."
+            />
+          ) : filteredCategories.length === 0 ? (
+            <EmptyState
+              illustration={<SceneSearchEmpty size={160} className="cx-float" />}
+              title="Sin resultados"
+              description={`No encontramos categorías que coincidan con "${query}".`}
             />
           ) : (
             <div className="overflow-x-auto">
@@ -357,7 +378,7 @@ export function CategoriasView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {categories.map((cat) => {
+                  {filteredCategories.map((cat) => {
                     const count = cat._count?.products ?? 0;
                     const isEditing = editingId === cat.id;
                     const isBusy = busyId === cat.id;
@@ -405,9 +426,9 @@ export function CategoriasView() {
                             <span className="inline-flex items-center gap-2.5 font-medium text-gray-800">
                               <span
                                 aria-hidden
-                                className="w-7 h-7 rounded-lg flex items-center justify-center bg-violet-50"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-50"
                               >
-                                <FolderTree className="w-3.5 h-3.5 text-violet-700" />
+                                <FolderTree className="w-3.5 h-3.5 text-blue-700" />
                               </span>
                               {cat.name}
                             </span>
@@ -459,8 +480,12 @@ export function CategoriasView() {
           )}
 
           <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
-            <span className="font-mono tabular-nums">{categories.length}</span>{' '}
-            {categories.length === 1 ? 'categoría' : 'categorías'} · ordenadas por nombre · al eliminar una categoría, sus productos no se borran: quedan sin categoría
+            <span className="font-mono tabular-nums">{filteredCategories.length}</span>{' '}
+            {filteredCategories.length === 1 ? 'categoría' : 'categorías'}
+            {query.trim() && (
+              <> de <span className="font-mono tabular-nums">{categories.length}</span></>
+            )}
+            {' '}· ordenadas por nombre · al eliminar una categoría, sus productos no se borran: quedan sin categoría
           </div>
         </SectionCard>
       </div>

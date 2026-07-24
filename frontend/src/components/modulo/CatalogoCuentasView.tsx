@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { buttonClasses } from '@/components/ui/Button';
+import { getErrorMessage } from '@/lib/utils';
+import { buttonClasses, Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
@@ -11,7 +12,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Spinner } from '@/components/ui/Spinner';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
-import { BookOpen, AlertTriangle, FolderTree } from 'lucide-react';
+import { BookOpen, AlertTriangle, FolderTree, Plus, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // ── Tipos del endpoint real ────────────────────────────────────
 // GET /api/v1/companies/:companyId/accounts
@@ -54,45 +56,40 @@ type LoadState =
 
 export function CatalogoCuentasView() {
   const [state, setState] = useState<LoadState>({ phase: 'loading' });
+  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
 
-  useEffect(() => {
-    let alive = true;
+  const load = async () => {
+    try {
+      // 1) Resolver la empresa igual que el sidebar: attempt activo → company.
+      const { data } = await api.get<any[]>('/api/v1/attempts');
+      const list = Array.isArray(data) ? data : [];
+      const active =
+        list.find((x) => x.status === 'IN_PROGRESS') ??
+        list.find((x) => x.company) ??
+        list.find((x) => x.status === 'NOT_STARTED') ??
+        list[0];
 
-    (async () => {
-      try {
-        // 1) Resolver la empresa igual que el sidebar: attempt activo → company.
-        const { data } = await api.get<any[]>('/api/v1/attempts');
-        const list = Array.isArray(data) ? data : [];
-        const active =
-          list.find((x) => x.status === 'IN_PROGRESS') ??
-          list.find((x) => x.company) ??
-          list.find((x) => x.status === 'NOT_STARTED') ??
-          list[0];
-
-        const companyId: string | undefined = active?.company?.id;
-        if (!companyId) {
-          if (alive) setState({ phase: 'no-company' });
-          return;
-        }
-
-        // 2) Traer el plan de cuentas de la empresa.
-        const res = await api.get<Account[]>(`/api/v1/companies/${companyId}/accounts`);
-        const accounts = Array.isArray(res.data) ? res.data : [];
-        if (alive) setState({ phase: 'ready', accounts });
-      } catch {
-        if (alive) {
-          setState({
-            phase: 'error',
-            message: 'No pudimos cargar tu catálogo de cuentas. Intentá de nuevo en un momento.',
-          });
-        }
+      const cId: string | undefined = active?.company?.id;
+      if (!cId) {
+        setState({ phase: 'no-company' });
+        return;
       }
-    })();
+      setCompanyId(cId);
 
-    return () => {
-      alive = false;
-    };
-  }, []);
+      // 2) Traer el plan de cuentas de la empresa.
+      const res = await api.get<Account[]>(`/api/v1/companies/${cId}/accounts`);
+      const accounts = Array.isArray(res.data) ? res.data : [];
+      setState({ phase: 'ready', accounts });
+    } catch {
+      setState({
+        phase: 'error',
+        message: 'No pudimos cargar tu catálogo de cuentas. Intentá de nuevo en un momento.',
+      });
+    }
+  };
+
+  useEffect(() => { load(); }, []);
 
   const header = (
     <PageHeader
@@ -102,6 +99,13 @@ export function CatalogoCuentasView() {
       icon={BookOpen}
       iconTint="#1B2E6E"
       className="mb-6"
+      actions={
+        state.phase === 'ready' && companyId ? (
+          <Button variant="primary" onClick={() => setShowModal(true)} className="cx-press">
+            <Plus className="w-4 h-4" /> Nueva cuenta
+          </Button>
+        ) : undefined
+      }
     />
   );
 
@@ -277,6 +281,144 @@ export function CatalogoCuentasView() {
             <span className="font-mono tabular-nums">{accounts.length}</span> cuentas · ordenadas por código
           </div>
         </SectionCard>
+      </div>
+
+      {showModal && companyId && (
+        <NewAccountModal
+          companyId={companyId}
+          existingAccounts={accounts}
+          onClose={() => setShowModal(false)}
+          onCreated={() => { setShowModal(false); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Crear cuenta personalizada ──────────────────────────────────────────────
+const TYPE_OPTIONS: { value: AccountType; label: string; defaultBalance: NormalBalance }[] = [
+  { value: 'ASSET',     label: 'Activo',     defaultBalance: 'DEBIT' },
+  { value: 'LIABILITY', label: 'Pasivo',     defaultBalance: 'CREDIT' },
+  { value: 'EQUITY',    label: 'Patrimonio', defaultBalance: 'CREDIT' },
+  { value: 'INCOME',    label: 'Ingreso',    defaultBalance: 'CREDIT' },
+  { value: 'EXPENSE',   label: 'Gasto',      defaultBalance: 'DEBIT' },
+];
+
+const ACCOUNT_INPUT = 'w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition';
+
+function NewAccountModal({
+  companyId, existingAccounts, onClose, onCreated,
+}: {
+  companyId: string;
+  existingAccounts: Account[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [form, setForm] = useState({
+    code: '', name: '', type: 'ASSET' as AccountType, normalBalance: 'DEBIT' as NormalBalance,
+    parentId: '', description: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  // Solo cuentas de mayor (header) del mismo tipo — es lo lógico para anidar
+  // una cuenta de detalle nueva.
+  const parentOptions = existingAccounts.filter((a) => a.isHeader && a.type === form.type);
+
+  const setType = (type: AccountType) => {
+    const meta = TYPE_OPTIONS.find((t) => t.value === type)!;
+    setForm((f) => ({ ...f, type, normalBalance: meta.defaultBalance, parentId: '' }));
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.code.trim()) { toast.error('El código es obligatorio'); return; }
+    if (!form.name.trim()) { toast.error('El nombre es obligatorio'); return; }
+    setSaving(true);
+    try {
+      const parent = existingAccounts.find((a) => a.id === form.parentId);
+      await api.post(`/api/v1/companies/${companyId}/accounts`, {
+        code: form.code.trim(),
+        name: form.name.trim(),
+        type: form.type,
+        normalBalance: form.normalBalance,
+        parentId: form.parentId || undefined,
+        level: parent ? Math.min(4, parent.level + 1) : 4,
+        isHeader: false,
+        description: form.description.trim() || undefined,
+      });
+      toast.success('Cuenta creada');
+      onCreated();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
+      onClick={onClose}>
+      <div className="bg-white w-full max-w-lg rounded-card shadow-card-hover my-8" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="font-bold text-gray-900">Nueva cuenta contable</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        <form onSubmit={submit} className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Código *</label>
+              <input autoFocus value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })}
+                placeholder="Ej. 1.1.06.01" className={ACCOUNT_INPUT} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Tipo</label>
+              <select value={form.type} onChange={(e) => setType(e.target.value as AccountType)} className={ACCOUNT_INPUT}>
+                {TYPE_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-1 block">Nombre de la cuenta *</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="Ej. Caja Chica Sucursal Norte" className={ACCOUNT_INPUT} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Naturaleza</label>
+              <select value={form.normalBalance} onChange={(e) => setForm({ ...form, normalBalance: e.target.value as NormalBalance })} className={ACCOUNT_INPUT}>
+                <option value="DEBIT">Deudora</option>
+                <option value="CREDIT">Acreedora</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-600 mb-1 block">Agrupar bajo</label>
+              <select value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })} className={ACCOUNT_INPUT}>
+                <option value="">Sin agrupar</option>
+                {parentOptions.map((p) => <option key={p.id} value={p.id}>{p.code} — {p.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-1 block">Descripción (opcional)</label>
+            <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Para qué vas a usar esta cuenta" className={ACCOUNT_INPUT} />
+          </div>
+
+          <div className="flex items-center gap-2 p-3 rounded-xl text-xs bg-blue-50 text-blue-700">
+            Esta cuenta queda personalizada solo para tu empresa — no la ven otros estudiantes.
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>Cancelar</Button>
+            <Button type="submit" variant="primary" loading={saving} disabled={saving}>
+              {saving ? 'Creando…' : 'Crear cuenta'}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

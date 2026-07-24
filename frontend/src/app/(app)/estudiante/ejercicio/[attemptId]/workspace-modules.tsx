@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatDate, getErrorMessage, esc } from '@/lib/utils';
 import { exportToExcel } from '@/lib/excel';
@@ -347,6 +348,7 @@ export function ProductsTab({ companyId, readonly, attemptId }: { companyId: str
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', cabysCode: '', cabysDesc: '', price: '', taxRate: '13', stock: '', unit: 'UNI', isService: false });
+  const [query, setQuery] = useState('');
 
   const load = useCallback(() => {
     api.get<Product[]>(`/api/v1/companies/${companyId}/products`)
@@ -383,10 +385,28 @@ export function ProductsTab({ companyId, readonly, attemptId }: { companyId: str
     finally { setSaving(false); }
   }
 
+  // ── KPIs derivados de la data ya cargada (sin fetches nuevos) ──
+  const withCabys  = useMemo(() => products.filter((p) => !!p.cabysCode).length, [products]);
+  const outOfStock = useMemo(() => products.filter((p) => Number(p.stock) <= 0).length, [products]);
+  const inventoryValue = useMemo(
+    () => products.reduce((sum, p) => sum + Number(p.price || 0) * Number(p.stock || 0), 0),
+    [products]);
+  const fmtCRC0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  // ── Búsqueda 100% client-side sobre la lista ya cargada ──
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      (p.cabysCode ?? '').toLowerCase().includes(q) ||
+      (p.category?.name ?? '').toLowerCase().includes(q));
+  }, [products, query]);
+
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
   return (
-    <div>
+    <div className="space-y-5">
       {showModal && (
         <Modal title="Nuevo Producto / Servicio" onClose={() => setShowModal(false)}>
           <form onSubmit={handleCreate} className="space-y-4">
@@ -437,44 +457,115 @@ export function ProductsTab({ companyId, readonly, attemptId }: { companyId: str
         </Modal>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-gray-500">{products.length} producto{products.length !== 1 ? 's' : ''}</p>
-          {attemptId && (
-            <Link href={`/estudiante/ejercicio/${attemptId}/cabys`}
-              className="text-xs text-blue-700 hover:text-blue-700 hover:underline flex items-center gap-1">
-              <Search className="w-3 h-3" /> Buscar CABYS
-            </Link>
-          )}
-        </div>
-        {!readonly && (
-          <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo producto</Button>
-        )}
+      {/* ── Encabezado de módulo ── */}
+      <ModuleHeader
+        icon={Package}
+        title="Catálogo de productos"
+        subtitle="Productos y servicios disponibles para facturar"
+        action={
+          <div className="flex items-center gap-3">
+            {attemptId && (
+              <Link href={`/estudiante/ejercicio/${attemptId}/cabys`}
+                className="text-xs text-blue-700 hover:text-blue-700 hover:underline flex items-center gap-1">
+                <Search className="w-3 h-3" /> Buscar CABYS
+              </Link>
+            )}
+            {!readonly && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo producto</Button>
+            )}
+          </div>
+        }
+      />
+
+      {/* ── Fila de KPIs / resumen ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <StatTile label="Total de productos" value={String(products.length)} icon={Package} tint={BRAND_BLUE} />
+        <StatTile label="Con CABYS asignado" value={String(withCabys)} icon={FileCheck2} tint={BRAND_BLUE_D} />
+        <StatTile label="Sin stock" value={String(outOfStock)} icon={PackageMinus} tint={outOfStock > 0 ? '#DC2626' : BRAND_GOLD} valueColor={outOfStock > 0 ? '#DC2626' : undefined} />
+        <StatTile label="Valor de inventario" value={fmtCRC0(inventoryValue)} icon={Wallet} tint={BRAND_GOLD} valueColor={BRAND_BLUE_D} />
       </div>
 
       {products.length === 0 ? (
-        <div className="text-center py-10">
-          <Package className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No hay productos aún</p>
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <Package className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title="Aún no hay productos"
+            description="Registra tu primer producto o servicio para poder incluirlo en facturas."
+            action={!readonly && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo producto</Button>
+            )}
+          />
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="text-xs text-gray-500 uppercase tracking-wide border-b border-gray-200">
-              <th className="text-left pb-3">Nombre</th>
-              <th className="text-right pb-3">Precio</th>
-              <th className="text-right pb-3">Stock</th>
-            </tr></thead>
-            <tbody className="divide-y divide-gray-100">
-              {products.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50">
-                  <td className="py-3 text-gray-700">{p.name}</td>
-                  <td className="py-3 text-right text-gray-600">₡{Number(p.price).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
-                  <td className="py-3 text-right text-gray-600">{p.stock}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+          {/* ── Barra de herramientas: buscador client-side ── */}
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por nombre, CABYS o categoría…"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
+              />
+            </div>
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
+              {filtered.length} de {products.length}
+            </span>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Sin resultados para “{query}”.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] text-gray-500 uppercase tracking-wide bg-gray-50/60 border-b border-gray-100">
+                    <th className="text-left font-semibold px-4 py-2.5">Producto</th>
+                    <th className="text-left font-semibold px-4 py-2.5">CABYS</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Categoría</th>
+                    <th className="text-right font-semibold px-4 py-2.5">Precio</th>
+                    <th className="text-right font-semibold px-4 py-2.5">Stock</th>
+                    <th className="text-center font-semibold px-4 py-2.5">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((p) => (
+                    <tr key={p.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                            {p.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-semibold text-gray-900 truncate">{p.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {p.cabysCode
+                          ? <span className="font-mono tabular-nums text-gray-600">{p.cabysCode}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{p.category?.name ?? <span className="text-gray-300">—</span>}</td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-gray-700">
+                        ₡{Number(p.price).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-right font-mono tabular-nums text-gray-700">{p.stock}</td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={p.isActive ? 'green' : 'slate'}>{p.isActive ? 'Activo' : 'Inactivo'}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -488,6 +579,7 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', identification: '', idType: '02', phone: '', address: '' });
+  const [query, setQuery] = useState('');
 
   const load = useCallback(() => {
     api.get<Supplier[]>(`/api/v1/companies/${companyId}/suppliers`)
@@ -519,10 +611,24 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
     finally { setSaving(false); }
   }
 
+  // ── KPIs derivados de la data ya cargada (sin fetches nuevos) ──
+  const withEmail = useMemo(() => suppliers.filter((s) => !!s.email).length, [suppliers]);
+  const withId    = useMemo(() => suppliers.filter((s) => !!s.identification).length, [suppliers]);
+
+  // ── Búsqueda 100% client-side sobre la lista ya cargada ──
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter((s) =>
+      s.name.toLowerCase().includes(q) ||
+      (s.email ?? '').toLowerCase().includes(q) ||
+      (s.identification ?? '').toLowerCase().includes(q));
+  }, [suppliers, query]);
+
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
   return (
-    <div>
+    <div className="space-y-5">
       {showModal && (
         <Modal title="Nuevo Proveedor" onClose={() => setShowModal(false)}>
           <form onSubmit={handleCreate} className="space-y-4">
@@ -551,31 +657,98 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
         </Modal>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">{suppliers.length} proveedor{suppliers.length !== 1 ? 'es' : ''}</p>
-        {!readonly && (
+      {/* ── Encabezado de módulo ── */}
+      <ModuleHeader
+        icon={Truck}
+        title="Proveedores"
+        subtitle="Directorio de proveedores de la empresa de práctica"
+        action={!readonly && (
           <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo proveedor</Button>
         )}
+      />
+
+      {/* ── Fila de KPIs / resumen ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatTile label="Total de proveedores" value={String(suppliers.length)} icon={Truck} tint={BRAND_BLUE} />
+        <StatTile label="Con correo" value={String(withEmail)} icon={Mail} tint={BRAND_BLUE_D} />
+        <StatTile label="Con identificación" value={String(withId)} icon={Contact} tint={BRAND_GOLD} />
       </div>
 
       {suppliers.length === 0 ? (
-        <div className="text-center py-10">
-          <Truck className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No hay proveedores aún</p>
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <Truck className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title="Aún no hay proveedores"
+            description="Registra tu primer proveedor para poder documentar compras a su nombre."
+            action={!readonly && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo proveedor</Button>
+            )}
+          />
         </div>
       ) : (
-        <div className="space-y-2">
-          {suppliers.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-700 font-semibold text-sm flex-shrink-0">
-                {s.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{s.name}</p>
-                <p className="text-xs text-gray-500">{s.email ?? s.identification ?? '—'}</p>
-              </div>
+        <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+          {/* ── Barra de herramientas: buscador client-side ── */}
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por nombre, correo o identificación…"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
+              />
             </div>
-          ))}
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
+              {filtered.length} de {suppliers.length}
+            </span>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Sin resultados para “{query}”.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] text-gray-500 uppercase tracking-wide bg-gray-50/60 border-b border-gray-100">
+                    <th className="text-left font-semibold px-4 py-2.5">Proveedor</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Correo</th>
+                    <th className="text-right font-semibold px-4 py-2.5">Identificación</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((s) => (
+                    <tr key={s.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
+                            {s.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-semibold text-gray-900 truncate">{s.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {s.email
+                          ? <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-gray-400" />{s.email}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {s.identification
+                          ? <span className="font-mono tabular-nums text-gray-600">{s.identification}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1607,15 +1780,24 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
   const [exporting, setExporting] = useState(false);
   const [analysis, setAnalysis] = useState<any>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
+  // ── Barra de filtros del sub-tab "Resumen" ──
+  // El endpoint financial-analysis ya trae Balance + Estado de Resultados combinados;
+  // "Tipo de Estado" filtra qué se muestra en pantalla (no cambia la llamada al backend).
+  const [statementType, setStatementType] = useState<'ambos' | 'balance' | 'resultados'>('ambos');
+  const [analysisPeriod, setAnalysisPeriod] = useState(String(new Date().getFullYear()));
 
-  useEffect(() => {
-    setAnalysis(null);
+  const loadAnalysis = useCallback(() => {
     setAnalysisLoading(true);
     api.get(`/api/v1/companies/${companyId}/reports/financial-analysis`)
       .then(({ data: d }) => setAnalysis(d))
       .catch(() => toast.error('Error al cargar el resumen financiero'))
       .finally(() => setAnalysisLoading(false));
   }, [companyId]);
+
+  useEffect(() => {
+    setAnalysis(null);
+    loadAnalysis();
+  }, [loadAnalysis]);
 
   function load(type: typeof report) {
     setReport(type);
@@ -1863,7 +2045,36 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
       </div>
 
       {subTab === 'resumen' ? (
-        <FinancialSummaryPanel analysis={analysis} loading={analysisLoading} />
+        <div className="space-y-5">
+          {/* ── Barra de filtros: Tipo de Estado / Período / Generar Estado ── */}
+          <div className="bg-white rounded-card border border-gray-200/70 px-4 py-3 flex items-center gap-3 flex-wrap" style={CARD_SHADOW}>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Tipo de Estado</label>
+              <select value={statementType} onChange={(e) => setStatementType(e.target.value as typeof statementType)}
+                className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 min-w-[190px]">
+                <option value="ambos">Balance General y Estado de Resultados</option>
+                <option value="balance">Balance General</option>
+                <option value="resultados">Estado de Resultados</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Período</label>
+              <select value={analysisPeriod} onChange={(e) => setAnalysisPeriod(e.target.value)}
+                className="rounded-xl bg-white border border-gray-300 text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 min-w-[110px]">
+                {[0, 1, 2].map((offset) => {
+                  const y = new Date().getFullYear() - offset;
+                  return <option key={y} value={String(y)}>{y}</option>;
+                })}
+              </select>
+            </div>
+            <div className="flex-1" />
+            <Button size="sm" onClick={loadAnalysis} loading={analysisLoading}>
+              <FileText className="w-4 h-4" /> Generar Estado
+            </Button>
+          </div>
+
+          <FinancialSummaryPanel analysis={analysis} loading={analysisLoading} statementType={statementType} />
+        </div>
       ) : (
       <div>
       <div className="flex items-center justify-between gap-2 mb-6 flex-wrap">
@@ -2094,7 +2305,9 @@ function FaRatioBadge({ tag, goodTags }: { tag: string | null | undefined; goodT
   return <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}>{tag}</span>;
 }
 
-function FinancialSummaryPanel({ analysis, loading }: { analysis: any; loading: boolean }) {
+function FinancialSummaryPanel({ analysis, loading, statementType = 'ambos' }: { analysis: any; loading: boolean; statementType?: 'ambos' | 'balance' | 'resultados' }) {
+  const showBalance    = statementType !== 'resultados';
+  const showResultados = statementType !== 'balance';
   if (loading) {
     return <div className="flex justify-center py-16"><Spinner /></div>;
   }
@@ -2157,62 +2370,70 @@ function FinancialSummaryPanel({ analysis, loading }: { analysis: any; loading: 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left panel */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FaCard title="Balance General" subtitle="Estructura del activo">
-              <FaLineRow label="Activo Corriente" amount={faFmt(bs.currentAssets)} pct={faPct(dist.currentAssetsPct)} />
-              <FaLineRow label="Activo No Corriente" amount={faFmt(bs.nonCurrentAssets)} pct={faPct(dist.nonCurrentAssetsPct)} />
-              <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
-                <span className="text-xs font-bold text-gray-900">Total Activo</span>
-                <span className="text-xs font-bold text-blue-700 font-mono tabular-nums">{faFmt(bs.totalAssets)}</span>
-              </div>
-            </FaCard>
-            <FaCard title="Pasivo y Patrimonio" subtitle="Estructura de financiamiento">
-              <FaLineRow label="Pasivo Corriente" amount={faFmt(bs.currentLiabilities)} pct={faPct(dist.currentLiabilitiesPct)} />
-              <FaLineRow label="Pasivo No Corriente" amount={faFmt(bs.nonCurrentLiabilities)} pct={faPct(dist.nonCurrentLiabilitiesPct)} />
-              <FaLineRow label="Patrimonio" amount={faFmt(bs.adjustedEquity)} pct={faPct(dist.equityPct)} />
-              <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
-                <span className="text-xs font-bold text-gray-900">Total Pasivo + Patrimonio</span>
-                <span className="text-xs font-bold text-blue-700 font-mono tabular-nums">
-                  {faFmt(Number(bs.totalLiabilities ?? 0) + Number(bs.adjustedEquity ?? 0))}
-                </span>
-              </div>
-            </FaCard>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FaCard title="Resultado del Período" subtitle="Ingresos, gastos y utilidad">
-              <FaLineRow label="Ingresos Totales" amount={faFmt(is.totalIncome)} />
-              <FaLineRow label="Costos y Gastos" amount={faFmt(is.totalExpenses)} />
-              <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
-                <span className={`text-xs font-bold ${Number(is.netIncome) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                  {Number(is.netIncome) >= 0 ? 'Utilidad del Período' : 'Pérdida del Período'}
-                </span>
-                <span className={`text-xs font-bold font-mono tabular-nums ${Number(is.netIncome) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-                  {faFmt(is.netIncome)}
-                </span>
-              </div>
-            </FaCard>
-            <FaCard title="Distribución del Activo" subtitle="Corriente vs. no corriente">
-              <div className="h-[132px] -mt-1">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={assetDonut} dataKey="value" nameKey="name" innerRadius={38} outerRadius={58} paddingAngle={2}>
-                      {assetDonut.map((d, i) => <Cell key={i} fill={d.color} />)}
-                    </Pie>
-                    <RTooltip content={donutTooltip} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex flex-col gap-1 mt-1">
-                {assetDonut.map((d) => (
-                  <span key={d.name} className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
-                    <i className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: d.color }} />
-                    {d.name} <span className="font-mono tabular-nums text-gray-700 font-semibold ml-auto">{faPct(d.value)}</span>
+          {showBalance && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FaCard title="Balance General" subtitle="Estructura del activo">
+                <FaLineRow label="Activo Corriente" amount={faFmt(bs.currentAssets)} pct={faPct(dist.currentAssetsPct)} />
+                <FaLineRow label="Activo No Corriente" amount={faFmt(bs.nonCurrentAssets)} pct={faPct(dist.nonCurrentAssetsPct)} />
+                <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
+                  <span className="text-xs font-bold text-gray-900">Total Activo</span>
+                  <span className="text-xs font-bold text-blue-700 font-mono tabular-nums">{faFmt(bs.totalAssets)}</span>
+                </div>
+              </FaCard>
+              <FaCard title="Pasivo y Patrimonio" subtitle="Estructura de financiamiento">
+                <FaLineRow label="Pasivo Corriente" amount={faFmt(bs.currentLiabilities)} pct={faPct(dist.currentLiabilitiesPct)} />
+                <FaLineRow label="Pasivo No Corriente" amount={faFmt(bs.nonCurrentLiabilities)} pct={faPct(dist.nonCurrentLiabilitiesPct)} />
+                <FaLineRow label="Patrimonio" amount={faFmt(bs.adjustedEquity)} pct={faPct(dist.equityPct)} />
+                <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
+                  <span className="text-xs font-bold text-gray-900">Total Pasivo + Patrimonio</span>
+                  <span className="text-xs font-bold text-blue-700 font-mono tabular-nums">
+                    {faFmt(Number(bs.totalLiabilities ?? 0) + Number(bs.adjustedEquity ?? 0))}
                   </span>
-                ))}
-              </div>
-            </FaCard>
-          </div>
+                </div>
+              </FaCard>
+            </div>
+          )}
+
+          {(showResultados || showBalance) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {showResultados && (
+                <FaCard title="Resultado del Período" subtitle="Ingresos, gastos y utilidad">
+                  <FaLineRow label="Ingresos Totales" amount={faFmt(is.totalIncome)} />
+                  <FaLineRow label="Costos y Gastos" amount={faFmt(is.totalExpenses)} />
+                  <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-200">
+                    <span className={`text-xs font-bold ${Number(is.netIncome) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {Number(is.netIncome) >= 0 ? 'Utilidad del Período' : 'Pérdida del Período'}
+                    </span>
+                    <span className={`text-xs font-bold font-mono tabular-nums ${Number(is.netIncome) >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {faFmt(is.netIncome)}
+                    </span>
+                  </div>
+                </FaCard>
+              )}
+              {showBalance && (
+                <FaCard title="Distribución del Activo" subtitle="Corriente vs. no corriente">
+                  <div className="h-[132px] -mt-1">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={assetDonut} dataKey="value" nameKey="name" innerRadius={38} outerRadius={58} paddingAngle={2}>
+                          {assetDonut.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Pie>
+                        <RTooltip content={donutTooltip} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex flex-col gap-1 mt-1">
+                    {assetDonut.map((d) => (
+                      <span key={d.name} className="inline-flex items-center gap-1.5 text-[11px] text-gray-500">
+                        <i className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: d.color }} />
+                        {d.name} <span className="font-mono tabular-nums text-gray-700 font-semibold ml-auto">{faPct(d.value)}</span>
+                      </span>
+                    ))}
+                  </div>
+                </FaCard>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right panel */}
@@ -2286,7 +2507,10 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
   const [saving, setSaving]     = useState(false);
   const [importing, setImporting] = useState(false);
   const [form, setForm]         = useState({ date: '', description: '', amount: '', type: 'CREDIT', reference: '' });
+  const [query, setQuery]       = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
+  const isReconciliationView = searchParams?.get('sub') === 'conciliaciones';
 
   const load = useCallback(() => {
     Promise.all([
@@ -2361,10 +2585,23 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
   const fmtMoney = (v: string | number) =>
     `₡${Number(v).toLocaleString('es-CR', { minimumFractionDigits: 2 })}`;
 
+  // ── Movimientos pendientes de conciliar (vista "Conciliaciones bancarias") ──
+  const pending = useMemo(() => txs.filter((t) => !t.isReconciled), [txs]);
+
+  // ── Búsqueda client-side sobre los movimientos ya cargados ──
+  const baseList = isReconciliationView ? pending : txs;
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return baseList;
+    return baseList.filter((t) =>
+      t.description.toLowerCase().includes(q) ||
+      (t.reference ?? '').toLowerCase().includes(q));
+  }, [baseList, query]);
+
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
   return (
-    <div>
+    <div className="space-y-5">
       {showModal && !readonly && (
         <Modal title="Nuevo movimiento bancario" onClose={() => setShowModal(false)}>
           <form onSubmit={handleCreate} className="space-y-4">
@@ -2394,26 +2631,15 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
         </Modal>
       )}
 
-      {/* Summary */}
-      {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          {[
-            { label: 'Entradas',    value: fmtMoney(summary.credits), color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
-            { label: 'Salidas',     value: fmtMoney(summary.debits),  color: 'text-red-700',     bg: 'bg-red-50 border-red-200' },
-            { label: 'Saldo banco', value: fmtMoney(summary.balance), color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200' },
-            { label: 'Conciliados', value: `${summary.reconciled}/${summary.total}`, color: 'text-gray-700', bg: 'bg-gray-50 border-gray-200' },
-          ].map(s => (
-            <div key={s.label} className={`rounded-xl p-4 text-center border ${s.bg}`}>
-              <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-gray-500">{txs.length} movimiento{txs.length !== 1 ? 's' : ''}</p>
-        {!readonly && (
+      {/* ── Encabezado de módulo ── */}
+      <ModuleHeader
+        icon={Landmark}
+        tint={isReconciliationView ? BRAND_GOLD : BRAND_BLUE}
+        title={isReconciliationView ? 'Conciliaciones bancarias' : 'Bancos y cajas'}
+        subtitle={isReconciliationView
+          ? 'Movimientos bancarios pendientes de conciliar'
+          : 'Movimientos de cuentas bancarias y caja de la empresa'}
+        action={!readonly && (
           <div className="flex items-center gap-2">
             <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSV} />
             <button onClick={() => fileRef.current?.click()} disabled={importing}
@@ -2426,70 +2652,109 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
             </Button>
           </div>
         )}
-      </div>
+      />
 
-      {txs.length === 0 ? (
-        <div className="text-center py-10">
-          <Landmark className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No hay movimientos bancarios aún</p>
-          {!readonly && <p className="text-gray-400 text-xs mt-1">Registra los movimientos de tu cuenta bancaria</p>}
+      {/* ── Fila de KPIs / resumen ── */}
+      {summary && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StatTile label="Entradas" value={fmtMoney(summary.credits)} icon={ArrowRightCircle} tint={BRAND_BLUE} valueColor="#047857" />
+          <StatTile label="Salidas" value={fmtMoney(summary.debits)} icon={ArrowRightCircle} tint="#DC2626" valueColor="#DC2626" />
+          <StatTile label="Saldo total" value={fmtMoney(summary.balance)} icon={Wallet} tint={BRAND_BLUE_D} valueColor={BRAND_BLUE_D} />
+          <StatTile label="Conciliados" value={`${summary.reconciled}/${summary.total}`} icon={CheckCircle2} tint={BRAND_GOLD} />
+        </div>
+      )}
+
+      {baseList.length === 0 ? (
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <Landmark className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title={isReconciliationView ? 'No hay movimientos pendientes' : 'Aún no hay movimientos bancarios'}
+            description={isReconciliationView
+              ? 'Todos los movimientos registrados ya están conciliados.'
+              : 'Registra el primer movimiento de la cuenta bancaria o caja.'}
+            action={!readonly && !isReconciliationView && (
+              <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo movimiento</Button>
+            )}
+          />
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50 border-b border-gray-200">
-                  <th className="text-left p-4">Fecha</th>
-                  <th className="text-left p-4">Descripción</th>
-                  <th className="text-left p-4">Ref.</th>
-                  <th className="text-right p-4">Monto</th>
-                  <th className="text-center p-4">Tipo</th>
-                  <th className="text-center p-4">Conciliado</th>
-                  {!readonly && <th className="p-4" />}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {txs.map(tx => (
-                  <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4 text-gray-500 text-xs">{formatDate(tx.date)}</td>
-                    <td className="p-4 text-gray-700 font-medium">{tx.description}</td>
-                    <td className="p-4 text-gray-400 text-xs font-mono">{tx.reference ?? '—'}</td>
-                    <td className={`p-4 text-right font-semibold ${tx.type === 'CREDIT' ? 'text-emerald-700' : 'text-red-700'}`}>
-                      {tx.type === 'DEBIT' ? '-' : '+'}{fmtMoney(tx.amount)}
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className={`text-xs px-2 py-0.5 rounded-full border ${
-                        tx.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-red-50 text-red-700 border-red-200'
-                      }`}>
-                        {tx.type === 'CREDIT' ? 'Entrada' : 'Salida'}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      {!readonly ? (
-                        <button onClick={() => toggleReconciled(tx)} title="Marcar conciliado"
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mx-auto transition-colors ${
-                            tx.isReconciled ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'
-                          }`}>
-                          {tx.isReconciled && <CheckCircle2 className="w-3 h-3 text-white" />}
-                        </button>
-                      ) : (
-                        <span>{tx.isReconciled ? '✓' : '—'}</span>
-                      )}
-                    </td>
-                    {!readonly && (
-                      <td className="p-4">
-                        <button onClick={() => remove(tx)} className="text-gray-300 hover:text-red-500 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+          {/* ── Barra de herramientas: buscador client-side ── */}
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por descripción o referencia…"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
+              />
+            </div>
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
+              {filtered.length} de {baseList.length}
+            </span>
           </div>
+
+          {filtered.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Sin resultados para “{query}”.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] text-gray-500 uppercase tracking-wide bg-gray-50/60 border-b border-gray-100">
+                    <th className="text-left font-semibold px-4 py-2.5">Fecha</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Descripción</th>
+                    <th className="text-left font-semibold px-4 py-2.5">Ref.</th>
+                    <th className="text-right font-semibold px-4 py-2.5">Monto</th>
+                    <th className="text-center font-semibold px-4 py-2.5">Tipo</th>
+                    <th className="text-center font-semibold px-4 py-2.5">Conciliado</th>
+                    {!readonly && <th className="px-4 py-2.5" />}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map(tx => (
+                    <tr key={tx.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                      <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(tx.date)}</td>
+                      <td className="px-4 py-3 text-gray-900 font-semibold">{tx.description}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs font-mono">{tx.reference ?? '—'}</td>
+                      <td className={`px-4 py-3 text-right font-mono tabular-nums font-semibold ${tx.type === 'CREDIT' ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {tx.type === 'DEBIT' ? '-' : '+'}{fmtMoney(tx.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Badge variant={tx.type === 'CREDIT' ? 'green' : 'red'}>{tx.type === 'CREDIT' ? 'Entrada' : 'Salida'}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {!readonly ? (
+                          <button onClick={() => toggleReconciled(tx)} title="Marcar conciliado"
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mx-auto transition-colors ${
+                              tx.isReconciled ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 hover:border-emerald-400'
+                            }`}>
+                            {tx.isReconciled && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          </button>
+                        ) : (
+                          <span>{tx.isReconciled ? '✓' : '—'}</span>
+                        )}
+                      </td>
+                      {!readonly && (
+                        <td className="px-4 py-3">
+                          <button onClick={() => remove(tx)} className="text-gray-300 hover:text-red-500 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -2499,6 +2764,7 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
 export function MayorizacionTab({ companyId }: { companyId: string }) {
   const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     api.get<LedgerAccount[]>(`/api/v1/companies/${companyId}/ledger`)
@@ -2507,63 +2773,113 @@ export function MayorizacionTab({ companyId }: { companyId: string }) {
       .finally(() => setLoading(false));
   }, [companyId]);
 
+  // ── Búsqueda client-side por código o nombre de cuenta ──
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return accounts;
+    return accounts.filter((a) =>
+      a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q));
+  }, [accounts, query]);
+
+  const fmt0 = (v: number | string) => '₡' + Number(v).toLocaleString('es-CR', { minimumFractionDigits: 0 });
+
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
-  if (accounts.length === 0) return (
-    <div className="text-center py-10">
-      <Scale className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-      <p className="text-gray-500 text-sm">No hay cuentas con movimientos aún</p>
-    </div>
-  );
 
   const totalD = accounts.reduce((s, a) => s + Number(a.totalDebit), 0);
   const totalC = accounts.reduce((s, a) => s + Number(a.totalCredit), 0);
   const balanced = Math.abs(totalD - totalC) < 0.01;
 
   return (
-    <div>
-      <p className="text-sm text-gray-500 mb-4">Cuentas T — resumen de movimientos por cuenta</p>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        {accounts.map((acc) => (
-          <div key={acc.accountId} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 text-center">
-              <p className="text-xs font-mono text-gray-400">{acc.code}</p>
-              <p className="text-sm font-semibold text-gray-800 truncate">{acc.name}</p>
-            </div>
-            <div className="grid grid-cols-2 divide-x divide-gray-200">
-              <div className="p-3 text-center">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">DEBE</p>
-                <p className="text-sm font-bold text-blue-700">₡{Number(acc.totalDebit).toLocaleString('es-CR', { minimumFractionDigits: 0 })}</p>
-              </div>
-              <div className="p-3 text-center">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">HABER</p>
-                <p className="text-sm font-bold text-red-600">₡{Number(acc.totalCredit).toLocaleString('es-CR', { minimumFractionDigits: 0 })}</p>
-              </div>
-            </div>
-            <div className="border-t border-dashed border-gray-300 px-4 py-2 text-center bg-gray-50">
-              <span className="text-xs text-gray-500">Saldo: </span>
-              <span className="text-sm font-bold text-gray-800">₡{Number(acc.balance).toLocaleString('es-CR', { minimumFractionDigits: 0 })}</span>
-              <span className="text-xs text-gray-400 ml-1">({acc.normalBalance === 'DEBIT' ? 'D' : 'H'})</span>
+    <div className="space-y-5">
+      {/* ── Encabezado de módulo (solo lectura — deriva del Diario) ── */}
+      <ModuleHeader
+        icon={Scale}
+        title="Mayorización"
+        subtitle="Cuentas T — resumen de movimientos por cuenta, derivado del Diario"
+      />
+
+      {/* ── Fila de KPIs / resumen ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <StatTile label="Cuentas con movimiento" value={String(accounts.length)} icon={BookOpen} tint={BRAND_BLUE} />
+        <StatTile label="Total débitos" value={fmt0(totalD)} icon={ArrowRightCircle} tint={BRAND_BLUE_D} valueColor={BRAND_BLUE_D} />
+        <StatTile label="Total créditos" value={fmt0(totalC)} icon={ArrowRightCircle} tint={BRAND_GOLD} valueColor="#B45309" />
+        <div className="bg-white rounded-card border border-gray-200/70 p-4 flex items-center justify-between gap-2" style={CARD_SHADOW}>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Verificación</p>
+            <div className="mt-2">
+              <Badge variant={balanced ? 'green' : 'amber'}>
+                {balanced ? 'Balanceado' : `Diferencia ${fmt0(Math.abs(totalD - totalC))}`}
+              </Badge>
             </div>
           </div>
-        ))}
-      </div>
-      <div className="flex gap-3 justify-end flex-wrap">
-        {[
-          { label: 'Total Débitos',  value: totalD, color: 'bg-blue-50 border-blue-200 text-blue-700' },
-          { label: 'Total Créditos', value: totalC, color: 'bg-red-50 border-red-200 text-red-700' },
-        ].map((s) => (
-          <div key={s.label} className={`border rounded-xl px-5 py-3 text-center ${s.color}`}>
-            <p className="text-xs opacity-70">{s.label}</p>
-            <p className="text-base font-bold">₡{s.value.toLocaleString('es-CR', { minimumFractionDigits: 0 })}</p>
-          </div>
-        ))}
-        <div className={`border rounded-xl px-5 py-3 text-center ${balanced ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-          <p className="text-xs text-gray-500">Verificación</p>
-          <p className={`text-sm font-bold ${balanced ? 'text-emerald-700' : 'text-amber-700'}`}>
-            {balanced ? '✓ Cuadra' : `⚠ Dif: ₡${Math.abs(totalD - totalC).toLocaleString('es-CR')}`}
-          </p>
+          <IconTile icon={balanced ? CheckCircle2 : AlertCircle} tint={balanced ? '#059669' : '#D97706'} size={38} />
         </div>
       </div>
+
+      {accounts.length === 0 ? (
+        <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
+          <EmptyState
+            illustration={
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <Scale className="w-8 h-8 text-blue-600" />
+              </div>
+            }
+            title="No hay cuentas con movimientos aún"
+            description="Registra asientos en el Diario para ver aquí la mayorización por cuenta."
+          />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* ── Buscador client-side por código o nombre de cuenta ── */}
+          <div className="bg-white rounded-card border border-gray-200/70 px-4 py-3 flex items-center gap-3 flex-wrap" style={CARD_SHADOW}>
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscar por código o nombre de cuenta…"
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
+              />
+            </div>
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
+              {filtered.length} de {accounts.length}
+            </span>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="bg-white rounded-card border border-gray-200/70 px-6 py-12 text-center" style={CARD_SHADOW}>
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Sin resultados para “{query}”.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((acc) => (
+                <div key={acc.accountId} className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+                  <div className="bg-gray-50/70 border-b border-gray-100 px-4 py-2.5 text-center">
+                    <p className="text-xs font-mono tabular-nums text-gray-400">{acc.code}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{acc.name}</p>
+                  </div>
+                  <div className="grid grid-cols-2 divide-x divide-gray-100">
+                    <div className="p-3 text-center">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">DEBE</p>
+                      <p className="text-sm font-bold font-mono tabular-nums text-blue-700">{fmt0(acc.totalDebit)}</p>
+                    </div>
+                    <div className="p-3 text-center">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">HABER</p>
+                      <p className="text-sm font-bold font-mono tabular-nums text-red-600">{fmt0(acc.totalCredit)}</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-dashed border-gray-200 px-4 py-2 text-center bg-gray-50/60">
+                    <span className="text-xs text-gray-500">Saldo: </span>
+                    <span className="text-sm font-bold font-mono tabular-nums text-gray-900">{fmt0(acc.balance)}</span>
+                    <span className="text-xs text-gray-400 ml-1">({acc.normalBalance === 'DEBIT' ? 'D' : 'H'})</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

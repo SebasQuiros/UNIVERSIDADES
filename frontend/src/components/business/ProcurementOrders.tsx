@@ -1,19 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { formatDate, getErrorMessage, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { IconTile } from '@/components/ui/IconTile';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
+import { Input } from '@/components/ui/Input';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ArtInventory } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import {
   Truck, PackageCheck, Plus, X, ShoppingCart, Receipt, CreditCard,
-  Ban, Building2, Check,
+  Ban, Building2, Check, Search, Wallet, Clock,
 } from 'lucide-react';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -176,6 +179,7 @@ export function ProcurementOrders({
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId]   = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [query, setQuery]     = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -208,32 +212,55 @@ export function ProcurementOrders({
     }
   };
 
+  const totalAmount = useMemo(() => orders.reduce((s, o) => s + (o.total ?? 0), 0), [orders]);
+  const pendingCount = useMemo(
+    () => orders.filter((o) => actionsFor(o).length > 0).length,
+    [orders],
+  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter(
+      (o) =>
+        o.counterpartyName?.toLowerCase().includes(q) ||
+        STATUS_META[o.status].label.toLowerCase().includes(q) ||
+        o.items.some((it) => it.description?.toLowerCase().includes(q)),
+    );
+  }, [orders, query]);
+
   return (
     <div className="flex flex-col gap-5">
-      {/* Encabezado explicativo + acción */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-3.5">
-          <IconTile icon={Truck} tint="#1B2E6E" size={46} />
-          <div>
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900 mb-0.5">
-              Modo ERP
-            </p>
-            <h2 className="text-lg font-bold text-gray-900 tracking-tight">
-              Aprovisionamiento entre empresas
-            </h2>
-            <p className="text-gray-500 text-sm mt-1 max-w-2xl leading-relaxed">
-              Órdenes de compra entre empresas del curso. El comprador emite la orden, el vendedor
-              despacha, el comprador recibe (inventario), el vendedor factura (asiento y CxP) y el
-              comprador paga.
-            </p>
-          </div>
+      <PageHeader
+        eyebrow="Modo ERP"
+        title="Aprovisionamiento entre empresas"
+        subtitle="Órdenes de compra entre empresas del curso. El comprador emite la orden, el vendedor despacha, el comprador recibe (inventario), el vendedor factura (asiento y CxP) y el comprador paga."
+        icon={Truck}
+        iconTint="#1B2E6E"
+        actions={
+          canCreate ? (
+            <Button onClick={() => setShowModal(true)} className="cx-press">
+              <Plus className="w-4 h-4" /> Nueva orden de compra
+            </Button>
+          ) : undefined
+        }
+      />
+
+      {!loading && orders.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard label="Órdenes totales" value={String(orders.length)} icon={Truck} tint="#1B2E6E" />
+          <StatCard label="Pendientes de acción" value={String(pendingCount)} icon={Clock} tint="#D4A017" />
+          <StatCard label="Monto total" value={money(totalAmount)} icon={Wallet} tint="#2563EB" />
         </div>
-        {canCreate && (
-          <Button onClick={() => setShowModal(true)} className="flex-shrink-0 cx-press">
-            <Plus className="w-4 h-4" /> Nueva orden de compra
-          </Button>
-        )}
-      </div>
+      )}
+
+      {!loading && orders.length > 0 && (
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar por empresa, estado o descripción…"
+          icon={<Search className="w-4 h-4" />}
+        />
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -258,9 +285,16 @@ export function ProcurementOrders({
             }
           />
         </Card>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <EmptyState
+            title="Sin resultados"
+            description="Ninguna orden coincide con la búsqueda."
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {orders.map((o, idx) => {
+          {filtered.map((o, idx) => {
             const busy = busyId === o.id;
             const acts = actionsFor(o);
             const isBuyer = o.role === 'BUYER';

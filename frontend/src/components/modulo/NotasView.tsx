@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/Input';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import {
   FileMinus, FilePlus, AlertTriangle, Plus, Trash2, X,
-  Send, Info, ReceiptText, Coins,
+  Send, Info, ReceiptText, Coins, Search, FileClock,
 } from 'lucide-react';
 
 // ── Tipos del backend real ─────────────────────────────────────
@@ -152,6 +152,9 @@ export function NotasView({ kind }: { kind: Kind }) {
 
   // Emisión de una nota DRAFT existente (id en curso).
   const [issuingId, setIssuingId] = useState<string | null>(null);
+
+  // Buscador client-side de la tabla (no afecta la carga de datos).
+  const [search, setSearch] = useState('');
 
   // ── Modal "Nueva nota" ───────────────────────────────────────
   const [showModal, setShowModal] = useState(false);
@@ -443,6 +446,23 @@ export function NotasView({ kind }: { kind: Kind }) {
   const draftCount = notes.filter((n) => n.status === 'DRAFT').length;
   const noIssuedInvoices = issuedInvoices.length === 0;
 
+  // Filtro client-side: nº de nota, nº de factura origen o nombre de cliente.
+  const q = search.trim().toLowerCase();
+  const filteredNotes = q
+    ? notes.filter((note) => {
+        const inv = invoiceById.get(note.invoiceId);
+        const haystack = [
+          `${meta.abbr}-${note.number}`,
+          inv?.consecutiveNumber ?? '',
+          inv?.clientName ?? '',
+          note.reason ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(q);
+      })
+    : notes;
+
   return (
     <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#FBF8F1]">
       <div className="max-w-6xl mx-auto">
@@ -471,11 +491,25 @@ export function NotasView({ kind }: { kind: Kind }) {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <StatCard label="Notas emitidas" value={issuedNotes.length.toLocaleString('es-CR')} icon={ReceiptText} tint={meta.tint} className="cx-pop cx-d1" />
           <StatCard label={meta.creditedLabel} value={`₡${fmtNum(totalIssued)}`} icon={Coins} tint="#B8860B" className="cx-pop cx-d2" />
-          <StatCard label="Borradores" value={draftCount.toLocaleString('es-CR')} icon={Icon} tint="#6D28D9" className="cx-pop cx-d3" />
+          <StatCard label="Borradores" value={draftCount.toLocaleString('es-CR')} icon={FileClock} tint="#6D28D9" className="cx-pop cx-d3" />
         </div>
 
         {/* Lista de notas */}
         <SectionCard flushBody className="cx-pop cx-d2">
+          {notes.length > 0 && (
+            <div className="px-4 py-3 border-b border-gray-100">
+              <div className="relative max-w-xs">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por nº, factura o cliente…"
+                  className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                />
+              </div>
+            </div>
+          )}
+
           {notes.length === 0 ? (
             <EmptyState
               illustration={<SceneEmptyBox size={180} className="cx-float" />}
@@ -500,6 +534,12 @@ export function NotasView({ kind }: { kind: Kind }) {
                 )
               }
             />
+          ) : filteredNotes.length === 0 ? (
+            <EmptyState
+              illustration={<SceneSearchEmpty size={160} className="cx-float" />}
+              title="Sin resultados"
+              description={`Ninguna nota coincide con “${search}”.`}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -516,7 +556,7 @@ export function NotasView({ kind }: { kind: Kind }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {notes.map((note) => {
+                  {filteredNotes.map((note) => {
                     const inv = invoiceById.get(note.invoiceId);
                     const isIssuing = issuingId === note.id;
                     return (
@@ -575,10 +615,13 @@ export function NotasView({ kind }: { kind: Kind }) {
             </div>
           )}
 
-          <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
-            <span className="font-mono tabular-nums">{notes.length}</span>{' '}
-            {notes.length === 1 ? 'nota' : 'notas'} · las más recientes primero · al emitir una nota se genera su asiento contable
-          </div>
+          {(notes.length === 0 ? false : filteredNotes.length > 0) && (
+            <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
+              <span className="font-mono tabular-nums">{filteredNotes.length}</span>{' '}
+              {filteredNotes.length === 1 ? 'nota' : 'notas'}
+              {q ? ` de ${notes.length} en total` : ''} · las más recientes primero · al emitir una nota se genera su asiento contable
+            </div>
+          )}
         </SectionCard>
       </div>
 

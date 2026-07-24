@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Spinner } from '@/components/ui/Spinner';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
-import { BarChart2, Package, Boxes, Coins, AlertTriangle } from 'lucide-react';
+import { Boxes, Package, Coins, Calculator, AlertTriangle } from 'lucide-react';
 
 // ── Tipos del endpoint real ────────────────────────────────────
 // GET /api/v1/companies/:companyId/inventory/valuation
@@ -101,8 +101,8 @@ export function ValorInventarioView() {
       eyebrow="Inventario"
       title="Valor de inventario"
       subtitle="Valoración de tu inventario al costo por método FIFO."
-      icon={BarChart2}
-      iconTint="#6D28D9"
+      icon={Boxes}
+      iconTint="#1B2E6E"
       className="mb-6"
     />
   );
@@ -190,7 +190,9 @@ export function ValorInventarioView() {
     );
   }
 
+  const productsWithStock = items.filter((i) => i.qty > 0).length;
   const totalUnits = items.reduce((sum, i) => sum + i.qty, 0);
+  const avgUnitCost = totalUnits > 0 ? total / totalUnits : 0;
 
   return (
     <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#FBF8F1]">
@@ -199,9 +201,9 @@ export function ValorInventarioView() {
 
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <StatCard label="Valor total" value={crc(total)} icon={Coins} tint="#6D28D9" className="cx-pop cx-d1" />
-          <StatCard label="N.º de ítems" value={items.length.toLocaleString('es-CR')} icon={Package} tint="#2563EB" className="cx-pop cx-d2" />
-          <StatCard label="Existencias totales" value={qtyFmt(totalUnits)} icon={Boxes} tint="#B8860B" className="cx-pop cx-d3" />
+          <StatCard label="Valor total de inventario" value={crc(total)} icon={Coins} tint="#1B2E6E" className="cx-pop cx-d1" />
+          <StatCard label="Productos con stock" value={productsWithStock.toLocaleString('es-CR')} icon={Package} tint="#2563EB" className="cx-pop cx-d2" />
+          <StatCard label="Costo unitario promedio" value={crc(avgUnitCost)} icon={Calculator} tint="#B8860B" className="cx-pop cx-d3" />
         </div>
 
         {/* Tabla de valoración por producto */}
@@ -210,6 +212,7 @@ export function ValorInventarioView() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wider text-gray-500 bg-gray-50 border-b border-gray-100">
+                  <th className="px-4 py-2.5 font-semibold w-36">Código</th>
                   <th className="px-4 py-2.5 font-semibold">Producto</th>
                   <th className="px-4 py-2.5 font-semibold text-right w-40">Existencias</th>
                   <th className="px-4 py-2.5 font-semibold text-right w-44">Costo unitario</th>
@@ -219,20 +222,20 @@ export function ValorInventarioView() {
               <tbody>
                 {items.map((item) => (
                   <tr key={item.productId} className="border-b border-gray-100 hover:bg-gray-50/60 transition-colors">
+                    <td className="px-4 py-2.5 font-mono tabular-nums text-xs text-gray-500 whitespace-nowrap">
+                      {item.sku ?? '—'}
+                    </td>
                     <td className="px-4 py-2.5">
                       <div className="font-medium text-gray-900">{item.productName}</div>
-                      {item.sku && (
-                        <div className="text-[11px] font-mono text-gray-400 mt-0.5">{item.sku}</div>
-                      )}
                     </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-gray-700 whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700 whitespace-nowrap">
                       {qtyFmt(item.qty)}
                       <span className="text-gray-400 ml-1">{item.unit}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-gray-700 whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700 whitespace-nowrap">
                       {crc(item.avgUnitCost)}
                     </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-gray-900 whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-gray-900 whitespace-nowrap">
                       {crc(item.cost)}
                     </td>
                   </tr>
@@ -240,15 +243,19 @@ export function ValorInventarioView() {
               </tbody>
               <tfoot>
                 <tr className="bg-gray-50 border-t border-gray-200">
-                  <td className="px-4 py-3 font-bold text-gray-900" colSpan={3}>
+                  <td className="px-4 py-3 font-bold text-gray-900" colSpan={4}>
                     Total del inventario
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums font-extrabold text-gold-900 whitespace-nowrap">
+                  <td className="px-4 py-3 text-right font-mono tabular-nums font-extrabold text-gold-900 whitespace-nowrap">
                     {crc(total)}
                   </td>
                 </tr>
               </tfoot>
             </table>
+          </div>
+
+          <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
+            <span className="font-mono tabular-nums">{items.length}</span> productos · valoración FIFO al costo
           </div>
         </SectionCard>
 
