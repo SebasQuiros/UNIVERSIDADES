@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDate, getErrorMessage } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -25,18 +25,6 @@ interface PracticeCompany {
   createdAt: string;
   _count: { invoices: number; journalEntries: number; clients: number };
 }
-
-const ACTIVITIES = [
-  'Comercio al por menor',
-  'Comercio al por mayor',
-  'Servicios profesionales',
-  'Servicios de tecnología',
-  'Manufactura / Producción',
-  'Construcción',
-  'Restaurante / Alimentos',
-  'Consultoría',
-  'Otro',
-];
 
 export default function ContadorPage() {
   const [companies, setCompanies] = useState<PracticeCompany[]>([]);
@@ -197,7 +185,6 @@ export default function ContadorPage() {
 
       {showForm && (
         <NewPracticeModal
-          activities={ACTIVITIES}
           onClose={() => setShowForm(false)}
           onCreated={(c) => { setCompanies((prev) => [c, ...prev]); setShowForm(false); }}
         />
@@ -207,14 +194,13 @@ export default function ContadorPage() {
 }
 
 function NewPracticeModal({
-  activities, onClose, onCreated,
+  onClose, onCreated,
 }: {
-  activities: string[];
   onClose: () => void;
   onCreated: (c: PracticeCompany) => void;
 }) {
   const [form, setForm] = useState({
-    name: '', legalId: '', legalIdType: 'JURIDICA', economicActivity: activities[0],
+    name: '', legalId: '', legalIdType: '02', economicActivity: '',
     address: '', phone: '', email: '',
   });
   const [saving, setSaving] = useState(false);
@@ -224,21 +210,25 @@ function NewPracticeModal({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error('El nombre de la empresa es obligatorio'); return; }
+    if (!form.legalId.trim()) { toast.error('La cédula es obligatoria'); return; }
+    if (!form.economicActivity || form.economicActivity.length !== 6) {
+      toast.error('La actividad económica debe tener exactamente 6 dígitos (código CIIU)'); return;
+    }
     setSaving(true);
     try {
       const { data } = await api.post<PracticeCompany>('/api/v1/practice/companies', {
         name: form.name.trim(),
-        legalId: form.legalId.trim() || null,
+        legalId: form.legalId.trim(),
         legalIdType: form.legalIdType,
         economicActivity: form.economicActivity,
-        address: form.address.trim() || null,
-        phone: form.phone.trim() || null,
-        email: form.email.trim() || null,
+        address: form.address.trim() || undefined,
+        phone: form.phone.trim() || undefined,
+        email: form.email.trim() || undefined,
       });
       toast.success('Empresa de práctica creada');
       onCreated({ ..._blankCounts(data) });
-    } catch {
-      toast.error('No se pudo crear la empresa');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -265,22 +255,24 @@ function NewPracticeModal({
           <div className="grid grid-cols-2 gap-3">
             <Field label="Tipo de cédula">
               <select value={form.legalIdType} onChange={(e) => set('legalIdType', e.target.value)} className={INPUT}>
-                <option value="JURIDICA">Jurídica</option>
-                <option value="FISICA">Física</option>
-                <option value="DIMEX">DIMEX</option>
+                <option value="01">01 — Física</option>
+                <option value="02">02 — Jurídica</option>
+                <option value="03">03 — DIMEX</option>
+                <option value="04">04 — NITE</option>
               </select>
             </Field>
             <Field label="Cédula">
               <input value={form.legalId} onChange={(e) => set('legalId', e.target.value)}
-                placeholder="3-101-123456" className={INPUT} />
+                placeholder="3101999999" className={INPUT} />
             </Field>
           </div>
 
-          <Field label="Actividad económica">
-            <select value={form.economicActivity} onChange={(e) => set('economicActivity', e.target.value)} className={INPUT}>
-              {activities.map((a) => <option key={a} value={a}>{a}</option>)}
-            </select>
+          <Field label="Actividad económica CIIU * (6 dígitos)">
+            <input value={form.economicActivity}
+              onChange={(e) => set('economicActivity', e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="Ej: 702001" maxLength={6} className={INPUT} />
           </Field>
+          <p className="text-xs text-gray-500 -mt-2">Código de actividad económica de Hacienda CR (ej: 702001 = Consultoría)</p>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Teléfono">
