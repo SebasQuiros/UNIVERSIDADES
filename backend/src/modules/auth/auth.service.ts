@@ -10,6 +10,17 @@ import { SupabaseAdminService } from '../../common/supabase/supabase-admin.servi
 import { REDIS_CLIENT } from '../../redis/redis.module';
 import { invalidateAuthUser } from '../../common/auth/auth-cache';
 
+// Cuentas de prueba conocidas — SIN contraseña acá ni en ningún lugar del
+// código (ver demoLogin: se accede vía magic-link de Supabase, nunca por
+// password). El único secreto es DEMO_LOGIN_TOKEN, que vive solo como
+// variable de entorno en Railway — nunca en el repo.
+const DEMO_ACCOUNTS: Record<string, string> = {
+  admin:        'admin@contafacil.cr',
+  profesor:     'profesor@contafacil.cr',
+  estudiante1:  'estudiante1@contafacil.cr',
+  estudiante2:  'estudiante2@contafacil.cr',
+};
+
 /**
  * AuthService mínimo tras la migración a Supabase Auth.
  *
@@ -27,6 +38,24 @@ export class AuthService {
     private readonly supabaseAdmin: SupabaseAdminService,
     @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
+
+  // ── Acceso rápido a cuentas de prueba (sin exponer contraseñas) ──
+  // Requiere DEMO_LOGIN_TOKEN configurado en el entorno; sin esa variable,
+  // esta función SIEMPRE rechaza (deshabilitado por defecto). El token no se
+  // compara nunca en el frontend — solo acá, server-side.
+  async demoLogin(token: string, as: string): Promise<{ email: string; hashedToken: string }> {
+    const expected = process.env.DEMO_LOGIN_TOKEN;
+    if (!expected || token !== expected) {
+      // 404 en vez de 401/403: no confirmamos ni que el endpoint exista.
+      throw new NotFoundException();
+    }
+    const email = DEMO_ACCOUNTS[as];
+    if (!email) throw new NotFoundException();
+
+    const hashedToken = await this.supabaseAdmin.generateMagicLink(email);
+    this.logger.log(`Acceso rápido de prueba usado: ${email}`);
+    return { email, hashedToken };
+  }
 
   // ── GDPR: borrar / anonimizar la propia cuenta ────────────────
   async deleteAccount(userId: string): Promise<{ message: string }> {

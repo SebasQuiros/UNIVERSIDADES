@@ -105,6 +105,33 @@ export class SupabaseAdminService implements OnModuleInit {
     return null;
   }
 
+  /**
+   * Genera un magic-link de Supabase para `email` y devuelve el `hashed_token`
+   * que el cliente puede canjear con `supabase.auth.verifyOtp({ email, token_hash,
+   * type: 'magiclink' })` para obtener una sesión real — SIN conocer ni exponer
+   * la contraseña de la cuenta en ningún lugar. Usado por el acceso rápido de
+   * cuentas de prueba (ver auth.controller.ts → demoLogin).
+   */
+  async generateMagicLink(email: string): Promise<string> {
+    const res = await fetch(`${this.url}/auth/v1/admin/generate_link`, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({ type: 'magiclink', email }),
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      throw new InternalServerErrorException(
+        `Supabase generateLink falló (${res.status}): ${detail}`,
+      );
+    }
+    const data: any = await res.json();
+    const hashedToken = data?.properties?.hashed_token || data?.hashed_token;
+    if (!hashedToken) {
+      throw new InternalServerErrorException('Supabase generateLink no devolvió hashed_token');
+    }
+    return hashedToken;
+  }
+
   /** Borra un usuario de Supabase Auth. No falla si ya no existe (404). */
   async deleteUser(authId: string): Promise<void> {
     if (!authId) return;

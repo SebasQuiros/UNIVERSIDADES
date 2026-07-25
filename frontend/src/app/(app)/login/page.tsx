@@ -2,14 +2,16 @@
 
 import { useState, FormEvent, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { SceneWelcome } from '@/components/illustrations';
 import { getErrorMessage } from '@/lib/utils';
-import { Mail, Lock, BookOpen, TrendingUp, FileText, Award, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, BookOpen, TrendingUp, FileText, Award, AlertCircle } from 'lucide-react';
 
 const FEATURES = [
   { icon: BookOpen,   label: 'Ejercicios contables interactivos' },
@@ -23,26 +25,69 @@ const ROLE_REDIRECT: Record<string, string> = {
   ADMIN: '/admin', SUPERADMIN: '/superadmin',
 };
 
-const DEMO_CREDENTIALS = [
-  { label: 'Admin',         email: 'admin@contafacil.cr',       password: 'Admin2026!',         color: '#7C3AED' },
-  { label: 'Profesor',      email: 'profesor@contafacil.cr',    password: 'Profesor2026!',      color: '#0369A1' },
-  { label: 'Estudiante 1',  email: 'estudiante1@contafacil.cr', password: 'Estudiante1-2026!',  color: '#065F46' },
-  { label: 'Estudiante 2',  email: 'estudiante2@contafacil.cr', password: 'Estudiante2-2026!',  color: '#065F46' },
-];
-
 export default function LoginPage() {
   const { login, user, isLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [email, setEmail]           = useState('');
   const [password, setPassword]     = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
     if (!isLoading && user) router.replace(ROLE_REDIRECT[user.role] ?? '/');
   }, [user, isLoading, router]);
+
+  // ── Acceso rápido a cuentas de prueba vía URL secreta ────────────────────
+  // ?demo=<token>&as=admin|profesor|estudiante1|estudiante2 — sin token
+  // correcto (server-side, nunca en este código) el backend responde 404 y
+  // acá simplemente no pasa nada. Ningún botón visible, ninguna contraseña
+  // en el código — ver backend auth.controller.ts → demo-login.
+  useEffect(() => {
+    const token = searchParams.get('demo');
+    const as = searchParams.get('as');
+    if (!token || !as || isLoading || user) return;
+
+    (async () => {
+      setDemoLoading(true);
+      try {
+        const { data } = await api.post<{ email: string; hashedToken: string }>(
+          '/api/v1/auth/demo-login',
+          { token, as },
+        );
+        // supabase.auth.verifyOtp() con token_hash no completó de forma
+        // confiable en pruebas — canjeamos el magic-link directo contra el
+        // endpoint REST de Supabase y luego hidratamos el cliente con
+        // setSession(), que sí dispara onAuthStateChange('SIGNED_IN') normal.
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+        const res = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: supabaseKey },
+          body: JSON.stringify({ type: 'magiclink', token_hash: data.hashedToken }),
+        });
+        if (!res.ok) throw new Error('Enlace inválido o expirado');
+        const session = await res.json();
+        const { error } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+        if (error) throw error;
+        // AuthContext detecta el SIGNED_IN vía onAuthStateChange; solo hace
+        // falta esperar a que resuelva el perfil para redirigir por rol.
+      } catch {
+        setDemoLoading(false);
+        setLoginError('Acceso rápido inválido o expirado.');
+      }
+    })();
+  }, [searchParams, isLoading, user]);
+
+  if (demoLoading && !user) {
+    return <PageSpinner />;
+  }
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
@@ -190,31 +235,6 @@ export default function LoginPage() {
               Iniciar sesión
             </Button>
           </form>
-
-          {/* ── Credenciales de prueba — acceso rápido para revisión ── */}
-          <div className="mt-6 p-3 rounded-xl border border-dashed border-gray-200 bg-gray-50">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Usuarios de prueba — clic para autocompletar
-            </p>
-            <div className="space-y-1.5">
-              {DEMO_CREDENTIALS.map(({ label, email: e, password: p, color }) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => {
-                    setEmail(e);
-                    setPassword(p);
-                    setLoginError('');
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors group"
-                >
-                  <span className="text-xs font-medium" style={{ color }}>{label}</span>
-                  <span className="text-xs text-gray-400 font-mono group-hover:text-gray-600 truncate ml-2">{e}</span>
-                </button>
-              ))}
-            </div>
-          </div>
 
           <p className="text-center text-xs text-gray-400 mt-4">
             ¿Olvidaste tu contraseña? Contacta a tu administrador institucional.

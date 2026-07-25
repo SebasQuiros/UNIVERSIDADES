@@ -1,6 +1,15 @@
 import {
-  IsString, MinLength, MaxLength, IsOptional, IsUrl,
+  IsString, MinLength, MaxLength, IsOptional, IsUrl, IsIn,
 } from 'class-validator';
+
+// ── Acceso rápido a cuentas de prueba ───────────────────────────
+export class DemoLoginDto {
+  @IsString()
+  token: string;
+
+  @IsIn(['admin', 'profesor', 'estudiante1', 'estudiante2'])
+  as: string;
+}
 
 // ── Update Profile ────────────────────────────────────────────
 // Único DTO que sobrevive tras migrar el auth a Supabase. El resto

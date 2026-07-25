@@ -1,11 +1,12 @@
 import {
-  Controller, Get, Patch, Delete,
+  Controller, Get, Post, Patch, Delete,
   Body, HttpCode, HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import { UpdateProfileDto } from './dto/auth.dto';
-import { CurrentUser } from './decorators/auth.decorators';
+import { UpdateProfileDto, DemoLoginDto } from './dto/auth.dto';
+import { CurrentUser, Public } from './decorators/auth.decorators';
 
 /**
  * Auth mínimo tras la migración a Supabase Auth.
@@ -31,6 +32,18 @@ export class AuthController {
       role:         user.role,
       universityId: user.universityId,
     };
+  }
+
+  // ── Acceso rápido a cuentas de prueba — deshabilitado por defecto ──
+  // (rechaza siempre sin DEMO_LOGIN_TOKEN configurado en el entorno). El
+  // token NUNCA vive en el frontend ni en el repo — solo como env var en
+  // Railway. Sin él, ni con el body correcto responde nada distinto de 404.
+  @Post('demo-login')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  demoLogin(@Body() dto: DemoLoginDto) {
+    return this.authService.demoLogin(dto.token, dto.as);
   }
 
   // ── Actualizar perfil ─────────────────────────────────────────
