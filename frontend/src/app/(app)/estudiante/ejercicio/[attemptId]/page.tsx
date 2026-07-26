@@ -22,6 +22,7 @@ import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import { ExamModeWrapper } from '@/components/exam';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
+import { FinancialAdvisorCard } from '@/components/dashboard/FinancialAdvisorCard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import type { ElementType } from 'react';
@@ -254,6 +255,7 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
           la valoración bursátil de tu propia empresa, junto al trabajo diario. */}
       <div className="space-y-3">
         <CompanyStockCard companyId={companyId} companyName={attempt.company?.name} />
+        <FinancialAdvisorCard companyId={companyId} />
 
         <Link href="/estudiante/simulador"
           className="group cx-hop-parent cx-press flex items-center gap-4 rounded-card px-5 py-4 text-white transition-all bg-gradient-to-br from-csq-mid to-csq-active border border-white/10 shadow-soft hover:shadow-card-hover">
