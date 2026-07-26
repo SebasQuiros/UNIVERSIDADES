@@ -146,7 +146,6 @@ export function StudentSidebar() {
       key: 'gastos', label: 'Ciclo de egresos', icon: Wallet,
       children: [
         { label: 'Proveedores',           tab: 'suppliers', slug: 'proveedores' },
-        { label: 'Pedidos a proveedores', tab: 'purchase-proposals' },
         { label: 'Facturas recibidas',    endsWith: '/compras', slug: 'facturas-compra' },
         { label: 'Órdenes de compra',     tab: 'purchase-orders', slug: 'ordenes-compra' },
         { label: 'Recepción de mercancía', tab: 'purchase-orders', slug: 'recepcion-comprobantes', sub: 'recepcion' },

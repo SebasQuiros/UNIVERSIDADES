@@ -34,8 +34,6 @@ import {
   Trophy, PlayCircle, Receipt, FolderOpen, XCircle, Target,
   FileSignature, PackageCheck, SlidersHorizontal, Paperclip,
 } from 'lucide-react';
-import { PurchaseProposalsInbox } from '@/components/business/PurchaseProposalsInbox';
-import { ProcurementOrders } from '@/components/business/ProcurementOrders';
 import { SocraticTutorPanel } from '@/components/pedagogy/SocraticTutorPanel';
 import {
   TYPE_LABELS,
@@ -1035,10 +1033,8 @@ export default function ExerciseWorkspacePage() {
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'quotes'    as Tab, label: 'Cotizaciones', icon: FileSignature }] : []),
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'suppliers' as Tab, label: 'Proveedores', icon: Truck   }] : []),
     ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'purchase-orders' as Tab, label: 'Órdenes de compra', icon: PackageCheck }] : []),
-    // Modo Empresarial: propuestas de compra recibidas de ventas de otras empresas del curso
-    ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'purchase-proposals' as Tab, label: 'Propuestas de compra', icon: Inbox }] : []),
-    // Modo ERP (F2.3): órdenes de aprovisionamiento entre empresas del curso
-    ...(exerciseType !== 'JOURNAL_ONLY' ? [{ id: 'procurement' as Tab, label: 'Aprovisionamiento (ERP)', icon: Truck }] : []),
+    // §5 espec. UTN: el espacio Educación no incluye operaciones entre empresas
+    // (propuestas de compra / aprovisionamiento inter-empresa se removieron).
     ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVOICING_ONLY' ? [{ id: 'products' as Tab, label: 'Productos', icon: Package }] : []),
     ...(exerciseType !== 'JOURNAL_ONLY' && exerciseType !== 'INVOICING_ONLY' ? [{ id: 'inventory-adjustments' as Tab, label: 'Ajustes de inventario', icon: SlidersHorizontal }] : []),
     // 1. Transacciones
@@ -1157,8 +1153,6 @@ export default function ExerciseWorkspacePage() {
             {activeTab === 'suppliers' && <SuppliersTab  companyId={company.id} readonly={isReadonly} />}
             {activeTab === 'purchase-orders' && <PurchaseOrdersTab companyId={company.id} readonly={isReadonly} attemptId={attemptId} focusReceiving={searchParams.get('sub') === 'recepcion'} />}
             {activeTab === 'inventory-adjustments' && <InventoryAdjustmentsTab companyId={company.id} readonly={isReadonly} />}
-            {activeTab === 'purchase-proposals' && <PurchaseProposalsInbox companyId={company.id} />}
-            {activeTab === 'procurement' && <ProcurementOrders companyId={company.id} exerciseId={attempt.exerciseId} />}
             {activeTab === 'products'  && <ProductsTab   companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'invoices'  && <InvoicesTab   companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'journal'   && <JournalTab    companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
