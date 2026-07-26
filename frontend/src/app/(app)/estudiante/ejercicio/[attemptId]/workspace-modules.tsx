@@ -2996,6 +2996,31 @@ export function BalanceComprobacionTab({
           </div>
         </div>
       </div>
+
+      {/* Composición por naturaleza de cuenta (indicador contable, spec UTN §7) */}
+      {(() => {
+        const fmt0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const byType = ['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE'].map((t) => ({
+          type: t,
+          total: accounts.filter((a) => a.type === t).reduce((s, a) => s + Math.abs(Number(a.balance || 0)), 0),
+        })).filter((x) => x.total > 0);
+        if (byType.length === 0) return null;
+        const dotColors: Record<string, string> = { ASSET: '#2563EB', LIABILITY: '#DC2626', EQUITY: '#475569', INCOME: '#16A34A', EXPENSE: '#B45309' };
+        return (
+          <div className="mb-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+            {byType.map((x) => (
+              <div key={x.type} className="rounded-xl border border-gray-200 bg-white p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="w-2 h-2 rounded-full" style={{ background: dotColors[x.type] }} />
+                  <span className="text-xs font-medium text-gray-500">{typeLabels[x.type] ?? x.type}</span>
+                </div>
+                <p className="text-sm font-bold tabular-nums text-gray-800">{fmt0(x.total)}</p>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
