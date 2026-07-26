@@ -11,13 +11,47 @@ export class AttemptsService {
     private readonly autoGrading: AutoGradingService,
   ) {}
 
+  // ── Vencimiento (spec UTN §2) ────────────────────────────────────────────
+  // Sin job en segundo plano: se evalúa perezosamente cada vez que se ACCEDE
+  // al intento (findOne/start) o se lista (findAll de STUDENT — lista acotada
+  // a sus propios intentos). `exercise.settings.onExpiry` ('LOCK' por
+  // defecto | 'AUTO_SUBMIT') decide qué pasa: bloquear (queda "Vencida",
+  // solo lectura vía isReadonly) o entregar automáticamente (auto-califica
+  // igual que una entrega normal).
+  private isPastDue(dueDate: Date | null, status: string): boolean {
+    return !!dueDate && dueDate.getTime() < Date.now()
+      && (status === 'NOT_STARTED' || status === 'IN_PROGRESS');
+  }
+
+  /** Persiste la transición (OVERDUE o auto-entrega) si corresponde. Devuelve
+   *  el intento actualizado, o el original si no había vencido. */
+  private async applyExpiryIfNeeded(attempt: any, exercise: { dueDate: Date | null; settings: any }) {
+    if (!this.isPastDue(exercise.dueDate, attempt.status)) return attempt;
+
+    const onExpiry = exercise.settings?.onExpiry === 'AUTO_SUBMIT' ? 'AUTO_SUBMIT' : 'LOCK';
+
+    if (onExpiry === 'AUTO_SUBMIT') {
+      await this.prisma.exerciseAttempt.update({
+        where: { id: attempt.id },
+        data:  { status: 'SUBMITTED', submittedAt: new Date() },
+      });
+      await this.autoGrading.gradeAndSave(attempt.id).catch(() => null);
+      return this.prisma.exerciseAttempt.findUnique({ where: { id: attempt.id } });
+    }
+
+    return this.prisma.exerciseAttempt.update({
+      where: { id: attempt.id },
+      data:  { status: 'OVERDUE' },
+    });
+  }
+
   // ── List attempts: student sees own, teacher sees attempts for their courses ──
   // `mineOnly` fuerza "solo mis propios intentos" sin importar el rol — lo usa
   // el espacio Educación cuando un profesor entra a probar como estudiante
   // (ve solo SU intento de vista previa, no los de sus estudiantes reales).
   async findAll(userId: string, userRole: string, mineOnly = false) {
     if (userRole === 'STUDENT' || mineOnly) {
-      return this.prisma.exerciseAttempt.findMany({
+      const attempts = await this.prisma.exerciseAttempt.findMany({
         where:   { studentId: userId },
         include: {
           exercise: {
@@ -33,6 +67,14 @@ export class AttemptsService {
         orderBy: { createdAt: 'desc' },
         take: 200,
       });
+
+      // Overlay de visualización: marca "Vencida" sin persistir. La transición
+      // real (auto-entrega/bloqueo) se aplica al abrir el intento en findOne.
+      return attempts.map((a) =>
+        this.isPastDue(a.exercise?.dueDate ?? null, a.status)
+          ? { ...a, status: 'OVERDUE' as const }
+          : a,
+      );
     }
 
     // TEACHER: see attempts for exercises in their courses (isPreview=false —
@@ -96,6 +138,14 @@ export class AttemptsService {
 
     this._assertAccess(attempt, userId, userRole);
 
+    // Vencimiento — se evalúa cada vez que se abre el intento (ver helper).
+    const updatedForExpiry = await this.applyExpiryIfNeeded(attempt, attempt.exercise);
+    if (updatedForExpiry && updatedForExpiry.status !== attempt.status) {
+      (attempt as any).status      = updatedForExpiry.status;
+      (attempt as any).submittedAt = updatedForExpiry.submittedAt;
+      (attempt as any).score       = (updatedForExpiry as any).score;
+    }
+
     // Sesión de Aula (GROUP): la empresa del grupo cuelga del ejercicio, no del
     // intento (attemptId null), así que `attempt.company` viene null. La
     // resolvemos vía CompanyMembership para que el workspace no muestre el alta de
@@ -138,6 +188,22 @@ export class AttemptsService {
 
     if (attempt.status === 'GRADED') {
       throw new BadRequestException('Este intento ya fue calificado');
+    }
+
+    // No permitir iniciar/reanudar un ejercicio vencido (spec UTN §2).
+    const exercise = await this.prisma.exercise.findUnique({
+      where:  { id: attempt.exerciseId },
+      select: { dueDate: true, settings: true },
+    });
+    if (attempt.status === 'OVERDUE'
+        || (exercise && this.isPastDue(exercise.dueDate, attempt.status))) {
+      const applied = await this.applyExpiryIfNeeded(
+        attempt,
+        { dueDate: exercise?.dueDate ?? null, settings: exercise?.settings },
+      );
+      if (applied?.status !== 'IN_PROGRESS') {
+        throw new BadRequestException('Este ejercicio ya venció y no puede iniciarse');
+      }
     }
 
     const now = new Date();

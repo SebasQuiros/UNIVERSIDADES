@@ -34,10 +34,11 @@ export function Badge({ children, variant = 'slate', size = 'sm', className }: B
 
 // ── Convenience: status badge ──────────────────────────────────────────────
 const STATUS_CONFIG: Record<ExerciseStatus, { label: string; variant: BadgeProps['variant']; dot: string }> = {
-  NOT_STARTED: { label: 'Sin iniciar',   variant: 'slate',   dot: 'bg-gray-400' },
+  NOT_STARTED: { label: 'Pendiente',     variant: 'slate',   dot: 'bg-gray-400' },
   IN_PROGRESS: { label: 'En progreso',   variant: 'blue',    dot: 'bg-blue-600 animate-pulse' },
-  SUBMITTED:   { label: 'Entregado',     variant: 'amber',   dot: 'bg-amber-500' },
-  GRADED:      { label: 'Calificado',    variant: 'emerald', dot: 'bg-emerald-500' },
+  SUBMITTED:   { label: 'Entregada',     variant: 'amber',   dot: 'bg-amber-500' },
+  GRADED:      { label: 'Finalizada',    variant: 'emerald', dot: 'bg-emerald-500' },
+  OVERDUE:     { label: 'Vencida',       variant: 'red',     dot: 'bg-red-500' },
 };
 
 export function StatusBadge({ status }: { status: ExerciseStatus }) {

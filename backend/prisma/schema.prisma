@@ -125,6 +125,11 @@ enum ExerciseStatus {
   IN_PROGRESS
   SUBMITTED
   GRADED
+  // Venció sin entrega (spec UTN §2 — "Vencida"). Se aplica de forma
+  // perezosa (al abrir/listar el intento, no con un job en segundo plano)
+  // según exercise.settings.onExpiry: 'LOCK' bloquea así, 'AUTO_SUBMIT'
+  // en cambio entrega automáticamente (queda SUBMITTED, no OVERDUE).
+  OVERDUE
 }
 
 enum ExerciseDifficulty {

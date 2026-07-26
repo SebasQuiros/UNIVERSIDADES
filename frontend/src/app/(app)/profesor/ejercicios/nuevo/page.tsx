@@ -89,6 +89,9 @@ export default function NuevoEjercicioPage() {
   const [examStartsAt, setExamStartsAt] = useState('');
   const [examEndsAt, setExamEndsAt] = useState('');
 
+  // Comportamiento al vencer la fecha límite (spec UTN §2)
+  const [onExpiry, setOnExpiry] = useState<'LOCK' | 'AUTO_SUBMIT'>('LOCK');
+
   // Pistas por paso
   const [hints, setHints] = useState({ journal: '', ledger: '', 'balance-comprobacion': '', reports: '' });
 
@@ -155,6 +158,7 @@ export default function NuevoEjercicioPage() {
           timeLimit:   examMode ? Number(timeLimit) : undefined,
           startsAt:    examMode && examStartsAt ? examStartsAt : undefined,
           endsAt:      examMode && examEndsAt   ? examEndsAt   : undefined,
+          onExpiry:    form.dueDate ? onExpiry : undefined,
           allowHints,
           hints: Object.keys(hintsObj).length > 0 ? hintsObj : undefined,
           expectedValues: Object.keys(evObj).length > 0 ? evObj : undefined,
@@ -318,6 +322,27 @@ export default function NuevoEjercicioPage() {
                   onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
                 />
               </div>
+
+              {form.dueDate && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Al vencer la fecha límite
+                  </label>
+                  <select
+                    value={onExpiry}
+                    onChange={(e) => setOnExpiry(e.target.value as 'LOCK' | 'AUTO_SUBMIT')}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="LOCK">Bloquear el ejercicio (queda como “Vencida”)</option>
+                    <option value="AUTO_SUBMIT">Entregar y calificar automáticamente</option>
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {onExpiry === 'LOCK'
+                      ? 'El estudiante ya no podrá seguir trabajando; deberás revisar el caso manualmente.'
+                      : 'Al pasar la fecha, la entrega se cierra y se califica con lo que el estudiante haya avanzado.'}
+                  </p>
+                </div>
+              )}
             </div>
           </SectionCard>
 

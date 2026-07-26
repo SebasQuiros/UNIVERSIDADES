@@ -1005,7 +1005,7 @@ export default function ExerciseWorkspacePage() {
 
   const exercise  = attempt.exercise!;
   const company   = attempt.company;
-  const isReadonly = attempt.status === 'SUBMITTED' || attempt.status === 'GRADED';
+  const isReadonly = attempt.status === 'SUBMITTED' || attempt.status === 'GRADED' || attempt.status === 'OVERDUE';
   const showSetup  = attempt.status === 'IN_PROGRESS' && !company;
   const exerciseType = exercise.type;
 

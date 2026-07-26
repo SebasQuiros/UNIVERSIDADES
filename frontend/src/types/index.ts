@@ -22,7 +22,7 @@ export interface AuthResponse {
   user: User;
 }
 
-export type ExerciseStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED';
+export type ExerciseStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'SUBMITTED' | 'GRADED' | 'OVERDUE';
 export type ExerciseDifficulty = 'BASIC' | 'INTERMEDIATE' | 'ADVANCED';
 export type ExerciseType = 'FULL_CYCLE' | 'JOURNAL_ONLY' | 'INVOICING_ONLY' | 'INVENTORY_ONLY';
 
