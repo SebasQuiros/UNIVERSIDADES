@@ -3306,6 +3306,23 @@ export function FixedAssetsTab({ companyId }: { companyId: string }) {
         <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo activo</Button>
       </div>
 
+      {/* Resumen de cartera de activos (spec UTN §7) */}
+      {assets.length > 0 && (() => {
+        const fmt0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const totalCost   = assets.reduce((s, a) => s + Number(a.acquisitionCost   || 0), 0);
+        const totalDeprec = assets.reduce((s, a) => s + Number(a.accumulatedDeprec || 0), 0);
+        const totalBook   = assets.reduce((s, a) => s + Number(a.bookValue         || 0), 0);
+        const wearPct = totalCost > 0 ? Math.round((totalDeprec / totalCost) * 100) : 0;
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <StatTile label="Costo total" value={fmt0(totalCost)} icon={Building2} tint={BRAND_BLUE} valueColor={BRAND_BLUE_D} />
+            <StatTile label="Depreciación acumulada" value={fmt0(totalDeprec)} icon={TrendingDown} tint="#DC2626" valueColor="#DC2626" />
+            <StatTile label="Valor en libros" value={fmt0(totalBook)} icon={Wallet} tint={BRAND_GOLD} valueColor={BRAND_BLUE_D} />
+            <StatTile label="Desgaste de la cartera" value={`${wearPct}%`} icon={SlidersHorizontal} tint={BRAND_BLUE_D} />
+          </div>
+        );
+      })()}
+
       {assets.length === 0 ? (
         <div className="text-center py-10">
           <Building2 className="w-8 h-8 text-gray-300 mx-auto mb-2" />
@@ -3583,6 +3600,22 @@ export function PayrollTab({ companyId }: { companyId: string }) {
           </button>
         ))}
       </div>
+
+      {/* Resumen de nómina (spec UTN §7) */}
+      {employees.length > 0 && (() => {
+        const fmt0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const brutoMensual = employees.reduce((s, e) => s + Number(e.salary || 0), 0);
+        // Carga social patronal CR aprox. 26.67% sobre el bruto.
+        const cargaPatronal = brutoMensual * 0.2667;
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatTile label="Empleados activos" value={String(employees.length)} icon={Users} tint={BRAND_BLUE} />
+            <StatTile label="Salario bruto mensual" value={fmt0(brutoMensual)} icon={Wallet} tint={BRAND_GOLD} valueColor={BRAND_BLUE_D} />
+            <StatTile label="Carga social patronal (≈26.67%)" value={fmt0(cargaPatronal)} icon={Landmark} tint={BRAND_BLUE_D} valueColor={BRAND_BLUE_D} />
+            <StatTile label="Planillas procesadas" value={String(payrolls.length)} icon={FileCheck2} tint={BRAND_BLUE} />
+          </div>
+        );
+      })()}
 
       {/* ── Section 1: Employees ── */}
       {section === 'employees' && (
