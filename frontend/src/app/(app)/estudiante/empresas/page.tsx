@@ -101,14 +101,14 @@ export default function EmpresasPage() {
 
       {/* Cabecera */}
       <PageHeader
-        eyebrow="Tus entornos contables"
-        title="Mis empresas"
+        eyebrow="Tu avance académico"
+        title="Ejercicios asignados"
         subtitle={
           companies.length === 1
-            ? '1 empresa a tu cargo. Cada una lleva su propia contabilidad.'
-            : `${companies.length} empresas a tu cargo. Cada una lleva su propia contabilidad.`
+            ? '1 ejercicio en curso. Cada uno tiene su propia empresa y contabilidad.'
+            : `${companies.length} ejercicios en curso. Cada uno tiene su propia empresa y contabilidad.`
         }
-        icon={Building2}
+        icon={BookOpen}
         className="mb-6"
         actions={
           <div className="w-full sm:w-72">
@@ -156,11 +156,11 @@ export default function EmpresasPage() {
           {companies.length === 0 ? (
             <EmptyState
               illustration={<ArtLedger size={200} className="cx-float" />}
-              title="Aún no tienes empresas"
-              description="Tu empresa nace cuando inicias un ejercicio: ahí constituyes la sociedad y empiezas a registrar sus operaciones."
+              title="Aún no tienes ejercicios asignados"
+              description="Cuando tu profesor te asigne un ejercicio y lo inicies, vas a constituir tu empresa y empezar a registrar sus operaciones acá."
               action={
                 <Link href="/estudiante">
-                  <Button variant="primary">Ver mis ejercicios</Button>
+                  <Button variant="primary">Ir a Inicio</Button>
                 </Link>
               }
             />
@@ -195,10 +195,11 @@ export default function EmpresasPage() {
                   i < 6 ? `cx-d${i + 1}` : undefined,
                 )}
               >
-                {/* Encabezado */}
+                {/* Encabezado — el ejercicio es la identidad principal de la
+                    tarjeta; la empresa es un detalle secundario (ver abajo) */}
                 <div className="flex items-start gap-3">
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center font-bold flex-shrink-0 text-white cx-hop"
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-white cx-hop"
                     style={{
                       background: isGroup
                         ? 'linear-gradient(145deg,#1E3A8A,#0F2657)'
@@ -206,20 +207,23 @@ export default function EmpresasPage() {
                       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)',
                     }}
                   >
-                    {company.name.charAt(0).toUpperCase()}
+                    <BookOpen className="w-5 h-5" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 truncate tracking-tight">{company.name}</h3>
-                    {company.legalId && (
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Cédula <span className="font-mono tabular-nums">{company.legalId}</span>
-                      </p>
+                    <h3 className="font-bold text-gray-900 truncate tracking-tight">
+                      {company.linkedExercise?.title ?? company.name}
+                    </h3>
+                    {company.linkedExercise?.course && (
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{company.linkedExercise.course.name}</p>
                     )}
                   </div>
                 </div>
 
-                {/* Badges modo + rol */}
+                {/* Badges: estado del ejercicio + modo + rol */}
                 <div className="flex items-center gap-2 flex-wrap -mt-1">
+                  {company.attempt && (
+                    <StatusBadge status={company.attempt.status as ExerciseStatus} />
+                  )}
                   <Badge variant={isGroup ? 'slate' : 'blue'}>
                     {isGroup ? <Users className="w-3 h-3" /> : <User className="w-3 h-3" />}
                     {isGroup
@@ -251,23 +255,18 @@ export default function EmpresasPage() {
                   </div>
                 </div>
 
-                {/* Ejercicio vinculado */}
-                {company.linkedExercise && (
-                  <div className="flex flex-col gap-1.5 p-3 bg-blue-50/40 rounded-xl border border-blue-100">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" strokeWidth={1.75} />
-                      <p className="text-xs font-medium text-gray-700 truncate">{company.linkedExercise.title}</p>
-                    </div>
-                    {company.linkedExercise.course && (
-                      <p className="text-xs text-gray-400 pl-5">{company.linkedExercise.course.name}</p>
-                    )}
-                    {company.attempt && (
-                      <div className="pl-5">
-                        <StatusBadge status={company.attempt.status as ExerciseStatus} />
-                      </div>
+                {/* Empresa (detalle secundario — el ejercicio ya es el encabezado) */}
+                <div className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" strokeWidth={1.75} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-700 truncate">{company.name}</p>
+                    {company.legalId && (
+                      <p className="text-[11px] text-gray-400">
+                        Cédula <span className="font-mono tabular-nums">{company.legalId}</span>
+                      </p>
                     )}
                   </div>
-                )}
+                </div>
 
                 {/* Pie */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">

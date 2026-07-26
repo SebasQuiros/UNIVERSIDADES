@@ -358,6 +358,60 @@ export class ExercisesService {
     };
   }
 
+  // ── Vista del profesor: probar el ejercicio como estudiante ────────────────────
+  // Crea (o reutiliza) un ExerciseAttempt PROPIO del profesor sobre este
+  // ejercicio — mismo modelo que usa un estudiante real, así entra al mismo
+  // workspace (/estudiante/ejercicio/:attemptId) y ve exactamente la misma
+  // experiencia. Marcado isPreview=true: excluido de entregas reales,
+  // estadísticas y rankings. Funciona con el ejercicio publicado o en
+  // borrador — de hecho es más útil ANTES de publicar, para validarlo.
+  async previewAsStudent(
+    courseId: string,
+    exerciseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
+    const exercise = await this.prisma.exercise.findFirst({
+      where:   { id: exerciseId, courseId },
+      include: { course: { select: { universityId: true } } },
+    });
+    if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
+
+    this.assertExerciseAccess(caller, exercise, exercise.course.universityId, 'previsualizarlo');
+
+    // Idempotente — mismo (exerciseId, studentId) del profesor, reutiliza si
+    // ya existe (@@unique([exerciseId, studentId]) en el schema).
+    let attempt = await this.prisma.exerciseAttempt.findUnique({
+      where: { exerciseId_studentId: { exerciseId, studentId: caller.id } },
+    });
+
+    if (!attempt) {
+      attempt = await this.prisma.exerciseAttempt.create({
+        data: {
+          exerciseId,
+          studentId: caller.id,
+          status:    'NOT_STARTED',
+          maxScore:  exercise.maxScore,
+          isPreview: true,
+        },
+      });
+      await this.prisma.studentProgress.create({
+        data: {
+          attemptId:     attempt.id,
+          studentId:     caller.id,
+          exerciseId,
+          progressPct:   0,
+          invoicesCount: 0,
+          entriesCount:  0,
+          clientsCount:  0,
+          productsCount: 0,
+          timeSpentMin:  0,
+        },
+      });
+    }
+
+    return { attemptId: attempt.id };
+  }
+
   // ── Templates ─────────────────────────────────────────────────────────────────
 
   async findTemplates(teacherId: string) {

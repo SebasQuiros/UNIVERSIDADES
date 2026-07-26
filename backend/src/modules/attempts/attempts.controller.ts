@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post,
-  Param, UseGuards, HttpCode, HttpStatus, ForbiddenException,
+  Param, Query, UseGuards, HttpCode, HttpStatus, ForbiddenException,
 } from '@nestjs/common';
 import { AttemptsService } from './attempts.service';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
@@ -23,9 +23,13 @@ export class AttemptsController {
     return this.svc.getGamification(user.id, user.universityId);
   }
 
+  // ?mine=true — fuerza "solo mis propios intentos" sin importar el rol.
+  // Lo usa el espacio Educación cuando lo abre un profesor (vista previa
+  // como estudiante): sin esto, el profesor vería mezclados los intentos
+  // de TODOS sus estudiantes en vez de solo el suyo propio.
   @Get()
-  findAll(@CurrentUser() user: any) {
-    return this.svc.findAll(user.id, user.role);
+  findAll(@Query('mine') mine: string, @CurrentUser() user: any) {
+    return this.svc.findAll(user.id, user.role, mine === 'true');
   }
 
   @Get(':id')

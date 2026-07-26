@@ -105,6 +105,19 @@ export class ExercisesController {
   ) {
     return this.svc.publish(courseId, id, user);
   }
+
+  /** POST .../:id/preview — crea/reutiliza el intento propio del profesor para
+   *  probar el ejercicio con la misma experiencia que ve un estudiante. */
+  @Post(':id/preview')
+  @HttpCode(HttpStatus.OK)
+  @Roles('TEACHER', 'ADMIN', 'SUPERADMIN')
+  previewAsStudent(
+    @Param('courseId') courseId: string,
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.svc.previewAsStudent(courseId, id, user);
+  }
 }
 
 // ── Global exercise template routes (no courseId required) ────────────────────

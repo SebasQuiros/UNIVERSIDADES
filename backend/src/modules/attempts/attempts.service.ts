@@ -12,8 +12,11 @@ export class AttemptsService {
   ) {}
 
   // ── List attempts: student sees own, teacher sees attempts for their courses ──
-  async findAll(userId: string, userRole: string) {
-    if (userRole === 'STUDENT') {
+  // `mineOnly` fuerza "solo mis propios intentos" sin importar el rol — lo usa
+  // el espacio Educación cuando un profesor entra a probar como estudiante
+  // (ve solo SU intento de vista previa, no los de sus estudiantes reales).
+  async findAll(userId: string, userRole: string, mineOnly = false) {
+    if (userRole === 'STUDENT' || mineOnly) {
       return this.prisma.exerciseAttempt.findMany({
         where:   { studentId: userId },
         include: {
@@ -32,11 +35,13 @@ export class AttemptsService {
       });
     }
 
-    // TEACHER: see attempts for exercises in their courses
+    // TEACHER: see attempts for exercises in their courses (isPreview=false —
+    // excluye su propio intento de vista previa, que no es una entrega real).
     if (userRole === 'TEACHER') {
       return this.prisma.exerciseAttempt.findMany({
         where: {
-          exercise: { course: { teacherId: userId } },
+          exercise:  { course: { teacherId: userId } },
+          isPreview: false,
         },
         include: {
           exercise: {

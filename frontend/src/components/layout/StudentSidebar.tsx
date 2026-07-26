@@ -10,7 +10,7 @@ import {
   Home, Coins, Wallet, Package, Landmark, BookOpen, BookOpenCheck,
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
   LogOut, Menu, X, ChevronDown, UserCircle,
-  GraduationCap, Calculator, Users, Ticket,
+  GraduationCap, Calculator, Users,
   LayoutDashboard, FileText, ClipboardCheck, Presentation,
 } from 'lucide-react';
 
@@ -62,21 +62,39 @@ export function StudentSidebar() {
   // la MISMA respuesta — antes eran 2 GET /attempts idénticos disparados a la
   // vez en cada montaje (login, cambio de usuario), duplicando la consulta
   // justo cuando el cache de sesión del backend está frío.
+  // Para un profesor este fetch (sin `mine`) trae los intentos de SUS
+  // ESTUDIANTES (para el badge de "pendientes de calificar") — el backend ya
+  // excluye su propio intento de vista previa de esa lista (isPreview=false),
+  // así que acá NUNCA resolvemos `activeId` de un profesor con esta llamada
+  // (ver el efecto de abajo, que sí trae SU PROPIO intento con `mine=true`).
   const didMount = useRef(false);
   useEffect(() => {
     api.get<any[]>('/api/v1/attempts').then(({ data }) => {
       const list = Array.isArray(data) ? data : [];
+      if (user?.role === 'TEACHER') {
+        setPending(list.filter((x) => x.status === 'IN_PROGRESS' || x.status === 'SUBMITTED').length);
+        return;
+      }
       const a = list.find((x) => x.status === 'IN_PROGRESS')
         ?? list.find((x) => x.company)
         ?? list.find((x) => x.status === 'NOT_STARTED')
         ?? list[0];
       setActiveId(a?.id ?? null);
-      if (user?.role === 'TEACHER') {
-        setPending(list.filter((x) => x.status === 'IN_PROGRESS' || x.status === 'SUBMITTED').length);
-      }
     }).catch(() => {});
     didMount.current = true;
   }, []);
+
+  // Vista del profesor: su PROPIO intento de vista previa (isPreview=true,
+  // ver exercises.service.ts → previewAsStudent) — así el espacio Educación
+  // navega el mismo ejercicio que el profesor abrió para probar, sin mezclar
+  // los intentos reales de sus estudiantes.
+  useEffect(() => {
+    if (user?.role !== 'TEACHER') return;
+    api.get<any[]>('/api/v1/attempts?mine=true').then(({ data }) => {
+      const list = Array.isArray(data) ? data : [];
+      setActiveId(list[0]?.id ?? null);
+    }).catch(() => {});
+  }, [user?.role]);
 
   // Solo el profesor: mantener "pending" al día al navegar (después del montaje
   // inicial, que ya lo resolvió arriba con el mismo fetch).
@@ -127,12 +145,11 @@ export function StudentSidebar() {
     {
       key: 'gastos', label: 'Ciclo de egresos', icon: Wallet,
       children: [
-        { label: 'Proveedores',         tab: 'suppliers', slug: 'proveedores' },
-        { label: 'Solicitudes de compra', tab: 'purchase-proposals' },
-        { label: 'Requerimientos',      tab: 'procurement' },
-        { label: 'Facturas recibidas',  endsWith: '/compras', slug: 'facturas-compra' },
-        { label: 'Órdenes de compra',   tab: 'purchase-orders', slug: 'ordenes-compra' },
-        { label: 'Recepción de bienes', tab: 'purchase-orders', slug: 'recepcion-comprobantes', sub: 'recepcion' },
+        { label: 'Proveedores',           tab: 'suppliers', slug: 'proveedores' },
+        { label: 'Pedidos a proveedores', tab: 'purchase-proposals' },
+        { label: 'Facturas recibidas',    endsWith: '/compras', slug: 'facturas-compra' },
+        { label: 'Órdenes de compra',     tab: 'purchase-orders', slug: 'ordenes-compra' },
+        { label: 'Recepción de mercancía', tab: 'purchase-orders', slug: 'recepcion-comprobantes', sub: 'recepcion' },
       ],
     },
     {
@@ -155,9 +172,9 @@ export function StudentSidebar() {
       key: 'contabilidad', label: 'Registro contable', icon: BookOpenCheck,
       children: [
         { label: 'Catálogo de cuentas',     slug: 'catalogo-cuentas' },
-        { label: 'Diario (asientos)',       tab: 'journal',        slug: 'asiento-contable' },
+        { label: 'Diario contable',         tab: 'journal',        slug: 'asiento-contable' },
         { label: 'Libro mayor',             tab: 'ledger',         slug: 'libro-mayor' },
-        { label: 'Mayorización',            tab: 'mayorizacion' },
+        { label: 'Cuentas T',               tab: 'mayorizacion' },
         { label: 'Balance de comprobación', tab: 'balance-comprobacion', slug: 'balance-comprobacion' },
         { label: 'Ajustes',                 tab: 'ajustes',        slug: 'ajustes' },
         { label: 'Balance ajustado',        tab: 'balance-ajustado' },
@@ -171,15 +188,12 @@ export function StudentSidebar() {
     { key: 'reportes', label: 'Estados y análisis', icon: BarChart2, children: [
         { label: 'Estados financieros', tab: 'reports', slug: 'estados-financieros' },
     ]},
-    { key: 'tribu', label: 'Tributación · TRIBU', icon: Receipt, href: '/estudiante/impuestos', path: '/estudiante/impuestos' },
-    // Andamiaje fase 1 (maqueta): unirse a una "Sesión de Aula" con código de
-    // profesor (lobby → mi empresa → auditoría entre pares → resultados).
-    { key: 'sesion', label: 'Sesión de aula', icon: Ticket, href: '/estudiante/sesion/unirse', path: '/estudiante/sesion' },
+    { key: 'tribu', label: 'Tributación', icon: Receipt, href: '/estudiante/impuestos', path: '/estudiante/impuestos' },
   ];
 
   const LEARN: Group[] = [
     { key: 'sim',  label: 'Simulador financiero', icon: LineChart,  href: '/estudiante/simulador', path: '/estudiante/simulador' },
-    { key: 'emp',  label: 'Mis empresas',         icon: Building2,  href: '/estudiante/empresas',  path: '/estudiante/empresas' },
+    { key: 'emp',  label: 'Ejercicios asignados', icon: BookOpen,   href: '/estudiante/empresas',  path: '/estudiante/empresas' },
     { key: 'prog', label: 'Mi progreso',          icon: TrendingUp, href: '/estudiante/progreso',  path: '/estudiante/progreso' },
     { key: 'notif',label: 'Notificaciones',       icon: Bell,       href: '/estudiante/notificaciones', path: '/estudiante/notificaciones', isNotif: true },
   ];

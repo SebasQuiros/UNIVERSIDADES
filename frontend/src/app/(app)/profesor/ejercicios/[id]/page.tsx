@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 import {
   ArrowLeft, Globe, Lock, Users, Clock, Award,
   CheckCircle2, ChevronRight, Send, BarChart2, Trash2, Archive,
-  AlertTriangle, X, Radio, Settings, ClipboardCheck, Hourglass,
+  AlertTriangle, X, Radio, Settings, ClipboardCheck, Hourglass, Eye,
 } from 'lucide-react';
 
 // Textura de puntos sutil para la banda hero (fondo azul noche).
@@ -57,6 +57,7 @@ export default function ExerciseDetailPage() {
   const [attempts, setAttempts] = useState<AttemptWithStudent[]>([]);
   const [loading, setLoading]   = useState(true);
   const [publishing, setPublishing]   = useState(false);
+  const [previewing, setPreviewing]   = useState(false);
   const [deleting, setDeleting]       = useState(false);
   const [archiving, setArchiving]     = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -103,6 +104,20 @@ export default function ExerciseDetailPage() {
       setArchiving(false);
     }
     setShowDeleteModal(false);
+  }
+
+  async function handlePreview() {
+    if (!courseId) return;
+    setPreviewing(true);
+    try {
+      const { data } = await api.post<{ attemptId: string }>(
+        `/api/v1/courses/${courseId}/exercises/${id}/preview`,
+      );
+      router.push(`/estudiante/ejercicio/${data.attemptId}`);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+      setPreviewing(false);
+    }
   }
 
   async function handlePublish() {
@@ -266,6 +281,10 @@ export default function ExerciseDetailPage() {
                 Panel de empresas
               </Button>
             </Link>
+            <Button variant="secondary" size="sm" onClick={handlePreview} loading={previewing} className="cx-press">
+              <Eye className="w-4 h-4" />
+              Probar como estudiante
+            </Button>
             {exercise.isPublished && (
               <Link href={`/profesor/ejercicios/${id}/live?cursoId=${courseId}`}>
                 <Button variant="secondary" size="sm" className="cx-press">
