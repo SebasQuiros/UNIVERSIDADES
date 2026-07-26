@@ -21,6 +21,7 @@ import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
 import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import { ExamModeWrapper } from '@/components/exam';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
+import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import type { ElementType } from 'react';
@@ -249,18 +250,23 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
       <StudentJourney companyId={companyId} attemptId={attempt.id} prog={prog} status={attempt.status} />
       {executivePanel}
 
-      {/* Acceso al Simulador Financiero (sección propia) */}
-      <Link href="/estudiante/simulador"
-        className="group cx-hop-parent cx-press flex items-center gap-4 rounded-card px-5 py-4 text-white transition-all bg-gradient-to-br from-csq-mid to-csq-active border border-white/10 shadow-soft hover:shadow-card-hover">
-        <IconTile icon={LineChart} size={44} onDark className="cx-hop" />
-        <div className="min-w-0 flex-1">
-          <p className="font-bold text-sm">Simulador Financiero</p>
-          <p className="text-xs text-blue-200/80">
-            Precio de acción, indicadores macro, gerente financiero IA y eventos económicos de tu empresa.
-          </p>
-        </div>
-        <ChevronRight className="w-5 h-5 flex-shrink-0 text-csq-accent-bright" />
-      </Link>
+      {/* Simulador financiero integrado en el ejercicio (spec UTN §8) —
+          la valoración bursátil de tu propia empresa, junto al trabajo diario. */}
+      <div className="space-y-3">
+        <CompanyStockCard companyId={companyId} companyName={attempt.company?.name} />
+
+        <Link href="/estudiante/simulador"
+          className="group cx-hop-parent cx-press flex items-center gap-4 rounded-card px-5 py-4 text-white transition-all bg-gradient-to-br from-csq-mid to-csq-active border border-white/10 shadow-soft hover:shadow-card-hover">
+          <IconTile icon={LineChart} size={44} onDark className="cx-hop" />
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-sm">Abrir el Simulador Financiero completo</p>
+            <p className="text-xs text-blue-200/80">
+              Viabilidad de negocio, indicadores macro, gerente financiero IA y eventos económicos de tu empresa.
+            </p>
+          </div>
+          <ChevronRight className="w-5 h-5 flex-shrink-0 text-csq-accent-bright" />
+        </Link>
+      </div>
 
       {/* ── Gamification card ───────────────────────────────────────────────── */}
       <SectionCard
