@@ -25,7 +25,7 @@ import {
   Lightbulb, Search, Mail, Contact, Receipt, FileCheck2,
   FileClock, Wallet, FileSignature, PackageCheck, SlidersHorizontal,
   PackagePlus, PackageMinus, ArrowRightCircle,
-  TrendingUp, TrendingDown, Minus, Award,
+  TrendingUp, TrendingDown, Minus, Award, AlertTriangle,
 } from 'lucide-react';
 
 // ─── Brand palette (azul-noche + dorado) ──────────────────────────────────────
@@ -1543,8 +1543,30 @@ export function JournalTab({ companyId, attemptId }: { companyId: string; readon
 
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
+  // Indicadores contables del diario (spec UTN §7)
+  const fmtCRC0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const totalDebit  = entries.reduce((s, e) => s + (e.lines ?? []).reduce((a, l) => a + Number(l.debit  || 0), 0), 0);
+  const totalCredit = entries.reduce((s, e) => s + (e.lines ?? []).reduce((a, l) => a + Number(l.credit || 0), 0), 0);
+  const balanced    = Math.abs(totalDebit - totalCredit) < 0.01;
+
   return (
     <div className="space-y-4">
+      {/* Indicadores del diario (spec UTN §7) */}
+      {entries.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatTile label="Asientos" value={String(entries.length)} icon={BookOpen} tint={BRAND_BLUE} />
+          <StatTile label="Total débitos" value={fmtCRC0(totalDebit)} icon={ArrowRightCircle} tint={BRAND_BLUE_D} valueColor={BRAND_BLUE_D} />
+          <StatTile label="Total créditos" value={fmtCRC0(totalCredit)} icon={ArrowRightCircle} tint={BRAND_GOLD} valueColor="#B45309" />
+          <StatTile
+            label={balanced ? 'Partida doble cuadrada' : 'Descuadre'}
+            value={balanced ? 'Débito = Crédito' : fmtCRC0(Math.abs(totalDebit - totalCredit))}
+            icon={balanced ? CheckCircle2 : AlertTriangle}
+            tint={balanced ? '#16A34A' : '#DC2626'}
+            valueColor={balanced ? '#16A34A' : '#DC2626'}
+          />
+        </div>
+      )}
+
       {/* Info box — auto-generated entries */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
         <div className="text-blue-600 mt-0.5">
