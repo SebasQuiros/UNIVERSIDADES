@@ -249,14 +249,17 @@ export default function NuevoEjercicioPage() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-gray-700">Instrucciones completas</label>
+                <label className="text-sm font-medium text-gray-700">Enunciado del caso</label>
                 <textarea
-                  placeholder="Instrucciones detalladas para el estudiante…"
+                  placeholder="Redactá el caso práctico completo: contexto de la empresa, operaciones a registrar, datos y lo que el estudiante debe resolver. El estudiante construirá su empresa conforme resuelve el caso."
                   value={form.instructions}
                   onChange={(e) => setForm({ ...form, instructions: e.target.value })}
-                  rows={4}
-                  className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                  rows={8}
+                  className="w-full resize-y rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
                 />
+                <p className="text-xs text-gray-400">
+                  Después de crear el ejercicio podrás <strong>adjuntar el enunciado y documentos de apoyo</strong> (PDF, Word, Excel, imágenes) desde su ficha.
+                </p>
               </div>
             </div>
           </SectionCard>
@@ -350,9 +353,9 @@ export default function NuevoEjercicioPage() {
           <SectionCard
             icon={ListChecks}
             iconTint="#B8860B"
-            eyebrow="Paso 3"
-            title="Rúbricas de evaluación"
-            description="Define los criterios con los que se medirá el progreso del estudiante."
+            eyebrow="Paso 3 · opcional"
+            title="Rúbricas de auto-calificación"
+            description="Opcional. Si querés que el sistema mida el avance automáticamente, agregá criterios. El caso lo define el enunciado; estas rúbricas solo apoyan la calificación."
             className="cx-pop cx-d3"
             action={
               <Button type="button" variant="secondary" size="sm" onClick={addRubric} className="cx-press">
