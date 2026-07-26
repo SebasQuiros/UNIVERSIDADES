@@ -328,11 +328,34 @@ model Exercise {
   companies    Company[]            @relation("ExerciseCompanies")
   competencies ExerciseCompetency[]
   classSession ClassSession?
+  attachments  ExerciseAttachment[]
 
   @@index([courseId])
   @@index([teacherId])
   @@index([isPublished])
   @@map("exercises")
+}
+
+// ── ExerciseAttachment (Spec UTN §1) ────────────────────────────
+//
+// Material adjunto por el profesor al redactar el caso práctico
+// (PDF, Word, Excel, imágenes) — visible para el estudiante dentro
+// del ejercicio. Se guarda el binario como base64 en columna Text,
+// mismo patrón que TaxAttachment, para sobrevivir redespliegues del
+// filesystem efímero de Railway.
+model ExerciseAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  exerciseId String   @map("exercise_id") @db.Uuid
+  fileName   String   @map("file_name")
+  fileSize   Int      @map("file_size")
+  mimeType   String   @map("mime_type")
+  fileData   String   @map("file_data") @db.Text // base64
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId])
+  @@map("exercise_attachments")
 }
 
 // ── ExerciseConfig (Fase 1) ─────────────────────────────────────

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
 import { SectionCard } from '@/components/ui/SectionCard';
+import { ExerciseAttachments } from '@/components/exercise/ExerciseAttachments';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconTile } from '@/components/ui/IconTile';
 import { ArtReport, SceneEmptyBox } from '@/components/illustrations';
@@ -18,7 +19,7 @@ import toast from 'react-hot-toast';
 import {
   ArrowLeft, Globe, Lock, Users, Clock, Award,
   CheckCircle2, ChevronRight, Send, BarChart2, Trash2, Archive,
-  AlertTriangle, X, Radio, Settings, ClipboardCheck, Hourglass, Eye,
+  AlertTriangle, X, Radio, Settings, ClipboardCheck, Hourglass, Eye, Paperclip,
 } from 'lucide-react';
 
 // Textura de puntos sutil para la banda hero (fondo azul noche).
@@ -302,6 +303,18 @@ export default function ExerciseDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Material del caso (Spec UTN §1) */}
+      <SectionCard
+        icon={Paperclip}
+        iconTint="#2563EB"
+        eyebrow="Enunciado"
+        title="Material del caso"
+        description="Adjunta el enunciado y documentos de apoyo (PDF, Word, Excel, imágenes). El estudiante los verá dentro del ejercicio."
+        className="mb-6 cx-pop"
+      >
+        <ExerciseAttachments courseId={courseId} exerciseId={id} editable />
+      </SectionCard>
 
       {/* Rúbricas */}
       {exercise.rubrics && exercise.rubrics.length > 0 && (

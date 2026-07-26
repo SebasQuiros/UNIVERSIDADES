@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
 import { SectionCard } from '@/components/ui/SectionCard';
+import { ExerciseAttachments } from '@/components/exercise/ExerciseAttachments';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconTile } from '@/components/ui/IconTile';
 import { ArtBalance, SceneStudentDesk, SceneEmptyBox } from '@/components/illustrations';
@@ -31,7 +32,7 @@ import {
   Scale, ClipboardList, ClipboardCheck, Lock, Download, MessageCircle,
   Lightbulb, ShoppingCart, Search, LineChart, Inbox, GraduationCap,
   Trophy, PlayCircle, Receipt, FolderOpen, XCircle, Target,
-  FileSignature, PackageCheck, SlidersHorizontal,
+  FileSignature, PackageCheck, SlidersHorizontal, Paperclip,
 } from 'lucide-react';
 import { PurchaseProposalsInbox } from '@/components/business/PurchaseProposalsInbox';
 import { ProcurementOrders } from '@/components/business/ProcurementOrders';
@@ -346,6 +347,23 @@ function DashboardTab({ companyId, attempt }: { companyId: string; attempt: Exer
             />
           ))}
         </div>
+      )}
+
+      {/* Material del caso (Spec UTN §1) */}
+      {(attempt.exercise as any)?.course?.id && attempt.exercise?.id && (
+        <SectionCard
+          eyebrow="Enunciado"
+          title="Material del caso"
+          description="Documentos y enunciado que tu profesor adjuntó para este ejercicio."
+          icon={Paperclip}
+          iconTint="#2563EB"
+          className="cx-pop cx-d2"
+        >
+          <ExerciseAttachments
+            courseId={(attempt.exercise as any).course.id}
+            exerciseId={attempt.exercise.id}
+          />
+        </SectionCard>
       )}
 
       {/* Rubrics checklist */}

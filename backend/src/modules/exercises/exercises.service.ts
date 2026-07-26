@@ -412,6 +412,129 @@ export class ExercisesService {
     return { attemptId: attempt.id };
   }
 
+  // ── Adjuntos del enunciado (Spec UTN §1) ───────────────────────────────────
+  //
+  // El profesor adjunta el material del caso (PDF/Word/Excel/imágenes); el
+  // estudiante los ve dentro del ejercicio. Binario en base64 (patrón
+  // TaxAttachment) para sobrevivir el filesystem efímero de Railway.
+
+  private static readonly ALLOWED_MIME = new Set([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+  ]);
+  private static readonly MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10 MB
+
+  async addAttachment(
+    courseId: string,
+    exerciseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+    file: { fileName: string; mimeType: string; fileData: string },
+  ) {
+    const exercise = await this.prisma.exercise.findFirst({
+      where:   { id: exerciseId, courseId },
+      include: { course: { select: { universityId: true } } },
+    });
+    if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
+    this.assertExerciseAccess(caller, exercise, exercise.course.universityId, 'adjuntar material');
+
+    if (!ExercisesService.ALLOWED_MIME.has(file.mimeType)) {
+      throw new BadRequestException('Tipo de archivo no permitido (solo PDF, Word, Excel o imágenes)');
+    }
+    const buf = Buffer.from(file.fileData, 'base64');
+    if (buf.length === 0) throw new BadRequestException('Archivo vacío o base64 inválido');
+    if (buf.length > ExercisesService.MAX_ATTACHMENT_BYTES) {
+      throw new BadRequestException('El archivo supera el límite de 10 MB');
+    }
+
+    const created = await this.prisma.exerciseAttachment.create({
+      data: {
+        exerciseId,
+        fileName: file.fileName.slice(0, 255),
+        fileSize: buf.length,
+        mimeType: file.mimeType,
+        fileData: file.fileData,
+      },
+      select: { id: true, fileName: true, fileSize: true, mimeType: true, createdAt: true },
+    });
+    return created;
+  }
+
+  async listAttachments(
+    courseId: string,
+    exerciseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
+    await this._assertCanReadExercise(courseId, exerciseId, caller);
+    return this.prisma.exerciseAttachment.findMany({
+      where:   { exerciseId },
+      select:  { id: true, fileName: true, fileSize: true, mimeType: true, createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async getAttachment(
+    courseId: string,
+    exerciseId: string,
+    attachmentId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
+    await this._assertCanReadExercise(courseId, exerciseId, caller);
+    const att = await this.prisma.exerciseAttachment.findFirst({
+      where: { id: attachmentId, exerciseId },
+    });
+    if (!att) throw new NotFoundException('Adjunto no encontrado');
+    return att;
+  }
+
+  async deleteAttachment(
+    courseId: string,
+    exerciseId: string,
+    attachmentId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
+    const exercise = await this.prisma.exercise.findFirst({
+      where:   { id: exerciseId, courseId },
+      include: { course: { select: { universityId: true } } },
+    });
+    if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
+    this.assertExerciseAccess(caller, exercise, exercise.course.universityId, 'eliminar material');
+
+    const att = await this.prisma.exerciseAttachment.findFirst({
+      where: { id: attachmentId, exerciseId },
+    });
+    if (!att) throw new NotFoundException('Adjunto no encontrado');
+
+    await this.prisma.exerciseAttachment.delete({ where: { id: attachmentId } });
+    return { message: 'Adjunto eliminado' };
+  }
+
+  /** Lectura del enunciado: staff según scoping; estudiante solo si el
+   *  ejercicio está publicado (mismo criterio que findOne). */
+  private async _assertCanReadExercise(
+    courseId: string,
+    exerciseId: string,
+    caller: { id: string; role: string; universityId: string | null },
+  ) {
+    const where: any = { id: exerciseId, courseId };
+    if (caller.role === 'STUDENT') {
+      where.isPublished = true;
+      where.isArchived  = false;
+    }
+    const exercise = await this.prisma.exercise.findFirst({
+      where,
+      include: { course: { select: { universityId: true } } },
+    });
+    if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
+    if (caller.role === 'ADMIN' && exercise.course.universityId !== caller.universityId) {
+      throw new NotFoundException('Ejercicio no encontrado');
+    }
+    return exercise;
+  }
+
   // ── Templates ─────────────────────────────────────────────────────────────────
 
   async findTemplates(teacherId: string) {

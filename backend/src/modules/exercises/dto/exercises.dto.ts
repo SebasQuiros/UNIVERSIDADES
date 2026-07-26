@@ -112,3 +112,17 @@ export class UpdateExerciseDto {
   @IsObject()
   settings?: Record<string, any>;
 }
+
+// Spec UTN §1 — adjunto del enunciado subido por el profesor.
+export class UploadAttachmentDto {
+  @IsString()
+  @MaxLength(255)
+  fileName: string;
+
+  @IsString()
+  @MaxLength(200)
+  mimeType: string;
+
+  @IsString()
+  fileData: string; // base64 (validado por tamaño/mime en el service)
+}
