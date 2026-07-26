@@ -25,7 +25,7 @@ import {
   Lightbulb, Search, Mail, Contact, Receipt, FileCheck2,
   FileClock, Wallet, FileSignature, PackageCheck, SlidersHorizontal,
   PackagePlus, PackageMinus, ArrowRightCircle,
-  TrendingUp, TrendingDown, Minus,
+  TrendingUp, TrendingDown, Minus, Award,
 } from 'lucide-react';
 
 // ─── Brand palette (azul-noche + dorado) ──────────────────────────────────────
@@ -79,7 +79,10 @@ function StatTile({
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-export interface Client  { id: string; name: string; email: string | null; identification: string | null; isActive: boolean; }
+export interface Client  {
+  id: string; name: string; email: string | null; identification: string | null; isActive: boolean;
+  totalPurchased?: number; invoiceCount?: number;
+}
 export interface Product { id: string; name: string; price: number | string; stock: number | string; isActive: boolean; cabysCode: string | null; taxRate: number | string; category: { id: string; name: string } | null; }
 export interface Invoice {
   id: string; consecutiveNumber: string; issueDate: string; total: number | string; status: string;
@@ -146,7 +149,10 @@ export interface LedgerMovement {
 }
 
 // ─── Invoices validation types ────────────────────────────────────────────────
-export interface Supplier { id: string; name: string; email: string | null; identification: string | null; isActive: boolean; }
+export interface Supplier {
+  id: string; name: string; email: string | null; identification: string | null; isActive: boolean;
+  totalPurchased?: number; orderCount?: number;
+}
 export interface ValidationCheck { field: string; status: 'ok' | 'missing' | 'invalid' | 'warning'; message: string; }
 export interface ValidationResult { isValid: boolean; checks: ValidationCheck[]; }
 
@@ -198,9 +204,16 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
     finally { setSaving(false); }
   }
 
-  // ── KPIs derivados de la data ya cargada (sin fetches nuevos) ──
-  const withEmail = useMemo(() => clients.filter((c) => !!c.email).length, [clients]);
-  const withId    = useMemo(() => clients.filter((c) => !!c.identification).length, [clients]);
+  // ── KPIs derivados de la data ya cargada (sin fetches nuevos) — de valor
+  //    real (spec UTN §7): facturado total y cliente con más compras, en vez
+  //    de métricas sin utilidad como "cuántos tienen correo".
+  const totalPurchased = useMemo(() => clients.reduce((s, c) => s + (c.totalPurchased ?? 0), 0), [clients]);
+  const topClient = useMemo(() => {
+    const withSales = clients.filter((c) => (c.totalPurchased ?? 0) > 0);
+    if (withSales.length === 0) return null;
+    return withSales.reduce((top, c) => (c.totalPurchased! > (top.totalPurchased ?? 0) ? c : top));
+  }, [clients]);
+  const fmtCRC0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   // ── Búsqueda 100% client-side sobre la lista ya cargada ──
   const filtered = useMemo(() => {
@@ -256,8 +269,8 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
       {/* ── Fila de KPIs / resumen ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatTile label="Total de clientes" value={String(clients.length)} icon={Users} tint={BRAND_BLUE} />
-        <StatTile label="Con correo" value={String(withEmail)} icon={Mail} tint={BRAND_BLUE_D} />
-        <StatTile label="Con identificación" value={String(withId)} icon={Contact} tint={BRAND_GOLD} />
+        <StatTile label="Facturado a clientes" value={fmtCRC0(totalPurchased)} icon={Receipt} tint={BRAND_BLUE_D} />
+        <StatTile label="Cliente con más compras" value={topClient ? topClient.name : '—'} icon={Award} tint={BRAND_GOLD} />
       </div>
 
       {clients.length === 0 ? (
@@ -611,9 +624,16 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
     finally { setSaving(false); }
   }
 
-  // ── KPIs derivados de la data ya cargada (sin fetches nuevos) ──
-  const withEmail = useMemo(() => suppliers.filter((s) => !!s.email).length, [suppliers]);
-  const withId    = useMemo(() => suppliers.filter((s) => !!s.identification).length, [suppliers]);
+  // ── KPIs derivados de la data ya cargada (sin fetches nuevos) — de valor
+  //    real (spec UTN §7): comprado total y proveedor con más compras, en
+  //    vez de métricas sin utilidad como "cuántos tienen correo".
+  const totalPurchased = useMemo(() => suppliers.reduce((s, sup) => s + (sup.totalPurchased ?? 0), 0), [suppliers]);
+  const topSupplier = useMemo(() => {
+    const withOrders = suppliers.filter((s) => (s.totalPurchased ?? 0) > 0);
+    if (withOrders.length === 0) return null;
+    return withOrders.reduce((top, s) => (s.totalPurchased! > (top.totalPurchased ?? 0) ? s : top));
+  }, [suppliers]);
+  const fmtCRC0 = (n: number) => '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
   // ── Búsqueda 100% client-side sobre la lista ya cargada ──
   const filtered = useMemo(() => {
@@ -670,8 +690,8 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
       {/* ── Fila de KPIs / resumen ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatTile label="Total de proveedores" value={String(suppliers.length)} icon={Truck} tint={BRAND_BLUE} />
-        <StatTile label="Con correo" value={String(withEmail)} icon={Mail} tint={BRAND_BLUE_D} />
-        <StatTile label="Con identificación" value={String(withId)} icon={Contact} tint={BRAND_GOLD} />
+        <StatTile label="Comprado a proveedores" value={fmtCRC0(totalPurchased)} icon={Receipt} tint={BRAND_BLUE_D} />
+        <StatTile label="Proveedor con más compras" value={topSupplier ? topSupplier.name : '—'} icon={Award} tint={BRAND_GOLD} />
       </div>
 
       {suppliers.length === 0 ? (

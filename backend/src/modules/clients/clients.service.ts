@@ -9,10 +9,27 @@ export class ClientsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(companyId: string) {
-    return this.prisma.client.findMany({
+    const clients = await this.prisma.client.findMany({
       where:   { companyId, isActive: true },
       orderBy: { name: 'asc' },
     });
+
+    // Agregado de compras por cliente — 1 sola query (groupBy), no N+1. Usado
+    // para mostrar "cliente con más compras" en vez de métricas sin valor
+    // como "cuántos tienen correo" (spec UTN §7).
+    const totals = clients.length === 0 ? [] : await this.prisma.invoice.groupBy({
+      by:     ['clientId'],
+      where:  { companyId, status: 'ISSUED', clientId: { in: clients.map((c) => c.id) } },
+      _sum:   { total: true },
+      _count: true,
+    });
+    const byClient = new Map(totals.map((t) => [t.clientId, t]));
+
+    return clients.map((c) => ({
+      ...c,
+      totalPurchased: Number(byClient.get(c.id)?._sum.total ?? 0),
+      invoiceCount:   byClient.get(c.id)?._count ?? 0,
+    }));
   }
 
   async findOne(companyId: string, clientId: string) {
