@@ -26,6 +26,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SceneEmptyBox, ArtInventory, ArtReport, SceneStudentDesk } from '@/components/illustrations';
 import { SessionLeaderboard } from '@/components/session/SessionLeaderboard';
 import { NegotiationsPanel } from '@/components/session/NegotiationsPanel';
+import { MarketDirectory } from '@/components/session/MarketDirectory';
 import {
   Users, Building2, ArrowRight, ShieldCheck, ChevronRight,
   ExternalLink, Radar, Clock, Lock, Hourglass, Trophy,
@@ -270,6 +271,7 @@ function MiEmpresaPhase({ me, waitingToStart, sessionId }: { me: MeResponse; wai
 
       {!waitingToStart && sessionId && (
         <>
+          <MarketDirectory sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
           <NegotiationsPanel sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
           <SessionLeaderboard sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
         </>

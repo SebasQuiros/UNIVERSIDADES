@@ -184,10 +184,10 @@ function NegotiationThread({ neg, myCompanyId, onBack, onChanged }: {
   );
 }
 
-function NewNegotiationModal({ sessionId, buyerCompanyId, companies, onClose, onCreated }: {
-  sessionId: string; buyerCompanyId: string; companies: Company[]; onClose: () => void; onCreated: (id: string) => void;
+export function NewNegotiationModal({ sessionId, buyerCompanyId, companies, preselectSellerId, onClose, onCreated }: {
+  sessionId: string; buyerCompanyId: string; companies: Company[]; preselectSellerId?: string; onClose: () => void; onCreated: (id: string) => void;
 }) {
-  const [sellerId, setSellerId] = useState('');
+  const [sellerId, setSellerId] = useState(preselectSellerId ?? '');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [qty, setQty] = useState('');
