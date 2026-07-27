@@ -1039,7 +1039,11 @@ export default function ExerciseWorkspacePage() {
 
   const exercise  = attempt.exercise!;
   const company   = attempt.company;
-  const isReadonly = attempt.status === 'SUBMITTED' || attempt.status === 'GRADED' || attempt.status === 'OVERDUE';
+  // Vencida (OVERDUE) NO bloquea la edición: en un entorno educativo el
+  // estudiante debe poder seguir trabajando aunque haya pasado la fecha (queda
+  // marcada como "tarde"). Solo bloquean Entregada (SUBMITTED) y Finalizada
+  // (GRADED). Un corte duro real se maneja con el modo examen (cronómetro).
+  const isReadonly = attempt.status === 'SUBMITTED' || attempt.status === 'GRADED';
   const showSetup  = attempt.status === 'IN_PROGRESS' && !company;
   const exerciseType = exercise.type;
 

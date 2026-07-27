@@ -190,20 +190,19 @@ export class AttemptsService {
       throw new BadRequestException('Este intento ya fue calificado');
     }
 
-    // No permitir iniciar/reanudar un ejercicio vencido (spec UTN §2).
+    // Vencida (OVERDUE) es un estado "tarde" pero NO bloquea: se puede reanudar
+    // y seguir trabajando. Solo se corta si el ejercicio quedó ENTREGADO (p.ej.
+    // por auto-entrega al vencer, cuando el profe eligió AUTO_SUBMIT) o calificado.
     const exercise = await this.prisma.exercise.findUnique({
       where:  { id: attempt.exerciseId },
       select: { dueDate: true, settings: true },
     });
-    if (attempt.status === 'OVERDUE'
-        || (exercise && this.isPastDue(exercise.dueDate, attempt.status))) {
-      const applied = await this.applyExpiryIfNeeded(
-        attempt,
-        { dueDate: exercise?.dueDate ?? null, settings: exercise?.settings },
-      );
-      if (applied?.status !== 'IN_PROGRESS') {
-        throw new BadRequestException('Este ejercicio ya venció y no puede iniciarse');
-      }
+    const applied = await this.applyExpiryIfNeeded(
+      attempt,
+      { dueDate: exercise?.dueDate ?? null, settings: exercise?.settings },
+    ) ?? attempt;
+    if (applied.status === 'SUBMITTED' || applied.status === 'GRADED') {
+      throw new BadRequestException('Este ejercicio ya fue entregado y no puede reabrirse.');
     }
 
     const now = new Date();
