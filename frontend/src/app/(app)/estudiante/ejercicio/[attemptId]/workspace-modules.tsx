@@ -2277,40 +2277,138 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
       {loading ? (
         <div className="flex justify-center py-10"><Spinner /></div>
       ) : !data ? null : report === 'balance-sheet' ? (
-        <div id="print-report-area"><div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-3">Activos</p>
-            {(data.assets?.accounts ?? []).map((a: any) => (
-              <ReportRow key={a.id} label={`${a.code} ${a.name}`} value={Number(a.balance ?? a.balanceNum ?? 0)} />
-            ))}
-            <ReportRow label="Total Activos" value={Number(data.assets?.total ?? data.totals?.totalAssets ?? 0)} bold />
-          </div>
-          <div className="space-y-4">
-            <div className="bg-red-50 rounded-xl p-4 border border-red-100">
-              <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-3">Pasivos</p>
-              {(data.liabilities?.accounts ?? []).map((a: any) => (
-                <ReportRow key={a.id} label={`${a.code} ${a.name}`} value={Number(a.balance ?? a.balanceNum ?? 0)} />
-              ))}
-              <ReportRow label="Total Pasivos" value={Number(data.liabilities?.total ?? data.totals?.totalLiabilities ?? 0)} bold />
+        <div id="print-report-area">{(() => {
+          // ── Balance de Situación (formato clásico: corriente / no corriente) ──
+          const bal = (a: any) => Number(a.balance ?? a.balanceNum ?? 0);
+          const grp = (list: any[], pref: string) =>
+            (list ?? []).filter((a: any) => String(a.code ?? '').startsWith(pref));
+          const sum = (list: any[]) => list.reduce((s: number, a: any) => s + bal(a), 0);
+          const fmt = (n: number) => `₡${(n ?? 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+          const assets = data.assets?.accounts ?? [];
+          const liabs  = data.liabilities?.accounts ?? [];
+          const eq     = data.equity?.accounts ?? [];
+          const actCorr = grp(assets, '1.1'), actNoCorr = grp(assets, '1.2');
+          const pasCorr = grp(liabs, '2.1'),  pasNoCorr = grp(liabs, '2.2');
+
+          const Sub = ({ label, accounts }: { label: string; accounts: any[] }) =>
+            accounts.length === 0 ? null : (
+              <div className="mb-2">
+                <p className="mb-1 text-[0.7rem] font-bold uppercase tracking-wide text-gray-400">{label}</p>
+                {accounts.map((a: any) => (
+                  <ReportRow key={a.id} label={`${a.code} ${a.name}`} value={bal(a)} indent />
+                ))}
+                <div className="flex items-center justify-between py-1.5 text-sm font-semibold text-gray-800 border-t border-gray-200">
+                  <span>Total {label.toLowerCase()}</span>
+                  <span className="font-mono tabular-nums">{fmt(sum(accounts))}</span>
+                </div>
+              </div>
+            );
+
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-3">Activos</p>
+                <Sub label="Activo corriente" accounts={actCorr} />
+                <Sub label="Activo no corriente" accounts={actNoCorr} />
+                <ReportRow label="TOTAL ACTIVOS" value={Number(data.assets?.total ?? data.totals?.totalAssets ?? 0)} bold />
+              </div>
+              <div className="space-y-4">
+                <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-3">Pasivos</p>
+                  <Sub label="Pasivo corriente" accounts={pasCorr} />
+                  <Sub label="Pasivo no corriente" accounts={pasNoCorr} />
+                  <ReportRow label="TOTAL PASIVOS" value={Number(data.liabilities?.total ?? data.totals?.totalLiabilities ?? 0)} bold />
+                </div>
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Patrimonio</p>
+                  {eq.map((a: any) => (
+                    <ReportRow key={a.id} label={`${a.code} ${a.name}`} value={bal(a)} indent />
+                  ))}
+                  <ReportRow label="TOTAL PATRIMONIO" value={Number(data.equity?.total ?? data.totals?.totalEquity ?? 0)} bold />
+                </div>
+                <div className="rounded-xl bg-gray-900 px-4 py-2.5 flex items-center justify-between text-white">
+                  <span className="text-sm font-bold">Pasivo + Patrimonio</span>
+                  <span className="font-mono text-sm font-bold tabular-nums">
+                    {fmt(Number(data.liabilities?.total ?? data.totals?.totalLiabilities ?? 0) + Number(data.equity?.total ?? data.totals?.totalEquity ?? 0))}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Patrimonio</p>
-              {(data.equity?.accounts ?? []).map((a: any) => (
-                <ReportRow key={a.id} label={`${a.code} ${a.name}`} value={Number(a.balance ?? a.balanceNum ?? 0)} />
-              ))}
-              <ReportRow label="Total Patrimonio" value={Number(data.equity?.total ?? data.totals?.totalEquity ?? 0)} bold />
-            </div>
-          </div>
-        </div></div>
+          );
+        })()}</div>
       ) : (
         <div id="print-report-area">
-          <div className="bg-emerald-50 rounded-xl p-4 max-w-md border border-emerald-100">
-            <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide mb-3">Estado de Resultados</p>
-            <ReportRow label="Ingresos totales"  value={Number(data.income?.total  ?? data.totals?.totalIncome   ?? 0)} />
-            <ReportRow label="Gastos totales"    value={Number(data.expenses?.total ?? data.totals?.totalExpenses ?? 0)} />
-            <ReportRow label="Utilidad neta"     value={Number(data.totals?.netIncome ?? 0)} bold />
-          </div>
-          {/* Feature 9: Income Tax Simulation */}
+          {(() => {
+            // ── Estado de Resultados escalonado (formato clásico) ──
+            // Se agrupan las cuentas por prefijo de código del catálogo.
+            const accs = [...(data.income?.accounts ?? []), ...(data.expenses?.accounts ?? [])];
+            const bal = (a: any) => Number(a.balance ?? a.balanceNum ?? 0);
+            const sumPref = (...prefs: string[]) =>
+              accs.filter((a: any) => prefs.some(p => String(a.code ?? '').startsWith(p)))
+                  .reduce((s: number, a: any) => s + bal(a), 0);
+
+            const ventasBrutas   = sumPref('4.1.01');
+            const devoluciones   = sumPref('4.1.02');
+            const ventasNetas    = ventasBrutas - devoluciones;
+            const costoVentas    = sumPref('5.1');
+            const utilidadBruta  = ventasNetas - costoVentas;
+            const gastosVenta    = sumPref('5.2.02');
+            const gastosAdmin    = sumPref('5.2.01');
+            const gastosPersonal = sumPref('6');
+            const utilidadOper   = utilidadBruta - gastosVenta - gastosAdmin - gastosPersonal;
+            const otrosIngresos  = sumPref('4.2');
+            const gastosFin      = sumPref('5.3');
+            const utilidadAntesImp = utilidadOper + otrosIngresos - gastosFin;
+
+            const fmt = (n: number) => `₡${(n ?? 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const Line = ({ label, value, kind = 'normal', sign }: { label: string; value: number; kind?: 'normal' | 'sub' | 'total'; sign?: '-' | '+' }) => (
+              <div className={`flex items-center justify-between px-4 ${
+                kind === 'total' ? 'bg-[#E9FBF6] py-2.5 font-bold text-gray-900 border-t-2 border-emerald-300'
+                : kind === 'sub' ? 'py-2 font-semibold text-gray-900 border-t border-gray-300'
+                : 'py-1.5 text-gray-600 border-b border-gray-100'}`}>
+                <span className="text-sm">{sign ? `(${sign}) ` : ''}{label}</span>
+                <span className="text-sm font-mono tabular-nums">{fmt(value)}</span>
+              </div>
+            );
+
+            return (
+              <div className="max-w-xl rounded-xl border border-gray-200 overflow-hidden bg-white">
+                <div className="bg-[#4C4CC4] px-4 py-2.5 text-center text-sm font-bold uppercase tracking-wide text-white">
+                  Estado de Resultados
+                </div>
+                <Line label="Ventas netas" value={ventasNetas} />
+                <Line label="Costo de ventas" value={costoVentas} sign="-" />
+                <Line label="Utilidad bruta" value={utilidadBruta} kind="sub" />
+                <div className="h-2" />
+                <Line label="Gasto de ventas" value={gastosVenta} sign="-" />
+                <Line label="Gasto de administración" value={gastosAdmin} sign="-" />
+                {gastosPersonal > 0 && <Line label="Gasto de personal" value={gastosPersonal} sign="-" />}
+                <Line label="Utilidad operativa" value={utilidadOper} kind="sub" />
+                <div className="h-2" />
+                <div className="px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">Otros ingresos y/o egresos</div>
+                <Line label="Otros ingresos (financieros y varios)" value={otrosIngresos} sign="+" />
+                <Line label="Gastos financieros" value={gastosFin} sign="-" />
+                <Line label="Utilidad antes de impuesto" value={utilidadAntesImp} kind="sub" />
+                {(() => {
+                  const base = Math.max(0, utilidadAntesImp);
+                  const brackets = [
+                    { limit: 5554000, rate: 0.05 }, { limit: 8334000, rate: 0.10 },
+                    { limit: 11120000, rate: 0.15 }, { limit: Infinity, rate: 0.30 },
+                  ];
+                  let rem = base, prev = 0, tax = 0;
+                  for (const b of brackets) { if (rem <= 0) break; const t = Math.min(rem, b.limit - prev); tax += t * b.rate; rem -= t; prev = b.limit; }
+                  return (
+                    <>
+                      <Line label="Impuesto a la renta (simulado)" value={tax} sign="-" />
+                      <Line label="Utilidad neta" value={utilidadAntesImp - tax} kind="total" />
+                    </>
+                  );
+                })()}
+              </div>
+            );
+          })()}
+          {/* Detalle del impuesto sobre la renta (simulación CR 2026) */}
           {(() => {
             const netIncome = Number(data.totals?.netIncome ?? 0);
             if (netIncome <= 0) return null;
