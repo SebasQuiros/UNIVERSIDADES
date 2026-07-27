@@ -142,6 +142,45 @@ const CHART: Array<{
   { code:'6.1.03.01',  name:'Aguinaldo — Provisión',           type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'6.1.03',  isHeader:false },
   { code:'6.1.04',     name:'Vacaciones y Otros',              type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'6.1',     isHeader:true  },
   { code:'6.1.04.01',  name:'Vacaciones — Provisión',          type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'6.1.04',  isHeader:false },
+
+  // ── Subcuentas específicas adicionales (catálogo más detallado) ──────────
+  // Bancos y efectivo
+  { code:'1.1.01.04',  name:'Caja Chica',                      type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.01',  isHeader:false },
+  { code:'1.1.01.05',  name:'BAC San José (₡)',                type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.01',  isHeader:false },
+  { code:'1.1.01.06',  name:'Banco Nacional de CR (US$)',      type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.01',  isHeader:false },
+  { code:'1.1.01.07',  name:'Cuenta de Ahorros',               type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.01',  isHeader:false },
+  // Cuentas por cobrar
+  { code:'1.1.02.04',  name:'Tarjetas por Cobrar',             type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.02',  isHeader:false },
+  { code:'1.1.02.05',  name:'Cheques por Depositar',           type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.02',  isHeader:false },
+  // Inventarios
+  { code:'1.1.03.04',  name:'Inventario de Suministros',       type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.03',  isHeader:false },
+  { code:'1.1.03.05',  name:'Mercadería en Tránsito',          type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.03',  isHeader:false },
+  // Impuestos por recuperar
+  { code:'1.1.04.02',  name:'Retenciones de Renta a Favor',    type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.04',  isHeader:false },
+  { code:'1.1.04.03',  name:'IVA Crédito Fiscal (tarifas reducidas)', type:'ASSET', normal:'DEBIT', level:4, parent:'1.1.04', isHeader:false },
+  // PPE y depreciación
+  { code:'1.2.01.07',  name:'Equipo de Reparto',               type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.01',  isHeader:false },
+  { code:'1.2.01.08',  name:'Herramientas',                    type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.01',  isHeader:false },
+  { code:'1.2.02.03',  name:'Dep. Acum. Vehículos',            type:'ASSET',     normal:'CREDIT', level:4, parent:'1.2.02',  isHeader:false },
+  { code:'1.2.02.04',  name:'Dep. Acum. Edificios',            type:'ASSET',     normal:'CREDIT', level:4, parent:'1.2.02',  isHeader:false },
+  { code:'1.2.02.05',  name:'Dep. Acum. Mobiliario y Equipo',  type:'ASSET',     normal:'CREDIT', level:4, parent:'1.2.02',  isHeader:false },
+  // Pasivos
+  { code:'2.1.01.04',  name:'Acreedores Varios',               type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.01',  isHeader:false },
+  { code:'2.1.03.03',  name:'Intereses por Pagar',             type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.03',  isHeader:false },
+  { code:'2.1.03.04',  name:'Servicios Públicos por Pagar',    type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.03',  isHeader:false },
+  // Ingresos
+  { code:'4.1.01.03',  name:'Ventas de Exportación',           type:'INCOME',    normal:'CREDIT', level:4, parent:'4.1.01',  isHeader:false },
+  { code:'4.2.01.04',  name:'Ingresos por Alquileres',         type:'INCOME',    normal:'CREDIT', level:4, parent:'4.2.01',  isHeader:false },
+  { code:'4.2.01.05',  name:'Ingresos por Comisiones',         type:'INCOME',    normal:'CREDIT', level:4, parent:'4.2.01',  isHeader:false },
+  // Gastos administrativos
+  { code:'5.2.01.12',  name:'Cuotas y Suscripciones',          type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.13',  name:'Gastos Legales y Notariales',     type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.14',  name:'Limpieza y Seguridad',            type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.15',  name:'Gastos de Representación',        type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.16',  name:'Impuestos Municipales y Patentes', type:'EXPENSE',  normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  // Gastos de ventas
+  { code:'5.2.02.04',  name:'Empaque y Embalaje',              type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
+  { code:'5.2.02.05',  name:'Viáticos de Ventas',              type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
 ];
 
 @Injectable()

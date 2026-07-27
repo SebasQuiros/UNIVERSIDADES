@@ -9,6 +9,7 @@ import { exportToExcel } from '@/lib/excel';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { AccountPicker } from '@/components/accounting/AccountPicker';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconTile } from '@/components/ui/IconTile';
@@ -1619,11 +1620,11 @@ export function JournalTab({ companyId, readonly, attemptId }: { companyId: stri
                 {lines.map((line, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-6">
-                      <select value={line.accountId} onChange={(e) => updateLine(i, 'accountId', e.target.value)}
-                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="">Cuenta...</option>
-                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} – {a.name}</option>)}
-                      </select>
+                      <AccountPicker
+                        accounts={accounts as any}
+                        value={line.accountId}
+                        onChange={(id) => updateLine(i, 'accountId', id)}
+                      />
                     </div>
                     <div className="col-span-2">
                       <input type="number" value={line.debit} onChange={(e) => updateLine(i, 'debit', e.target.value)}
@@ -3269,11 +3270,11 @@ export function SpecialJournalTab({
                 {lines.map((line, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-6">
-                      <select value={line.accountId} onChange={(e) => updateLine(i, 'accountId', e.target.value)}
-                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="">Cuenta...</option>
-                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} – {a.name}</option>)}
-                      </select>
+                      <AccountPicker
+                        accounts={accounts as any}
+                        value={line.accountId}
+                        onChange={(id) => updateLine(i, 'accountId', id)}
+                      />
                     </div>
                     <div className="col-span-2">
                       <input type="number" value={line.debit} onChange={(e) => updateLine(i, 'debit', e.target.value)}
