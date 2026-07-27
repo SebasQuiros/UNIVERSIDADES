@@ -139,6 +139,28 @@ export class TaxDeclarationsService {
     });
   }
 
+  // ── Rectificar (crea una declaración rectificativa a partir de una
+  //    presentada, como en TRIBU-CR) ──────────────────────────────────
+  async rectify(id: string, userId: string) {
+    const orig = await this.findOne(id, userId);
+    if (orig.status !== TaxDeclarationStatus.SUBMITTED) {
+      throw new BadRequestException('Solo se puede rectificar una declaración ya presentada');
+    }
+    const prevForm = (orig.formData as any) ?? {};
+    const created = await this.prisma.taxDeclaration.create({
+      data: {
+        userId,
+        companyId: orig.companyId ?? null,
+        type:      orig.type,
+        period:    orig.period,
+        status:    TaxDeclarationStatus.DRAFT,
+        formData:  { ...prevForm, declType: 'Rectificativa', rectificaRef: orig.referenceNo } as any,
+        result:    (orig.result as any) ?? {},
+      },
+    });
+    return created;
+  }
+
   // ── Eliminar ──────────────────────────────────────────────────────
   async remove(id: string, userId: string) {
     await this.findOne(id, userId);

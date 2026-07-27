@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ElementType, ReactNode } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
@@ -183,7 +184,23 @@ export default function ImpuestosPage() {
   const [loading, setLoading] = useState(true);
   const [toDelete, setToDelete] = useState<string | null>(null);
   const [deleting, setDeleting]   = useState(false);
+  const [hubTab, setHubTab] = useState<'pendientes' | 'realizadas'>('pendientes');
+  const [rectifying, setRectifying] = useState<string | null>(null);
   const { perfil } = usePerfilTributario();
+  const router = useRouter();
+
+  async function handleRectify(id: string, type: string) {
+    setRectifying(id);
+    try {
+      const { data } = await api.post<{ id: string }>(`/api/v1/tax-declarations/${id}/rectify`, {});
+      toast.success('Declaración rectificativa creada');
+      router.push(`/estudiante/impuestos/${TYPE_ROUTE[type] ?? 'd104'}?id=${data.id}`);
+    } catch {
+      toast.error('No se pudo rectificar');
+    } finally {
+      setRectifying(null);
+    }
+  }
 
   useEffect(() => {
     api.get<TaxDeclaration[]>('/api/v1/tax-declarations')
@@ -208,6 +225,8 @@ export default function ImpuestosPage() {
   }
 
   const d104Due = getD104DueDate();
+  const visibles = declarations.filter(d =>
+    hubTab === 'pendientes' ? d.status === 'DRAFT' : d.status === 'SUBMITTED');
   const d101Due = getD101DueDate();
 
   const presentadas = declarations.filter(d => d.status === 'SUBMITTED').length;
@@ -471,6 +490,31 @@ export default function ImpuestosPage() {
           flushBody
           bodyClassName="px-6 lg:px-7 py-5"
         >
+          {/* Tabs Pendientes / Realizadas (estilo TRIBU) */}
+          <div className="mb-4 flex items-center gap-6 border-b border-gray-200">
+            {([
+              { key: 'pendientes' as const, label: 'Pendientes', count: declarations.filter(d => d.status === 'DRAFT').length },
+              { key: 'realizadas' as const, label: 'Realizadas', count: declarations.filter(d => d.status === 'SUBMITTED').length },
+            ]).map(t => (
+              <button
+                key={t.key}
+                onClick={() => setHubTab(t.key)}
+                className={cn(
+                  '-mb-px flex items-center gap-1.5 border-b-2 pb-2.5 text-sm font-semibold transition-colors',
+                  hubTab === t.key ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-400 hover:text-gray-600',
+                )}
+              >
+                {t.label}
+                {t.count > 0 && (
+                  <span className={cn('rounded-full px-1.5 py-0.5 text-[0.65rem] tabular-nums',
+                    hubTab === t.key ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500')}>
+                    {t.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -484,23 +528,25 @@ export default function ImpuestosPage() {
                 </div>
               ))}
             </div>
-          ) : declarations.length === 0 ? (
+          ) : visibles.length === 0 ? (
             <EmptyState
               illustration={<SceneEmptyBox size={200} className="lp-drift" />}
-              title="Aún no has completado ninguna declaración"
-              description="Elige un formulario arriba (D-104, D-101, D-103 o D-115) y presenta tu primera declaración de práctica."
-              action={
+              title={hubTab === 'pendientes' ? 'No tenés declaraciones pendientes' : 'No tenés declaraciones presentadas'}
+              description={hubTab === 'pendientes'
+                ? 'Elegí un formulario arriba (D-104/D-150, D-101, D-103 o D-115) para empezar una nueva declaración de práctica.'
+                : 'Cuando presentes una declaración aparecerá acá, con opción de rectificar.'}
+              action={hubTab === 'pendientes' ? (
                 <Link
                   href="/estudiante/impuestos/d104"
                   className={buttonClasses({ variant: 'primary', className: 'cx-press' })}
                 >
-                  <FileText className="h-4 w-4" /> Empezar con la D-104
+                  <FileText className="h-4 w-4" /> Empezar con la D-150 (IVA)
                 </Link>
-              }
+              ) : undefined}
             />
           ) : (
             <div className="space-y-3">
-              {declarations.map((d, i) => {
+              {visibles.map((d, i) => {
                 const pagar =
                   d.type === 'D104_IVA'        ? (d.result?.cas304_impuestoPagar ?? 0) :
                   d.type === 'D101_RENTA'      ? (d.result?.cas602_impuestoPagar ?? 0) :
@@ -595,6 +641,14 @@ export default function ImpuestosPage() {
                           >
                             Ver comprobante
                           </Link>
+                          <button
+                            onClick={() => handleRectify(d.id, d.type)}
+                            disabled={rectifying === d.id}
+                            className="cx-press flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50"
+                            title="Crear una declaración rectificativa"
+                          >
+                            <Edit2 className="h-3 w-3" /> {rectifying === d.id ? 'Rectificando…' : 'Rectificar'}
+                          </button>
                         </>
                       )}
 

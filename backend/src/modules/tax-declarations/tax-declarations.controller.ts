@@ -50,6 +50,12 @@ export class TaxDeclarationsController {
     return this.svc.submit(id, user.id);
   }
 
+  @Post(':id/rectify')
+  @HttpCode(HttpStatus.CREATED)
+  rectify(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.svc.rectify(id, user.id);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string, @CurrentUser() user: any) {
