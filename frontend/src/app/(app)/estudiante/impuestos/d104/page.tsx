@@ -177,6 +177,48 @@ export default function D104Page() {
     setForm(prev => ({ ...prev, [key]: val }));
   }
 
+  // Prellenado desde las facturas/compras REALES de la empresa del estudiante.
+  // Usa el endpoint que agrega ventas y compras por tarifa (0/1/2/4/8/13%).
+  // `companyId` viene por query (Sesión de Aula GROUP); si no, resolvemos la
+  // empresa del estudiante (ejercicio individual) SOLO para el prellenado —
+  // el anclaje de la declaración no cambia.
+  const [resolvedCompanyId, setResolvedCompanyId] = useState<string | null>(companyId);
+  useEffect(() => {
+    if (companyId) { setResolvedCompanyId(companyId); return; }
+    api.get<any[]>('/api/v1/companies')
+      .then(({ data }) => { if (Array.isArray(data) && data.length > 0) setResolvedCompanyId(data[0].id); })
+      .catch(() => {});
+  }, [companyId]);
+
+  const [prefilling, setPrefilling] = useState(false);
+  async function prefillFromCompany() {
+    if (!resolvedCompanyId) { toast.error('No se encontró una empresa vinculada'); return; }
+    if (status === 'SUBMITTED') return;
+    const [y, m] = period.split('-').map((n) => parseInt(n, 10));
+    setPrefilling(true);
+    try {
+      const { data } = await api.post<any>('/api/v1/tax-declarations/d104/calculate', {
+        companyId: resolvedCompanyId, month: m, year: y,
+      });
+      const d = data?.debitosFiscales ?? {};
+      const c = data?.creditosFiscales ?? {};
+      const s = (v: any) => (v == null || Number(v) === 0 ? '' : String(v));
+      setForm({
+        ventas13: s(d.casilla101?.base), ventas8: s(d.casilla102?.base),
+        ventas4:  s(d.casilla103?.base), ventas2: s(d.casilla104?.base),
+        ventas1:  s(d.casilla105?.base), ventasExentas: s(d.casilla106?.base),
+        compras13: s(c.casilla201?.base), compras8: s(c.casilla202?.base),
+        compras4:  s(c.casilla203?.base), compras2: s(c.casilla204?.base),
+        compras1:  s(c.casilla205?.base),
+      });
+      toast.success('Ventas y compras cargadas desde tu empresa');
+    } catch (err) {
+      toast.error('No se pudieron cargar los datos de la empresa');
+    } finally {
+      setPrefilling(false);
+    }
+  }
+
   async function autoSave() {
     if (status === 'SUBMITTED') return;
     const formData = toNumeric(form);
@@ -399,6 +441,19 @@ export default function D104Page() {
               Ingresa la <strong>base imponible</strong> (monto sin IVA) de tus ventas por tarifa.
               El sistema calcula el IVA cobrado automáticamente.
             </Nota>
+
+            {resolvedCompanyId && !isSubmitted && (
+              <div className="mb-3 flex flex-col gap-2 rounded-xl border border-blue-200 bg-blue-50/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs leading-relaxed text-blue-800">
+                  <strong>Cargar desde mi empresa:</strong> trae automáticamente las ventas y compras
+                  del período agrupadas por tarifa, a partir de las facturas y compras que registraste.
+                </p>
+                <Button type="button" variant="secondary" size="sm" loading={prefilling}
+                  onClick={prefillFromCompany} className="flex-shrink-0">
+                  <Download className="h-4 w-4" /> Cargar datos de mi empresa
+                </Button>
+              </div>
+            )}
 
             <Casilla numero="101" label="Ventas gravadas al 13% (tarifa general)" hint="base sin IVA"
               value={form.ventas13} onChange={v => setField('ventas13', v)}>
