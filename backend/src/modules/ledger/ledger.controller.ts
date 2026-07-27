@@ -18,6 +18,12 @@ export class LedgerController {
     return this.svc.getLedger(companyId, filter);
   }
 
+  // Cuentas T: movimientos individuales por cuenta (cargos/abonos)
+  @Get('t-accounts')
+  getTAccounts(@Param('companyId') companyId: string) {
+    return this.svc.getTAccounts(companyId);
+  }
+
   // Detailed movements for a specific account (kardex)
   @Get(':accountId')
   getAccountLedger(

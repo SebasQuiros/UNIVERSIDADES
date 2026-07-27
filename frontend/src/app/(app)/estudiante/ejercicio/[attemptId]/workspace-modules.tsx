@@ -3013,19 +3013,28 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
   );
 }
 // ─── Mayorización tab ─────────────────────────────────────────────────────────
+const TYPE_ES: Record<string, string> = {
+  ASSET: 'Activo', LIABILITY: 'Pasivo', EQUITY: 'Patrimonio', INCOME: 'Ingreso', EXPENSE: 'Gasto',
+};
+interface TAccountMv { entryNumber: number; entryDate: string; description: string; reference: string | null; amount: string; }
+interface TAccount {
+  id: string; code: string; name: string; type: string; normalBalance: 'DEBIT' | 'CREDIT';
+  debits: TAccountMv[]; credits: TAccountMv[];
+  totalDebit: string; totalCredit: string; balance: string; balanceSide: 'DEBIT' | 'CREDIT';
+}
+
 export function MayorizacionTab({ companyId }: { companyId: string }) {
-  const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
+  const [accounts, setAccounts] = useState<TAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
 
   useEffect(() => {
-    api.get<LedgerAccount[]>(`/api/v1/companies/${companyId}/ledger`)
+    api.get<TAccount[]>(`/api/v1/companies/${companyId}/ledger/t-accounts`)
       .then(({ data }) => setAccounts(Array.isArray(data) ? data : []))
-      .catch(() => toast.error('Error al cargar datos'))
+      .catch(() => toast.error('Error al cargar las cuentas T'))
       .finally(() => setLoading(false));
   }, [companyId]);
 
-  // ── Búsqueda client-side por código o nombre de cuenta ──
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return accounts;
@@ -3034,6 +3043,8 @@ export function MayorizacionTab({ companyId }: { companyId: string }) {
   }, [accounts, query]);
 
   const fmt0 = (v: number | string) => '₡' + Number(v).toLocaleString('es-CR', { minimumFractionDigits: 0 });
+  const fmt2 = (v: number | string) => Number(v).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const shortDate = (d: string) => { try { return new Date(d).toLocaleDateString('es-CR', { day: '2-digit', month: '2-digit' }); } catch { return ''; } };
 
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
@@ -3041,26 +3052,35 @@ export function MayorizacionTab({ companyId }: { companyId: string }) {
   const totalC = accounts.reduce((s, a) => s + Number(a.totalCredit), 0);
   const balanced = Math.abs(totalD - totalC) < 0.01;
 
+  // Fila de una T (cargo o abono): fecha + Nº asiento + glosa + monto
+  const TRow = ({ mv, side }: { mv: TAccountMv; side: 'D' | 'H' }) => (
+    <div className="flex items-baseline justify-between gap-2 px-2 py-1 text-xs border-b border-gray-50 last:border-0">
+      <span className="min-w-0 flex-1 truncate text-gray-500">
+        <span className="font-mono text-gray-400">{shortDate(mv.entryDate)} · #{mv.entryNumber}</span>{' '}
+        {mv.description}
+      </span>
+      <span className={`flex-shrink-0 font-mono tabular-nums ${side === 'D' ? 'text-blue-700' : 'text-red-600'}`}>{fmt2(mv.amount)}</span>
+    </div>
+  );
+
   return (
     <div className="space-y-5">
-      {/* ── Encabezado de módulo (solo lectura — deriva del Diario) ── */}
       <ModuleHeader
         icon={Scale}
-        title="Mayorización"
-        subtitle="Cuentas T — resumen de movimientos por cuenta, derivado del Diario"
+        title="Cuentas T · Mayorización"
+        subtitle="Cada asiento del Diario mayorizado a su cuenta — cargos a la izquierda, abonos a la derecha"
       />
 
-      {/* ── Fila de KPIs / resumen ── */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <StatTile label="Cuentas con movimiento" value={String(accounts.length)} icon={BookOpen} tint={BRAND_BLUE} />
-        <StatTile label="Total débitos" value={fmt0(totalD)} icon={ArrowRightCircle} tint={BRAND_BLUE_D} valueColor={BRAND_BLUE_D} />
-        <StatTile label="Total créditos" value={fmt0(totalC)} icon={ArrowRightCircle} tint={BRAND_GOLD} valueColor="#B45309" />
+        <StatTile label="Total cargos (Debe)" value={fmt0(totalD)} icon={ArrowRightCircle} tint={BRAND_BLUE_D} valueColor={BRAND_BLUE_D} />
+        <StatTile label="Total abonos (Haber)" value={fmt0(totalC)} icon={ArrowRightCircle} tint={BRAND_GOLD} valueColor="#B45309" />
         <div className="bg-white rounded-card border border-gray-200/70 p-4 flex items-center justify-between gap-2" style={CARD_SHADOW}>
           <div className="min-w-0">
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Verificación</p>
             <div className="mt-2">
               <Badge variant={balanced ? 'green' : 'amber'}>
-                {balanced ? 'Balanceado' : `Diferencia ${fmt0(Math.abs(totalD - totalC))}`}
+                {balanced ? 'Debe = Haber' : `Diferencia ${fmt0(Math.abs(totalD - totalC))}`}
               </Badge>
             </div>
           </div>
@@ -3071,31 +3091,21 @@ export function MayorizacionTab({ companyId }: { companyId: string }) {
       {accounts.length === 0 ? (
         <div className="bg-white rounded-card border border-gray-200/70" style={CARD_SHADOW}>
           <EmptyState
-            illustration={
-              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
-                <Scale className="w-8 h-8 text-blue-600" />
-              </div>
-            }
+            illustration={<div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center"><Scale className="w-8 h-8 text-blue-600" /></div>}
             title="No hay cuentas con movimientos aún"
-            description="Registra asientos en el Diario para ver aquí la mayorización por cuenta."
+            description="Registra asientos en el Diario para ver aquí las cuentas T."
           />
         </div>
       ) : (
         <div className="space-y-4">
-          {/* ── Buscador client-side por código o nombre de cuenta ── */}
           <div className="bg-white rounded-card border border-gray-200/70 px-4 py-3 flex items-center gap-3 flex-wrap" style={CARD_SHADOW}>
             <div className="relative flex-1 min-w-[200px]">
               <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+              <input value={query} onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar por código o nombre de cuenta…"
-                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors"
-              />
+                className="w-full rounded-xl bg-white border border-gray-300 text-gray-900 placeholder-gray-400 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60 focus:border-blue-500 hover:border-gray-400 transition-colors" />
             </div>
-            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">
-              {filtered.length} de {accounts.length}
-            </span>
+            <span className="text-xs text-gray-400 font-mono tabular-nums whitespace-nowrap">{filtered.length} de {accounts.length}</span>
           </div>
 
           {filtered.length === 0 ? (
@@ -3104,30 +3114,54 @@ export function MayorizacionTab({ companyId }: { companyId: string }) {
               <p className="text-sm text-gray-500">Sin resultados para “{query}”.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((acc) => (
-                <div key={acc.accountId} className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
-                  <div className="bg-gray-50/70 border-b border-gray-100 px-4 py-2.5 text-center">
-                    <p className="text-xs font-mono tabular-nums text-gray-400">{acc.code}</p>
-                    <p className="text-sm font-semibold text-gray-900 truncate">{acc.name}</p>
-                  </div>
-                  <div className="grid grid-cols-2 divide-x divide-gray-100">
-                    <div className="p-3 text-center">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">DEBE</p>
-                      <p className="text-sm font-bold font-mono tabular-nums text-blue-700">{fmt0(acc.totalDebit)}</p>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {filtered.map((acc) => {
+                const saldoIzq = acc.balanceSide === 'DEBIT';
+                return (
+                  <div key={acc.id} className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
+                    {/* Encabezado de la cuenta */}
+                    <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50/70 px-4 py-2">
+                      <span className="font-mono text-xs tabular-nums text-gray-400">{acc.code}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">{acc.name}</span>
+                      <Badge variant="slate">{TYPE_ES[acc.type] ?? acc.type}</Badge>
                     </div>
-                    <div className="p-3 text-center">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">HABER</p>
-                      <p className="text-sm font-bold font-mono tabular-nums text-red-600">{fmt0(acc.totalCredit)}</p>
+                    {/* La T: Debe | Haber */}
+                    <div className="grid grid-cols-2">
+                      <div className="border-r-2 border-gray-300">
+                        <p className="border-b border-gray-200 bg-blue-50/50 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wider text-blue-700">Debe (cargos)</p>
+                        <div className="min-h-[2rem]">
+                          {acc.debits.length === 0 ? <p className="px-2 py-2 text-center text-xs text-gray-300">—</p>
+                            : acc.debits.map((m, i) => <TRow key={i} mv={m} side="D" />)}
+                        </div>
+                        <div className="flex justify-between border-t-2 border-gray-300 px-2 py-1.5 text-xs font-bold text-blue-800">
+                          <span>Σ Debe</span><span className="font-mono tabular-nums">{fmt2(acc.totalDebit)}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="border-b border-gray-200 bg-red-50/50 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-wider text-red-700">Haber (abonos)</p>
+                        <div className="min-h-[2rem]">
+                          {acc.credits.length === 0 ? <p className="px-2 py-2 text-center text-xs text-gray-300">—</p>
+                            : acc.credits.map((m, i) => <TRow key={i} mv={m} side="H" />)}
+                        </div>
+                        <div className="flex justify-between border-t-2 border-gray-300 px-2 py-1.5 text-xs font-bold text-red-800">
+                          <span>Σ Haber</span><span className="font-mono tabular-nums">{fmt2(acc.totalCredit)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Saldo del lado que corresponde */}
+                    <div className="grid grid-cols-2 border-t border-dashed border-gray-200 bg-gray-50/60">
+                      <div className={`px-2 py-1.5 text-center ${saldoIzq ? '' : 'opacity-0'}`}>
+                        <span className="text-[10px] uppercase tracking-wide text-gray-400">Saldo deudor </span>
+                        <span className="text-sm font-bold font-mono tabular-nums text-gray-900">{saldoIzq ? fmt2(acc.balance) : ''}</span>
+                      </div>
+                      <div className={`px-2 py-1.5 text-center ${saldoIzq ? 'opacity-0' : ''}`}>
+                        <span className="text-[10px] uppercase tracking-wide text-gray-400">Saldo acreedor </span>
+                        <span className="text-sm font-bold font-mono tabular-nums text-gray-900">{saldoIzq ? '' : fmt2(acc.balance)}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="border-t border-dashed border-gray-200 px-4 py-2 text-center bg-gray-50/60">
-                    <span className="text-xs text-gray-500">Saldo: </span>
-                    <span className="text-sm font-bold font-mono tabular-nums text-gray-900">{fmt0(acc.balance)}</span>
-                    <span className="text-xs text-gray-400 ml-1">({acc.normalBalance === 'DEBIT' ? 'D' : 'H'})</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

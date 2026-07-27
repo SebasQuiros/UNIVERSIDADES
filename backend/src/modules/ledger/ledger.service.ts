@@ -168,4 +168,66 @@ export class LedgerService {
       },
     };
   }
+
+  /**
+   * Cuentas T (mayorización): para CADA cuenta con movimientos devuelve sus
+   * cargos (débitos) y abonos (créditos) individuales, listos para pintar la
+   * "T" clásica (débitos a la izquierda, créditos a la derecha). Una sola
+   * consulta agrupada en memoria (no N+1).
+   */
+  async getTAccounts(companyId: string) {
+    const lines = await this.prisma.journalLine.findMany({
+      where: {
+        companyId,
+        entry: { isReversed: false, status: 'CONFIRMED' },
+      },
+      include: {
+        account: { select: { id: true, code: true, name: true, type: true, normalBalance: true } },
+        entry:   { select: { entryNumber: true, entryDate: true, description: true, reference: true } },
+      },
+      orderBy: [
+        { account: { code: 'asc' } },
+        { entry: { entryDate: 'asc' } },
+        { entry: { entryNumber: 'asc' } },
+      ],
+    });
+
+    const byAccount = new Map<string, any>();
+    for (const l of lines) {
+      const a = l.account;
+      let acc = byAccount.get(a.id);
+      if (!acc) {
+        acc = {
+          id: a.id, code: a.code, name: a.name, type: a.type, normalBalance: a.normalBalance,
+          debits:  [] as any[],  // cargos (izquierda)
+          credits: [] as any[],  // abonos (derecha)
+          _td: new Decimal(0), _tc: new Decimal(0),
+        };
+        byAccount.set(a.id, acc);
+      }
+      const debit  = new Decimal(l.debit.toString());
+      const credit = new Decimal(l.credit.toString());
+      const mv = {
+        entryNumber: l.entry.entryNumber,
+        entryDate:   l.entry.entryDate,
+        description: l.description || l.entry.description,
+        reference:   l.entry.reference,
+      };
+      if (debit.greaterThan(0))  { acc.debits.push({ ...mv,  amount: debit.toFixed(2)  }); acc._td = acc._td.plus(debit); }
+      if (credit.greaterThan(0)) { acc.credits.push({ ...mv, amount: credit.toFixed(2) }); acc._tc = acc._tc.plus(credit); }
+    }
+
+    return Array.from(byAccount.values()).map((acc) => {
+      const balance = acc.normalBalance === 'DEBIT'
+        ? acc._td.minus(acc._tc) : acc._tc.minus(acc._td);
+      return {
+        id: acc.id, code: acc.code, name: acc.name, type: acc.type, normalBalance: acc.normalBalance,
+        debits: acc.debits, credits: acc.credits,
+        totalDebit:  acc._td.toFixed(2),
+        totalCredit: acc._tc.toFixed(2),
+        balance:     balance.toFixed(2),
+        balanceSide: balance.greaterThanOrEqualTo(0) ? acc.normalBalance : (acc.normalBalance === 'DEBIT' ? 'CREDIT' : 'DEBIT'),
+      };
+    });
+  }
 }
