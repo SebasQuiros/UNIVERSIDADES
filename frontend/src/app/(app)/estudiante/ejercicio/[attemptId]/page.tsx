@@ -14,6 +14,7 @@ import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/ui/StatCard';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { ExerciseAttachments } from '@/components/exercise/ExerciseAttachments';
+import { useAuth } from '@/context/AuthContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconTile } from '@/components/ui/IconTile';
 import { ArtBalance, SceneStudentDesk, SceneEmptyBox } from '@/components/illustrations';
@@ -979,6 +980,7 @@ function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: 
 export default function ExerciseWorkspacePage() {
   const { attemptId } = useParams<{ attemptId: string }>();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [attempt, setAttempt] = useState<ExerciseAttempt | null>(null);
   const [loading, setLoading]   = useState(true);
@@ -996,10 +998,18 @@ export default function ExerciseWorkspacePage() {
   const load = useCallback(async () => {
     try {
       const { data } = await api.get<ExerciseAttempt>(`/api/v1/attempts/${attemptId}`);
+      // Defensa en profundidad: si el intento cargado NO es del usuario actual
+      // (p. ej. sesión mezclada / enlace viejo de otra persona), no lo mostramos.
+      const owner = (data as any).student?.id;
+      if (user && user.role === 'STUDENT' && owner && owner !== user.id) {
+        toast.error('Ese ejercicio no es tuyo. Te llevamos a tus ejercicios asignados.');
+        router.push('/estudiante/empresas');
+        return;
+      }
       setAttempt(data);
     } catch { toast.error('Error al cargar el ejercicio'); router.push('/estudiante'); }
     finally { setLoading(false); }
-  }, [attemptId, router]);
+  }, [attemptId, router, user]);
 
   useEffect(() => { load(); }, [load]);
 

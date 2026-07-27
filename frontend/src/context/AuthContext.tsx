@@ -98,7 +98,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
         setApiToken(session.access_token);
-        setState((prev) => ({ ...prev, accessToken: session.access_token }));
+        // CRÍTICO: re-cargar el perfil para que SIEMPRE corresponda al usuario
+        // del token. Antes solo se actualizaba el token conservando el perfil
+        // anterior (`...prev`) → si la sesión de Supabase cambiaba de usuario
+        // quedaba "token de A + perfil de B" (sesión mezclada: mostraba a un
+        // usuario mientras la API operaba como otro).
+        (async () => {
+          try {
+            const profile = await fetchProfile();
+            if (!active) return;
+            setState({ user: profile, accessToken: session.access_token, isLoading: false });
+          } catch {
+            if (!active) return;
+            setState((prev) => ({ ...prev, accessToken: session.access_token }));
+          }
+        })();
       }
     });
 
