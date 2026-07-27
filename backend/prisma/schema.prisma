@@ -1898,6 +1898,57 @@ model SessionAnnouncement {
   @@map("session_announcements")
 }
 
+// ── Motor de negociación empresarial (spec Multiempresa cap. 6) ────────────────
+// RFQ → oferta → contraoferta → chat → aceptar/rechazar, entre dos empresas de
+// una sesión. Los IDs de empresa/sesión son escalares (FK por migración) para no
+// tocar los modelos existentes. Aceptar registra términos; NO postea contabilidad
+// (eso se engancha con el flujo de compras existente por separado).
+enum NegotiationStatus {
+  ABIERTA        // RFQ enviada / en conversación
+  CONTRAOFERTA   // hay una oferta sobre la mesa esperando respuesta
+  ACEPTADA
+  RECHAZADA
+  CANCELADA
+}
+
+model Negotiation {
+  id              String            @id @default(uuid()) @db.Uuid
+  classSessionId  String?           @map("class_session_id") @db.Uuid
+  buyerCompanyId  String            @map("buyer_company_id") @db.Uuid
+  sellerCompanyId String            @map("seller_company_id") @db.Uuid
+  subject         String                                            // qué se negocia
+  status          NegotiationStatus @default(ABIERTA)
+  agreedQty       Int?              @map("agreed_qty")
+  agreedUnitPrice Decimal?          @map("agreed_unit_price") @db.Decimal(14,2)
+  createdById     String            @map("created_by_id") @db.Uuid
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt      @map("updated_at")
+
+  entries NegotiationEntry[]
+
+  @@index([classSessionId])
+  @@index([buyerCompanyId])
+  @@index([sellerCompanyId])
+  @@map("negotiations")
+}
+
+model NegotiationEntry {
+  id              String   @id @default(uuid()) @db.Uuid
+  negotiationId   String   @map("negotiation_id") @db.Uuid
+  authorId        String   @map("author_id") @db.Uuid
+  authorCompanyId String   @map("author_company_id") @db.Uuid       // lado que habla
+  kind            String   @default("MENSAJE")                       // MENSAJE | OFERTA | SISTEMA
+  message         String?  @db.Text
+  qty             Int?
+  unitPrice       Decimal? @map("unit_price") @db.Decimal(14,2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  negotiation Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+
+  @@index([negotiationId])
+  @@map("negotiation_entries")
+}
+
 // Un participante = un estudiante dentro de ESTA sesión. companyId queda
 // NULL hasta que el profesor lo asigna a un grupo (o el auto-assign).
 model ClassSessionParticipant {
