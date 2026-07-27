@@ -1526,20 +1526,70 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
   );
 }
 // ─── Journal tab ──────────────────────────────────────────────────────────────
-export function JournalTab({ companyId, attemptId }: { companyId: string; readonly?: boolean; attemptId?: string }) {
+export function JournalTab({ companyId, readonly, attemptId }: { companyId: string; readonly?: boolean; attemptId?: string }) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ entryDate: new Date().toISOString().split('T')[0], description: '' });
+  const [lines, setLines] = useState([{ accountId: '', debit: '', credit: '' }, { accountId: '', debit: '', credit: '' }]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const ent = await api.get<{ entries: JournalEntry[] }>(`/api/v1/companies/${companyId}/journal?limit=200`);
+      const [ent, acc] = await Promise.all([
+        api.get<{ entries: JournalEntry[] }>(`/api/v1/companies/${companyId}/journal?limit=200`),
+        api.get<Account[]>(`/api/v1/companies/${companyId}/accounts`),
+      ]);
       setEntries(Array.isArray(ent.data) ? ent.data : (ent.data as any).entries ?? []);
+      setAccounts((acc.data as Account[]).filter((a) => a.level >= 4 && !a.isHeader));
     } catch { toast.error('Error al cargar asientos'); }
     finally { setLoading(false); }
   }, [companyId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // ── Asiento manual (spec UTN: el estudiante crea asientos propios) ──────────
+  function addLine() { setLines((ls) => [...ls, { accountId: '', debit: '', credit: '' }]); }
+  function removeLine(i: number) { setLines((ls) => ls.length > 2 ? ls.filter((_, idx) => idx !== i) : ls); }
+  function updateLine(i: number, field: string, val: string) {
+    setLines((ls) => ls.map((l, idx) => idx === i ? { ...l, [field]: val } : l));
+  }
+  const mDebit  = lines.reduce((s, l) => s + (Number(l.debit)  || 0), 0);
+  const mCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
+  const mBalanced = Math.abs(mDebit - mCredit) < 0.01 && mDebit > 0;
+
+  async function handleCreateManual(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.description.trim()) { toast.error('Ingresá una descripción'); return; }
+    if (!mBalanced) { toast.error('El asiento debe estar balanceado (débito = crédito)'); return; }
+    const validLines = lines.filter((l) => l.accountId && (Number(l.debit) > 0 || Number(l.credit) > 0));
+    if (validLines.length < 2) { toast.error('Se necesitan al menos 2 líneas'); return; }
+    setSaving(true);
+    try {
+      // Referencia MAN-NNN autonumerada (permitida por el backend en modo automático).
+      const maxMan = entries.reduce((max, en) => {
+        if (!en.reference?.toUpperCase().startsWith('MAN-')) return max;
+        const n = parseInt(en.reference.slice(4), 10);
+        return Number.isFinite(n) && n > max ? n : max;
+      }, 0);
+      const ref = `MAN-${String(maxMan + 1).padStart(3, '0')}`;
+      await api.post(`/api/v1/companies/${companyId}/journal`, {
+        entryDate:   form.entryDate,
+        description: form.description,
+        reference:   ref,
+        lines: validLines.map((l) => ({ accountId: l.accountId, debit: Number(l.debit) || 0, credit: Number(l.credit) || 0 })),
+      });
+      if (attemptId) api.post(`/api/v1/attempts/${attemptId}/track`, { event: 'JOURNAL_ENTRY_SAVED', metadata: { type: 'MANUAL' } }).catch(() => {});
+      toast.success('Asiento manual registrado');
+      setShowModal(false);
+      setLines([{ accountId: '', debit: '', credit: '' }, { accountId: '', debit: '', credit: '' }]);
+      setForm({ entryDate: new Date().toISOString().split('T')[0], description: '' });
+      load();
+    } catch (err) { toast.error(getErrorMessage(err)); }
+    finally { setSaving(false); }
+  }
 
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 
@@ -1551,6 +1601,63 @@ export function JournalTab({ companyId, attemptId }: { companyId: string; readon
 
   return (
     <div className="space-y-4">
+      {/* Modal — nuevo asiento manual */}
+      {showModal && !readonly && (
+        <Modal title="Nuevo asiento manual" onClose={() => setShowModal(false)}>
+          <form onSubmit={handleCreateManual} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Fecha" type="date" value={form.entryDate} onChange={(e) => setForm({ ...form, entryDate: e.target.value })} />
+              <Input label="Descripción *" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Ej: Registro de gasto por servicios" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">Partidas (cuenta · débito · crédito)</label>
+                <button type="button" onClick={addLine} className="text-xs text-blue-700 hover:underline">+ Agregar línea</button>
+              </div>
+              <div className="space-y-2">
+                {lines.map((line, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                    <div className="col-span-6">
+                      <select value={line.accountId} onChange={(e) => updateLine(i, 'accountId', e.target.value)}
+                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="">Cuenta...</option>
+                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.code} – {a.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="col-span-2">
+                      <input type="number" value={line.debit} onChange={(e) => updateLine(i, 'debit', e.target.value)}
+                        placeholder="Débito" min="0" step="0.01"
+                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    </div>
+                    <div className="col-span-2">
+                      <input type="number" value={line.credit} onChange={(e) => updateLine(i, 'credit', e.target.value)}
+                        placeholder="Crédito" min="0" step="0.01"
+                        className="w-full rounded-lg bg-white border border-gray-300 text-gray-900 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    </div>
+                    <div className="col-span-2 flex justify-center">
+                      <button type="button" onClick={() => removeLine(i)} disabled={lines.length <= 2}
+                        className="text-gray-400 hover:text-red-600 disabled:opacity-30"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className={`mt-2 text-xs flex gap-4 ${mBalanced ? 'text-emerald-600' : 'text-amber-600'}`}>
+                <span>Débitos: ₡{mDebit.toFixed(2)}</span>
+                <span>Créditos: ₡{mCredit.toFixed(2)}</span>
+                {mBalanced
+                  ? <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Balanceado</span>
+                  : <span className="flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Débito y crédito deben coincidir</span>}
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancelar</Button>
+              <Button type="submit" loading={saving} disabled={!mBalanced} className="flex-1">Registrar asiento</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {/* Indicadores del diario (spec UTN §7) */}
       {entries.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1573,11 +1680,12 @@ export function JournalTab({ companyId, attemptId }: { companyId: string; readon
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </div>
         <div>
-          <p className="font-semibold text-blue-800 text-sm">Asientos generados automáticamente</p>
+          <p className="font-semibold text-blue-800 text-sm">Asientos automáticos + tus asientos manuales</p>
           <p className="text-blue-700 text-sm mt-1">
-            El sistema registra los asientos contables automáticamente cuando realizas
-            operaciones (facturas, compras, pagos, planillas). Los asientos se muestran
-            a continuación para tu revisión.
+            El sistema registra asientos automáticamente al facturar, comprar, cobrar o
+            pagar. Además podés crear <strong>asientos manuales propios</strong> con el botón
+            “Nuevo asiento manual”: se registran en el Diario y se reflejan en el mayor,
+            el balance de comprobación y los estados financieros de tu empresa.
           </p>
         </div>
       </div>
@@ -1585,6 +1693,9 @@ export function JournalTab({ companyId, attemptId }: { companyId: string; readon
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">{entries.length} asiento{entries.length !== 1 ? 's' : ''}</p>
         <div className="flex items-center gap-2">
+          {!readonly && (
+            <Button size="sm" onClick={() => setShowModal(true)}><Plus className="w-4 h-4" /> Nuevo asiento manual</Button>
+          )}
           {entries.length > 0 && (
             <button
               onClick={async () => {

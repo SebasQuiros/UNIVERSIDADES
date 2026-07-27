@@ -62,13 +62,18 @@ export class JournalController {
     const mode = await this.modeResolver.forCompany(companyId);
     if (mode === 'AUTOMATIC') {
       const ref = (dto.reference || '').trim().toUpperCase();
-      const isAcademicAdjustment = ref.startsWith('ADJ-') || ref.startsWith('CIER-');
-      if (!isAcademicAdjustment) {
+      // ADJ- (ajustes), CIER- (cierre) y MAN- (asiento manual del estudiante) son
+      // asientos legítimos del ciclo académico que el sistema NO genera solo. El
+      // estudiante debe poder registrar asientos propios en el Diario aunque la
+      // empresa esté en modo automático (spec UTN: "dejar crear asientos, no solo
+      // dependientes de otros módulos").
+      const isAcademic = ref.startsWith('ADJ-') || ref.startsWith('CIER-') || ref.startsWith('MAN-');
+      if (!isAcademic) {
         throw new ForbiddenException(
           'Esta empresa está en modo AUTOMÁTICO. Los asientos genéricos se generan ' +
           'automáticamente desde facturas, cobros y pagos. ' +
-          'Solo se permiten asientos manuales con referencia que empiece con ADJ- (ajustes) ' +
-          'o CIER- (cierre de período).',
+          'Para registrar un asiento manual usa el botón "Nuevo asiento manual" del Diario ' +
+          '(se etiqueta MAN-), o una referencia ADJ- (ajustes) o CIER- (cierre).',
         );
       }
     }
