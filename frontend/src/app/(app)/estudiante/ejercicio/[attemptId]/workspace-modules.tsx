@@ -1730,39 +1730,66 @@ export function JournalTab({ companyId, readonly, attemptId }: { companyId: stri
         </div>
       ) : (
         <div className="space-y-4">
-          {entries.map((entry) => (
-            <div key={entry.id} className="border border-gray-200 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">{entry.description}</p>
-                  {entry.reference && <p className="text-xs text-gray-500">Ref: {entry.reference}</p>}
+          {entries.map((entry) => {
+            const eLines = entry.lines ?? [];
+            const eD = eLines.reduce((s, l) => s + Number(l.debit || 0), 0);
+            const eC = eLines.reduce((s, l) => s + Number(l.credit || 0), 0);
+            const eBal = Math.abs(eD - eC) < 0.01;
+            const folio = (entry as any).entryNumber;
+            const money = (n: number) => `₡${n.toLocaleString('es-CR', { minimumFractionDigits: 2 })}`;
+            return (
+            <div key={entry.id} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {folio != null && (
+                    <span className="flex-shrink-0 rounded-md bg-blue-600 px-2 py-0.5 text-[11px] font-bold tabular-nums text-white">
+                      N° {folio}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-700 truncate">{entry.description}</p>
+                    {entry.reference && <p className="text-xs text-gray-500 font-mono">Ref: {entry.reference}</p>}
+                  </div>
                 </div>
-                <span className="text-xs text-gray-400">{formatDate(entry.entryDate)}</span>
+                <span className="flex-shrink-0 text-xs text-gray-400">{formatDate(entry.entryDate)}</span>
               </div>
               <table className="w-full text-xs">
-                <thead><tr className="text-gray-400 border-b border-gray-100">
+                <thead><tr className="text-gray-400 border-b border-gray-100 bg-gray-50/40">
                   <th className="text-left p-3">Cuenta</th>
                   <th className="text-right p-3">Débito</th>
                   <th className="text-right p-3">Crédito</th>
                 </tr></thead>
                 <tbody>
-                  {(entry.lines ?? []).map((line, i) => (
+                  {eLines.map((line, i) => {
+                    const isCredit = Number(line.credit) > 0;
+                    return (
                     <tr key={i} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                      <td className="p-3 text-gray-600">
+                      <td className={`p-3 text-gray-600 ${isCredit ? 'pl-8' : ''}`}>
                         <span className="font-mono text-gray-400">{line.account?.code ?? '—'}</span> {line.account?.name}
                       </td>
-                      <td className="p-3 text-right text-gray-700">
-                        {Number(line.debit) > 0 ? `₡${Number(line.debit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
+                      <td className="p-3 text-right font-mono tabular-nums text-blue-700">
+                        {Number(line.debit) > 0 ? money(Number(line.debit)) : '—'}
                       </td>
-                      <td className="p-3 text-right text-gray-700">
-                        {Number(line.credit) > 0 ? `₡${Number(line.credit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
+                      <td className="p-3 text-right font-mono tabular-nums text-red-600">
+                        {Number(line.credit) > 0 ? money(Number(line.credit)) : '—'}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
+                <tfoot>
+                  <tr className={`border-t-2 ${eBal ? 'border-gray-200' : 'border-red-300'} font-bold`}>
+                    <td className="p-3 text-right text-gray-500 uppercase text-[11px] tracking-wide">
+                      {eBal ? 'Sumas iguales' : 'Descuadre'}
+                    </td>
+                    <td className="p-3 text-right font-mono tabular-nums text-blue-800">{money(eD)}</td>
+                    <td className="p-3 text-right font-mono tabular-nums text-red-800">{money(eC)}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -3453,33 +3480,53 @@ export function SpecialJournalTab({
         </div>
       ) : (
         <div className="space-y-4">
-          {entries.map((entry) => (
-            <div key={entry.id} className="border border-gray-200 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">{entry.description}</p>
-                  {entry.reference && <p className="text-xs text-gray-500 font-mono">Ref: {entry.reference}</p>}
+          {entries.map((entry) => {
+            const eLines = entry.lines ?? [];
+            const eD = eLines.reduce((s, l) => s + Number(l.debit || 0), 0);
+            const eC = eLines.reduce((s, l) => s + Number(l.credit || 0), 0);
+            const eBal = Math.abs(eD - eC) < 0.01;
+            const folio = (entry as any).entryNumber;
+            const money = (n: number) => `₡${n.toLocaleString('es-CR', { minimumFractionDigits: 2 })}`;
+            return (
+            <div key={entry.id} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="flex items-center justify-between gap-3 p-3 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {folio != null && (
+                    <span className="flex-shrink-0 rounded-md bg-gold-700 px-2 py-0.5 text-[11px] font-bold tabular-nums text-white">N° {folio}</span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-700 truncate">{entry.description}</p>
+                    {entry.reference && <p className="text-xs text-gray-500 font-mono">Ref: {entry.reference}</p>}
+                  </div>
                 </div>
-                <span className="text-xs text-gray-400">{formatDate(entry.entryDate)}</span>
+                <span className="flex-shrink-0 text-xs text-gray-400">{formatDate(entry.entryDate)}</span>
               </div>
               <table className="w-full text-xs">
-                <thead><tr className="text-gray-400 border-b border-gray-100">
+                <thead><tr className="text-gray-400 border-b border-gray-100 bg-gray-50/40">
                   <th className="text-left p-3">Cuenta</th>
                   <th className="text-right p-3">Débito</th>
                   <th className="text-right p-3">Crédito</th>
                 </tr></thead>
                 <tbody>
-                  {entry.lines.map((line, i) => (
+                  {eLines.map((line, i) => (
                     <tr key={i} className="border-b border-gray-50 last:border-0">
-                      <td className="p-3 text-gray-600"><span className="font-mono text-gray-400">{line.account.code}</span> {line.account.name}</td>
-                      <td className="p-3 text-right text-gray-700">{Number(line.debit)  > 0 ? `₡${Number(line.debit).toLocaleString('es-CR',  { minimumFractionDigits: 2 })}` : '—'}</td>
-                      <td className="p-3 text-right text-gray-700">{Number(line.credit) > 0 ? `₡${Number(line.credit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}</td>
+                      <td className={`p-3 text-gray-600 ${Number(line.credit) > 0 ? 'pl-8' : ''}`}><span className="font-mono text-gray-400">{line.account.code}</span> {line.account.name}</td>
+                      <td className="p-3 text-right font-mono tabular-nums text-blue-700">{Number(line.debit)  > 0 ? money(Number(line.debit))  : '—'}</td>
+                      <td className="p-3 text-right font-mono tabular-nums text-red-600">{Number(line.credit) > 0 ? money(Number(line.credit)) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className={`border-t-2 ${eBal ? 'border-gray-200' : 'border-red-300'} font-bold`}>
+                    <td className="p-3 text-right text-gray-500 uppercase text-[11px] tracking-wide">{eBal ? 'Sumas iguales' : 'Descuadre'}</td>
+                    <td className="p-3 text-right font-mono tabular-nums text-blue-800">{money(eD)}</td>
+                    <td className="p-3 text-right font-mono tabular-nums text-red-800">{money(eC)}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
