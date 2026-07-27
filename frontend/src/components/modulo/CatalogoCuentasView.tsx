@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { getErrorMessage } from '@/lib/utils';
@@ -12,8 +12,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Spinner } from '@/components/ui/Spinner';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
-import { BookOpen, AlertTriangle, FolderTree, Plus, X } from 'lucide-react';
+import { BookOpen, AlertTriangle, FolderTree, Plus, X, Upload, Download, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { exportToExcel } from '@/lib/excel';
 
 // ── Tipos del endpoint real ────────────────────────────────────
 // GET /api/v1/companies/:companyId/accounts
@@ -58,6 +59,44 @@ export function CatalogoCuentasView() {
   const [state, setState] = useState<LoadState>({ phase: 'loading' });
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function downloadTemplate() {
+    exportToExcel('plantilla-catalogo-cuentas', [
+      { codigo: '1',          nombre: 'ACTIVOS',            tipo: 'Activo',     naturaleza: 'Debe'  },
+      { codigo: '1.1',        nombre: 'Activo Corriente',   tipo: 'Activo',     naturaleza: 'Debe'  },
+      { codigo: '1.1.01',     nombre: 'Caja y Bancos',      tipo: 'Activo',     naturaleza: 'Debe'  },
+      { codigo: '1.1.01.01',  nombre: 'Caja General',       tipo: 'Activo',     naturaleza: 'Debe'  },
+      { codigo: '2.1.01.01',  nombre: 'Proveedores',        tipo: 'Pasivo',     naturaleza: 'Haber' },
+      { codigo: '3.1.01.01',  nombre: 'Capital Social',     tipo: 'Patrimonio', naturaleza: 'Haber' },
+      { codigo: '4.1.01.01',  nombre: 'Ventas',             tipo: 'Ingreso',    naturaleza: 'Haber' },
+      { codigo: '5.1.01.01',  nombre: 'Costo de Ventas',    tipo: 'Gasto',      naturaleza: 'Debe'  },
+    ]);
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !companyId) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('El archivo supera el límite de 5 MB'); return; }
+    setImporting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const { data } = await api.post<{ created: number; skipped: number; total: number; errors: string[] }>(
+        `/api/v1/companies/${companyId}/accounts/import`, fd,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      );
+      toast.success(`Importado: ${data.created} creadas, ${data.skipped} omitidas de ${data.total}.`);
+      if (data.errors?.length) toast(`Avisos: ${data.errors[0]}${data.errors.length > 1 ? ` (+${data.errors.length - 1})` : ''}`, { icon: '⚠️' });
+      load();
+    } catch (err) {
+      toast.error(getErrorMessage(err) || 'No se pudo importar el catálogo');
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
 
   const load = async () => {
     try {
@@ -101,9 +140,18 @@ export function CatalogoCuentasView() {
       className="mb-6"
       actions={
         state.phase === 'ready' && companyId ? (
-          <Button variant="primary" onClick={() => setShowModal(true)} className="cx-press">
-            <Plus className="w-4 h-4" /> Nueva cuenta
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
+            <Button variant="secondary" onClick={downloadTemplate} className="cx-press">
+              <Download className="w-4 h-4" /> Plantilla
+            </Button>
+            <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={importing} className="cx-press">
+              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Importar Excel
+            </Button>
+            <Button variant="primary" onClick={() => setShowModal(true)} className="cx-press">
+              <Plus className="w-4 h-4" /> Nueva cuenta
+            </Button>
+          </div>
         ) : undefined
       }
     />

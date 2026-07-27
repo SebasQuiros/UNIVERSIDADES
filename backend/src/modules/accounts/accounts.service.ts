@@ -304,4 +304,126 @@ export class AccountsService {
       where: { companyId, code },
     });
   }
+
+  // ── Importar catálogo de cuentas desde Excel ──────────────────
+  // Columnas esperadas (fila 1 = encabezados, insensible a mayúsculas/acentos):
+  //   codigo | nombre | tipo | naturaleza
+  // - tipo: Activo/Pasivo/Patrimonio/Ingreso/Gasto (o ASSET/LIABILITY/…)
+  // - naturaleza: Debe/Deudora/DEBIT · Haber/Acreedora/CREDIT (opcional: se
+  //   infiere del tipo si falta). Nivel y cuenta padre se derivan del código
+  //   punteado (p.ej. 1.1.01.01 → nivel 4, padre 1.1.01). Cabecera = tiene hijos.
+  async importFromExcel(companyId: string, fileBuffer: Buffer) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const XLSX = require('xlsx') as typeof import('xlsx');
+    let rows: unknown[][];
+    try {
+      const wb = XLSX.read(fileBuffer, { type: 'buffer' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false }) as unknown[][];
+    } catch {
+      throw new BadRequestException('No se pudo leer el archivo Excel.');
+    }
+    if (!rows || rows.length < 2) {
+      throw new BadRequestException('El archivo no tiene filas de datos (fila 1 = encabezados).');
+    }
+
+    const norm = (s: any) => String(s ?? '').trim().toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const headers = (rows[0] as any[]).map(norm);
+    const col = (...names: string[]) => headers.findIndex(h => names.includes(h));
+    const iCode = col('codigo', 'cuenta', 'code');
+    const iName = col('nombre', 'descripcion', 'name');
+    const iType = col('tipo', 'type', 'clase');
+    const iNat  = col('naturaleza', 'saldo', 'normal', 'naturalezasaldo');
+    if (iCode < 0 || iName < 0) {
+      throw new BadRequestException('Faltan columnas obligatorias: "codigo" y "nombre".');
+    }
+
+    const TYPE_MAP: Record<string, AccountType> = {
+      activo: 'ASSET', activos: 'ASSET', asset: 'ASSET',
+      pasivo: 'LIABILITY', pasivos: 'LIABILITY', liability: 'LIABILITY',
+      patrimonio: 'EQUITY', capital: 'EQUITY', equity: 'EQUITY',
+      ingreso: 'INCOME', ingresos: 'INCOME', income: 'INCOME',
+      gasto: 'EXPENSE', gastos: 'EXPENSE', costo: 'EXPENSE', costos: 'EXPENSE', expense: 'EXPENSE',
+    };
+    const typeFromCode = (code: string): AccountType => {
+      const d = code.trim()[0];
+      return d === '1' ? 'ASSET' : d === '2' ? 'LIABILITY' : d === '3' ? 'EQUITY'
+        : d === '4' ? 'INCOME' : 'EXPENSE';
+    };
+    const natFrom = (raw: any, type: AccountType): NormalBalance => {
+      const n = norm(raw);
+      if (['debe', 'deudora', 'deudor', 'debito', 'debit', 'd'].includes(n)) return 'DEBIT';
+      if (['haber', 'acreedora', 'acreedor', 'credito', 'credit', 'h', 'c'].includes(n)) return 'CREDIT';
+      return type === 'ASSET' || type === 'EXPENSE' ? 'DEBIT' : 'CREDIT';
+    };
+
+    // Parsear filas → cuentas normalizadas
+    type Parsed = { code: string; name: string; type: AccountType; normal: NormalBalance; level: number; parent: string | null };
+    const parsed: Parsed[] = [];
+    const errors: string[] = [];
+    const seenCodes = new Set<string>();
+    for (let r = 1; r < rows.length; r++) {
+      const row = rows[r] as any[];
+      const code = String(row[iCode] ?? '').trim();
+      const name = String(row[iName] ?? '').trim();
+      if (!code && !name) continue;
+      if (!code || !name) { errors.push(`Fila ${r + 1}: código o nombre vacío.`); continue; }
+      if (code.length > 20) { errors.push(`Fila ${r + 1}: código "${code}" supera 20 caracteres.`); continue; }
+      if (seenCodes.has(code)) { errors.push(`Fila ${r + 1}: código "${code}" duplicado en el archivo.`); continue; }
+      seenCodes.add(code);
+      const type = (iType >= 0 && TYPE_MAP[norm(row[iType])]) || typeFromCode(code);
+      const normal = natFrom(iNat >= 0 ? row[iNat] : '', type);
+      const segs = code.split('.').filter(Boolean);
+      const level = Math.min(segs.length, 4);
+      const parent = segs.length > 1 ? segs.slice(0, -1).join('.') : null;
+      parsed.push({ code, name: name.slice(0, 150), type, normal, level, parent });
+    }
+    if (parsed.length === 0) {
+      throw new BadRequestException(`No se importó ninguna cuenta válida. ${errors.slice(0, 3).join(' ')}`);
+    }
+
+    // Cabecera = alguna otra cuenta la tiene como prefijo padre
+    const codeSet = new Set(parsed.map(p => p.code));
+    const isHeaderOf = (code: string) => parsed.some(p => p.parent === code);
+
+    // Cuentas ya existentes (para no chocar con @@unique(companyId, code))
+    const existing = await this.prisma.account.findMany({
+      where: { companyId }, select: { id: true, code: true },
+    });
+    const codeToId: Record<string, string> = {};
+    existing.forEach(e => { codeToId[e.code] = e.id; });
+    const existingCodes = new Set(existing.map(e => e.code));
+
+    // Crear por niveles (padres primero) para resolver parentId por código.
+    parsed.sort((a, b) => a.level - b.level || a.code.localeCompare(b.code));
+    let created = 0, skipped = 0;
+    for (const p of parsed) {
+      if (existingCodes.has(p.code)) { skipped++; continue; }
+      const parentId = p.parent ? (codeToId[p.parent] ?? null) : null;
+      try {
+        const acc = await this.prisma.account.create({
+          data: {
+            companyId, code: p.code, name: p.name, type: p.type,
+            normalBalance: p.normal, level: p.level, parentId,
+            isHeader: isHeaderOf(p.code) || p.level < 4,
+            isActive: true,
+          },
+        });
+        codeToId[p.code] = acc.id;
+        existingCodes.add(p.code);
+        created++;
+      } catch {
+        skipped++;
+        errors.push(`No se pudo crear "${p.code} — ${p.name}".`);
+      }
+    }
+
+    // Asegurar secuencia de asientos (por si es una empresa recién creada).
+    await this.prisma.journalSequence.upsert({
+      where: { companyId }, update: {}, create: { companyId, lastNumber: 0 },
+    });
+
+    return { created, skipped, total: parsed.length, errors: errors.slice(0, 20) };
+  }
 }
