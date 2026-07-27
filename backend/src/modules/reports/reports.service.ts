@@ -139,7 +139,7 @@ export class ReportsService {
   // ── 2. BALANCE SHEET — Balance General ────────────────────────
   // Assets = Liabilities + Equity
   // Uses ALL history up to endDate (balance sheet is cumulative)
-  async getBalanceSheet(companyId: string, filter: ReportFilterDto) {
+  async getBalanceSheet(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
     const { endDate, period } = await this.resolveDates(companyId, filter);
 
     // Balance sheet is cumulative — start from the beginning of time
@@ -199,7 +199,7 @@ export class ReportsService {
 
   // ── 3. INCOME STATEMENT — Estado de Resultados ───────────────
   // Only covers the specified period (not cumulative)
-  async getIncomeStatement(companyId: string, filter: ReportFilterDto) {
+  async getIncomeStatement(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
     const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
     const accounts = await this.getAccountBalances(companyId, startDate, endDate, ['INCOME', 'EXPENSE']);
 

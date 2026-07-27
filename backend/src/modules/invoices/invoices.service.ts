@@ -100,6 +100,17 @@ export class InvoicesService {
     let subtotal = new Decimal(0);
     let tax      = new Decimal(0);
 
+    // Herencia desde el producto: si la línea trae productId pero NO trae CABYS,
+    // se toma el del producto (evita que la factura no se pueda emitir por falta
+    // de CABYS cuando el producto sí lo tiene). Una sola consulta.
+    const productIds = dto.lines.map((l) => l.productId).filter(Boolean) as string[];
+    const prodMap = productIds.length === 0 ? new Map<string, any>() : new Map(
+      (await this.prisma.product.findMany({
+        where: { id: { in: productIds }, companyId },
+        select: { id: true, cabysCode: true, taxRate: true },
+      })).map((p) => [p.id, p]),
+    );
+
     const lines = dto.lines.map((line, i) => {
       const qty       = new Decimal(line.quantity.toString());
       const unitPrice = new Decimal(line.unitPrice.toString());
@@ -123,7 +134,7 @@ export class InvoicesService {
         taxAmount,
         subtotal:    lineSubtotal,
         total:       lineTotal,
-        cabysCode:   line.cabysCode,
+        cabysCode:   line.cabysCode || (line.productId ? prodMap.get(line.productId)?.cabysCode : null) || null,
       };
     });
 

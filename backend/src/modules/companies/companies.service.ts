@@ -308,7 +308,25 @@ export class CompaniesService {
       where: { id: companyId, studentId, isPractice: true },
     });
     if (!company) throw new NotFoundException('Empresa de práctica no encontrada');
-    await this.prisma.company.delete({ where: { id: companyId } });
+
+    // Varias tablas referencian companyId SIN onDelete: Cascade (journal_lines,
+    // payments, inventory_movements, etc.), así que un delete directo fallaba por
+    // FK cuando la empresa ya tenía transacciones. Se borran los hijos en orden
+    // (padres de FK primero) dentro de una transacción.
+    await this.prisma.$transaction([
+      this.prisma.journalLine.deleteMany({ where: { companyId } }),
+      this.prisma.payment.deleteMany({ where: { companyId } }),
+      this.prisma.inventoryMovement.deleteMany({ where: { companyId } }),
+      this.prisma.journalEntry.deleteMany({ where: { companyId } }),
+      this.prisma.invoiceItem.deleteMany({ where: { invoice: { companyId } } }),
+      this.prisma.invoice.deleteMany({ where: { companyId } }),
+      this.prisma.client.deleteMany({ where: { companyId } }),
+      this.prisma.product.deleteMany({ where: { companyId } }),
+      this.prisma.accountingPeriod.deleteMany({ where: { companyId } }),
+      this.prisma.journalSequence.deleteMany({ where: { companyId } }),
+      this.prisma.account.deleteMany({ where: { companyId } }),
+      this.prisma.company.delete({ where: { id: companyId } }),
+    ]);
     return { ok: true };
   }
 
