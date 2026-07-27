@@ -82,7 +82,7 @@ interface TaxDeclaration {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  D104_IVA:        'D-104 — Declaración de IVA',
+  D104_IVA:        'D-150 — Impuesto al valor agregado',
   D101_RENTA:      'D-101 — Declaración de Renta',
   D103_RETENCION:  'D-103 — Retención en la Fuente',
   D115_DIVIDENDOS: 'D-115 — Dividendos y Participaciones',
@@ -341,7 +341,7 @@ export default function ImpuestosPage() {
               <div className="mb-1.5 flex items-center gap-2">
                 <IconTile icon={FileText} tint="#2563EB" size={32} />
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-gray-800">D-104 — IVA mensual</p>
+                  <p className="text-xs font-bold text-gray-800">D-150 — IVA mensual</p>
                   <p className={cn(
                     'text-xs font-bold tabular-nums',
                     d104Due.urgent || d104Due.overdue ? 'text-red-600' : 'text-gray-500',
@@ -401,7 +401,7 @@ export default function ImpuestosPage() {
             {[
               { step: '1', title: 'Emitir facturas', desc: 'Emite y recibe facturas electrónicas en el sistema de Hacienda (ATV). Cada transacción queda registrada.' },
               { step: '2', title: 'Registrar en libro', desc: 'Contabiliza ventas y compras en los libros contables. El IVA cobrado es débito; el IVA pagado es crédito.' },
-              { step: '3', title: 'Completar D-104', desc: 'Ingresa los totales por tarifa. El sistema calcula automáticamente el impuesto neto o saldo a favor.' },
+              { step: '3', title: 'Completar D-150', desc: 'Ingresa los totales por tarifa. El sistema calcula automáticamente el impuesto neto o saldo a favor.' },
               { step: '4', title: 'Presentar y pagar', desc: 'Presenta antes del día 15. Si hay impuesto a pagar, cancela en el banco o directamente en ATV.' },
             ].map(({ step, title, desc }, i) => (
               <div key={step} className={cn('cx-pop flex items-start gap-2.5', `cx-d${i + 1}`)}>
@@ -423,7 +423,7 @@ export default function ImpuestosPage() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <FormularioCard
-              code="D-104"
+              code="D-150"
               route="d104"
               icon={FileText}
               tint="#2563EB"

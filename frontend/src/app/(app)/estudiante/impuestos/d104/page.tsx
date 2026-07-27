@@ -135,6 +135,7 @@ export default function D104Page() {
   // Pago diferido del impuesto por ventas a crédito (D-150 real). Educativo:
   // se registra la elección; no altera el cálculo simplificado del IVA neto.
   const [pagoDiferido, setPagoDiferido] = useState<'NO' | 'SI'>('NO');
+  const [declType, setDeclType]   = useState<'Original' | 'Rectificativa'>('Original');
   const [status, setStatus]       = useState<'DRAFT' | 'SUBMITTED'>('DRAFT');
   const [refNo, setRefNo]         = useState<string | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -173,6 +174,7 @@ export default function D104Page() {
         setStatus(data.status);
         setRefNo(data.referenceNo);
         if (fd.pagoDiferido === 'SI' || fd.pagoDiferido === 'NO') setPagoDiferido(fd.pagoDiferido);
+        if (fd.declType === 'Rectificativa') setDeclType('Rectificativa');
         if (data.status === 'SUBMITTED') {
           setStep(STEP_CALCULO);
           setShowResult(true);
@@ -334,11 +336,12 @@ export default function D104Page() {
     <div className="flex-1 overflow-y-auto bg-[#FBF8F1]" ref={topRef}>
       {/* Encabezado TRIBU-CR unificado */}
       <TribuHeader
-        code="D-104"
-        title="Declaración del Impuesto al Valor Agregado"
+        code="D-150"
+        title="Impuesto al valor agregado"
         accent="blue"
         status={status}
         refNo={refNo}
+        declType={declType}
         periodLabel={`${monthName} ${year}`}
         perfil={perfil}
         description="El IVA que cobras en tus ventas es el débito fiscal; el que pagas en tus compras es el crédito fiscal. La diferencia entre ambos es lo que liquidas cada mes ante Hacienda."
@@ -447,7 +450,7 @@ export default function D104Page() {
             {/* Info TRIBU flow */}
             <SectionCard
               eyebrow="Cómo funciona"
-              title="Proceso D-104 en Hacienda"
+              title="Proceso del D-150 (IVA) en Hacienda"
               icon={ListChecks}
               iconTint="#B8860B"
               className="cx-pop cx-d2"
@@ -810,7 +813,7 @@ export default function D104Page() {
                 >
                   <span className="flex items-center gap-2 text-sm font-bold text-gold-900">
                     <BookOpen className="h-4 w-4" />
-                    Generar asiento de liquidación D-104
+                    Generar asiento de liquidación del IVA (D-150)
                   </span>
                   <span className="text-xs font-semibold text-gold-700">
                     {showJournalEntry ? 'Ocultar' : 'Ver asiento sugerido'}
@@ -897,7 +900,7 @@ export default function D104Page() {
                       <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                       <span>
                         Fecha del asiento: último día del período fiscal declarado.
-                        Descripción sugerida: <em>Liquidación D-104 {monthName} {year}</em>.
+                        Descripción sugerida: <em>Liquidación IVA (D-150) {monthName} {year}</em>.
                       </span>
                     </div>
                   </div>
@@ -911,7 +914,7 @@ export default function D104Page() {
                 <HelpCircle className="h-4 w-4" /> Notas sobre el IVA en Costa Rica
               </p>
               <ul className="mt-2 list-inside list-disc space-y-1 leading-relaxed">
-                <li>La declaración D-104 se presenta mensualmente, a más tardar el día 15 del mes siguiente.</li>
+                <li>La declaración del IVA (formulario D-150) se presenta mensualmente, a más tardar el día 15 del mes siguiente.</li>
                 <li>Las tasas vigentes son: 13% (general), 8% (medicina privada y seguros), 4% (boletos y espectáculos), 2% (canasta básica tributaria) y 1% (medicamentos e insumos agropecuarios).</li>
                 <li>Las exportaciones y algunos servicios educativos están exentos (0%).</li>
                 <li>Si el crédito fiscal supera el débito, el saldo se arrastra al período siguiente o se puede solicitar devolución.</li>
@@ -987,6 +990,10 @@ export default function D104Page() {
               <dt className="text-xs text-gray-400">Declaración</dt>
               <dd className="font-medium text-gray-800">150 - Impuesto al valor agregado</dd>
             </div>
+            <div>
+              <dt className="text-xs text-gray-400">Tipo de declaración</dt>
+              <dd className="font-medium text-gray-800">Autoliquidativa {declType}</dd>
+            </div>
             {plazo && (
               <div className="flex items-end justify-between gap-2">
                 <div>
@@ -1057,7 +1064,7 @@ export default function D104Page() {
             {/* TRIBU-style receipt */}
             <div className="mb-5 space-y-1 rounded-2xl border border-gray-200 bg-gray-50 p-4 font-mono text-xs tabular-nums">
               <div className="mb-3 text-center text-sm font-bold text-gray-700">MINISTERIO DE HACIENDA — TRIBU CR</div>
-              <div className="flex justify-between"><span>Formulario:</span><span className="font-bold">D-104</span></div>
+              <div className="flex justify-between"><span>Formulario:</span><span className="font-bold">D-150 (IVA)</span></div>
               <div className="flex justify-between"><span>Período:</span><span>{monthName} {year}</span></div>
               <div className="flex justify-between"><span>Número de referencia:</span><span className="font-bold text-blue-700">{refNo}</span></div>
               <div className="mt-2 flex justify-between border-t border-gray-300 pt-2">
