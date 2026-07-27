@@ -119,4 +119,21 @@ export class ClassSessionsController {
   dashboard(@Param('id') id: string) {
     return this.svc.dashboard(id);
   }
+
+  // Anuncios del profesor (noticias de la sesión)
+  @Post('class-sessions/:id/announcements')
+  createAnnouncement(
+    @Param('id') id: string,
+    @Body() dto: { title: string; body?: string; kind?: string },
+  ) {
+    return this.svc.createAnnouncement(id, dto);
+  }
+
+  @Delete('class-sessions/:id/announcements/:announcementId')
+  deleteAnnouncement(
+    @Param('id') id: string,
+    @Param('announcementId') announcementId: string,
+  ) {
+    return this.svc.deleteAnnouncement(id, announcementId);
+  }
 }

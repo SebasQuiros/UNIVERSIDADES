@@ -58,4 +58,12 @@ export class ClassSessionsParticipantsController {
   ranking(@Param('id') id: string) {
     return this.svc.ranking(id);
   }
+
+  // Anuncios/noticias de la sesión — visibles a participantes y staff.
+  @Get('class-sessions/:id/announcements')
+  @Roles('STUDENT', 'TEACHER', 'ADMIN', 'SUPERADMIN')
+  @UseGuards(ClassSessionGuard)
+  announcements(@Param('id') id: string) {
+    return this.svc.listAnnouncements(id);
+  }
 }

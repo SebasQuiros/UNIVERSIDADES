@@ -25,8 +25,28 @@ import {
 
 export function PhaseInProgress({ session, onChanged }: { session: DashboardResponse; onChanged: () => void }) {
   const [closing, setClosing] = useState(false);
+  const [annTitle, setAnnTitle] = useState('');
+  const [annBody, setAnnBody] = useState('');
+  const [annKind, setAnnKind] = useState<'INFO' | 'EVENTO' | 'ALERTA'>('INFO');
+  const [publishing, setPublishing] = useState(false);
 
   const onlineNow = session.participants.filter((p) => p.onlineStatus === 'ACTIVE').length;
+
+  async function publishAnnouncement() {
+    if (!annTitle.trim()) { toast.error('Escribí un título para el anuncio'); return; }
+    setPublishing(true);
+    try {
+      await api.post(`/api/v1/class-sessions/${session.id}/announcements`, {
+        title: annTitle.trim(), body: annBody.trim() || undefined, kind: annKind,
+      });
+      toast.success('Anuncio publicado a la sesión');
+      setAnnTitle(''); setAnnBody(''); setAnnKind('INFO');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   async function closeOperations() {
     setClosing(true);
@@ -43,6 +63,31 @@ export function PhaseInProgress({ session, onChanged }: { session: DashboardResp
 
   return (
     <div className="space-y-6">
+      {/* Publicar anuncio/noticia a la sesión */}
+      <SectionCard icon={AlertTriangle} iconTint="#7C3AED" eyebrow="Mission control" title="Publicar anuncio a la sesión"
+        description="Novedades del mercado, eventos económicos o instrucciones. Aparecen en vivo a todos los estudiantes.">
+        <div className="space-y-2.5">
+          <div className="flex flex-wrap gap-2">
+            {(['INFO', 'EVENTO', 'ALERTA'] as const).map((k) => (
+              <button key={k} type="button" onClick={() => setAnnKind(k)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                  annKind === k ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                {k}
+              </button>
+            ))}
+          </div>
+          <input value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} maxLength={200}
+            placeholder="Título del anuncio (ej: Sube el precio del combustible 15%)"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          <textarea value={annBody} onChange={(e) => setAnnBody(e.target.value)} rows={2} maxLength={2000}
+            placeholder="Detalle (opcional)"
+            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          <div className="flex justify-end">
+            <Button onClick={publishAnnouncement} loading={publishing} size="sm">Publicar anuncio</Button>
+          </div>
+        </div>
+      </SectionCard>
+
       {/* Resumen global */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Participantes" value={String(session.participantsCount)} icon={Users} tint="#2563EB" className="cx-pop cx-d1" />

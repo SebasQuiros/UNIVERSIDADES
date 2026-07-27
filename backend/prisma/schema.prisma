@@ -1874,10 +1874,28 @@ model ClassSession {
   companies    ClassSessionCompany[]
   participants ClassSessionParticipant[]
   assignments  ClassSessionAuditAssignment[]
+  announcements SessionAnnouncement[]
 
   @@index([teacherId])
   @@index([status])
   @@map("class_sessions")
+}
+
+// Anuncios/noticias del profesor a la sesión (spec Multiempresa: noticias del
+// mercado / mission control). El profesor publica; los participantes ven un
+// banner vivo (polling).
+model SessionAnnouncement {
+  id             String   @id @default(uuid()) @db.Uuid
+  classSessionId String   @map("class_session_id") @db.Uuid
+  kind           String   @default("INFO")             // INFO | EVENTO | ALERTA
+  title          String
+  body           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  session ClassSession @relation(fields: [classSessionId], references: [id], onDelete: Cascade)
+
+  @@index([classSessionId])
+  @@map("session_announcements")
 }
 
 // Un participante = un estudiante dentro de ESTA sesión. companyId queda

@@ -795,6 +795,34 @@ export class ClassSessionsService {
   }
 
   // ════════════════════════════════════════════════════════════
+  //  Anuncios del profesor (noticias de la sesión) — spec Multiempresa
+  // ════════════════════════════════════════════════════════════
+  async createAnnouncement(id: string, dto: { title: string; body?: string; kind?: string }) {
+    await this.loadOrThrow(id);
+    const title = (dto.title ?? '').trim();
+    if (!title) throw new BadRequestException('El anuncio necesita un título.');
+    const kind = ['INFO', 'EVENTO', 'ALERTA'].includes((dto.kind ?? '').toUpperCase())
+      ? (dto.kind as string).toUpperCase() : 'INFO';
+    return this.prisma.sessionAnnouncement.create({
+      data: { classSessionId: id, title: title.slice(0, 200), body: dto.body?.slice(0, 2000) || null, kind },
+    });
+  }
+
+  async listAnnouncements(id: string) {
+    return this.prisma.sessionAnnouncement.findMany({
+      where:   { classSessionId: id },
+      orderBy: { createdAt: 'desc' },
+      take:    30,
+    });
+  }
+
+  async deleteAnnouncement(id: string, announcementId: string) {
+    await this.loadOrThrow(id);
+    await this.prisma.sessionAnnouncement.deleteMany({ where: { id: announcementId, classSessionId: id } });
+    return { message: 'Anuncio eliminado' };
+  }
+
+  // ════════════════════════════════════════════════════════════
   //  Auditoría (req ya validado por AuditAssignmentGuard)
   // ════════════════════════════════════════════════════════════
 

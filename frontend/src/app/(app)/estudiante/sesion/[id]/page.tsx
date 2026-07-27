@@ -121,6 +121,8 @@ export default function MiSesionPage() {
         actions={<Badge variant="blue">{STATUS_LABELS[me.status]}</Badge>}
       />
 
+      {me.status !== 'DRAFT' && <SessionAnnouncements sessionId={id} />}
+
       {(me.status === 'DRAFT' || me.status === 'LOBBY') && !me.companyId && (
         <LobbyWaitPhase sessionId={id} />
       )}
@@ -448,6 +450,49 @@ function ResultsPendingPhase({ me }: { me: MeResponse }) {
           <IconTile icon={Trophy} tint="#B8860B" size={64} onDark />
         </div>
       </Card>
+    </div>
+  );
+}
+
+// ── Anuncios del profesor (noticias de la sesión) ─────────────────────────────
+interface Announcement { id: string; kind: string; title: string; body: string | null; createdAt: string; }
+
+function SessionAnnouncements({ sessionId }: { sessionId: string }) {
+  const [items, setItems] = useState<Announcement[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      api.get<Announcement[]>(`/api/v1/class-sessions/${sessionId}/announcements`)
+        .then(({ data }) => { if (alive) setItems(Array.isArray(data) ? data : []); })
+        .catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 20000);
+    return () => { alive = false; clearInterval(t); };
+  }, [sessionId]);
+
+  if (items.length === 0) return null;
+  const style = (k: string) => k === 'ALERTA'
+    ? { bg: 'bg-red-50', bd: 'border-red-200', tx: 'text-red-800', chip: 'bg-red-600' }
+    : k === 'EVENTO'
+    ? { bg: 'bg-purple-50', bd: 'border-purple-200', tx: 'text-purple-800', chip: 'bg-purple-600' }
+    : { bg: 'bg-blue-50', bd: 'border-blue-200', tx: 'text-blue-800', chip: 'bg-blue-600' };
+
+  return (
+    <div className="mb-6 space-y-2">
+      {items.slice(0, 3).map((a) => {
+        const s = style(a.kind);
+        return (
+          <div key={a.id} className={cn('flex items-start gap-3 rounded-card border px-4 py-3', s.bg, s.bd)}>
+            <span className={cn('mt-0.5 flex-shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white', s.chip)}>{a.kind}</span>
+            <div className="min-w-0">
+              <p className={cn('text-sm font-bold', s.tx)}>{a.title}</p>
+              {a.body && <p className="mt-0.5 text-sm text-gray-600">{a.body}</p>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
