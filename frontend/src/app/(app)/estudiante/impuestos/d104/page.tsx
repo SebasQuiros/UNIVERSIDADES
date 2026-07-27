@@ -128,6 +128,9 @@ export default function D104Page() {
   //  desactualizado al modal de "Presentar declaración").
   const result: D104Result = useMemo(() => calcD104(form), [form]);
   const [declId, setDeclId]       = useState<string | null>(existingId);
+  // Pago diferido del impuesto por ventas a crédito (D-150 real). Educativo:
+  // se registra la elección; no altera el cálculo simplificado del IVA neto.
+  const [pagoDiferido, setPagoDiferido] = useState<'NO' | 'SI'>('NO');
   const [status, setStatus]       = useState<'DRAFT' | 'SUBMITTED'>('DRAFT');
   const [refNo, setRefNo]         = useState<string | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -165,6 +168,7 @@ export default function D104Page() {
         setPeriod(data.period);
         setStatus(data.status);
         setRefNo(data.referenceNo);
+        if (fd.pagoDiferido === 'SI' || fd.pagoDiferido === 'NO') setPagoDiferido(fd.pagoDiferido);
         if (data.status === 'SUBMITTED') {
           setStep(3);
           setShowResult(true);
@@ -221,7 +225,7 @@ export default function D104Page() {
 
   async function autoSave() {
     if (status === 'SUBMITTED') return;
-    const formData = toNumeric(form);
+    const formData = { ...toNumeric(form), pagoDiferido };
     try {
       if (declId) {
         await api.patch(`/api/v1/tax-declarations/${declId}`, { formData });
@@ -270,7 +274,7 @@ export default function D104Page() {
     setSubmitting(true);
     try {
       let id = declId;
-      const formData = toNumeric(form);
+      const formData = { ...toNumeric(form), pagoDiferido };
 
       if (!id) {
         const { data } = await api.post<any>('/api/v1/tax-declarations', {
@@ -525,6 +529,27 @@ export default function D104Page() {
             iconTint="#047857"
             className="cx-pop"
           >
+            {/* Pago diferido del impuesto por ventas a crédito (D-150 real) */}
+            <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+              <p className="mb-1 text-sm font-semibold text-gray-800">
+                Pago diferido del impuesto por ventas a crédito
+              </p>
+              <p className="mb-3 text-xs leading-relaxed text-gray-500">
+                Indicá si te acogés al esquema de pago diferido del IVA por ventas a crédito
+                del período (o de períodos anteriores). En la mayoría de los casos educativos
+                se deja en “No lo utilizaré”.
+              </p>
+              <select
+                value={pagoDiferido}
+                onChange={(e) => setPagoDiferido(e.target.value as 'NO' | 'SI')}
+                disabled={isSubmitted}
+                className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 disabled:opacity-60"
+              >
+                <option value="NO">No lo utilizaré</option>
+                <option value="SI">Sí lo utilizaré</option>
+              </select>
+            </div>
+
             <Nota>
               Ingresa la <strong>base imponible</strong> de tus compras gravadas.
               El IVA pagado se convierte en crédito fiscal.
