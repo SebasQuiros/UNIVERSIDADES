@@ -758,6 +758,15 @@ export class ClassSessionsService {
       return acc;
     }, {});
 
+    // Actividad operativa por empresa (cap. 10: el profesor ve quién trabaja).
+    const companyIds = groups.map((g) => g.companyId);
+    const [entryCounts, invoiceCounts] = await Promise.all([
+      this.prisma.journalEntry.groupBy({ by: ['companyId'], where: { companyId: { in: companyIds } }, _count: true }),
+      this.prisma.invoice.groupBy({ by: ['companyId'], where: { companyId: { in: companyIds } }, _count: true }),
+    ]);
+    const entryMap = entryCounts.reduce<Record<string, number>>((a, c) => { a[c.companyId] = c._count as number; return a; }, {});
+    const invoiceMap = invoiceCounts.reduce<Record<string, number>>((a, c) => { a[c.companyId] = c._count as number; return a; }, {});
+
     const rows = await Promise.all(groups.map(async (g) => {
       let val: any = null;
       try { val = await this.companies.getValuation(g.companyId); } catch { /* sin datos aún */ }
@@ -783,6 +792,7 @@ export class ClassSessionsService {
         archetype: g.archetype,
         memberCount: countMap[g.companyId] ?? 0,
         onlineCount: onlineMap[g.companyId] ?? 0,
+        activity: { entries: entryMap[g.companyId] ?? 0, invoices: invoiceMap[g.companyId] ?? 0 },
         score,
         sharePrice: val?.sharePrice ?? null,
         marketCap:  val?.marketCap ?? null,

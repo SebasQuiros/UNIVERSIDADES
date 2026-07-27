@@ -11,6 +11,7 @@ interface RankRow {
   position: number; companyId: string; name: string; archetype: string;
   score: number; sharePrice: number | null; rating: string | null;
   memberCount?: number; onlineCount?: number;
+  activity?: { entries: number; invoices: number };
   metrics: { equity: number; netIncome: number; netMargin: number; currentRatio: number; healthScore: number };
   breakdown: { salud: number; rentabilidad: number; solvencia: number };
 }
@@ -97,6 +98,8 @@ export function SessionLeaderboard({
                     <span>Solvencia <b className="text-gray-700">{r.breakdown.solvencia}</b></span>
                     <span>Patrimonio <b className="text-gray-700">{fmt0(r.metrics.equity)}</b></span>
                     {r.sharePrice != null && <span>Acción <b className="text-gray-700">{fmt0(r.sharePrice)}</b></span>}
+                    {r.activity && <span>Asientos <b className="text-gray-700">{r.activity.entries}</b></span>}
+                    {r.activity && <span>Facturas <b className="text-gray-700">{r.activity.invoices}</b></span>}
                   </div>
                 )}
               </div>
