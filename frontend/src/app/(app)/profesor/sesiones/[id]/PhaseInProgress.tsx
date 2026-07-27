@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { IconTile } from '@/components/ui/IconTile';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { StatCard } from '@/components/ui/StatCard';
+import { SessionLeaderboard } from '@/components/session/SessionLeaderboard';
 import type { DashboardResponse } from './types';
 import {
   Users, Building2, Wifi, ShieldCheck, ArrowRight, CheckCircle2, AlertTriangle,
@@ -87,6 +88,9 @@ export function PhaseInProgress({ session, onChanged }: { session: DashboardResp
           </div>
         </div>
       </SectionCard>
+
+      {/* Ranking en vivo — mission control ve la competencia entre empresas */}
+      <SessionLeaderboard sessionId={session.id} expandedMetrics refreshMs={12000} />
 
       {/* Resumen global */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
