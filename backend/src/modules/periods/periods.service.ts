@@ -3,7 +3,7 @@ import {
   NotFoundException, ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { JournalSource, Prisma, PeriodStatus } from '@prisma/client';
+import { JournalSource, Prisma, PeriodStatus, PeriodType } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreatePeriodDto, ClosePeriodDto } from './dto/periods.dto';
 
@@ -467,10 +467,27 @@ export class PeriodsService {
     });
 
     if (!period) {
-      throw new BadRequestException(
-        `No existe un período contable que cubra la fecha ${entryDate.toLocaleDateString('es-CR')}. ` +
-        `Cree un período contable antes de registrar asientos.`,
-      );
+      // Contexto educativo: en vez de bloquear al estudiante por un período que
+      // no sabía que debía crear, se crea automáticamente un período ANUAL
+      // abierto que cubra la fecha del asiento (mismo comportamiento que ya
+      // hacía el dashboard, pero garantizado también al entrar directo al Diario).
+      const y = entryDate.getFullYear();
+      await this.prisma.accountingPeriod.create({
+        data: {
+          companyId,
+          name:      `Período ${y}`,
+          type:      PeriodType.ANNUAL,
+          startDate: new Date(y, 0, 1),
+          endDate:   new Date(y, 11, 31, 23, 59, 59),
+          status:    PeriodStatus.OPEN,
+        },
+      });
+      await this.prisma.journalSequence.upsert({
+        where:  { companyId },
+        update: {},
+        create: { companyId, lastNumber: 0 },
+      });
+      return; // período recién creado → OK
     }
 
     if (period.status === PeriodStatus.CLOSED) {
