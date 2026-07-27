@@ -120,6 +120,15 @@ export class ClassSessionsController {
     return this.svc.dashboard(id);
   }
 
+  // Config de economía de la sesión (cierre comercial, capital ref., moneda)
+  @Patch('class-sessions/:id/config')
+  updateConfig(
+    @Param('id') id: string,
+    @Body() dto: { commercialCloseAt?: string | null; initialCapital?: number | null; currency?: string },
+  ) {
+    return this.svc.updateConfig(id, dto);
+  }
+
   // Anuncios del profesor (noticias de la sesión)
   @Post('class-sessions/:id/announcements')
   createAnnouncement(

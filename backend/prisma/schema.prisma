@@ -1860,6 +1860,11 @@ model ClassSession {
   minGroupSize  Int                @default(3) @map("min_group_size")
   maxGroupSize  Int                @default(6) @map("max_group_size")
   settings      Json               @default("{}")                        // pesos del score, etc.
+  // Config de economía/sesión (cap. 3) — de referencia/visualización; NO siembra
+  // contabilidad (los saldos de apertura vienen del ejercicio, no de acá).
+  commercialCloseAt DateTime?      @map("commercial_close_at")            // cierre del período comercial (cronómetro)
+  initialCapital    Decimal?       @map("initial_capital") @db.Decimal(14,2)
+  currency          String         @default("CRC")
   startedAt     DateTime?          @map("started_at")
   closedOpsAt   DateTime?          @map("closed_ops_at")
   snapshotAt    DateTime?          @map("snapshot_at")

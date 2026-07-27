@@ -716,6 +716,9 @@ export class ClassSessionsService {
       status: session.status,
       code: session.code,
       participantsCount,
+      commercialCloseAt: session.commercialCloseAt,
+      currency: session.currency,
+      initialCapital: session.initialCapital,
       groups: groups.map(g => ({
         companyId: g.companyId,
         name: g.company.name,
@@ -723,6 +726,21 @@ export class ClassSessionsService {
         memberCount: countMap[g.companyId] ?? 0,
       })),
     };
+  }
+
+  /** Config de economía de la sesión (cap. 3). Solo referencia/visualización;
+   *  NO siembra contabilidad. */
+  async updateConfig(id: string, dto: { commercialCloseAt?: string | null; initialCapital?: number | null; currency?: string }) {
+    await this.loadOrThrow(id);
+    return this.prisma.classSession.update({
+      where: { id },
+      data: {
+        ...(dto.commercialCloseAt !== undefined && { commercialCloseAt: dto.commercialCloseAt ? new Date(dto.commercialCloseAt) : null }),
+        ...(dto.initialCapital !== undefined && { initialCapital: dto.initialCapital }),
+        ...(dto.currency && { currency: dto.currency.slice(0, 8) }),
+      },
+      select: { id: true, commercialCloseAt: true, initialCapital: true, currency: true },
+    });
   }
 
   // ════════════════════════════════════════════════════════════

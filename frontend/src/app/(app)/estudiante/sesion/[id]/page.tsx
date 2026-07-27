@@ -27,6 +27,7 @@ import { SceneEmptyBox, ArtInventory, ArtReport, SceneStudentDesk } from '@/comp
 import { SessionLeaderboard } from '@/components/session/SessionLeaderboard';
 import { NegotiationsPanel } from '@/components/session/NegotiationsPanel';
 import { MarketDirectory } from '@/components/session/MarketDirectory';
+import { CommercialCountdown } from '@/components/session/CommercialCountdown';
 import {
   Users, Building2, ArrowRight, ShieldCheck, ChevronRight,
   ExternalLink, Radar, Clock, Lock, Hourglass, Trophy,
@@ -124,6 +125,7 @@ export default function MiSesionPage() {
         actions={<Badge variant="blue">{STATUS_LABELS[me.status]}</Badge>}
       />
 
+      {me.status === 'EN_CURSO' && <CommercialCountdown sessionId={id} />}
       {me.status !== 'DRAFT' && <SessionAnnouncements sessionId={id} />}
 
       {(me.status === 'DRAFT' || me.status === 'LOBBY') && !me.companyId && (

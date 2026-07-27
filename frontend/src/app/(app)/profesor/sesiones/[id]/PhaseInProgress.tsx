@@ -30,8 +30,24 @@ export function PhaseInProgress({ session, onChanged }: { session: DashboardResp
   const [annBody, setAnnBody] = useState('');
   const [annKind, setAnnKind] = useState<'INFO' | 'EVENTO' | 'ALERTA'>('INFO');
   const [publishing, setPublishing] = useState(false);
+  const [closeAt, setCloseAt] = useState('');
+  const [savingCfg, setSavingCfg] = useState(false);
 
   const onlineNow = session.participants.filter((p) => p.onlineStatus === 'ACTIVE').length;
+
+  async function patchClose(iso: string | null) {
+    setSavingCfg(true);
+    try {
+      await api.patch(`/api/v1/class-sessions/${session.id}/config`, { commercialCloseAt: iso });
+      toast.success(iso ? 'Cierre comercial programado' : 'Cronómetro quitado');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSavingCfg(false);
+    }
+  }
+  const setInMinutes = (m: number) => patchClose(new Date(Date.now() + m * 60000).toISOString());
+  const setFromInput = () => patchClose(closeAt ? new Date(closeAt).toISOString() : null);
 
   async function publishAnnouncement() {
     if (!annTitle.trim()) { toast.error('Escribí un título para el anuncio'); return; }
@@ -86,6 +102,23 @@ export function PhaseInProgress({ session, onChanged }: { session: DashboardResp
           <div className="flex justify-end">
             <Button onClick={publishAnnouncement} loading={publishing} size="sm">Publicar anuncio</Button>
           </div>
+        </div>
+      </SectionCard>
+
+      {/* Cierre del período comercial (cronómetro para los estudiantes) */}
+      <SectionCard icon={AlertTriangle} iconTint="#2563EB" eyebrow="Economía" title="Cierre del período comercial"
+        description="Programá un cronómetro visible para todos: da urgencia y marca cuándo dejan de negociar.">
+        <div className="flex flex-wrap items-center gap-2">
+          {[15, 30, 60].map((m) => (
+            <Button key={m} size="sm" variant="secondary" loading={savingCfg} onClick={() => setInMinutes(m)}>
+              En {m} min
+            </Button>
+          ))}
+          <input type="datetime-local" value={closeAt} onChange={(e) => setCloseAt(e.target.value)}
+            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm" />
+          <Button size="sm" loading={savingCfg} onClick={setFromInput}>Fijar</Button>
+          <button onClick={() => patchClose(null)}
+            className="text-xs text-gray-400 hover:text-gray-600">Quitar cronómetro</button>
         </div>
       </SectionCard>
 
