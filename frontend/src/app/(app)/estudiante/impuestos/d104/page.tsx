@@ -307,6 +307,17 @@ export default function D104Page() {
   const monthName = MONTHS[parseInt(month) - 1] ?? '';
   const isSubmitted = status === 'SUBMITTED';
 
+  // Plazo de presentación del IVA en CR: del 1 al 15 del mes SIGUIENTE al período.
+  const plazo = useMemo(() => {
+    const y = parseInt(year, 10), m = parseInt(month, 10);
+    if (!y || !m) return null;
+    const inicio = new Date(y, m, 1);          // 1º del mes siguiente (m es 1-based → índice m = siguiente)
+    const fin    = new Date(y, m, 15);          // día 15 del mes siguiente
+    const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const fueraDePlazo = new Date() > fin && !isSubmitted;
+    return { inicioLabel: fmt(inicio), finLabel: fmt(fin), fueraDePlazo };
+  }, [year, month, isSubmitted]);
+
   // ── Validation helper ──────────────────────────────────────────────────────
   function getStepErrors(): string[] {
     const errs: string[] = [];
@@ -334,10 +345,38 @@ export default function D104Page() {
         illustration={<ArtInvoice size={150} className="lp-drift" />}
       />
 
-      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 lg:grid-cols-[210px_minmax(0,1fr)_300px]">
 
-        {/* Wizard stepper */}
-        <div className="rounded-card border border-gray-200/70 bg-white p-5 shadow-card">
+        {/* ── Navegación lateral de pasos (estilo TRIBU) ── */}
+        <nav className="hidden lg:block">
+          <div className="sticky top-6 space-y-1">
+            {WIZARD_STEPS.map((s, i) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => { if (!isSubmitted || i <= step) setStep(i); }}
+                className={cn(
+                  'flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm transition-colors',
+                  i === step ? 'bg-blue-50 font-semibold text-blue-700' : 'text-gray-500 hover:bg-gray-100',
+                )}
+              >
+                <span className={cn(
+                  'flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums',
+                  i === step ? 'bg-blue-600 text-white' : i < step ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500',
+                )}>
+                  {i < step ? '✓' : i + 1}
+                </span>
+                <span className="leading-tight">{s.label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        {/* ── Columna central: contenido del paso ── */}
+        <div className="min-w-0 space-y-6">
+
+        {/* Wizard stepper (móvil) */}
+        <div className="rounded-card border border-gray-200/70 bg-white p-4 shadow-card lg:hidden">
           <WizardStepper steps={WIZARD_STEPS} currentStep={step} />
         </div>
 
@@ -926,6 +965,66 @@ export default function D104Page() {
             )}
           </div>
         </div>
+        </div>{/* fin columna central */}
+
+        {/* ── Panel Resumen (estilo TRIBU D-150) ── */}
+        <aside className="h-fit rounded-card border border-gray-200/70 bg-white p-5 shadow-card lg:sticky lg:top-6">
+          <p className="mb-3 text-base font-bold text-gray-900">Resumen</p>
+          <dl className="space-y-2.5 text-sm">
+            <div>
+              <dt className="text-xs text-gray-400">Identificación</dt>
+              <dd className="font-medium text-gray-800">{perfil?.cedula || '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-gray-400">Nombre</dt>
+              <dd className="font-medium text-gray-800">{perfil?.razonSocial || 'Estudiante (práctica)'}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-gray-400">Período</dt>
+              <dd className="font-medium text-gray-800">{monthName} {year}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-gray-400">Declaración</dt>
+              <dd className="font-medium text-gray-800">150 - Impuesto al valor agregado</dd>
+            </div>
+            {plazo && (
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <dt className="text-xs text-gray-400">Fecha inicio</dt>
+                  <dd className="font-medium tabular-nums text-gray-800">{plazo.inicioLabel}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-400">Fecha fin</dt>
+                  <dd className="font-medium tabular-nums text-gray-800">{plazo.finLabel}</dd>
+                </div>
+                {plazo.fueraDePlazo && (
+                  <span className="pb-0.5 text-xs font-semibold text-red-600">Fuera de plazo</span>
+                )}
+              </div>
+            )}
+          </dl>
+
+          <div className="my-4 border-t border-dashed border-gray-200" />
+
+          <dl className="space-y-2.5 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-gray-600">Total monto del impuesto</dt>
+              <dd><MoneyPop value={result?.cas301_debitoFiscal ?? 0} className="font-semibold text-gray-800" /></dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-gray-600">Total crédito fiscal</dt>
+              <dd><MoneyPop value={result?.cas302_creditoFiscal ?? 0} className="font-semibold text-gray-800" /></dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-gray-600">Total gasto para utilidades</dt>
+              <dd><MoneyPop value={Math.max(0, (result?.totalCompras ?? 0) - (result?.cas302_creditoFiscal ?? 0))} className="font-semibold text-gray-800" /></dd>
+            </div>
+          </dl>
+
+          <p className="mt-4 rounded-lg bg-gold-50 px-3 py-2 text-[0.68rem] leading-relaxed text-gold-900">
+            Simulación educativa · no es una presentación real ante Hacienda.
+          </p>
+        </aside>
       </div>
 
       {/* PreSubmit modal */}
