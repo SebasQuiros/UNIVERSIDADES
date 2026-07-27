@@ -44,12 +44,16 @@ const MONTHS = [
   'Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre',
 ];
 
+// Pasos del D-150 IVA (estructura oficial de TRIBU-CR + un paso inicial de datos).
 const WIZARD_STEPS = [
-  { id: 'info',     label: 'Información General', shortLabel: 'Info' },
-  { id: 'ventas',   label: 'Ventas',               shortLabel: 'Ventas' },
-  { id: 'compras',  label: 'Compras',              shortLabel: 'Compras' },
-  { id: 'resumen',  label: 'Resumen',              shortLabel: 'Resumen' },
+  { id: 'info',           label: 'Información general',  shortLabel: 'Info' },
+  { id: 'ventas',         label: 'Ventas generales',    shortLabel: 'Ventas' },
+  { id: 'pago-diferido',  label: 'Pago diferido',       shortLabel: 'Pago dif.' },
+  { id: 'compras',        label: 'Compras totales',     shortLabel: 'Compras' },
+  { id: 'credito',        label: 'Crédito fiscal',      shortLabel: 'Crédito' },
+  { id: 'calculo',        label: 'Cálculo del impuesto', shortLabel: 'Cálculo' },
 ];
+const STEP_INFO = 0, STEP_VENTAS = 1, STEP_PAGO_DIFERIDO = 2, STEP_COMPRAS = 3, STEP_CREDITO = 4, STEP_CALCULO = 5;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUB-COMPONENTS (presentación)
@@ -170,7 +174,7 @@ export default function D104Page() {
         setRefNo(data.referenceNo);
         if (fd.pagoDiferido === 'SI' || fd.pagoDiferido === 'NO') setPagoDiferido(fd.pagoDiferido);
         if (data.status === 'SUBMITTED') {
-          setStep(3);
+          setStep(STEP_CALCULO);
           setShowResult(true);
         }
       })
@@ -306,7 +310,7 @@ export default function D104Page() {
   // ── Validation helper ──────────────────────────────────────────────────────
   function getStepErrors(): string[] {
     const errs: string[] = [];
-    if (step === 3) {
+    if (step === STEP_CALCULO) {
       if (!perfil?.cedula) errs.push('Completa el perfil del contribuyente (cédula jurídica/física).');
       if (!perfil?.razonSocial) errs.push('Ingresa la razón social en el perfil.');
     }
@@ -519,26 +523,25 @@ export default function D104Page() {
           </SectionCard>
         )}
 
-        {/* ── STEP 2: Compras ─────────────────────────────────────────────── */}
-        {step === 2 && (
+        {/* ── STEP: Pago diferido ─────────────────────────────────────────── */}
+        {step === STEP_PAGO_DIFERIDO && (
           <SectionCard
-            eyebrow="Sección II"
-            title="Compras y crédito fiscal"
-            description="Lo que pagaste de IVA a tus proveedores."
-            icon={ShoppingCart}
-            iconTint="#047857"
+            eyebrow="Pago diferido"
+            title="Pago diferido del impuesto por ventas a crédito"
+            description="Del período a presentar o de períodos anteriores."
+            icon={Calculator}
+            iconTint="#7C3AED"
             className="cx-pop"
           >
-            {/* Pago diferido del impuesto por ventas a crédito (D-150 real) */}
-            <div className="mb-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
-              <p className="mb-1 text-sm font-semibold text-gray-800">
-                Pago diferido del impuesto por ventas a crédito
-              </p>
-              <p className="mb-3 text-xs leading-relaxed text-gray-500">
-                Indicá si te acogés al esquema de pago diferido del IVA por ventas a crédito
-                del período (o de períodos anteriores). En la mayoría de los casos educativos
-                se deja en “No lo utilizaré”.
-              </p>
+            <p className="mb-4 text-sm leading-relaxed text-gray-600">
+              Seleccioná “Sí lo utilizaré” si deseás acogerte al esquema del pago diferido del
+              impuesto por ventas a crédito, o si requerís cancelar el impuesto de períodos
+              anteriores bajo esta modalidad. De lo contrario, dejalo en “No lo utilizaré”.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-t border-gray-100 pt-4">
+              <label className="text-sm font-medium text-gray-700">
+                Quiero realizar el pago diferido del impuesto por ventas a crédito del período
+              </label>
               <select
                 value={pagoDiferido}
                 onChange={(e) => setPagoDiferido(e.target.value as 'NO' | 'SI')}
@@ -549,7 +552,19 @@ export default function D104Page() {
                 <option value="SI">Sí lo utilizaré</option>
               </select>
             </div>
+          </SectionCard>
+        )}
 
+        {/* ── STEP: Compras totales ───────────────────────────────────────── */}
+        {step === STEP_COMPRAS && (
+          <SectionCard
+            eyebrow="Sección II"
+            title="Compras totales"
+            description="Lo que pagaste de IVA a tus proveedores (crédito fiscal)."
+            icon={ShoppingCart}
+            iconTint="#047857"
+            className="cx-pop"
+          >
             <Nota>
               Ingresa la <strong>base imponible</strong> de tus compras gravadas.
               El IVA pagado se convierte en crédito fiscal.
@@ -585,11 +600,29 @@ export default function D104Page() {
                 attachments={attachments} onAttachmentAdded={a => setAttachments(p => [...p, a])}
                 onAttachmentRemoved={id => setAttachments(p => p.filter(a => a.id !== id))} disabled={isSubmitted} />
             </Casilla>
+          </SectionCard>
+        )}
 
-            {/* Crédito fiscal */}
-            <div className="mt-4 space-y-1 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+        {/* ── STEP: Crédito fiscal ────────────────────────────────────────── */}
+        {step === STEP_CREDITO && (
+          <SectionCard
+            eyebrow="Sección"
+            title="Crédito fiscal"
+            description="El IVA soportado en tus compras que podés deducir."
+            icon={Receipt}
+            iconTint="#047857"
+            className="cx-pop"
+          >
+            <Nota>
+              El crédito fiscal para el IVA es el impuesto soportado en las compras con derecho a
+              crédito. La diferencia entre el impuesto soportado y el crédito fiscal es el importe
+              de costo o gasto para utilidades.
+            </Nota>
+
+            {/* Desglose por tarifa */}
+            <div className="mt-2 space-y-1 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
               <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-700">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Crédito fiscal — IVA pagado en compras
+                <CheckCircle2 className="h-3.5 w-3.5" /> IVA pagado en compras, por tarifa
               </div>
               {result?.ivaCompras && [
                 { t: '13%', v: result.ivaCompras.t13 }, { t: '8%', v: result.ivaCompras.t8 },
@@ -601,16 +634,31 @@ export default function D104Page() {
                   <MoneyPop value={v} />
                 </div>
               ))}
-              <div className="flex items-center justify-between border-t border-emerald-200 pt-2 text-sm font-bold text-emerald-800">
-                <span>Casilla 302 — Total crédito fiscal</span>
+              {(!result?.ivaCompras || result.cas302_creditoFiscal === 0) && (
+                <p className="text-xs text-emerald-700/70">Sin crédito fiscal registrado en el período.</p>
+              )}
+            </div>
+
+            {/* Totales del crédito fiscal (estilo D-150) */}
+            <div className="mt-4 divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white px-4">
+              <div className="flex items-center justify-between py-3 text-sm text-gray-600">
+                <span>Total importe de compras con IVA soportado</span>
+                <MoneyPop value={result?.totalCompras ?? 0} className="font-medium text-gray-800" />
+              </div>
+              <div className="flex items-center justify-between py-3 text-sm text-gray-600">
+                <span>Total impuesto soportado</span>
+                <MoneyPop value={result?.cas302_creditoFiscal ?? 0} className="font-medium text-gray-800" />
+              </div>
+              <div className="flex items-center justify-between py-3 text-sm font-bold text-emerald-800">
+                <span>Total crédito fiscal del período</span>
                 <MoneyPop value={result?.cas302_creditoFiscal ?? 0} className="text-base" />
               </div>
             </div>
           </SectionCard>
         )}
 
-        {/* ── STEP 3: Resumen ─────────────────────────────────────────────── */}
-        {step === 3 && (
+        {/* ── STEP: Cálculo del impuesto ──────────────────────────────────── */}
+        {step === STEP_CALCULO && (
           <div className="space-y-5">
             {/* Resultado del período */}
             <SectionCard
