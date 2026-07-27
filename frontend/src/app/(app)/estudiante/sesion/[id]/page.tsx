@@ -25,6 +25,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SceneEmptyBox, ArtInventory, ArtReport, SceneStudentDesk } from '@/components/illustrations';
 import { SessionLeaderboard } from '@/components/session/SessionLeaderboard';
+import { NegotiationsPanel } from '@/components/session/NegotiationsPanel';
 import {
   Users, Building2, ArrowRight, ShieldCheck, ChevronRight,
   ExternalLink, Radar, Clock, Lock, Hourglass, Trophy,
@@ -268,7 +269,10 @@ function MiEmpresaPhase({ me, waitingToStart, sessionId }: { me: MeResponse; wai
       )}
 
       {!waitingToStart && sessionId && (
-        <SessionLeaderboard sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
+        <>
+          <NegotiationsPanel sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
+          <SessionLeaderboard sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
+        </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
