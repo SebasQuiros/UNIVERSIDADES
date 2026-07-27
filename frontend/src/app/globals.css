@@ -686,3 +686,29 @@ body {
     color: #60A5FA !important;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Calma SOLO en Tributación — la pantalla "bailaba" (deriva/rebote/entradas
+   escalonadas) y costaba leer. Dentro de `.tribu-calm` se apagan las
+   animaciones ambientales infinitas y las entradas con retardo, dejando todo
+   fijo y ordenado como en el portal real. Hovers/press se conservan.
+   Solo aplica a las páginas del módulo de impuestos (que llevan esta clase).
+   ────────────────────────────────────────────────────────────────────────── */
+.tribu-calm .lp-drift, .tribu-calm .lp-drift-2,
+.tribu-calm .lp-float, .tribu-calm .lp-bounce,
+.tribu-calm .lp-pulse, .tribu-calm .lp-tilt,
+.tribu-calm .cx-bounce, .tribu-calm .cx-float,
+.tribu-calm .cx-wiggle-loop, .tribu-calm .cx-ping, .tribu-calm .cx-count,
+.tribu-calm .cx-pop, .tribu-calm .lp-in,
+.tribu-calm .cx-d1, .tribu-calm .cx-d2, .tribu-calm .cx-d3,
+.tribu-calm .cx-d4, .tribu-calm .cx-d5, .tribu-calm .cx-d6,
+.tribu-calm .lp-in-d1, .tribu-calm .lp-in-d2, .tribu-calm .lp-in-d3,
+.tribu-calm .lp-in-d4, .tribu-calm .lp-in-d5, .tribu-calm .lp-in-d6, .tribu-calm .lp-in-d7 {
+  animation: none !important;
+  animation-delay: 0s !important;
+}
+.tribu-calm .lp-drift, .tribu-calm .lp-drift-2,
+.tribu-calm .lp-float, .tribu-calm .lp-bounce, .tribu-calm .lp-tilt {
+  transform: none !important;
+}
+.tribu-calm .animate-pulse { animation: none !important; }
