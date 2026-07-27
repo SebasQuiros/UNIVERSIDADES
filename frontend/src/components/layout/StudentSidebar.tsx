@@ -219,6 +219,9 @@ export function StudentSidebar() {
     { key: 'd-pen',  label: 'Pendientes de calificar', icon: ClipboardCheck,  href: '/profesor/pendientes', path: '/profesor/pendientes', badge: pending },
   ];
   const CONTADOR_GROUPS: Group[] = [
+    { key: 'c-gen', label: 'General', icon: LayoutDashboard, children: [
+      { label: 'Resumen de la empresa', tab: 'dashboard' },
+    ]},
     { key: 'c-ing', label: 'Ciclo de ingresos', icon: Coins, children: [
       { label: 'Clientes',          tab: 'clients' },
       { label: 'Facturas emitidas', tab: 'invoices' },
@@ -425,22 +428,25 @@ export function StudentSidebar() {
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
           <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(212,160,23,0.12)', border: '1px solid rgba(212,160,23,0.3)', color: '#F5D67B' }}>
             {contadorCompanyId
-              ? 'Estás operando una empresa-cliente. El menú de abajo navega SUS libros.'
-              : 'Espacio Contador — tu contabilidad separada por empresa. Abrí una empresa-cliente para operar sus libros.'}
+              ? 'Estás operando una empresa-cliente. Este menú navega SUS libros contables.'
+              : 'Espacio Contador — tu contabilidad separada por empresa. Seleccioná una empresa-cliente para operar sus libros.'}
           </div>
           <div className="space-y-0.5 mb-4">{CONTADOR_TOP.map(renderGroup)}</div>
-          {/* Con una empresa-cliente abierta, la barra de pestañas de esa página
-              YA es la navegación completa de sus libros (Resumen/Clientes/
-              Proveedores/.../Mayorización) — repetir eso acá era vista doble
-              (dos navegaciones distintas apuntando al mismo ?tab=). Solo mostramos
-              este submenú como preview/atajo mientras NO hay empresa abierta. */}
-          {!contadorCompanyId && (
+          {/* Menú ÚNICO: con una empresa abierta, el sidebar ES la navegación de
+              sus libros (deep-link ?tab=); la página ya no repite una barra de
+              pestañas. Sin empresa abierta no se muestra menú de libros (no hay
+              a qué navegar) — primero se selecciona la empresa. */}
+          {contadorCompanyId ? (
             <>
               <p className="px-2.5 mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: GOLD_EYEBROW }}>
-                Contabilidad · abrí una empresa
+                Libros de la empresa
               </p>
               <div className="space-y-0.5">{CONTADOR_GROUPS.map(renderGroup)}</div>
             </>
+          ) : (
+            <div className="mx-0.5 px-2.5 py-3 rounded-md text-[10.5px] leading-snug text-center" style={{ border: `1px dashed ${SIDE_LINE}`, color: TXT_FAINT }}>
+              Seleccioná una empresa-cliente para ver y operar sus libros contables.
+            </div>
           )}
         </nav>
       ) : (

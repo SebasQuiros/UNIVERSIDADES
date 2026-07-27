@@ -98,11 +98,6 @@ export default function PracticeWorkspacePage() {
     );
   }
 
-  const selectTab = (id: Tab) => {
-    setTab(id);
-    router.replace(`/estudiante/contador/${companyId}?tab=${id}`, { scroll: false });
-  };
-
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Cabecera de la empresa */}
@@ -127,26 +122,9 @@ export default function PracticeWorkspacePage() {
         </div>
       </div>
 
-      {/* Barra de módulos (tabs internos) */}
-      <div className="border-b border-gray-100 bg-white overflow-x-auto">
-        <div className="flex gap-1 px-4 lg:px-6 py-2 min-w-max">
-          {TABS.map((t) => {
-            const on = t.id === tab;
-            const Icon = t.icon;
-            return (
-              <button key={t.id} onClick={() => selectTab(t.id)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all"
-                style={on
-                  ? { background: '#D4A017', color: '#1a1205' }
-                  : { color: '#64748b' }}
-                onMouseEnter={(e) => { if (!on) (e.currentTarget as HTMLElement).style.background = '#F8FAFC'; }}
-                onMouseLeave={(e) => { if (!on) (e.currentTarget as HTMLElement).style.background = ''; }}>
-                <Icon className="w-4 h-4" /> {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* La navegación de módulos vive en el menú lateral (Libros de la empresa),
+          para no duplicar menús. Aquí solo se muestra el contenido del módulo
+          seleccionado vía ?tab=. */}
 
       {/* Contenido del módulo */}
       <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-gray-50/50">
