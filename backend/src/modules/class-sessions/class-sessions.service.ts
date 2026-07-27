@@ -6,6 +6,7 @@ import { ClassSessionStatus, TaxDeclarationType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CompanyMembershipsService } from '../company-memberships/company-memberships.service';
 import { ReportsService } from '../reports/reports.service';
+import { CompaniesService } from '../companies/companies.service';
 import { ClassSessionsOracleService } from './class-sessions-oracle.service';
 import { ringAssignments } from './class-sessions.logic';
 import {
@@ -32,6 +33,7 @@ export class ClassSessionsService {
     private readonly memberships: CompanyMembershipsService,
     private readonly reports: ReportsService,
     private readonly oracle: ClassSessionsOracleService,
+    private readonly companies: CompaniesService,
   ) {}
 
   // ════════════════════════════════════════════════════════════
@@ -720,6 +722,75 @@ export class ClassSessionsService {
         archetype: g.archetype,
         memberCount: countMap[g.companyId] ?? 0,
       })),
+    };
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  Ranking empresarial (Enterprise Score 0–1000) — spec cap. 9
+  // ════════════════════════════════════════════════════════════
+  // Score continuo derivado de la contabilidad real de cada empresa de la
+  // sesión (reutiliza getValuation). Read-only, sin mutar nada.
+  async ranking(id: string) {
+    const session = await this.loadOrThrow(id);
+    const groups = await this.prisma.classSessionCompany.findMany({
+      where:   { classSessionId: id },
+      include: { company: { select: { name: true } } },
+    });
+    const memberCounts = await this.prisma.classSessionParticipant.groupBy({
+      by: ['companyId'],
+      where: { classSessionId: id, companyId: { not: null } },
+      _count: true,
+    });
+    const countMap = memberCounts.reduce<Record<string, number>>((acc, c) => {
+      if (c.companyId) acc[c.companyId] = c._count as number;
+      return acc;
+    }, {});
+
+    const rows = await Promise.all(groups.map(async (g) => {
+      let val: any = null;
+      try { val = await this.companies.getValuation(g.companyId); } catch { /* sin datos aún */ }
+      const f = val?.financials ?? {};
+      const r = val?.ratios ?? {};
+      const health = Number(val?.healthScore ?? 0);          // 0–100 aprox.
+      const netIncome = Number(f.netIncome ?? 0);
+      const equity    = Number(f.equity ?? 0);
+      const netMargin = Number(r.netMargin ?? 0);            // %
+      const currentR  = Number(r.currentRatio ?? 0);
+
+      // Enterprise Score 0–1000: salud (0–500) + rentabilidad (0–250) +
+      // solvencia/liquidez (0–250). Ponderaciones fijas, explicables.
+      const sSalud    = Math.max(0, Math.min(500, health * 5));
+      const sRent     = Math.max(0, Math.min(250, (netMargin / 25) * 250)) + (netIncome > 0 ? 0 : -60);
+      const sSolvencia = Math.max(0, Math.min(150, (Math.min(currentR, 3) / 3) * 150))
+                       + (equity > 0 ? 100 : 0);
+      const score = Math.round(Math.max(0, Math.min(1000, sSalud + Math.max(0, sRent) + sSolvencia)));
+
+      return {
+        companyId: g.companyId,
+        name: g.company.name,
+        archetype: g.archetype,
+        memberCount: countMap[g.companyId] ?? 0,
+        score,
+        sharePrice: val?.sharePrice ?? null,
+        marketCap:  val?.marketCap ?? null,
+        rating:     val?.rating ?? null,
+        metrics: {
+          equity, netIncome, netMargin, currentRatio: currentR,
+          healthScore: health,
+        },
+        breakdown: {
+          salud: Math.round(sSalud),
+          rentabilidad: Math.round(Math.max(0, sRent)),
+          solvencia: Math.round(sSolvencia),
+        },
+      };
+    }));
+
+    rows.sort((a, b) => b.score - a.score);
+    return {
+      status: session.status,
+      generatedAt: new Date().toISOString(),
+      ranking: rows.map((r, i) => ({ position: i + 1, ...r })),
     };
   }
 

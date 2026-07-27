@@ -50,4 +50,12 @@ export class ClassSessionsParticipantsController {
   live(@Param('id') id: string) {
     return this.svc.live(id);
   }
+
+  // Ranking empresarial (Enterprise Score) — leaderboard vivo de la sesión.
+  @Get('class-sessions/:id/ranking')
+  @Roles('STUDENT', 'TEACHER', 'ADMIN', 'SUPERADMIN')
+  @UseGuards(ClassSessionGuard)
+  ranking(@Param('id') id: string) {
+    return this.svc.ranking(id);
+  }
 }

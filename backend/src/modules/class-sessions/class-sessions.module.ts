@@ -8,6 +8,7 @@ import { ClassSessionGuard } from './guards/class-session-access.guard';
 import { AuditAssignmentGuard } from './guards/audit-assignment.guard';
 import { CompanyMembershipsModule } from '../company-memberships/company-memberships.module';
 import { ReportsModule } from '../reports/reports.module';
+import { CompaniesModule } from '../companies/companies.module';
 
 /**
  * ClassSessionsModule — "Sesión de Aula" (Kahoot-like sobre Exercise + GROUP).
@@ -15,7 +16,7 @@ import { ReportsModule } from '../reports/reports.module';
  * el lobby, el snapshot congelado y el esqueleto del oráculo de auditoría.
  */
 @Module({
-  imports: [CompanyMembershipsModule, ReportsModule],
+  imports: [CompanyMembershipsModule, ReportsModule, CompaniesModule],
   controllers: [
     ClassSessionsController,
     ClassSessionsParticipantsController,
