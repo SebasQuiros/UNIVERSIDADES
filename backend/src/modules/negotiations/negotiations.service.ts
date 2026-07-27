@@ -196,7 +196,67 @@ export class NegotiationsService {
       where: { id },
       data: { status: 'ACEPTADA', agreedQty: lastOffer.qty, agreedUnitPrice: lastOffer.unitPrice, updatedAt: new Date() },
     });
+
+    // Enganche con compras: el trato aceptado genera una Orden de Compra
+    // (comprador → vendedor) en estado PO_ISSUED. Esto NO postea contabilidad
+    // todavía (eso ocurre al recibir/facturar/pagar por el flujo existente).
+    // Tolerante a fallos: si no se puede, la aceptación igual queda registrada.
+    if (neg.classSessionId && lastOffer.qty != null && lastOffer.unitPrice != null) {
+      try {
+        await this.generatePurchaseOrder(neg, lastOffer, userId);
+      } catch (e: any) {
+        await this.prisma.negotiationEntry.create({
+          data: {
+            negotiationId: id, authorId: userId,
+            authorCompanyId: neg.buyerCompanyId, kind: 'SISTEMA',
+            message: 'No se pudo generar la Orden de Compra automáticamente; podés crearla manualmente en Aprovisionamiento.',
+          },
+        }).catch(() => null);
+      }
+    }
     return this.getOne(id, userId);
+  }
+
+  /** Crea la Orden de Compra (PO_ISSUED) a partir del trato aceptado, reusando
+   *  la máquina de compras existente. Requiere que ambas empresas compartan el
+   *  exercise de la sesión (invariante de las empresas de una ClassSession). */
+  private async generatePurchaseOrder(
+    neg: { id: string; classSessionId: string | null; buyerCompanyId: string; sellerCompanyId: string; subject: string },
+    offer: { qty: number | null; unitPrice: any },
+    userId: string,
+  ) {
+    if (!neg.classSessionId) return;
+    const session = await this.prisma.classSession.findUnique({
+      where: { id: neg.classSessionId }, select: { exerciseId: true },
+    });
+    if (!session?.exerciseId) return;
+
+    const qty = Number(offer.qty ?? 0);
+    const unitPrice = Number(offer.unitPrice ?? 0);
+    const taxRate = 0.13;
+    const subtotal = Math.round(qty * unitPrice * 100) / 100;
+    const taxAmount = Math.round(subtotal * taxRate * 100) / 100;
+    const total = Math.round((subtotal + taxAmount) * 100) / 100;
+
+    const order = await this.prisma.procurementOrder.create({
+      data: {
+        exerciseId:      session.exerciseId,
+        buyerCompanyId:  neg.buyerCompanyId,
+        sellerCompanyId: neg.sellerCompanyId,
+        status:          'PO_ISSUED',
+        items:           [{ description: neg.subject.slice(0, 200), quantity: qty, unitPrice }] as any,
+        subtotal, taxAmount, total,
+        notes:           `Generada desde negociación aceptada (${neg.id}).`,
+        createdById:     userId,
+      },
+      select: { id: true },
+    });
+    await this.prisma.negotiationEntry.create({
+      data: {
+        negotiationId: neg.id, authorId: userId, authorCompanyId: neg.buyerCompanyId, kind: 'SISTEMA',
+        message: `Orden de Compra generada (${order.id.slice(0, 8)}…). Continuá en Aprovisionamiento: despachar → recibir → facturar → pagar.`,
+      },
+    });
   }
 
   async close(id: string, userId: string, status: 'RECHAZADA' | 'CANCELADA') {
