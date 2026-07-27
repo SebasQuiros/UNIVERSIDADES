@@ -746,6 +746,18 @@ export class ClassSessionsService {
       return acc;
     }, {});
 
+    // Presencia: integrantes con ping reciente (≤ 90s) = "en línea".
+    const onlineSince = new Date(Date.now() - 90 * 1000);
+    const onlineCounts = await this.prisma.classSessionParticipant.groupBy({
+      by: ['companyId'],
+      where: { classSessionId: id, companyId: { not: null }, lastPingAt: { gte: onlineSince } },
+      _count: true,
+    });
+    const onlineMap = onlineCounts.reduce<Record<string, number>>((acc, c) => {
+      if (c.companyId) acc[c.companyId] = c._count as number;
+      return acc;
+    }, {});
+
     const rows = await Promise.all(groups.map(async (g) => {
       let val: any = null;
       try { val = await this.companies.getValuation(g.companyId); } catch { /* sin datos aún */ }
@@ -770,6 +782,7 @@ export class ClassSessionsService {
         name: g.company.name,
         archetype: g.archetype,
         memberCount: countMap[g.companyId] ?? 0,
+        onlineCount: onlineMap[g.companyId] ?? 0,
         score,
         sharePrice: val?.sharePrice ?? null,
         marketCap:  val?.marketCap ?? null,

@@ -10,6 +10,7 @@ import { Trophy } from 'lucide-react';
 interface RankRow {
   position: number; companyId: string; name: string; archetype: string;
   score: number; sharePrice: number | null; rating: string | null;
+  memberCount?: number; onlineCount?: number;
   metrics: { equity: number; netIncome: number; netMargin: number; currentRatio: number; healthScore: number };
   breakdown: { salud: number; rentabilidad: number; solvencia: number };
 }
@@ -71,8 +72,13 @@ export function SessionLeaderboard({
                 <div className="flex items-center gap-3">
                   <span className="w-7 flex-shrink-0 text-center text-lg font-bold tabular-nums">{medal(r.position)}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-gray-900">
-                      {r.name}{mine && <span className="text-gold-900"> · tu empresa</span>}
+                    <p className="flex items-center gap-2 truncate text-sm font-semibold text-gray-900">
+                      <span className="truncate">{r.name}{mine && <span className="text-gold-900"> · tu empresa</span>}</span>
+                      {(r.onlineCount ?? 0) > 0 && (
+                        <span className="flex flex-shrink-0 items-center gap-1 text-[10px] font-medium text-emerald-600">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {r.onlineCount} en línea
+                        </span>
+                      )}
                     </p>
                     <div className="mt-1 h-1.5 w-full rounded-full bg-gray-100">
                       <div className="h-1.5 rounded-full bg-gradient-to-r from-blue-600 to-[#1B2E6E]" style={{ width: `${pct}%` }} />
