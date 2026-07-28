@@ -23,6 +23,17 @@ async function bootstrap() {
   app.use(compression());
   app.use(cookieParser());
 
+  // ── Tamaño máximo del cuerpo de la petición ────────────────────────────────
+  // El límite por defecto de Express es 100 KB, pero varios endpoints reciben
+  // adjuntos en base64 de hasta 10 MB (material del ejercicio, comprobantes de
+  // declaraciones): base64 infla ~33%, así que 10 MB de archivo ≈ 13.3 MB de
+  // payload y con el default fallaban con 413. Se fija un límite explícito y
+  // acotado — dejarlo sin límite sería un vector de denegación de servicio.
+  // Las subidas multipart (Excel/CSV) tienen su propio tope de 5 MB en Multer.
+  const bodyParser = require('body-parser');
+  app.use(bodyParser.json({ limit: '15mb' }));
+  app.use(bodyParser.urlencoded({ limit: '15mb', extended: true }));
+
   // Quita X-Powered-By: Express — no debe filtrar el stack del servidor.
   // Express lo agrega antes de helmet, así que hay que desactivarlo a nivel adaptador.
   (app.getHttpAdapter().getInstance() as any).disable('x-powered-by');
