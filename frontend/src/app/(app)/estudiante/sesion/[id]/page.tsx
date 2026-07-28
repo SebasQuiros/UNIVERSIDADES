@@ -27,6 +27,7 @@ import { SceneEmptyBox, ArtInventory, ArtReport, SceneStudentDesk } from '@/comp
 import { SessionLeaderboard } from '@/components/session/SessionLeaderboard';
 import { NegotiationsPanel } from '@/components/session/NegotiationsPanel';
 import { MarketDirectory } from '@/components/session/MarketDirectory';
+import { TransfersPanel } from '@/components/session/TransfersPanel';
 import { CommercialCountdown } from '@/components/session/CommercialCountdown';
 import {
   Users, Building2, ArrowRight, ShieldCheck, ChevronRight,
@@ -275,6 +276,7 @@ function MiEmpresaPhase({ me, waitingToStart, sessionId }: { me: MeResponse; wai
         <>
           <MarketDirectory sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
           <NegotiationsPanel sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
+          <TransfersPanel sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
           <SessionLeaderboard sessionId={sessionId} myCompanyId={me.companyId ?? undefined} />
         </>
       )}
