@@ -3,6 +3,7 @@ import {
   NotFoundException, ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { readSpreadsheet } from '../../common/upload/read-spreadsheet';
 import { AccountType, NormalBalance } from '@prisma/client';
 import { CreateAccountDto, UpdateAccountDto } from './dto/accounts.dto';
 
@@ -312,17 +313,10 @@ export class AccountsService {
   // - naturaleza: Debe/Deudora/DEBIT · Haber/Acreedora/CREDIT (opcional: se
   //   infiere del tipo si falta). Nivel y cuenta padre se derivan del código
   //   punteado (p.ej. 1.1.01.01 → nivel 4, padre 1.1.01). Cabecera = tiene hijos.
-  async importFromExcel(companyId: string, fileBuffer: Buffer) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const XLSX = require('xlsx') as typeof import('xlsx');
-    let rows: unknown[][];
-    try {
-      const wb = XLSX.read(fileBuffer, { type: 'buffer' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      rows = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false }) as unknown[][];
-    } catch {
-      throw new BadRequestException('No se pudo leer el archivo Excel.');
-    }
+  async importFromExcel(companyId: string, fileBuffer: Buffer, originalName = '') {
+    // Lectura con exceljs (ver read-spreadsheet.ts): `xlsx` tiene CVEs sin
+    // parche y este buffer viene de una subida de usuario.
+    const rows: unknown[][] = await readSpreadsheet(fileBuffer, originalName);
     if (!rows || rows.length < 2) {
       throw new BadRequestException('El archivo no tiene filas de datos (fila 1 = encabezados).');
     }

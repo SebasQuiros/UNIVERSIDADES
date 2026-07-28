@@ -212,14 +212,22 @@ export class CompetenciesService {
   }
 
   /** Dashboard del profesor: dominio por competencia + alumnos en riesgo de un curso. */
-  async getCourseEvidence(courseId: string, user: { id: string; role: string }) {
+  async getCourseEvidence(courseId: string, user: { id: string; role: string; universityId?: string | null }) {
     const course = await this.prisma.course.findUnique({
       where: { id: courseId },
       select: { id: true, name: true, teacherId: true, universityId: true },
     });
     if (!course) throw new NotFoundException('Curso no encontrado');
-    if (course.teacherId !== user.id && !['ADMIN', 'SUPERADMIN'].includes(user.role)) {
-      throw new ForbiddenException('No puedes ver un curso que no es tuyo');
+    // ADMIN NO es global: antes cualquier ADMIN leía el dominio por competencia
+    // y la lista nominal de "alumnos en riesgo" de CUALQUIER institución.
+    if (user.role !== 'SUPERADMIN') {
+      if (user.role === 'ADMIN') {
+        if (!user.universityId || course.universityId !== user.universityId) {
+          throw new ForbiddenException('Este curso pertenece a otra institución.');
+        }
+      } else if (course.teacherId !== user.id) {
+        throw new ForbiddenException('No puedes ver un curso que no es tuyo');
+      }
     }
 
     const exercisesRaw = await this.prisma.exercise.findMany({
@@ -295,8 +303,10 @@ export class CompetenciesService {
     if (!['ADMIN', 'SUPERADMIN'].includes(user.role)) {
       throw new ForbiddenException('Solo administración académica');
     }
-    if (user.role === 'ADMIN' && user.universityId && user.universityId !== universityId) {
-      throw new ForbiddenException('Solo tu propia universidad');
+    // FALLA CERRADO: con `&&`, un ADMIN sin institución asignada leía la
+    // evidencia de acreditación de CUALQUIER institución.
+    if (user.role === 'ADMIN' && (!user.universityId || user.universityId !== universityId)) {
+      throw new ForbiddenException('Solo tu propia institución');
     }
 
     const courses = await this.prisma.course.findMany({

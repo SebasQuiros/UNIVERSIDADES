@@ -3,6 +3,7 @@ import {
   NotFoundException, Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { readSpreadsheet } from '../../common/upload/read-spreadsheet';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
   CreateBankAccountDto,
@@ -231,12 +232,9 @@ export class BankReconciliationService {
   // ── XLSX Parser ──────────────────────────────────────────────
 
   private async parseXlsx(buffer: Buffer): Promise<Record<string, string>[]> {
-    // Dynamic import so xlsx is optional at module load time
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const XLSX = require('xlsx') as typeof import('xlsx');
-    const wb   = XLSX.read(buffer, { type: 'buffer', cellDates: true });
-    const ws   = wb.Sheets[wb.SheetNames[0]];
-    const raw  = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { header: 1 }) as unknown as unknown[][];
+    // Lectura con exceljs (ver read-spreadsheet.ts). `xlsx` tiene CVEs de
+    // prototype-pollution/ReDoS SIN parche y este buffer viene de una subida.
+    const raw = await readSpreadsheet(buffer);
 
     if (raw.length < 2) return [];
 

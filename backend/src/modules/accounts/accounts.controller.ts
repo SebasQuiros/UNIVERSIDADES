@@ -29,7 +29,7 @@ export class AccountsController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file?.buffer) throw new BadRequestException('No se recibió ningún archivo.');
-    return this.svc.importFromExcel(companyId, file.buffer);
+    return this.svc.importFromExcel(companyId, file.buffer, file.originalname);
   }
 
   @Get(':id')
