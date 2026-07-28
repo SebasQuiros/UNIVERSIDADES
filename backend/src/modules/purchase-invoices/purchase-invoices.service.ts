@@ -99,7 +99,12 @@ export class PurchaseInvoicesService {
       // factura está aceptada, creamos un lote por línea para alimentar el
       // FIFO. Si NO vienen líneas, asumimos compra agregada (servicios,
       // gastos) y no tocamos inventario — comportamiento histórico.
-      if (isAccepted && autoInventory && dto.lines && dto.lines.length > 0) {
+      // Nota: el seguimiento de EXISTENCIAS (lote + movimiento + stock) se hace
+      // siempre que el usuario envíe líneas con producto — `autoInventory` rige
+      // la automatización CONTABLE, no si el inventario se lleva. Antes estaba
+      // atado a ese flag y una compra no aumentaba el stock (ni aparecía en el
+      // Kardex) en empresas de práctica.
+      if (isAccepted && dto.lines && dto.lines.length > 0) {
         for (const line of dto.lines) {
           await this.inventory.addLot(
             {

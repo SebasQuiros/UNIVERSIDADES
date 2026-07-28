@@ -41,6 +41,11 @@ export class ReportsController {
     return this.svc.getBalanceSheet(id, f);
   }
 
+  @Get('statement-analysis')
+  statementAnalysis(@Param('companyId') id: string, @Query() f: ReportFilterDto) {
+    return this.svc.getStatementAnalysis(id, f);
+  }
+
   @Get('income-statement')
   incomeStatement(@Param('companyId') id: string, @Query() f: ReportFilterDto) {
     return this.svc.getIncomeStatement(id, f);

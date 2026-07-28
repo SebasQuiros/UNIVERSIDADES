@@ -487,42 +487,66 @@ export class InvoicesService {
             );
             totalCost = totalCost.plus(result.totalCost);
           } else {
-            // Camino legacy / manual: usa product.cost para sumar al COGS si
-            // hay costo definido, y mantiene el comportamiento histórico de
-            // decrementar Product.stock + un único InventoryMovement.
-            if (Number(product.cost) > 0) {
-              totalCost = totalCost.plus(
-                new Decimal(product.cost.toString())
-                  .times(new Decimal(item.quantity.toString()))
-                  .toDecimalPlaces(2),
-              );
-            }
+            // Camino sin autoInventory. Si el producto TIENE lotes, igual los
+            // consumimos respetando el método de valuación de la empresa
+            // (PEPS/UEPS) para que el Kardex y el costo de ventas sean reales.
+            // Si no hay lotes, se cae al costo del producto (histórico).
             const required = new Decimal(item.quantity.toString());
-            const currentStock = new Decimal(product.stock.toString());
-            if (required.greaterThan(currentStock)) {
-              throw new BadRequestException(
-                `Stock insuficiente para "${product.name}" (validación final). ` +
-                `Disponible: ${currentStock.toFixed(3)}, Requerido: ${required.toFixed(3)}.`,
+            const hasLots = product.trackInventory && (await tx.inventoryLot.count({
+              where: { productId: item.productId, qtyRemaining: { gt: 0 } },
+            })) > 0;
+
+            if (hasLots) {
+              const result = await this.inventory.consumeFIFO(
+                {
+                  companyId,
+                  productId:     item.productId,
+                  qty:           item.quantity,
+                  referenceId:   invoiceId,
+                  referenceType: 'INVOICE',
+                  createdById:   userId,
+                },
+                tx,
               );
+              totalCost = totalCost.plus(result.totalCost);
+            } else {
+              if (Number(product.cost) > 0) {
+                totalCost = totalCost.plus(
+                  new Decimal(product.cost.toString())
+                    .times(required)
+                    .toDecimalPlaces(2),
+                );
+              }
+              const currentStock = new Decimal(product.stock.toString());
+              if (required.greaterThan(currentStock)) {
+                throw new BadRequestException(
+                  `Stock insuficiente para "${product.name}" (validación final). ` +
+                  `Disponible: ${currentStock.toFixed(3)}, Requerido: ${required.toFixed(3)}.`,
+                );
+              }
+              const newStock = currentStock.minus(required);
+              await tx.product.update({
+                where: { id: item.productId },
+                data:  { stock: newStock, updatedAt: new Date() },
+              });
+              const unitCost = new Decimal(product.cost.toString());
+              await tx.inventoryMovement.create({
+                data: {
+                  productId:     item.productId,
+                  companyId,
+                  type:          'SALE',
+                  quantity:      required.negated(),
+                  // COSTO de la salida (no el precio de venta): el Kardex valúa
+                  // las existencias al costo, no al precio facturado.
+                  unitCost,
+                  totalCost:     unitCost.times(required).toDecimalPlaces(2),
+                  referenceId:   invoiceId,
+                  referenceType: 'INVOICE',
+                  balanceAfter:  newStock,
+                  createdById:   userId,
+                },
+              });
             }
-            const newStock = currentStock.minus(required);
-            await tx.product.update({
-              where: { id: item.productId },
-              data:  { stock: newStock, updatedAt: new Date() },
-            });
-            await tx.inventoryMovement.create({
-              data: {
-                productId:     item.productId,
-                companyId,
-                type:          'SALE',
-                quantity:      required.negated(),
-                unitCost:      item.unitPrice,
-                referenceId:   invoiceId,
-                referenceType: 'INVOICE',
-                balanceAfter:  newStock,
-                createdById:   userId,
-              },
-            });
           }
         }
 

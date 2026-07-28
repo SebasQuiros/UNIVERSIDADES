@@ -234,6 +234,91 @@ export class ReportsService {
     };
   }
 
+  // ── ANÁLISIS VERTICAL Y HORIZONTAL ──────────────────────────────────
+  //
+  // Vertical  = cada partida como % de una base (Estado de Resultados: ventas
+  //             netas; Balance: total de activos).
+  // Horizontal= variación (absoluta y %) contra el período anterior.
+  async getStatementAnalysis(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
+    const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
+
+    // Período anterior: mismo largo, inmediatamente antes.
+    const spanMs   = endDate.getTime() - startDate.getTime();
+    const prevEnd  = new Date(startDate.getTime() - 1);
+    const prevStart = new Date(prevEnd.getTime() - spanMs);
+    const inception = new Date(2000, 0, 1);
+
+    const [curIS, curBS, prevIncExp, prevBal] = await Promise.all([
+      this.getIncomeStatement(companyId, filter),
+      this.getBalanceSheet(companyId, filter),
+      this.getAccountBalances(companyId, prevStart, prevEnd, ['INCOME', 'EXPENSE']),
+      this.getAccountBalances(companyId, inception, prevEnd, ['ASSET', 'LIABILITY', 'EQUITY']),
+    ]);
+
+    const num = (v: any) => new Decimal((v ?? 0).toString());
+    const pct = (part: Decimal, base: Decimal) =>
+      base.abs().greaterThan(0) ? part.dividedBy(base).times(100).toDecimalPlaces(2).toNumber() : 0;
+    const varPct = (cur: Decimal, prev: Decimal) =>
+      prev.abs().greaterThan(0) ? cur.minus(prev).dividedBy(prev.abs()).times(100).toDecimalPlaces(2).toNumber() : null;
+
+    // Mapa de saldos previos por código de cuenta.
+    const prevMap = new Map<string, Decimal>();
+    [...prevIncExp, ...prevBal].forEach((a: any) => prevMap.set(a.code, num(a.balanceNum ?? a.balance)));
+
+    const buildRows = (accounts: any[], base: Decimal) => accounts.map((a: any) => {
+      const actual   = num(a.balanceNum ?? a.balance);
+      const anterior = prevMap.get(a.code) ?? new Decimal(0);
+      const variacion = actual.minus(anterior);
+      return {
+        code: a.code, name: a.name, type: a.type,
+        actual:            actual.toFixed(2),
+        anterior:          anterior.toFixed(2),
+        // Vertical: peso de la partida sobre la base
+        porcentajeVertical: pct(actual, base),
+        // Horizontal: cuánto cambió contra el período anterior
+        variacionAbsoluta:  variacion.toFixed(2),
+        variacionPorcentual: varPct(actual, anterior),
+      };
+    });
+
+    // ── Estado de Resultados ──
+    const ventas       = num(curIS.totals.totalIncome);
+    const isRows       = buildRows([...(curIS.income.accounts ?? []), ...(curIS.expenses.accounts ?? [])], ventas);
+    const prevIngresos = prevIncExp.filter((a: any) => a.type === 'INCOME')
+      .reduce((s: Decimal, a: any) => s.plus(num(a.balanceNum)), new Decimal(0));
+    const prevGastos   = prevIncExp.filter((a: any) => a.type === 'EXPENSE')
+      .reduce((s: Decimal, a: any) => s.plus(num(a.balanceNum)), new Decimal(0));
+    const prevUtilidad = prevIngresos.minus(prevGastos);
+    const curUtilidad  = num(curIS.totals.netIncome);
+
+    // ── Balance ──
+    const totalActivos = num(curBS.totals?.totalAssets);
+    const bsRows = buildRows([
+      ...(curBS.assets?.accounts ?? []), ...(curBS.liabilities?.accounts ?? []), ...(curBS.equity?.accounts ?? []),
+    ], totalActivos);
+
+    return {
+      companyId,
+      period:         period ?? { startDate, endDate },
+      previousPeriod: { startDate: prevStart, endDate: prevEnd },
+      generatedAt:    new Date(),
+      incomeStatement: {
+        base: { label: 'Ventas netas', value: ventas.toFixed(2) },
+        rows: isRows,
+        totals: {
+          ingresos:  { actual: ventas.toFixed(2),      anterior: prevIngresos.toFixed(2), variacionPorcentual: varPct(ventas, prevIngresos) },
+          gastos:    { actual: num(curIS.totals.totalExpenses).toFixed(2), anterior: prevGastos.toFixed(2), variacionPorcentual: varPct(num(curIS.totals.totalExpenses), prevGastos) },
+          utilidad:  { actual: curUtilidad.toFixed(2), anterior: prevUtilidad.toFixed(2), variacionPorcentual: varPct(curUtilidad, prevUtilidad),
+                       margenVertical: pct(curUtilidad, ventas) },
+        },
+      },
+      balanceSheet: {
+        base: { label: 'Total activos', value: totalActivos.toFixed(2) },
+        rows: bsRows,
+      },
+    };
+  }
+
   // ── 3.5 FINANCIAL ANALYSIS — Estados y Análisis (ratios + comparativo) ──
   //
   // Reusa getBalanceSheet/getIncomeStatement para los totales (evita divergir

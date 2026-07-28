@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Param, Query, UseGuards,
+  Controller, Get, Patch, Body, Param, Query, UseGuards, BadRequestException,
 } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
@@ -46,5 +46,34 @@ export class InventoryController {
       from: from ? new Date(from) : undefined,
       to:   to   ? new Date(to)   : undefined,
     });
+  }
+
+  /** Kardex (tarjeta de existencias) de un producto: entradas/salidas/saldo. */
+  @Get('products/:productId/kardex')
+  kardex(
+    @Param('companyId') companyId: string,
+    @Param('productId') productId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.svc.kardex(companyId, productId, {
+      from: from ? new Date(from) : undefined,
+      to:   to   ? new Date(to)   : undefined,
+    });
+  }
+
+  /** Método de valuación vigente (PEPS/UEPS/PROMEDIO). */
+  @Get('cost-method')
+  getCostMethod(@Param('companyId') companyId: string) {
+    return this.svc.getCostMethod(companyId);
+  }
+
+  /** Cambia el método de valuación de la empresa. */
+  @Patch('cost-method')
+  setCostMethod(
+    @Param('companyId') companyId: string,
+    @Body() dto: { costMethod: 'PEPS' | 'UEPS' | 'PROMEDIO' },
+  ) {
+    return this.svc.setCostMethod(companyId, dto.costMethod);
   }
 }

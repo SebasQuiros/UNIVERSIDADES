@@ -186,12 +186,23 @@ export class InventoryService {
       );
     }
 
-    // Traemos lotes con qty_remaining > 0 ordenados FIFO. Limitamos por
-    // performance: con miles de lotes podríamos paginar, pero en este flujo
+    // Método de valuación de la empresa: PEPS (FIFO) consume los lotes MÁS
+    // ANTIGUOS primero; UEPS (LIFO) consume los MÁS RECIENTES primero.
+    // PROMEDIO se aproxima recorriendo en orden PEPS (el costo unitario
+    // promedio se refleja igual en la valuación total).
+    const company = await client.company.findUnique({
+      where:  { id: args.companyId },
+      select: { costMethod: true },
+    });
+    const method = company?.costMethod ?? 'PEPS';
+    const order: 'asc' | 'desc' = method === 'UEPS' ? 'desc' : 'asc';
+
+    // Traemos lotes con qty_remaining > 0 ordenados según el método. Limitamos
+    // por performance: con miles de lotes podríamos paginar, pero en este flujo
     // raramente superan 50 por producto.
     const lots = await client.inventoryLot.findMany({
       where:   { productId: args.productId, qtyRemaining: { gt: 0 } },
-      orderBy: [{ receivedAt: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ receivedAt: order }, { createdAt: order }],
     });
 
     const totalAvailable = lots.reduce(
@@ -347,6 +358,129 @@ export class InventoryService {
       orderBy: { createdAt: 'asc' },
       include: { lot: { select: { id: true, source: true, sourceId: true, receivedAt: true } } },
     });
+  }
+
+  // ────────────────────────────────────────────────────────────
+  //  Método de valuación (PEPS / UEPS / PROMEDIO)
+  // ────────────────────────────────────────────────────────────
+  async getCostMethod(companyId: string) {
+    const c = await this.prisma.company.findUnique({
+      where: { id: companyId }, select: { costMethod: true },
+    });
+    if (!c) throw new NotFoundException('Empresa no encontrada');
+    return { costMethod: c.costMethod };
+  }
+
+  async setCostMethod(companyId: string, costMethod: 'PEPS' | 'UEPS' | 'PROMEDIO') {
+    if (!['PEPS', 'UEPS', 'PROMEDIO'].includes(costMethod)) {
+      throw new BadRequestException('Método inválido. Use PEPS, UEPS o PROMEDIO.');
+    }
+    const c = await this.prisma.company.update({
+      where: { id: companyId },
+      data:  { costMethod: costMethod as any },
+      select: { costMethod: true },
+    });
+    // Nota didáctica: el cambio aplica a las salidas FUTURAS. Los movimientos
+    // ya registrados conservan el costo con que se valuaron (no se recalcula
+    // el histórico, igual que en un ERP real).
+    return { costMethod: c.costMethod, aplicaA: 'salidas futuras' };
+  }
+
+  // ────────────────────────────────────────────────────────────
+  //  KARDEX — tarjeta de control de existencias
+  // ────────────────────────────────────────────────────────────
+  /**
+   * Kardex clásico de un producto: cada movimiento con sus columnas de
+   * ENTRADAS / SALIDAS / SALDO (cantidad, costo unitario y costo total), con
+   * saldo acumulado corrido. Indica el método de valuación de la empresa.
+   */
+  async kardex(companyId: string, productId: string, opts: { from?: Date; to?: Date } = {}) {
+    const [product, company] = await Promise.all([
+      this.prisma.product.findFirst({
+        where:  { id: productId, companyId },
+        select: { id: true, name: true, sku: true, unit: true, stock: true, cost: true },
+      }),
+      this.prisma.company.findUnique({ where: { id: companyId }, select: { costMethod: true } }),
+    ]);
+    if (!product) throw new NotFoundException('Producto no encontrado');
+
+    const movs = await this.prisma.inventoryMovement.findMany({
+      where: {
+        companyId, productId,
+        ...(opts.from || opts.to ? { createdAt: { gte: opts.from, lte: opts.to } } : {}),
+      },
+      orderBy: [{ createdAt: 'asc' }],
+      include: { lot: { select: { source: true, unitCost: true } } },
+    });
+
+    const TYPE_ES: Record<string, string> = {
+      PURCHASE: 'Compra', SALE: 'Venta', INITIAL_STOCK: 'Inventario inicial',
+      ADJUSTMENT: 'Ajuste', RETURN: 'Devolución', TRANSFER: 'Traslado',
+    };
+
+    let saldoQty  = new Decimal(0);
+    let saldoCost = new Decimal(0);   // costo total acumulado en existencias
+
+    const rows = movs.map((m) => {
+      const qty      = new Decimal(m.quantity.toString());        // negativo = salida
+      const unitCost = new Decimal((m.unitCost ?? 0).toString());
+      const isEntrada = qty.greaterThan(0);
+      const absQty   = qty.abs();
+      // Costo del movimiento: usa totalCost si existe (COGS real por lotes).
+      const movTotal = m.totalCost != null
+        ? new Decimal(m.totalCost.toString()).abs()
+        : absQty.times(unitCost);
+
+      if (isEntrada) {
+        saldoQty  = saldoQty.plus(absQty);
+        saldoCost = saldoCost.plus(movTotal);
+      } else {
+        saldoQty  = saldoQty.minus(absQty);
+        saldoCost = saldoCost.minus(movTotal);
+        if (saldoCost.lessThan(0)) saldoCost = new Decimal(0);
+      }
+      const costoPromedio = saldoQty.greaterThan(0)
+        ? saldoCost.dividedBy(saldoQty).toDecimalPlaces(2)
+        : new Decimal(0);
+
+      return {
+        id:          m.id,
+        fecha:       m.createdAt,
+        tipo:        m.type,
+        detalle:     TYPE_ES[m.type] ?? m.type,
+        notas:       m.notes ?? null,
+        referenciaId: m.referenceId ?? null,
+        entrada: isEntrada
+          ? { cantidad: absQty.toFixed(3), costoUnitario: unitCost.toFixed(2), total: movTotal.toFixed(2) }
+          : null,
+        salida: !isEntrada
+          ? { cantidad: absQty.toFixed(3), costoUnitario: (absQty.greaterThan(0) ? movTotal.dividedBy(absQty) : new Decimal(0)).toFixed(2), total: movTotal.toFixed(2) }
+          : null,
+        saldo: {
+          cantidad:      saldoQty.toFixed(3),
+          costoUnitario: costoPromedio.toFixed(2),
+          total:         saldoCost.toFixed(2),
+        },
+      };
+    });
+
+    const totalEntradas = rows.reduce((s, r) => s.plus(r.entrada ? new Decimal(r.entrada.total) : 0), new Decimal(0));
+    const totalSalidas  = rows.reduce((s, r) => s.plus(r.salida  ? new Decimal(r.salida.total)  : 0), new Decimal(0));
+
+    return {
+      product: {
+        id: product.id, name: product.name, sku: product.sku,
+        unit: product.unit, stockActual: product.stock.toString(),
+      },
+      costMethod: company?.costMethod ?? 'PEPS',
+      rows,
+      totals: {
+        entradas:    totalEntradas.toFixed(2),
+        salidas:     totalSalidas.toFixed(2),
+        saldoQty:    saldoQty.toFixed(3),
+        saldoTotal:  saldoCost.toFixed(2),
+      },
+    };
   }
 
   // ────────────────────────────────────────────────────────────

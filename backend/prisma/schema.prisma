@@ -146,6 +146,13 @@ enum ExerciseType {
 }
 
 // ── Fase 1 (Config Engine + Multi-company) ──────────────────────
+// Método de valuación de inventario (costeo de salidas).
+enum CostMethod {
+  PEPS      // FIFO — primero entrado, primero salido
+  UEPS      // LIFO — último entrado, primero salido
+  PROMEDIO  // costo promedio ponderado
+}
+
 enum CompanyMode {
   INDIVIDUAL
   GROUP
@@ -579,6 +586,9 @@ model Company {
   isPractice         Boolean      @default(false) @map("is_practice")
   mode               CompanyMode  @default(INDIVIDUAL)
   isCompanyEnabled   Boolean      @default(true) @map("is_company_enabled")
+  // Método de valuación de inventario: PEPS (FIFO, primero entrado primero
+  // salido) | UEPS (LIFO, último entrado primero salido) | PROMEDIO.
+  costMethod         CostMethod   @default(PEPS) @map("cost_method")
   name               String
   legalId            String       @map("legal_id")
   legalIdType        String       @default("02") @map("legal_id_type")  // 01 física, 02 jurídica

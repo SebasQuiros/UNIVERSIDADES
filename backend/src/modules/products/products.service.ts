@@ -96,16 +96,41 @@ export class ProductsService {
     }
     try {
       await this.prisma.$transaction(async (tx) => {
-        await tx.inventoryLot.create({
+        // El inventario inicial es, por definición, la existencia MÁS ANTIGUA:
+        // se fecha con la creación de la empresa para que bajo PEPS se consuma
+        // antes que cualquier compra posterior.
+        const co = await tx.company.findUnique({
+          where: { id: companyId }, select: { createdAt: true },
+        });
+        const lot = await tx.inventoryLot.create({
           data: {
             companyId, productId,
             qtyOriginal:  qty,
             qtyRemaining: qty,
             unitCost,
-            source:   'INITIAL',
-            sourceId: productId,
+            source:     'INITIAL',
+            sourceId:   productId,
+            receivedAt: co?.createdAt ?? new Date(),
           },
         });
+
+        // Movimiento de entrada para que el inventario inicial aparezca en el
+        // Kardex (antes solo se creaba el lote y el Kardex arrancaba en cero).
+        if (authorId) {
+          await tx.inventoryMovement.create({
+            data: {
+              productId, companyId,
+              type:          'INITIAL_STOCK',
+              quantity:      qty,
+              unitCost,
+              totalCost:     total,
+              lotId:         lot.id,
+              balanceAfter:  qty,
+              notes:         'Inventario inicial',
+              createdById:   authorId,
+            },
+          });
+        }
 
         const [inv, cap] = await Promise.all([
           tx.account.findFirst({ where: { companyId, code: '1.1.03.01' }, select: { id: true } }),
