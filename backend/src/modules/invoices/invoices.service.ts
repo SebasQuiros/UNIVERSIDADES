@@ -15,6 +15,7 @@ import { CreateInvoiceDto, InvoiceFilterDto } from './dto/invoices.dto';
 import { BusinessEventsService } from '../business/business-events.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { InterCompanyService } from '../inter-company/inter-company.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { AccountingModeResolver } from '../accounting/accounting-mode.resolver';
 import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
 import * as fs   from 'fs';
@@ -39,6 +40,8 @@ export class InvoicesService {
     private readonly inventory:      InventoryService,
     // ── Fase 4: replicación inter-company ───────────────────────
     private readonly interCompany:   InterCompanyService,
+    // ── Bitácora de acciones ────────────────────────────────────
+    private readonly activityLog:    ActivityLogService,
   ) {}
 
   // ── List invoices (paginated) ─────────────────────────────────
@@ -602,6 +605,19 @@ export class InvoicesService {
       }
 
       this.logger.log(`✓ Factura FE-${invoice.consecutiveNumber} emitida y aceptada`);
+
+      // Bitácora (best-effort: nunca debe tumbar la emisión)
+      void this.activityLog.log({
+        userId, companyId,
+        action:   'INVOICE_ISSUED',
+        entity:   'Invoice',
+        entityId: invoiceId,
+        details:  {
+          consecutivo: invoice.consecutiveNumber,
+          cliente:     invoice.clientName,
+          total:       invoice.total?.toString(),
+        },
+      });
 
       return {
         status:          'ACCEPTED',

@@ -1,0 +1,108 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { Badge } from '@/components/ui/Badge';
+import { History, FileText, BookOpen, ShoppingCart, Receipt, User } from 'lucide-react';
+
+interface LogRow {
+  id: string; action: string; entity: string | null; entityId: string | null;
+  details: Record<string, any>; createdAt: string; userId: string; userName: string | null;
+}
+
+/** Etiqueta legible + estilo por tipo de acción. */
+const ACTION_META: Record<string, { label: string; icon: any; variant: any }> = {
+  INVOICE_ISSUED:        { label: 'Factura emitida',    icon: Receipt,      variant: 'blue'    },
+  JOURNAL_ENTRY_CREATED: { label: 'Asiento contable',   icon: BookOpen,     variant: 'purple'  },
+  PURCHASE_RECORDED:     { label: 'Compra registrada',  icon: ShoppingCart, variant: 'amber'   },
+  LOGIN:                 { label: 'Inicio de sesión',   icon: User,         variant: 'slate'   },
+};
+
+function fmtDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleString('es-CR', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return ''; }
+}
+
+/** Resumen legible de los detalles guardados. */
+function describe(row: LogRow): string {
+  const d = row.details ?? {};
+  if (row.action === 'INVOICE_ISSUED') {
+    return [d.cliente && `Cliente: ${d.cliente}`, d.total && `₡${Number(d.total).toLocaleString('es-CR')}`]
+      .filter(Boolean).join(' · ');
+  }
+  if (row.action === 'JOURNAL_ENTRY_CREATED') {
+    return [d.numero && `Asiento #${d.numero}`, d.descripcion, d.monto && `₡${Number(d.monto).toLocaleString('es-CR')}`]
+      .filter(Boolean).join(' · ');
+  }
+  const keys = Object.keys(d);
+  return keys.length ? keys.slice(0, 3).map((k) => `${k}: ${d[k]}`).join(' · ') : '';
+}
+
+/**
+ * Bitácora de acciones de la empresa: quién hizo qué y cuándo.
+ * Solo lectura — el registro se escribe en el backend.
+ */
+export function ActivityLogPanel({ companyId }: { companyId: string }) {
+  const [rows, setRows] = useState<LogRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    api.get<LogRow[]>(`/api/v1/companies/${companyId}/activity-log?limit=100`)
+      .then(({ data }) => { if (alive) setRows(Array.isArray(data) ? data : []); })
+      .catch(() => {})
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [companyId]);
+
+  return (
+    <SectionCard
+      icon={History}
+      iconTint="#1B2E6E"
+      eyebrow="Auditoría"
+      title="Bitácora de acciones"
+      description="Registro de quién hizo qué y cuándo en esta empresa."
+    >
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-400">
+          Todavía no hay acciones registradas. Emití una factura o registrá un asiento para verlas acá.
+        </p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {rows.map((r) => {
+            const meta = ACTION_META[r.action] ?? { label: r.action, icon: FileText, variant: 'slate' };
+            const Icon = meta.icon;
+            return (
+              <li key={r.id} className="flex items-start gap-3 py-2.5">
+                <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={meta.variant}>{meta.label}</Badge>
+                    <span className="text-xs text-gray-500">{r.userName ?? 'Usuario'}</span>
+                  </div>
+                  {describe(r) && (
+                    <p className="mt-0.5 truncate text-sm text-gray-700">{describe(r)}</p>
+                  )}
+                </div>
+                <span className="flex-shrink-0 whitespace-nowrap font-mono text-xs tabular-nums text-gray-400">
+                  {fmtDate(r.createdAt)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </SectionCard>
+  );
+}

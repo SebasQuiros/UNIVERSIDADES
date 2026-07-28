@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PeriodsService } from '../periods/periods.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { JournalSource, JournalEntryStatus, Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
@@ -19,6 +20,7 @@ export class JournalService {
   constructor(
     private readonly prisma:  PrismaService,
     private readonly periods: PeriodsService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   // ── List journal entries ──────────────────────────────────────
@@ -254,7 +256,7 @@ export class JournalService {
       }
 
       // Step 7 — COMMIT (implicit at end of transaction callback)
-      return tx.journalEntry.findUnique({
+      const savedEntry = await tx.journalEntry.findUnique({
         where: { id: entry.id },
         include: {
           lines: {
@@ -264,6 +266,22 @@ export class JournalService {
           },
         },
       });
+
+      // Bitácora (best-effort, fuera del camino crítico)
+      void this.activityLog.log({
+        userId, companyId,
+        action:   'JOURNAL_ENTRY_CREATED',
+        entity:   'JournalEntry',
+        entityId: entry.id,
+        details:  {
+          numero:      entry.entryNumber,
+          descripcion: dto.description,
+          referencia:  dto.reference ?? null,
+          monto:       sumDebit.toFixed(2),
+        },
+      });
+
+      return savedEntry;
     });
   }
 

@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Spinner } from '@/components/ui/Spinner';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
-import { BookOpen, AlertTriangle, FolderTree, Plus, X, Upload, Download, Loader2 } from 'lucide-react';
+import { BookOpen, AlertTriangle, FolderTree, Plus, X, Upload, Download, Loader2, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { exportToExcel } from '@/lib/excel';
 
@@ -60,6 +60,7 @@ export function CatalogoCuentasView() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [query, setQuery] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   function downloadTemplate() {
@@ -242,6 +243,21 @@ export function CatalogoCuentasView() {
   const detailCount = accounts.filter((a) => !a.isHeader).length;
   const headerCount = accounts.filter((a) => a.isHeader).length;
 
+  // Búsqueda por código o nombre. Al filtrar mostramos las cuentas que coinciden
+  // y también sus cuentas padre (por prefijo de código), para no perder el
+  // contexto jerárquico del plan de cuentas.
+  const q = query.trim().toLowerCase();
+  const visibles = !q ? accounts : (() => {
+    const hits = accounts.filter((a) =>
+      a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q));
+    const keep = new Set<string>();
+    hits.forEach((h) => {
+      keep.add(h.id);
+      accounts.forEach((a) => { if (a.isHeader && h.code.startsWith(a.code + '.')) keep.add(a.id); });
+    });
+    return accounts.filter((a) => keep.has(a.id));
+  })();
+
   return (
     <div className="flex-1 overflow-y-auto p-6 lg:p-8 bg-[#FBF8F1]">
       <div className="max-w-6xl mx-auto">
@@ -252,6 +268,28 @@ export function CatalogoCuentasView() {
           <StatCard label="Cuentas en total" value={accounts.length.toLocaleString('es-CR')} icon={BookOpen} tint="#1B2E6E" className="cx-pop cx-d1" />
           <StatCard label="Cuentas de detalle" value={detailCount.toLocaleString('es-CR')} icon={FolderTree} tint="#2563EB" className="cx-pop cx-d2" />
           <StatCard label="Cuentas de mayor" value={headerCount.toLocaleString('es-CR')} icon={FolderTree} tint="#B8860B" className="cx-pop cx-d3" />
+        </div>
+
+        {/* Buscador de cuentas */}
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-card border border-gray-200/70 bg-white px-4 py-3 shadow-card">
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar cuenta por código o nombre… (ej. 1.1.01 o Caja)"
+              className="w-full rounded-xl border border-gray-300 bg-white py-2 pl-9 pr-9 text-sm text-gray-900 placeholder-gray-400 transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+            />
+            {query && (
+              <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <span className="whitespace-nowrap font-mono text-xs tabular-nums text-gray-400">
+            {query ? `${visibles.filter((a) => !a.isHeader).length} coincidencias` : `${accounts.length} cuentas`}
+          </span>
         </div>
 
         {/* Árbol / tabla del plan de cuentas */}
@@ -267,7 +305,12 @@ export function CatalogoCuentasView() {
                 </tr>
               </thead>
               <tbody>
-                {accounts.map((acc) => {
+                {visibles.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500">
+                    Sin resultados para “{query}”.
+                  </td></tr>
+                )}
+                {visibles.map((acc) => {
                   const meta = TYPE_META[acc.type];
                   // Indentación por nivel (level 1 = raíz). Los niveles arrancan en 1.
                   const indent = Math.max(0, acc.level - 1) * 18;

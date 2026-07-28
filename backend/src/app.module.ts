@@ -6,6 +6,7 @@ import { BulkReadInterceptor } from './common/interceptors/bulk-read.interceptor
 import { CompanyEnabledGuard } from './common/guards/company-enabled.guard';
 import { SupabaseModule }       from './common/supabase/supabase.module';
 import { PrismaModule }         from './prisma/prisma.module';
+import { ActivityLogModule }    from './common/activity/activity-log.module';
 import { HealthModule }         from './modules/health/health.module';
 import { AuthModule }           from './modules/auth/auth.module';
 import { UsersModule }          from './modules/users/users.module';
@@ -69,6 +70,7 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
       { name: 'medium', ttl: 60000, limit: 500 }, // 500 req/min por IP
     ]),
     PrismaModule,
+    ActivityLogModule,       // Bitácora de acciones (global)
     HealthModule,              // /api/v1/health (público, SELECT 1) — keep-warm de Neon
     // Identidad en Supabase Auth (global) — SupabaseAdminService disponible en toda la app
     SupabaseModule,

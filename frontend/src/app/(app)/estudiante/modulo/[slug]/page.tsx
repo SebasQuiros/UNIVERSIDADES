@@ -12,6 +12,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import { CatalogoCuentasView } from '@/components/modulo/CatalogoCuentasView';
+import { BitacoraView } from '@/components/modulo/BitacoraView';
 import { ValorInventarioView } from '@/components/modulo/ValorInventarioView';
 import { CategoriasView } from '@/components/modulo/CategoriasView';
 import { NotasView } from '@/components/modulo/NotasView';
@@ -235,6 +236,7 @@ export default function ModuloPage() {
   // ── Slugs con backend real: se pintan con su propio componente ──
   // (resuelven la empresa del attempt activo y hacen su fetch).
   if (slug === 'catalogo-cuentas') return <CatalogoCuentasView />;
+  if (slug === 'bitacora') return <BitacoraView />;
   if (slug === 'valor-inventario') return <ValorInventarioView />;
   if (slug === 'categorias') return <CategoriasView />;
   if (slug === 'notas-credito') return <NotasView kind="credito" />;

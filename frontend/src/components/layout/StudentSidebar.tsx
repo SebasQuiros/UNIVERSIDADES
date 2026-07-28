@@ -181,6 +181,7 @@ export function StudentSidebar() {
         { label: 'Balanza post-cierre',     tab: 'balanza-post-cierre' },
         { label: 'Activos fijos',           tab: 'fixed-assets',   slug: 'activos' },
         { label: 'Nómina',                  tab: 'payroll' },
+        { label: 'Bitácora de acciones',    slug: 'bitacora' },
         { label: 'Tutor IA',                tab: 'tutor' },
       ],
     },
