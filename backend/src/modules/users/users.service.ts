@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SupabaseAdminService } from '../../common/supabase/supabase-admin.service';
 import { Role } from '@prisma/client';
@@ -42,6 +42,24 @@ export class UsersService {
 
   async create(data: CreateUserData) {
     const email = data.email.toLowerCase().trim();
+
+    // ── INVARIANTE MULTI-TENANT ───────────────────────────────────────────
+    // Todo usuario DEBE pertenecer a una institución (universidad o colegio).
+    // La única excepción es SUPERADMIN, que por diseño es global.
+    // Un usuario "huérfano" (sin universityId) era la raíz de varias fugas
+    // entre instituciones: los chequeos de tenant no tenían con qué comparar.
+    if (data.role !== 'SUPERADMIN' && !data.universityId) {
+      throw new BadRequestException(
+        'Todo usuario debe pertenecer a una institución. Indicá la universidad o colegio.',
+      );
+    }
+    if (data.universityId) {
+      const uni = await this.prisma.university.findUnique({
+        where: { id: data.universityId }, select: { id: true, isActive: true },
+      });
+      if (!uni) throw new BadRequestException('La institución indicada no existe.');
+      if (!uni.isActive) throw new BadRequestException('La institución está inactiva.');
+    }
     // Crea primero la identidad en Supabase Auth (idempotente por email) y
     // guarda su id en `authId`. Ya no almacenamos hash de contraseña localmente.
     const authId = await this.supabaseAdmin.createUser({
