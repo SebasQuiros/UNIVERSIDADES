@@ -314,12 +314,28 @@ export class CompaniesService {
     // FK cuando la empresa ya tenía transacciones. Se borran los hijos en orden
     // (padres de FK primero) dentro de una transacción.
     await this.prisma.$transaction([
+      // Notas de crédito/débito (referencian invoice → deben irse ANTES que las facturas)
+      this.prisma.creditNoteLine.deleteMany({ where: { creditNote: { companyId } } }),
+      this.prisma.creditNote.deleteMany({ where: { companyId } }),
+      this.prisma.debitNoteLine.deleteMany({ where: { debitNote: { companyId } } }),
+      this.prisma.debitNote.deleteMany({ where: { companyId } }),
+      // Movimientos contables y de dinero
       this.prisma.journalLine.deleteMany({ where: { companyId } }),
+      this.prisma.arPayment.deleteMany({ where: { companyId } }),
       this.prisma.payment.deleteMany({ where: { companyId } }),
       this.prisma.inventoryMovement.deleteMany({ where: { companyId } }),
       this.prisma.journalEntry.deleteMany({ where: { companyId } }),
+      // Planilla y activos fijos
+      this.prisma.payrollLine.deleteMany({ where: { payroll: { companyId } } }),
+      this.prisma.payroll.deleteMany({ where: { companyId } }),
+      this.prisma.employee.deleteMany({ where: { companyId } }),
+      this.prisma.depreciationRecord.deleteMany({ where: { companyId } }),
+      this.prisma.fixedAsset.deleteMany({ where: { companyId } }),
+      // Documentos comerciales y maestros
       this.prisma.invoiceItem.deleteMany({ where: { invoice: { companyId } } }),
       this.prisma.invoice.deleteMany({ where: { companyId } }),
+      this.prisma.purchaseInvoice.deleteMany({ where: { companyId } }),
+      this.prisma.supplier.deleteMany({ where: { companyId } }),
       this.prisma.client.deleteMany({ where: { companyId } }),
       this.prisma.product.deleteMany({ where: { companyId } }),
       this.prisma.accountingPeriod.deleteMany({ where: { companyId } }),

@@ -30,7 +30,7 @@ export class ProductsService {
     return product;
   }
 
-  async create(companyId: string, dto: CreateProductDto) {
+  async create(companyId: string, dto: CreateProductDto, userId?: string) {
     // Check for duplicate SKU within company
     if (dto.sku) {
       const existing = await this.prisma.product.findFirst({
@@ -41,7 +41,11 @@ export class ProductsService {
       }
     }
 
-    return this.prisma.product.create({
+    const stock = new Decimal((dto.stock ?? 0).toString());
+    const cost  = new Decimal((dto.cost  ?? 0).toString());
+    const isService = dto.isService ?? false;
+
+    const product = await this.prisma.product.create({
       data: {
         companyId,
         name:        dto.name,
@@ -49,16 +53,94 @@ export class ProductsService {
         sku:         dto.sku         ?? null,
         cabysCode:   dto.cabysCode,
         price:       new Decimal(dto.price.toString()),
-        cost:        new Decimal((dto.cost ?? 0).toString()),
+        cost,
         taxRate:     new Decimal(dto.taxRate.toString()),
-        stock:       new Decimal((dto.stock ?? 0).toString()),
+        stock,
         minStock:    new Decimal((dto.minStock ?? 0).toString()),
         unit:        dto.unit      ?? 'Unid',
-        isService:   dto.isService ?? false,
+        isService,
         categoryId:  dto.categoryId ?? null,
         isActive:    true,
       },
     });
+
+    // ── Inventario inicial CONTABLE ──────────────────────────────
+    // Antes, un producto creado con stock guardaba la CANTIDAD pero no
+    // capitalizaba su VALOR: al vender, el costo de ventas dejaba la cuenta
+    // Inventario en negativo. Ahora el stock de apertura crea su lote FIFO y
+    // su asiento (Inventario contra Capital), como un aporte en especie.
+    if (!isService && stock.greaterThan(0) && cost.greaterThan(0)) {
+      await this.seedOpeningInventory(companyId, product.id, stock, cost, userId);
+    }
+
+    return product;
+  }
+
+  /** Lote FIFO + asiento de apertura del inventario inicial. Tolerante a
+   *  fallos: si no se puede asentar (faltan cuentas, período cerrado), el
+   *  producto igual queda creado con su stock. */
+  private async seedOpeningInventory(
+    companyId: string, productId: string,
+    qty: Decimal, unitCost: Decimal, userId?: string,
+  ) {
+    const total = qty.times(unitCost).toDecimalPlaces(2);
+    // El asiento necesita autor: si no viene del request, usamos el dueño de la
+    // empresa (estudiante del intento / de práctica).
+    let authorId = userId;
+    if (!authorId) {
+      const co = await this.prisma.company.findUnique({
+        where:  { id: companyId },
+        select: { studentId: true, attempt: { select: { studentId: true } } },
+      });
+      authorId = co?.studentId ?? co?.attempt?.studentId ?? undefined;
+    }
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.inventoryLot.create({
+          data: {
+            companyId, productId,
+            qtyOriginal:  qty,
+            qtyRemaining: qty,
+            unitCost,
+            source:   'INITIAL',
+            sourceId: productId,
+          },
+        });
+
+        const [inv, cap] = await Promise.all([
+          tx.account.findFirst({ where: { companyId, code: '1.1.03.01' }, select: { id: true } }),
+          tx.account.findFirst({ where: { companyId, code: '3.1.01.01' }, select: { id: true } }),
+        ]);
+        // Sin catálogo estándar o sin autor: queda el lote, sin asiento.
+        if (!inv || !cap || !authorId) return;
+
+        const seq = await tx.journalSequence.upsert({
+          where: { companyId }, update: { lastNumber: { increment: 1 } },
+          create: { companyId, lastNumber: 1 },
+          select: { lastNumber: true },
+        });
+        await tx.journalEntry.create({
+          data: {
+            companyId,
+            entryNumber: seq.lastNumber,
+            entryDate:   new Date(),
+            description: 'Inventario inicial (aporte en especie)',
+            reference:   'APERT-INV',
+            source:      'MANUAL',
+            status:      'CONFIRMED',
+            createdById: authorId,
+            lines: {
+              create: [
+                { companyId, accountId: inv.id, debit: total, credit: 0, description: 'Inventario inicial' },
+                { companyId, accountId: cap.id, debit: 0, credit: total, description: 'Aporte de capital en especie' },
+              ],
+            },
+          },
+        });
+      });
+    } catch {
+      /* el producto ya existe con su stock; el asiento se puede hacer manual */
+    }
   }
 
   async update(companyId: string, productId: string, dto: UpdateProductDto) {

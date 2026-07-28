@@ -63,8 +63,8 @@ export class ProductsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Param('companyId') companyId: string, @Body() dto: CreateProductDto) {
-    return this.svc.create(companyId, dto);
+  create(@Param('companyId') companyId: string, @Body() dto: CreateProductDto, @Request() req: any) {
+    return this.svc.create(companyId, dto, req?.user?.id);
   }
 
   @Patch(':id')
