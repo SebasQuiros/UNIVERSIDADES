@@ -63,7 +63,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const code = ex.code as string | undefined;
       const name = ex.name as string | undefined;
       const msg  = String(ex.message ?? '');
-      if (code === 'P2025') status = HttpStatus.NOT_FOUND;
+      // body-parser: cuerpo de petición más grande que el límite configurado.
+      // Sin este mapeo salía 500 (parecía un fallo del servidor) cuando en
+      // realidad es un error del cliente: 413 Payload Too Large.
+      if (name === 'PayloadTooLargeError' || code === 'LIMIT_FILE_SIZE' || ex.type === 'entity.too.large') {
+        status = HttpStatus.PAYLOAD_TOO_LARGE;
+      }
+      else if (code === 'P2025') status = HttpStatus.NOT_FOUND;
       else if (code === 'P2002') status = HttpStatus.CONFLICT;
       else if (code === 'P2003') status = HttpStatus.BAD_REQUEST;
       else if (
