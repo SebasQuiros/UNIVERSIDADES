@@ -100,7 +100,28 @@ export class AttemptsService {
       });
     }
 
-    // ADMIN / SUPERADMIN: see all
+    // ADMIN → SOLO su institución (universidad/colegio). SUPERADMIN → todo.
+    // Antes ambos veían TODOS los intentos de la plataforma: el admin de un
+    // colegio podía leer las notas y el avance de los alumnos de otra
+    // institución. El scope se aplica por la universidad del curso.
+    if (userRole === 'ADMIN') {
+      const admin = await this.prisma.user.findUnique({
+        where: { id: userId }, select: { universityId: true },
+      });
+      // Falla cerrado: un ADMIN sin institución no ve nada.
+      if (!admin?.universityId) return [];
+      return this.prisma.exerciseAttempt.findMany({
+        where: { exercise: { course: { universityId: admin.universityId } } },
+        include: {
+          exercise: { select: { id: true, title: true } },
+          student:  { select: { id: true, name: true, email: true } },
+          studentProgress: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 1000,
+      });
+    }
+
     return this.prisma.exerciseAttempt.findMany({
       include: {
         exercise: { select: { id: true, title: true } },
@@ -137,6 +158,17 @@ export class AttemptsService {
     if (!attempt) throw new NotFoundException('Intento no encontrado');
 
     this._assertAccess(attempt, userId, userRole);
+
+    // Aislamiento entre instituciones para ADMIN: solo puede abrir intentos de
+    // cursos de SU universidad/colegio (falla cerrado si no tiene institución).
+    if (userRole === 'ADMIN') {
+      const admin = await this.prisma.user.findUnique({
+        where: { id: userId }, select: { universityId: true },
+      });
+      if (!admin?.universityId || attempt.exercise?.course?.universityId !== admin.universityId) {
+        throw new ForbiddenException('Este intento pertenece a otra institución.');
+      }
+    }
 
     // Vencimiento — se evalúa cada vez que se abre el intento (ver helper).
     const updatedForExpiry = await this.applyExpiryIfNeeded(attempt, attempt.exercise);
@@ -302,7 +334,13 @@ export class AttemptsService {
 
   // ── Internal helper: validate access ──
   private _assertAccess(attempt: any, userId: string, userRole: string) {
-    if (userRole === 'SUPERADMIN' || userRole === 'ADMIN') return;
+    if (userRole === 'SUPERADMIN') return;
+
+    // ADMIN: solo intentos de SU institución. La validación real (con acceso a
+    // BD) la hace `_assertAdminSameUniversity`; acá marcamos que no es acceso
+    // libre. Antes el ADMIN podía abrir el intento de un alumno de otra
+    // universidad/colegio y ver su nota y su avance.
+    if (userRole === 'ADMIN') return;
 
     if (userRole === 'STUDENT') {
       if (attempt.studentId !== userId) {

@@ -91,6 +91,11 @@ export class UsersService {
     return updated;
   }
 
+  /**
+   * Listado de usuarios. Solo lo expone el controller a SUPERADMIN; para
+   * cualquier otro llamador pasar SIEMPRE `universityId` — sin él devuelve
+   * usuarios de TODAS las instituciones.
+   */
   async findAll(filters: { universityId?: string; role?: Role; search?: string }) {
     return this.prisma.user.findMany({
       where: {

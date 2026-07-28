@@ -47,11 +47,14 @@ export class UsersController {
     if (!email) return null;
     const user = await this.svc.findByEmail(email.trim());
     if (!user) return null;
-    // Aislamiento por universidad (SUPERADMIN bypassa).
+    // Aislamiento por institución (SUPERADMIN bypassa). FALLA CERRADO: antes,
+    // si el solicitante no tenía universidad asignada, la condición se saltaba
+    // y podía buscar por correo a CUALQUIER usuario de cualquier institución.
     const role = req?.user?.role;
     const myUniversityId = req?.user?.universityId ?? null;
-    if (role !== 'SUPERADMIN' && myUniversityId && user.universityId !== myUniversityId) {
-      return null; // mismo response que "no existe" — no leakea
+    if (role !== 'SUPERADMIN') {
+      if (!myUniversityId) return null;
+      if (user.universityId !== myUniversityId) return null; // igual que "no existe"
     }
     return { id: user.id, name: user.name, email: user.email };
   }
