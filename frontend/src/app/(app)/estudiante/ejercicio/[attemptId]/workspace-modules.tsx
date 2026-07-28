@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { AccountPicker } from '@/components/accounting/AccountPicker';
+import { StatementAnalysis } from '@/components/reports/StatementAnalysis';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconTile } from '@/components/ui/IconTile';
@@ -1954,7 +1955,7 @@ export function LedgerTab({ companyId }: { companyId: string }) {
 }
 // ─── Reports tab ──────────────────────────────────────────────────────────────
 export function ReportsTab({ companyId, companyName }: { companyId: string; companyName?: string }) {
-  const [subTab, setSubTab] = useState<'resumen' | 'estados'>('resumen');
+  const [subTab, setSubTab] = useState<'resumen' | 'estados' | 'analisis'>('resumen');
   const [report, setReport] = useState<'balance-sheet' | 'income-statement'>('balance-sheet');
   const [data, setData]     = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -2215,6 +2216,7 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
         {([
           { id: 'resumen', label: 'Resumen' },
           { id: 'estados', label: 'Estados Financieros' },
+          { id: 'analisis', label: 'Análisis V/H' },
         ] as const).map(({ id, label }) => (
           <button key={id} onClick={() => setSubTab(id)}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
@@ -2225,7 +2227,9 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
         ))}
       </div>
 
-      {subTab === 'resumen' ? (
+      {subTab === 'analisis' ? (
+        <StatementAnalysis companyId={companyId} />
+      ) : subTab === 'resumen' ? (
         <div className="space-y-5">
           {/* ── Barra de filtros: Tipo de Estado / Período / Generar Estado ── */}
           <div className="bg-white rounded-card border border-gray-200/70 px-4 py-3 flex items-center gap-3 flex-wrap" style={CARD_SHADOW}>

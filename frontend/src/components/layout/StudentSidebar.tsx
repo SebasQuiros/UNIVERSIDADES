@@ -156,6 +156,7 @@ export function StudentSidebar() {
       children: [
         { label: 'Catálogo de productos', tab: 'products', slug: 'productos' },
         { label: 'Valorización',         slug: 'valor-inventario' },
+        { label: 'Kardex',               slug: 'kardex' },
         { label: 'Ajustes',              tab: 'inventory-adjustments', slug: 'ajustes-inventario' },
         { label: 'Categorías',           slug: 'categorias' },
       ],
