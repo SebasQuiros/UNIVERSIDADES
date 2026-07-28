@@ -1,6 +1,7 @@
 import {
   Controller, Get, Post, Delete, Param, Body, UseGuards, Request,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
 import { PracticeGroupsService } from './practice-groups.service';
 import { CreateGroupDto, JoinGroupDto } from './dto/practice-groups.dto';
@@ -21,6 +22,9 @@ export class PracticeGroupsController {
   }
 
   // Unirse a un grupo existente por código.
+  // Límite anti fuerza bruta del código de invitación (igual que el join de
+  // Sesión de Aula): 10 intentos por minuto.
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post('join')
   join(@Body() dto: JoinGroupDto, @Request() req: any) {
     return this.svc.joinGroup(req.user.id, dto);

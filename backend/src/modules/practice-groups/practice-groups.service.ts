@@ -110,6 +110,18 @@ export class PracticeGroupsService {
     });
     if (!group) throw new NotFoundException('Grupo de práctica no encontrado.');
 
+    // Aislamiento entre instituciones: el código de invitación no es un secreto
+    // perfecto. Antes un estudiante de otra universidad/colegio podía unirse y
+    // sus empresas quedaban expuestas como contrapartes comerciales. Falla
+    // cerrado si alguna de las dos instituciones no se resuelve.
+    const [joiner, owner] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId },           select: { universityId: true } }),
+      this.prisma.user.findUnique({ where: { id: group.createdById }, select: { universityId: true } }),
+    ]);
+    if (!joiner?.universityId || !owner?.universityId || joiner.universityId !== owner.universityId) {
+      throw new ForbiddenException('Este grupo de práctica pertenece a otra institución.');
+    }
+
     // Alta idempotente: si ya es miembro (unique groupId+companyId), no falla.
     try {
       await this.prisma.practiceGroupMember.create({

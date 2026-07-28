@@ -352,6 +352,12 @@ export class CompanyMembershipsService {
     if (user.role === 'TEACHER') {
       await this._assertExerciseTeacher(company.exerciseId ?? null, user.id);
     }
+    // ADMIN: solo empresas de SU institución. Antes no se validaba nada, así
+    // que el admin de un colegio podía deshabilitar (congelar) la empresa de
+    // un alumno de otra universidad en pleno examen.
+    if (user.role === 'ADMIN') {
+      await this._assertAdminSameUniversity(company, user.id);
+    }
 
     // ── Hook Sesión de Aula: no reactivar una empresa mientras su sesión está
     // congelada (tributación/auditoría/calificación), para no invalidar el
@@ -415,13 +421,53 @@ export class CompanyMembershipsService {
     return exercise;
   }
 
+  /**
+   * Aislamiento multi-tenant para ADMIN: la empresa debe pertenecer a SU
+   * institución. Un ADMIN es el rol que se le vende a cada universidad/colegio,
+   * NO un superusuario global: antes `['ADMIN','SUPERADMIN'].includes(role)`
+   * le daba acceso a las empresas de cualquier institución (y, vía gestión de
+   * miembros, podía inyectarse en los libros de otro cliente).
+   * Falla cerrado: sin institución resuelta, se deniega.
+   */
+  private async _assertAdminSameUniversity(company: any, userId: string) {
+    const [admin, companyUniversityId] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { universityId: true } }),
+      this._resolveCompanyUniversityId(company),
+    ]);
+    if (!admin?.universityId || !companyUniversityId || admin.universityId !== companyUniversityId) {
+      throw new ForbiddenException('Esta empresa pertenece a otra institución.');
+    }
+  }
+
+  /** Universidad de la empresa: por el curso del exercise (GROUP) o por el estudiante dueño. */
+  private async _resolveCompanyUniversityId(company: any): Promise<string | null> {
+    if (company.exerciseId) {
+      const ex = await this.prisma.exercise.findUnique({
+        where:  { id: company.exerciseId },
+        select: { course: { select: { universityId: true } } },
+      });
+      if (ex?.course?.universityId) return ex.course.universityId;
+    }
+    if (company.studentId) {
+      const st = await this.prisma.user.findUnique({
+        where: { id: company.studentId }, select: { universityId: true },
+      });
+      return st?.universityId ?? null;
+    }
+    return null;
+  }
+
   /** Lectura: integrante de la company o admin/teacher del exercise. */
   private async _assertCanReadCompany(
     companyId: string,
     user: { id: string; role: string },
   ) {
     const company = await this._loadCompanyOrThrow(companyId);
-    if (['ADMIN', 'SUPERADMIN'].includes(user.role)) return company;
+    if (user.role === 'SUPERADMIN') return company;
+    if (user.role === 'ADMIN') {
+      await this._assertAdminSameUniversity(company, user.id);
+      return company;
+    }
     if (user.role === 'TEACHER') {
       await this._assertExerciseTeacher(company.exerciseId ?? null, user.id);
       return company;
@@ -448,7 +494,11 @@ export class CompanyMembershipsService {
         'Solo las empresas en modo GROUP tienen miembros',
       );
     }
-    if (['ADMIN', 'SUPERADMIN'].includes(user.role)) return company;
+    if (user.role === 'SUPERADMIN') return company;
+    if (user.role === 'ADMIN') {
+      await this._assertAdminSameUniversity(company, user.id);
+      return company;
+    }
     if (user.role === 'TEACHER') {
       await this._assertExerciseTeacher(company.exerciseId ?? null, user.id);
       return company;

@@ -56,9 +56,10 @@ export class AuditAssignmentGuard implements CanActivate {
       // ADMIN: mismo aislamiento por universidad que ClassSessionGuard (evita
       // fuga de metadatos —nombres de grupos/arquetipos— entre tenants).
       if (user.role === 'ADMIN') {
+        // FALLA CERRADO (ver ClassSessionGuard).
         const teacherUni = session.exercise?.teacher?.universityId ?? null;
-        if (user.universityId && teacherUni && user.universityId !== teacherUni) {
-          throw new ForbiddenException('No tenés acceso a sesiones de otra universidad.');
+        if (!user.universityId || !teacherUni || user.universityId !== teacherUni) {
+          throw new ForbiddenException('No tenés acceso a sesiones de otra institución.');
         }
       }
       if (isWrite) {

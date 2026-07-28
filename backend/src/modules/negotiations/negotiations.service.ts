@@ -19,6 +19,27 @@ export class NegotiationsService {
     return u?.role === 'TEACHER' || u?.role === 'ADMIN' || u?.role === 'SUPERADMIN';
   }
 
+  /**
+   * Institución (universidad/colegio) del usuario. SUPERADMIN devuelve null y
+   * se trata como global.
+   */
+  private async callerTenant(userId: string) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId }, select: { role: true, universityId: true },
+    });
+    return { role: u?.role ?? null, universityId: u?.universityId ?? null };
+  }
+
+  /** Universidad de una negociación, vía la sesión → ejercicio → curso. */
+  private async negotiationUniversityId(classSessionId: string | null): Promise<string | null> {
+    if (!classSessionId) return null;
+    const s = await this.prisma.classSession.findUnique({
+      where:  { id: classSessionId },
+      select: { exercise: { select: { course: { select: { universityId: true } } } } },
+    });
+    return s?.exercise?.course?.universityId ?? null;
+  }
+
   private async isMember(companyId: string, userId: string): Promise<boolean> {
     const m = await this.prisma.companyMembership.findUnique({
       where: { companyId_userId: { companyId, userId } },
@@ -86,17 +107,39 @@ export class NegotiationsService {
       where: { userId }, select: { companyId: true },
     });
     const myCompanyIds = memberships.map((m) => m.companyId);
-    const staff = await this.isStaff(userId);
+    const { role, universityId } = await this.callerTenant(userId);
+    const staff = role === 'TEACHER' || role === 'ADMIN' || role === 'SUPERADMIN';
+
+    // Aislamiento por institución: antes CUALQUIER staff (incluido un profesor
+    // de otro colegio) veía TODAS las negociaciones de la plataforma, con sus
+    // precios y cantidades pactadas. Ahora el staff ve solo las de sesiones de
+    // SU institución; sin institución resuelta no ve nada.
+    // `Negotiation.classSessionId` es FK escalar (sin relación Prisma), así que
+    // resolvemos primero las sesiones de la institución.
+    let staffWhere: any = {};
+    if (staff && role !== 'SUPERADMIN') {
+      if (!universityId) {
+        staffWhere = { id: '00000000-0000-4000-8000-000000000000' }; // nada
+      } else {
+        const sessions = await this.prisma.classSession.findMany({
+          where:  { exercise: { course: { universityId } } },
+          select: { id: true },
+        });
+        staffWhere = { classSessionId: { in: sessions.map((s) => s.id) } };
+      }
+    }
 
     const negs = await this.prisma.negotiation.findMany({
       where: {
         ...(classSessionId ? { classSessionId } : {}),
-        ...(staff ? {} : {
-          OR: [
-            { buyerCompanyId:  { in: myCompanyIds } },
-            { sellerCompanyId: { in: myCompanyIds } },
-          ],
-        }),
+        ...(staff
+          ? staffWhere
+          : {
+              OR: [
+                { buyerCompanyId:  { in: myCompanyIds } },
+                { sellerCompanyId: { in: myCompanyIds } },
+              ],
+            }),
       },
       orderBy: { updatedAt: 'desc' },
       take: 100,
@@ -120,7 +163,19 @@ export class NegotiationsService {
     });
     if (!neg) throw new NotFoundException('Negociación no encontrada.');
     const side = await this.sideOf(neg, userId);
-    if (!side && !(await this.isStaff(userId))) {
+    // Staff (profe/admin) puede observar, pero SOLO negociaciones de su propia
+    // institución. Antes cualquier staff leía el hilo completo —mensajes,
+    // cantidades y precios pactados— de cualquier otro cliente.
+    let staffCanSee = false;
+    if (!side) {
+      const { role, universityId } = await this.callerTenant(userId);
+      if (role === 'SUPERADMIN') staffCanSee = true;
+      else if (role === 'TEACHER' || role === 'ADMIN') {
+        const negUni = await this.negotiationUniversityId(neg.classSessionId);
+        staffCanSee = !!universityId && !!negUni && universityId === negUni;
+      }
+    }
+    if (!side && !staffCanSee) {
       throw new ForbiddenException('No participas en esta negociación.');
     }
     const names = await this.companyNames([neg.buyerCompanyId, neg.sellerCompanyId]);

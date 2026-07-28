@@ -632,9 +632,12 @@ export class ClassSessionsService {
     // (6 chars), así que validamos que el estudiante pertenezca a la universidad
     // de la sesión. Sin esto, un alumno de otra universidad podría colarse por
     // código y terminar comerciando/auditando en un aula ajena.
+    // FALLA CERRADO: antes, con `&&`, un usuario SIN institución asignada (o una
+    // sesión cuya universidad no se resolvía) pasaba el filtro y podía unirse al
+    // aula de otro cliente por código.
     const sessionUniversityId = session.exercise?.course?.universityId ?? null;
-    if (user.universityId && sessionUniversityId && user.universityId !== sessionUniversityId) {
-      throw new ForbiddenException('Esta sesión de aula pertenece a otra universidad.');
+    if (!user.universityId || !sessionUniversityId || user.universityId !== sessionUniversityId) {
+      throw new ForbiddenException('Esta sesión de aula pertenece a otra institución.');
     }
     // Idempotente: si ya se unió, devuelve el existente.
     const participant = await this.prisma.classSessionParticipant.upsert({

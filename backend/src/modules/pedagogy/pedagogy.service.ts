@@ -104,6 +104,45 @@ export class PedagogyService {
 
   // ── getOrCreateProfile ──────────────────────────────────────────────────────
   /** Devuelve el LearningProfile del estudiante, creándolo vacío si no existe. */
+  /**
+   * Perfil de aprendizaje de un estudiante para staff, CON aislamiento.
+   * Antes el endpoint llamaba directo a getOrCreateProfile(studentId): con solo
+   * conocer el UUID, un profesor de otra institución leía (¡y creaba!) el
+   * perfil pedagógico de un alumno ajeno.
+   *   · SUPERADMIN → libre.
+   *   · ADMIN      → solo alumnos de SU institución.
+   *   · TEACHER    → solo alumnos matriculados en un curso que él imparte.
+   * Falla cerrado.
+   */
+  async getStudentProfileFor(
+    studentId: string,
+    caller: { id?: string; role?: string; universityId?: string | null },
+  ) {
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId }, select: { id: true, universityId: true },
+    });
+    if (!student) throw new NotFoundException('Estudiante no encontrado');
+
+    if (caller?.role !== 'SUPERADMIN') {
+      if (caller?.role === 'ADMIN') {
+        if (!caller?.universityId || student.universityId !== caller.universityId) {
+          throw new ForbiddenException('Este estudiante pertenece a otra institución.');
+        }
+      } else if (caller?.role === 'TEACHER') {
+        const shares = await this.prisma.enrollment.findFirst({
+          where:  { studentId, course: { teacherId: caller.id } },
+          select: { id: true },
+        });
+        if (!shares) {
+          throw new ForbiddenException('Este estudiante no está en tus cursos.');
+        }
+      } else {
+        throw new ForbiddenException('Sin permiso para ver este perfil.');
+      }
+    }
+    return this.getOrCreateProfile(studentId);
+  }
+
   async getOrCreateProfile(studentId: string) {
     const existing = await this.prisma.learningProfile.findUnique({
       where: { studentId },

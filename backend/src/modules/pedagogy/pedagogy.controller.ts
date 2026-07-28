@@ -74,7 +74,7 @@ export class PedagogyController {
   @Get('students/:studentId/profile')
   @UseGuards(RolesGuard)
   @Roles('TEACHER', 'ADMIN', 'SUPERADMIN')
-  studentProfile(@Param('studentId') studentId: string) {
-    return this.pedagogy.getOrCreateProfile(studentId);
+  studentProfile(@Param('studentId') studentId: string, @CurrentUser() user: any) {
+    return this.pedagogy.getStudentProfileFor(studentId, user);
   }
 }

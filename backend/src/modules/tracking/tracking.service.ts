@@ -97,6 +97,17 @@ export class TrackingService {
     if (userRole === 'TEACHER' && attempt.exercise?.course?.teacherId !== userId) {
       throw new ForbiddenException('Solo el profesor del curso puede ver este progreso');
     }
+    // ADMIN: solo intentos de SU institución (antes veía el progreso y la traza
+    // de proctoring de alumnos de cualquier cliente). Falla cerrado.
+    if (userRole === 'ADMIN') {
+      const admin = await this.prisma.user.findUnique({
+        where: { id: userId }, select: { universityId: true },
+      });
+      const uni = (attempt as any).exercise?.course?.universityId ?? null;
+      if (!admin?.universityId || uni !== admin.universityId) {
+        throw new NotFoundException('Intento no encontrado');
+      }
+    }
 
     // Recalculate live counts from company data
     let liveCounts = {

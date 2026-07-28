@@ -138,7 +138,7 @@ export class GradingService {
           select: {
             id: true, title: true, maxScore: true,
             rubrics: rubricsInclude,
-            course:  { select: { teacherId: true } },
+            course:  { select: { teacherId: true, universityId: true } },
           },
         },
         gradedBy: { select: { id: true, name: true } },
@@ -151,6 +151,17 @@ export class GradingService {
     }
     if (userRole === 'TEACHER' && attempt.exercise.course.teacherId !== userId) {
       throw new ForbiddenException('Solo el profesor del curso puede ver esta calificación');
+    }
+    // ADMIN: solo calificaciones de SU institución. Antes caía al return y
+    // devolvía la nota + la rúbrica CON `expectedValue` (clave de respuestas)
+    // de cualquier universidad/colegio. Falla cerrado.
+    if (userRole === 'ADMIN') {
+      const admin = await this.prisma.user.findUnique({
+        where: { id: userId }, select: { universityId: true },
+      });
+      if (!admin?.universityId || attempt.exercise.course.universityId !== admin.universityId) {
+        throw new NotFoundException('Intento no encontrado');
+      }
     }
 
     // Parse structured feedback JSON

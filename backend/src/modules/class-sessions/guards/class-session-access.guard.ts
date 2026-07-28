@@ -47,9 +47,12 @@ export class ClassSessionGuard implements CanActivate {
     if (user.role === 'SUPERADMIN') return true;
 
     if (user.role === 'ADMIN') {
+      // FALLA CERRADO: con `&&`, un ADMIN sin institución (o una sesión cuya
+      // universidad no se resuelve) obtenía acceso a las sesiones de CUALQUIER
+      // cliente, incluidas rutas de escritura (start/cancel/grade).
       const teacherUni = session.exercise?.teacher?.universityId ?? null;
-      if (user.universityId && teacherUni && user.universityId !== teacherUni) {
-        throw new ForbiddenException('No tenés acceso a sesiones de otra universidad.');
+      if (!user.universityId || !teacherUni || user.universityId !== teacherUni) {
+        throw new ForbiddenException('No tenés acceso a sesiones de otra institución.');
       }
       return true;
     }

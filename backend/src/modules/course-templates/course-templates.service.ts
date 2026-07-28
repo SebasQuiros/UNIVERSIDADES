@@ -29,7 +29,7 @@ export class CourseTemplatesService {
    * crea Exercises publicados + sus ExerciseRubric + vínculos ExerciseCompetency.
    * Idempotente por título: no duplica ejercicios que ya existan en el curso.
    */
-  async applyTemplate(courseId: string, templateKey: string, user: { id: string; role: string }) {
+  async applyTemplate(courseId: string, templateKey: string, user: { id: string; role: string; universityId?: string | null }) {
     const tpl = this.getTemplate(templateKey);
 
     const course = await this.prisma.course.findUnique({
@@ -38,9 +38,18 @@ export class CourseTemplatesService {
     });
     if (!course) throw new NotFoundException('Curso no encontrado');
 
-    const isStaff = ['ADMIN', 'SUPERADMIN'].includes(user.role);
-    if (course.teacherId !== user.id && !isStaff) {
-      throw new ForbiddenException('No puedes modificar un curso que no es tuyo');
+    // ADMIN NO es global: es el rol de cada institución. Antes bastaba con ser
+    // ADMIN para aplicar una plantilla (inyectando ejercicios y rúbricas) en el
+    // curso de otra universidad/colegio.
+    if (user.role !== 'SUPERADMIN') {
+      const isOwner = course.teacherId === user.id;
+      if (user.role === 'ADMIN') {
+        if (!user.universityId || course.universityId !== user.universityId) {
+          throw new ForbiddenException('Este curso pertenece a otra institución.');
+        }
+      } else if (!isOwner) {
+        throw new ForbiddenException('No puedes modificar un curso que no es tuyo');
+      }
     }
 
     // Resolver competencias por code: globales (universityId NULL) o de la universidad del curso.

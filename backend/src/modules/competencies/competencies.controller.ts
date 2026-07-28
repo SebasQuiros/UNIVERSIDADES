@@ -56,15 +56,15 @@ export class CompetenciesController {
   @Patch('competencies/:id')
   @UseGuards(RolesGuard)
   @Roles('TEACHER', 'ADMIN', 'SUPERADMIN')
-  update(@Param('id') id: string, @Body() dto: Partial<UpsertCompetencyDto>) {
-    return this.svc.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: Partial<UpsertCompetencyDto>, @CurrentUser() user: any) {
+    return this.svc.update(id, dto, user);
   }
 
   @Delete('competencies/:id')
   @UseGuards(RolesGuard)
   @Roles('ADMIN', 'SUPERADMIN')
-  remove(@Param('id') id: string) {
-    return this.svc.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.svc.remove(id, user);
   }
 
   // ── Vínculo con ejercicios ────────────────────────────────────
@@ -76,8 +76,8 @@ export class CompetenciesController {
   @Put('exercises/:exerciseId/competencies')
   @UseGuards(RolesGuard)
   @Roles('TEACHER', 'ADMIN', 'SUPERADMIN')
-  setForExercise(@Param('exerciseId') exerciseId: string, @Body() dto: SetLinksDto) {
-    return this.svc.setExerciseCompetencies(exerciseId, dto.competencies ?? []);
+  setForExercise(@Param('exerciseId') exerciseId: string, @Body() dto: SetLinksDto, @CurrentUser() user: any) {
+    return this.svc.setExerciseCompetencies(exerciseId, dto.competencies ?? [], user);
   }
 
   // ── Evidencia de competencias (dashboards) ────────────────────

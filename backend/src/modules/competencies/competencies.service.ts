@@ -56,9 +56,34 @@ export class CompetenciesService {
     });
   }
 
-  async update(id: string, dto: Partial<UpsertCompetencyDto>) {
-    const exists = await this.prisma.competency.findUnique({ where: { id } });
-    if (!exists) throw new NotFoundException('Competencia no encontrada');
+
+  /**
+   * Aislamiento multi-tenant del catálogo de competencias.
+   * Las competencias con `universityId: null` son del catálogo GLOBAL y solo
+   * SUPERADMIN puede tocarlas. El resto pertenece a una institución concreta.
+   * Antes update/remove no validaban NADA: un profesor de un colegio podía
+   * renombrar o borrar las competencias de acreditación de otra universidad.
+   */
+  private async _assertCanMutateCompetency(
+    id: string,
+    caller?: { id?: string; role?: string; universityId?: string | null },
+  ) {
+    const comp = await this.prisma.competency.findUnique({
+      where: { id }, select: { id: true, universityId: true },
+    });
+    if (!comp) throw new NotFoundException('Competencia no encontrada');
+    if (caller?.role === 'SUPERADMIN') return comp;
+    if (!comp.universityId) {
+      throw new ForbiddenException('El catálogo global solo lo edita el superadministrador.');
+    }
+    if (!caller?.universityId || comp.universityId !== caller.universityId) {
+      throw new ForbiddenException('Esta competencia pertenece a otra institución.');
+    }
+    return comp;
+  }
+
+  async update(id: string, dto: Partial<UpsertCompetencyDto>, caller?: { id?: string; role?: string; universityId?: string | null }) {
+    await this._assertCanMutateCompetency(id, caller);
     return this.prisma.competency.update({
       where: { id },
       data: {
@@ -73,9 +98,8 @@ export class CompetenciesService {
     });
   }
 
-  async remove(id: string) {
-    const exists = await this.prisma.competency.findUnique({ where: { id } });
-    if (!exists) throw new NotFoundException('Competencia no encontrada');
+  async remove(id: string, caller?: { id?: string; role?: string; universityId?: string | null }) {
+    await this._assertCanMutateCompetency(id, caller);
     await this.prisma.competency.delete({ where: { id } });
     return { ok: true };
   }
@@ -90,9 +114,35 @@ export class CompetenciesService {
   }
 
   /** Reemplaza el conjunto de competencias vinculadas a un ejercicio. */
-  async setExerciseCompetencies(exerciseId: string, links: ExerciseCompetencyLink[]) {
-    const exercise = await this.prisma.exercise.findUnique({ where: { id: exerciseId } });
+  async setExerciseCompetencies(
+    exerciseId: string,
+    links: ExerciseCompetencyLink[],
+    caller?: { id?: string; role?: string; universityId?: string | null },
+  ) {
+    const exercise = await this.prisma.exercise.findUnique({
+      where:  { id: exerciseId },
+      select: { id: true, teacherId: true, course: { select: { universityId: true, teacherId: true } } },
+    });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
+
+    // Aislamiento: antes bastaba con conocer el UUID del ejercicio para
+    // reescribir el mapeo de competencias de otra institución (evidencia de
+    // acreditación). SUPERADMIN libre; TEACHER solo sus ejercicios; ADMIN solo
+    // los de su institución. Falla cerrado.
+    if (caller?.role !== 'SUPERADMIN') {
+      const exUni = exercise.course?.universityId ?? null;
+      if (caller?.role === 'TEACHER') {
+        const owns = exercise.teacherId === caller?.id || exercise.course?.teacherId === caller?.id;
+        const sameUni = !!caller?.universityId && !!exUni && caller.universityId === exUni;
+        if (!owns && !sameUni) throw new ForbiddenException('Este ejercicio pertenece a otra institución.');
+      } else if (caller?.role === 'ADMIN') {
+        if (!caller?.universityId || !exUni || caller.universityId !== exUni) {
+          throw new ForbiddenException('Este ejercicio pertenece a otra institución.');
+        }
+      } else {
+        throw new ForbiddenException('Sin permiso para modificar competencias.');
+      }
+    }
 
     const clean = (links ?? []).filter(l => l.competencyId);
     await this.prisma.$transaction([
