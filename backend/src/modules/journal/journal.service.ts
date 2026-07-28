@@ -447,19 +447,31 @@ export class JournalService {
       `;
       const entryNumber = Number(seqResult[0].last_number);
 
-      // Validate period is open
-      const period = await tx.accountingPeriod.findFirst({
-        where: {
-          companyId,
-          startDate: { lte: entryDate },
-          endDate:   { gte: entryDate },
-          status:    'OPEN',
-        },
+      // Validate period is open. Contexto educativo: si NO existe ningún
+      // período que cubra la fecha, se crea automáticamente uno ANUAL abierto
+      // (mismo criterio que PeriodsService.validatePeriodOpen) en vez de
+      // bloquear una operación de negocio legítima. Si existe pero está
+      // CERRADO/BLOQUEADO, sí se corta: cerrar un período es deliberado.
+      const anyPeriod = await tx.accountingPeriod.findFirst({
+        where: { companyId, startDate: { lte: entryDate }, endDate: { gte: entryDate } },
+        select: { id: true, status: true, name: true },
       });
-      if (!period) {
+      if (!anyPeriod) {
+        const y = entryDate.getFullYear();
+        await tx.accountingPeriod.create({
+          data: {
+            companyId,
+            name:      `Período ${y}`,
+            type:      'ANNUAL',
+            startDate: new Date(y, 0, 1),
+            endDate:   new Date(y, 11, 31, 23, 59, 59),
+            status:    'OPEN',
+          },
+        });
+      } else if (anyPeriod.status !== 'OPEN') {
         throw new BadRequestException(
           `No se pudo generar el asiento contable. ` +
-          `No existe un período contable abierto para la fecha ${entryDate.toLocaleDateString('es-CR')}.`,
+          `El período contable "${anyPeriod.name}" está ${anyPeriod.status === 'CLOSED' ? 'cerrado' : 'bloqueado'}.`,
         );
       }
 
