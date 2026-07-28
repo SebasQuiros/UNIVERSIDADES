@@ -39,6 +39,7 @@ import { TrackingModule }       from './modules/tracking/tracking.module';
 import { GradingModule }        from './modules/grading/grading.module';
 import { ClassSessionsModule }  from './modules/class-sessions/class-sessions.module';
 import { NegotiationsModule }   from './modules/negotiations/negotiations.module';
+import { TransfersModule }      from './modules/transfers/transfers.module';
 import { NotificationsModule }  from './modules/notifications/notifications.module';
 import { FixedAssetsModule }    from './modules/fixed-assets/fixed-assets.module';
 import { PayrollModule }        from './modules/payroll/payroll.module';
@@ -109,6 +110,7 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     GradingModule,
     ClassSessionsModule,       // "Sesión de Aula" — Kahoot-like sobre Exercise + GROUP companies
     NegotiationsModule,        // Motor de negociación empresarial (Multiempresa cap. 6)
+    TransfersModule,           // Transferencias de dinero entre empresas (asiento en ambos lados)
     NotificationsModule,
     // Phase 6 — New Features
     FixedAssetsModule,

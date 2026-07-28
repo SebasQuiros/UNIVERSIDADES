@@ -2374,3 +2374,34 @@ model InventoryAdjustment {
   @@index([productId])
   @@map("inventory_adjustments")
 }
+
+// ── Transferencias de dinero entre empresas (Multiempresa) ───────────────────
+// El CONCEPTO determina el asiento en cada lado (no hay un asiento "genérico"
+// correcto para mover plata entre dos empresas):
+//   PRESTAMO   → quien envía registra un derecho de cobro; quien recibe, deuda.
+//   PAGO_DEUDA → cancela una CxP en quien paga y una CxC en quien cobra.
+//   ANTICIPO   → anticipo a proveedor / anticipo de cliente.
+enum TransferConcept {
+  PRESTAMO
+  PAGO_DEUDA
+  ANTICIPO
+}
+
+model CompanyTransfer {
+  id             String          @id @default(uuid()) @db.Uuid
+  classSessionId String?         @map("class_session_id") @db.Uuid
+  fromCompanyId  String          @map("from_company_id") @db.Uuid
+  toCompanyId    String          @map("to_company_id")   @db.Uuid
+  amount         Decimal         @db.Decimal(14,2)
+  concept        TransferConcept
+  note           String?
+  fromEntryId    String?         @map("from_entry_id") @db.Uuid   // asiento del emisor
+  toEntryId      String?         @map("to_entry_id")   @db.Uuid   // asiento del receptor
+  createdById    String          @map("created_by_id") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  @@index([fromCompanyId, createdAt])
+  @@index([toCompanyId, createdAt])
+  @@index([classSessionId])
+  @@map("company_transfers")
+}
