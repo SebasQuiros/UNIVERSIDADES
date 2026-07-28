@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { JournalService } from '../journal/journal.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { JournalSource } from '@prisma/client';
@@ -20,6 +21,7 @@ export class AccountsReceivableService {
     private readonly prisma:         PrismaService,
     private readonly journal:        JournalService,
     private readonly businessEvents: BusinessEventsService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   // ── AR Dashboard ───────────────────────────────────────────────
@@ -476,6 +478,20 @@ export class AccountsReceivableService {
         customerName:      invoice.clientName,
         amount:            payAmount.toNumber(),
         date:              paymentDate,
+      });
+
+      // Bitácora (best-effort)
+      void this.activityLog.log({
+        userId, companyId,
+        action:   'PAYMENT_RECEIVED',
+        entity:   'ArPayment',
+        entityId: arPayment.id,
+        details:  {
+          factura: invoice.consecutiveNumber,
+          cliente: invoice.clientName,
+          monto:   payAmount.toFixed(2),
+          metodo:  method,
+        },
       });
 
       return arPayment;

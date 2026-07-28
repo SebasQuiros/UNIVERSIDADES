@@ -5,7 +5,10 @@ import { api } from '@/lib/api';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
-import { History, FileText, BookOpen, ShoppingCart, Receipt, User } from 'lucide-react';
+import {
+  History, FileText, BookOpen, ShoppingCart, Receipt, User,
+  Coins, FileMinus, Users, Building2,
+} from 'lucide-react';
 
 interface LogRow {
   id: string; action: string; entity: string | null; entityId: string | null;
@@ -14,10 +17,14 @@ interface LogRow {
 
 /** Etiqueta legible + estilo por tipo de acción. */
 const ACTION_META: Record<string, { label: string; icon: any; variant: any }> = {
-  INVOICE_ISSUED:        { label: 'Factura emitida',    icon: Receipt,      variant: 'blue'    },
-  JOURNAL_ENTRY_CREATED: { label: 'Asiento contable',   icon: BookOpen,     variant: 'purple'  },
-  PURCHASE_RECORDED:     { label: 'Compra registrada',  icon: ShoppingCart, variant: 'amber'   },
-  LOGIN:                 { label: 'Inicio de sesión',   icon: User,         variant: 'slate'   },
+  INVOICE_ISSUED:        { label: 'Factura emitida',      icon: Receipt,      variant: 'blue'    },
+  JOURNAL_ENTRY_CREATED: { label: 'Asiento contable',     icon: BookOpen,     variant: 'purple'  },
+  PURCHASE_RECORDED:     { label: 'Compra registrada',    icon: ShoppingCart, variant: 'amber'   },
+  PAYMENT_RECEIVED:      { label: 'Cobro recibido',       icon: Coins,        variant: 'green'   },
+  CREDIT_NOTE_ISSUED:    { label: 'Nota de crédito',      icon: FileMinus,    variant: 'red'     },
+  PAYROLL_PROCESSED:     { label: 'Planilla procesada',   icon: Users,        variant: 'blue'    },
+  ASSET_DEPRECIATED:     { label: 'Depreciación',         icon: Building2,    variant: 'slate'   },
+  LOGIN:                 { label: 'Inicio de sesión',     icon: User,         variant: 'slate'   },
 };
 
 function fmtDate(iso: string) {
@@ -38,6 +45,25 @@ function describe(row: LogRow): string {
   if (row.action === 'JOURNAL_ENTRY_CREATED') {
     return [d.numero && `Asiento #${d.numero}`, d.descripcion, d.monto && `₡${Number(d.monto).toLocaleString('es-CR')}`]
       .filter(Boolean).join(' · ');
+  }
+  if (row.action === 'PURCHASE_RECORDED') {
+    return [d.proveedor && `Proveedor: ${d.proveedor}`, d.factura && `Fact. ${d.factura}`,
+      d.total && `₡${Number(d.total).toLocaleString('es-CR')}`].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'PAYMENT_RECEIVED') {
+    return [d.cliente && `Cliente: ${d.cliente}`, d.monto && `₡${Number(d.monto).toLocaleString('es-CR')}`,
+      d.metodo].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'CREDIT_NOTE_ISSUED') {
+    return [d.numero && `NC-${d.numero}`, d.factura && `sobre factura ${d.factura}`,
+      d.total && `₡${Number(d.total).toLocaleString('es-CR')}`].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'PAYROLL_PROCESSED') {
+    return [d.periodo, d.empleados != null && `${d.empleados} empleado(s)`,
+      d.neto && `neto ₡${Number(d.neto).toLocaleString('es-CR')}`].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'ASSET_DEPRECIATED') {
+    return [d.periodo, d.monto && `₡${Number(d.monto).toLocaleString('es-CR')}`].filter(Boolean).join(' · ');
   }
   const keys = Object.keys(d);
   return keys.length ? keys.slice(0, 3).map((k) => `${k}: ${d[k]}`).join(' · ') : '';

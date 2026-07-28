@@ -7,6 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { CreateEmployeeDto, ProcessPayrollDto, UpdateEmployeeDto } from './dto/payroll.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PayrollCalculatorService } from './payroll-calculator.service';
@@ -23,6 +24,7 @@ export class PayrollService {
     private readonly calculator: PayrollCalculatorService,
     @Inject(REDIS_CLIENT) private readonly redis: any,
     private readonly journal: JournalService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   // ── Ownership guard (Fase 1: soporta INDIVIDUAL + GROUP) ────────────────
@@ -250,6 +252,21 @@ export class PayrollService {
 
       return { payroll, lines: payrollLines, journalEntryId };
     });
+
+    // Bitácora (best-effort)
+    if (userId) {
+      void this.activityLog.log({
+        userId, companyId,
+        action:   'PAYROLL_PROCESSED',
+        entity:   'Payroll',
+        entityId: result.payroll.id,
+        details:  {
+          periodo:   dto.period,
+          empleados: result.lines?.length ?? 0,
+          neto:      result.payroll.totalNet?.toString(),
+        },
+      });
+    }
 
     // Return full payroll with lines + employee data
     return this.prisma.payroll.findUnique({

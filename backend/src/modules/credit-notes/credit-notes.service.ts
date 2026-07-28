@@ -3,6 +3,7 @@ import {
   NotFoundException, Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { Prisma } from '@prisma/client';
 import { BusinessEventsService } from '../business/business-events.service';
@@ -31,6 +32,7 @@ export class CreditNotesService {
   constructor(
     private readonly prisma:         PrismaService,
     private readonly businessEvents: BusinessEventsService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   // ════════════════════════════════════════════════════════════════
@@ -236,6 +238,20 @@ export class CreditNotesService {
     });
 
     this.logger.log(`✓ Nota de crédito NC-${note.number} emitida (factura ${invoice.consecutiveNumber})`);
+
+    // Bitácora (best-effort)
+    void this.activityLog.log({
+      userId, companyId,
+      action:   'CREDIT_NOTE_ISSUED',
+      entity:   'CreditNote',
+      entityId: id,
+      details:  {
+        numero:  note.number,
+        factura: invoice.consecutiveNumber,
+        total:   note.total?.toString(),
+      },
+    });
+
     return this.getCreditNote(companyId, id);
   }
 

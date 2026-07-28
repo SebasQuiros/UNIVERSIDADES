@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { Prisma, JournalSource } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { CreateFixedAssetDto } from './dto/fixed-assets.dto';
 import { Decimal } from '@prisma/client/runtime/library';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
@@ -16,6 +17,7 @@ export class FixedAssetsService {
     private readonly prisma: PrismaService,
     @Inject(REDIS_CLIENT) private readonly redis: any,
     private readonly journal: JournalService,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   /** Idempotente: asegura que exista una cuenta postable (nivel 4) bajo su header. */
@@ -168,6 +170,17 @@ export class FixedAssetsService {
             `se registró la depreciación sin asiento contable.`,
           );
         }
+      }
+
+      // Bitácora (best-effort)
+      if (userId) {
+        void this.activityLog.log({
+          userId, companyId,
+          action:   'ASSET_DEPRECIATED',
+          entity:   'FixedAsset',
+          entityId: assetId,
+          details:  { periodo: period, monto: record.amount?.toString() },
+        });
       }
 
       return record;

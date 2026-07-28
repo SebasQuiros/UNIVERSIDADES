@@ -2,6 +2,7 @@ import {
   Injectable, Inject, NotFoundException, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { JournalService } from '../journal/journal.service';
 import { JournalSource } from '@prisma/client';
 import {
@@ -34,6 +35,7 @@ export class PurchaseInvoicesService {
     private readonly inventory:     InventoryService,
     private readonly modeResolver:  AccountingModeResolver,
     @Inject(REDIS_CLIENT) private readonly redis: any,
+    private readonly activityLog: ActivityLogService,
   ) {}
 
   // Fase 1: helper centralizado, soporta INDIVIDUAL + GROUP.
@@ -143,6 +145,19 @@ export class PurchaseInvoicesService {
       }
 
       return created;
+    });
+
+    // Bitácora (best-effort)
+    void this.activityLog.log({
+      userId, companyId,
+      action:   'PURCHASE_RECORDED',
+      entity:   'PurchaseInvoice',
+      entityId: purchaseInvoice.id,
+      details:  {
+        proveedor: dto.supplierName,
+        factura:   dto.invoiceNumber,
+        total:     total.toString(),
+      },
     });
 
     return purchaseInvoice;
