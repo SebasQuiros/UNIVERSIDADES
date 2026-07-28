@@ -2,9 +2,10 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request }
 import { BankService } from './bank.service';
 import { CreateBankTransactionDto, UpdateBankTransactionDto, BulkImportDto } from './dto/bank.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
+import { CompanyOwnerGuard } from '../../common/guards/company-owner.guard';
 
 @Controller('companies/:companyId/bank')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyOwnerGuard)
 export class BankController {
   constructor(private readonly svc: BankService) {}
 

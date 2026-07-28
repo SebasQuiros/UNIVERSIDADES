@@ -1,6 +1,6 @@
 import {
   IsString, IsNumber, IsOptional, IsDateString, IsBoolean,
-  IsArray, IsUUID, Min,
+  IsArray, IsUUID, Min, Max,
 } from 'class-validator';
 
 export class CreateEmployeeDto {
@@ -80,4 +80,26 @@ export class RunPayrollDto {
 
   @IsString()
   period: string;
+}
+
+/** Calculadora rápida de planilla (no persiste). Antes el body era un tipo de
+ *  TypeScript, así que el ValidationPipe global no podía validarlo y aceptaba
+ *  NaN/Infinity/negativos. */
+export class CalculatePayrollLineDto {
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000_000)
+  salary: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000_000)
+  overtime?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000_000)
+  bonus?: number;
 }

@@ -33,16 +33,15 @@ export class ExercisesService {
 
   async findAll(
     courseId: string,
-    caller?: { role?: string; universityId?: string | null },
+    caller?: { id?: string; role?: string; universityId?: string | null },
   ) {
     const role = caller?.role;
     const course = await this._checkCourse(courseId);
 
-    // ADMIN sólo lista ejercicios de cursos de su propia universidad; el listado
-    // de staff incluye el answer-key (expectedValue) de cada rúbrica.
-    if (role === 'ADMIN' && course.universityId !== (caller?.universityId ?? null)) {
-      throw new NotFoundException('Curso no encontrado');
-    }
+    // Aislamiento multi-tenant: el listado de staff incluye el answer-key
+    // (expectedValue) de cada rúbrica, así que la validación es obligatoria
+    // para TODOS los roles, no solo ADMIN.
+    await this._assertCourseAccess(course, caller);
 
     return this.prisma.exercise.findMany({
       where:   {
@@ -61,9 +60,15 @@ export class ExercisesService {
   async findOne(
     courseId: string,
     exerciseId: string,
-    caller?: { role?: string; universityId?: string | null },
+    caller?: { id?: string; role?: string; universityId?: string | null },
   ) {
     const role = caller?.role;
+
+    // Aislamiento multi-tenant ANTES de leer nada: el include de staff trae el
+    // answer-key (expectedValue) de las rúbricas.
+    const course = await this._checkCourse(courseId);
+    await this._assertCourseAccess(course, caller);
+
     const where: any = { id: exerciseId, courseId };
     if (role === 'STUDENT') {
       where.isPublished = true;
@@ -79,15 +84,6 @@ export class ExercisesService {
       },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
-
-    // ADMIN sólo puede ver ejercicios de su propia universidad (el answer-key
-    // completo va en la rúbrica de staff). SUPERADMIN sin restricción; TEACHER y
-    // STUDENT quedan acotados por scoping/role — la lectura de un TEACHER de otra
-    // universidad no expone `expectedValue` de forma distinta al resto de staff,
-    // pero mantenemos el comportamiento previo para no romper flujos legítimos.
-    if (role === 'ADMIN' && exercise.course.universityId !== (caller?.universityId ?? null)) {
-      throw new NotFoundException('Ejercicio no encontrado');
-    }
 
     return exercise;
   }
@@ -623,6 +619,53 @@ export class ExercisesService {
     });
     if (!course) throw new NotFoundException('Curso no encontrado');
     return course;
+  }
+
+  /**
+   * Aislamiento multi-tenant en LECTURA de ejercicios de un curso.
+   *
+   * Antes solo se validaba ADMIN, de modo que un TEACHER de otra universidad
+   * podía leer los ejercicios de un curso ajeno —incluyendo `expectedValue`
+   * (la clave de respuestas del auto-calificador)— y cualquier estudiante no
+   * matriculado podía leer los enunciados de cualquier curso.
+   *
+   *  · SUPERADMIN → sin restricción.
+   *  · ADMIN      → solo cursos de su universidad.
+   *  · TEACHER    → solo cursos propios (o de su universidad).
+   *  · STUDENT    → solo cursos en los que está matriculado.
+   */
+  private async _assertCourseAccess(
+    course: { id: string; teacherId: string; universityId: string | null },
+    caller?: { id?: string; role?: string; universityId?: string | null },
+  ) {
+    const role = caller?.role;
+    if (role === 'SUPERADMIN') return;
+
+    if (role === 'ADMIN') {
+      // Falla cerrado: sin universidad resuelta no se concede acceso.
+      if (!caller?.universityId || course.universityId !== caller.universityId) {
+        throw new NotFoundException('Curso no encontrado');
+      }
+      return;
+    }
+
+    if (role === 'TEACHER') {
+      if (course.teacherId === caller?.id) return;
+      if (caller?.universityId && course.universityId === caller.universityId) return;
+      throw new NotFoundException('Curso no encontrado');
+    }
+
+    if (role === 'STUDENT') {
+      if (!caller?.id) throw new NotFoundException('Curso no encontrado');
+      const enrolled = await this.prisma.enrollment.findFirst({
+        where:  { courseId: course.id, studentId: caller.id },
+        select: { id: true },
+      });
+      if (!enrolled) throw new NotFoundException('Curso no encontrado');
+      return;
+    }
+
+    throw new NotFoundException('Curso no encontrado');
   }
 
   // Ownership/tenant guard for staff operating on an existing exercise.

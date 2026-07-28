@@ -294,7 +294,11 @@ export class PayrollService {
     });
   }
 
-  async getPayroll(companyId: string, payrollId: string) {
+  async getPayroll(companyId: string, payrollId: string, userId?: string) {
+    // Defensa en profundidad: además del CompanyOwnerGuard del controller,
+    // validamos la pertenencia acá (esta ruta devuelve datos personales de
+    // empleados: nombre, cédula y salario).
+    if (userId) await this.verifyOwner(companyId, userId);
     const payroll = await this.prisma.payroll.findFirst({
       where:   { id: payrollId, companyId },
       include: {

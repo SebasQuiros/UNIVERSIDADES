@@ -5,10 +5,11 @@ import {
 import { PurchaseInvoicesService } from './purchase-invoices.service';
 import { CreatePurchaseInvoiceDto, PurchaseInvoiceFilterDto } from './dto/purchase-invoices.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
+import { CompanyOwnerGuard } from '../../common/guards/company-owner.guard';
 import { CurrentUser } from '../auth/decorators/auth.decorators';
 
 @Controller('companies/:companyId/purchase-invoices')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyOwnerGuard)
 export class PurchaseInvoicesController {
   constructor(private readonly svc: PurchaseInvoicesService) {}
 

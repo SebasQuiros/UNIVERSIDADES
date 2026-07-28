@@ -105,11 +105,16 @@ export class CompanyOwnerGuard implements CanActivate {
         company.student?.universityId
         ?? company.exercise?.teacher?.universityId
         ?? null;
-      if (
-        user.universityId &&
-        companyUniversityId &&
-        companyUniversityId !== user.universityId
-      ) {
+      // FALLA CERRADO: antes, si cualquiera de los dos lados era null se
+      // concedía el acceso, de modo que un TEACHER/ADMIN sin universidad
+      // asignada (o una empresa cuya universidad no se puede resolver) podía
+      // leer datos de CUALQUIER empresa de la plataforma.
+      if (!user.universityId || !companyUniversityId) {
+        throw new ForbiddenException(
+          'No se pudo verificar la universidad de esta empresa. Acceso denegado.',
+        );
+      }
+      if (companyUniversityId !== user.universityId) {
         throw new ForbiddenException(
           'No tienes acceso a empresas de otras universidades.',
         );

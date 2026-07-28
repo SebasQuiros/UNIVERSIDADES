@@ -473,11 +473,13 @@ export class TaxDeclarationsService {
 
   // ── D-104 Cálculo automático desde datos de la empresa ───────────
   async calculateD104FromCompany(companyId: string, month: number, year: number, userId?: string) {
-    // Verify ownership if userId provided (Fase 1: respeta GROUP via helper)
-    // Pasamos `redis` para reusar el core cacheado por el guard (fail-open a DB).
-    if (userId) {
-      await assertCompanyAccess(this.prisma, companyId, userId, { redis: this.redis });
+    // Este endpoint recibe `companyId` en el BODY, así que el CompanyOwnerGuard
+    // (que valida el param de ruta) NO se ejecuta: la verificación acá es la
+    // ÚNICA defensa y por eso es obligatoria (antes era condicional).
+    if (!userId) {
+      throw new ForbiddenException('Sesión inválida: no se pudo verificar el acceso a la empresa.');
     }
+    await assertCompanyAccess(this.prisma, companyId, userId, { redis: this.redis });
     const startDate = new Date(year, month - 1, 1);
     const endDate   = new Date(year, month, 0, 23, 59, 59);
 

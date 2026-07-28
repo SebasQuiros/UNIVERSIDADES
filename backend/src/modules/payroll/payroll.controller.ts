@@ -9,10 +9,12 @@ import {
   UpdateEmployeeDto,
   ProcessPayrollDto,
   PreviewPayrollDto,
+  CalculatePayrollLineDto,
 } from './dto/payroll.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
+import { CompanyOwnerGuard } from '../../common/guards/company-owner.guard';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyOwnerGuard)
 @Controller('companies/:companyId')
 export class PayrollController {
   constructor(
@@ -69,7 +71,7 @@ export class PayrollController {
   // ── Quick calculator (pure, no employees needed) ──────────────────────────
   // POST /companies/:id/payrolls/calculate { salary, overtime?, bonus? }
   @Post('payrolls/calculate')
-  calculateSingle(@Body() body: { salary: number; overtime?: number; bonus?: number }) {
+  calculateSingle(@Body() body: CalculatePayrollLineDto) {
     return this.calculator.calculatePayrollLine(
       Number(body.salary),
       Number(body.overtime ?? 0),
@@ -99,7 +101,8 @@ export class PayrollController {
   getPayroll(
     @Param('companyId') companyId: string,
     @Param('payrollId') payrollId: string,
+    @Request() req: any,
   ) {
-    return this.svc.getPayroll(companyId, payrollId);
+    return this.svc.getPayroll(companyId, payrollId, req.user.id);
   }
 }

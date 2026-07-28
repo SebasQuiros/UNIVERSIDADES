@@ -4,6 +4,7 @@ import {
   UploadedFile, UseInterceptors, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { SPREADSHEET_UPLOAD } from '../../common/upload/spreadsheet-upload';
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto, UpdateAccountDto } from './dto/accounts.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
@@ -22,7 +23,7 @@ export class AccountsController {
   /** POST .../accounts/import — importa catálogo desde un archivo Excel. */
   @Post('import')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('file', SPREADSHEET_UPLOAD))
   importExcel(
     @Param('companyId') companyId: string,
     @UploadedFile() file: Express.Multer.File,

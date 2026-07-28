@@ -2,8 +2,9 @@ import { Controller, Get, Post, Param, Body, UseGuards, Request } from '@nestjs/
 import { FixedAssetsService } from './fixed-assets.service';
 import { CreateFixedAssetDto } from './dto/fixed-assets.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
+import { CompanyOwnerGuard } from '../../common/guards/company-owner.guard';
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, CompanyOwnerGuard)
 @Controller('companies/:companyId/fixed-assets')
 export class FixedAssetsController {
   constructor(private readonly svc: FixedAssetsService) {}

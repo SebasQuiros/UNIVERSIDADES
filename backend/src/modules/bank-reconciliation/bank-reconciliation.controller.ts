@@ -4,6 +4,7 @@ import {
   HttpCode, HttpStatus, Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { SPREADSHEET_UPLOAD } from '../../common/upload/spreadsheet-upload';
 import { Response } from 'express';
 import { BankReconciliationService } from './bank-reconciliation.service';
 import {
@@ -52,7 +53,7 @@ export class BankReconciliationController {
   // este archivo y tiene una vulnerabilidad ReDoS/prototype-pollution SIN fix
   // disponible (GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9) — acotar el tamaño
   // reduce la superficie de un archivo maliciosamente grande/complejo.
-  @UseInterceptors(FileInterceptor('file', { storage: undefined, limits: { fileSize: 5 * 1024 * 1024 } })) // memory storage, máx 5MB
+  @UseInterceptors(FileInterceptor('file', SPREADSHEET_UPLOAD)) // memoria, máx 5MB, solo hojas de cálculo
   uploadStatement(
     @Param('companyId')     companyId: string,
     @Param('bankAccountId') bankAccountId: string,
