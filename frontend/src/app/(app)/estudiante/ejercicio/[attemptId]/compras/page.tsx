@@ -76,13 +76,14 @@ interface Company {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Porcentaje, igual que en ventas y productos.
 const TAX_RATES = [
-  { value: 0.13, label: '13% — Tarifa general' },
-  { value: 0.08, label: '8% — Medicina privada / seguros' },
-  { value: 0.04, label: '4% — Boletos aéreos / espectáculos' },
-  { value: 0.02, label: '2% — Canasta básica tributaria' },
-  { value: 0.01, label: '1% — Medicamentos / insumos agropecuarios' },
-  { value: 0,    label: '0% — Exento' },
+  { value: 13, label: '13% — Tarifa general' },
+  { value: 8,  label: '8% — Medicina privada / seguros' },
+  { value: 4,  label: '4% — Boletos aéreos / espectáculos' },
+  { value: 2,  label: '2% — Canasta básica tributaria' },
+  { value: 1,  label: '1% — Medicamentos / insumos agropecuarios' },
+  { value: 0,  label: '0% — Exento' },
 ];
 
 const MONTHS = [
@@ -122,7 +123,7 @@ const EMPTY_FORM: FormState = {
   invoiceNumber: '',
   date: new Date().toISOString().split('T')[0],
   subtotal: '',
-  taxRate: '0.13',
+  taxRate: '13',
   description: '',
 };
 
@@ -198,7 +199,7 @@ export default function ComprasPage() {
   // ── Computed values for form ───────────────────────────────────────
   const subtotalNum = parseFloat(form.subtotal || '0') || 0;
   const taxRateNum  = parseFloat(form.taxRate)  || 0;
-  const taxAmount   = round2(subtotalNum * taxRateNum);
+  const taxAmount   = round2(subtotalNum * taxRateNum / 100);
   const total       = round2(subtotalNum + taxAmount);
 
   function setField(key: keyof FormState, val: string) {
@@ -466,7 +467,7 @@ export default function ComprasPage() {
                 </div>
                 <div>
                   <p className="text-[0.68rem] text-gold-500 font-bold uppercase tracking-[0.13em]">
-                    IVA ({(taxRateNum * 100).toFixed(0)}%) — Crédito fiscal
+                    IVA ({taxRateNum.toFixed(0)}%) — Crédito fiscal
                   </p>
                   <p className="text-lg font-extrabold font-mono tabular-nums mt-0.5 cx-count">₡ {fmtMoney(taxAmount)}</p>
                 </div>
@@ -810,7 +811,7 @@ export default function ComprasPage() {
                         ₡ {fmtMoney(inv.subtotal)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <Badge variant="blue">{(Number(inv.taxRate) * 100).toFixed(0)}%</Badge>
+                        <Badge variant="blue">{Number(inv.taxRate).toFixed(0)}%</Badge>
                       </td>
                       <td className="px-4 py-3 text-right font-mono tabular-nums text-xs font-bold text-emerald-700">
                         ₡ {fmtMoney(inv.taxAmount)}

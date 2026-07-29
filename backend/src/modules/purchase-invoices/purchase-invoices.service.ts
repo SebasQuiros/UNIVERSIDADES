@@ -17,8 +17,8 @@ import { REDIS_CLIENT } from '../../redis/redis.module';
 
 // ── IVA rate display labels ─────────────────────────────────────────
 const RATE_LABEL: Record<number, string> = {
-  0.13: '13%', 0.08: '8%', 0.04: '4%',
-  0.02: '2%',  0.01: '1%', 0: '0%',
+  13: '13%', 8: '8%', 4: '4%',
+  2: '2%',   1: '1%', 0: '0%',
 };
 
 function round2(n: number): number {
@@ -52,9 +52,10 @@ export class PurchaseInvoicesService {
     userId: string,
   ) {
     await this.verifyOwner(companyId, userId);
-    const taxRate   = dto.taxRate ?? 0.13;
+    // taxRate viene como porcentaje (13), igual que en el resto del sistema.
+    const taxRate   = dto.taxRate ?? 13;
     const subtotal  = round2(dto.subtotal);
-    const taxAmount = round2(subtotal * taxRate);
+    const taxAmount = round2(subtotal * taxRate / 100);
     const total     = round2(subtotal + taxAmount);
     const isAccepted = dto.isAccepted ?? true;
 
@@ -189,7 +190,7 @@ export class PurchaseInvoicesService {
       return null;
     }
 
-    const rateLabel = RATE_LABEL[Number(invoice.taxRate)] ?? `${Number(invoice.taxRate) * 100}%`;
+    const rateLabel = RATE_LABEL[Number(invoice.taxRate)] ?? `${Number(invoice.taxRate)}%`;
     const entryDate = invoice.date instanceof Date
       ? invoice.date.toISOString().split('T')[0]
       : String(invoice.date).split('T')[0];
@@ -333,7 +334,7 @@ export class PurchaseInvoicesService {
     const baseCompras = { rate13: 0, rate8: 0, rate4: 0, rate2: 0, rate1: 0, total: 0 };
 
     for (const p of purchases) {
-      const rate = round2(Number(p.taxRate) * 100); // stored as 0.13 → convert to 13
+      const rate = round2(Number(p.taxRate)); // porcentaje, igual que en ventas
       const iva  = round2(Number(p.taxAmount));
       const base = round2(Number(p.subtotal));
 

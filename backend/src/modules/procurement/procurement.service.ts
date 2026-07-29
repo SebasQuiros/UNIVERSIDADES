@@ -242,8 +242,9 @@ export class ProcurementService {
     const subtotal  = new Decimal(order.subtotal.toString());
     const taxAmount  = new Decimal(order.taxAmount.toString());
     const total      = new Decimal(order.total.toString());
+    // Se guarda como PORCENTAJE (13), la convención de purchase_invoices.
     const taxRate    = subtotal.gt(0)
-      ? taxAmount.div(subtotal).toDecimalPlaces(4)
+      ? taxAmount.div(subtotal).times(100).toDecimalPlaces(2)
       : new Decimal(0);
     const date       = new Date();
     const invoiceNumber = `PO-${order.id.slice(0, 8)}`;

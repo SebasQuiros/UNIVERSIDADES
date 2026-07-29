@@ -525,7 +525,7 @@ export class TaxDeclarationsService {
     const compras = { base13: 0, iva13: 0, base8: 0, iva8: 0, base4: 0, iva4: 0, base2: 0, iva2: 0, base1: 0, iva1: 0 };
 
     for (const p of purchases) {
-      const rate = round(Number(p.taxRate) * 100); // stored as 0.13 → 13
+      const rate = round(Number(p.taxRate)); // porcentaje, igual que en ventas
       const iva  = round(Number(p.taxAmount));
       const base = round(Number(p.subtotal));
 

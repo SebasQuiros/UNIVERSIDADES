@@ -1437,7 +1437,7 @@ model PurchaseInvoice {
   invoiceNumber  String   @map("invoice_number")
   date           DateTime
   subtotal       Decimal  @db.Decimal(15, 2)
-  taxRate        Decimal  @default(0.13) @map("tax_rate")   @db.Decimal(5, 4)
+  taxRate        Decimal  @default(13) @map("tax_rate")   @db.Decimal(5, 2)
   taxAmount      Decimal  @db.Decimal(15, 2)               @map("tax_amount")
   total          Decimal  @db.Decimal(15, 2)
   description    String?

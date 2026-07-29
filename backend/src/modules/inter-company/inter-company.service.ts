@@ -162,13 +162,13 @@ export class InterCompanyService {
     }
 
     // 6. Crear PurchaseInvoice en el buyer.
-    // taxRate del invoice está como Decimal con valor "13", "0.13", o porcentaje;
-    // mantenemos el ratio que usa el módulo de purchase-invoices (Decimal entre 0 y 1).
+    // La tasa se deriva del impuesto real sobre la base y se guarda como
+    // PORCENTAJE (13), que es la convención de todo el sistema.
     const subtotal = new Decimal(invoice.subtotal.toString());
     const tax      = new Decimal(invoice.tax.toString());
     const total    = new Decimal(invoice.total.toString());
     const taxRate  = subtotal.gt(0)
-      ? tax.div(subtotal).toDecimalPlaces(4)
+      ? tax.div(subtotal).times(100).toDecimalPlaces(2)
       : new Decimal(0);
 
     // NOTA (code-review): a propósito NO capturamos un posible P2002 acá. Si

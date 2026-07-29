@@ -6,7 +6,9 @@ import {
 import { Transform, Type } from 'class-transformer';
 
 // Valid IVA rates for Costa Rica
-const VALID_TAX_RATES = [0, 0.01, 0.02, 0.04, 0.08, 0.13] as const;
+// Porcentaje, igual que el resto del sistema (ventas, productos, cotizaciones,
+// notas de crédito, órdenes de compra). Antes acá se guardaba la fracción.
+const VALID_TAX_RATES = [0, 1, 2, 4, 8, 13] as const;
 
 /**
  * Línea de compra opcional (Fase 2).
@@ -52,7 +54,7 @@ export class CreatePurchaseInvoiceDto {
 
   @IsNumber({ maxDecimalPlaces: 4 })
   @IsIn(VALID_TAX_RATES, {
-    message: 'taxRate debe ser 0, 0.01, 0.02, 0.04, 0.08, o 0.13',
+    message: 'taxRate debe ser 0, 1, 2, 4, 8 o 13 (porcentaje)',
   })
   taxRate: number;
 
