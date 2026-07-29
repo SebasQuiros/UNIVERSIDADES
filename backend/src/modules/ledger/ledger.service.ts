@@ -123,8 +123,31 @@ export class LedgerService {
       ],
     });
 
+    // Saldo anterior: cuando se filtra desde una fecha, el mayor de ese período
+    // NO empieza en cero — arrastra lo acumulado antes del corte. Sin esto el
+    // saldo corriente queda mal y el mayor deja de cuadrar contra el balance
+    // de comprobación.
+    let openingBalance = new Decimal(0);
+    if (startDate) {
+      const prev = await this.prisma.journalLine.aggregate({
+        where: {
+          accountId,
+          companyId,
+          entry: {
+            isReversed: false,
+            status:     'CONFIRMED',
+            entryDate:  { lt: startDate },
+          },
+        },
+        _sum: { debit: true, credit: true },
+      });
+      const pd = new Decimal((prev._sum.debit  ?? 0).toString());
+      const pc = new Decimal((prev._sum.credit ?? 0).toString());
+      openingBalance = account.normalBalance === 'DEBIT' ? pd.minus(pc) : pc.minus(pd);
+    }
+
     // Calculate running balance
-    let runningBalance = new Decimal(0);
+    let runningBalance = openingBalance;
     const movements = lines.map(line => {
       const debit  = new Decimal(line.debit.toString());
       const credit = new Decimal(line.credit.toString());
@@ -159,12 +182,16 @@ export class LedgerService {
         normalBalance: account.normalBalance,
       },
       movements,
+      openingBalance: openingBalance.toFixed(2),
       totals: {
         debit:   totalDebit.toFixed(2),
         credit:  totalCredit.toFixed(2),
-        balance: account.normalBalance === 'DEBIT'
-          ? totalDebit.minus(totalCredit).toFixed(2)
-          : totalCredit.minus(totalDebit).toFixed(2),
+        // Saldo final del período = saldo anterior + movimiento del período.
+        balance: openingBalance.plus(
+          account.normalBalance === 'DEBIT'
+            ? totalDebit.minus(totalCredit)
+            : totalCredit.minus(totalDebit),
+        ).toFixed(2),
       },
     };
   }

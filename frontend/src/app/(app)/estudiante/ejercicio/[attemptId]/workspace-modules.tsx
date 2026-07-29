@@ -1802,8 +1802,13 @@ export function LedgerTab({ companyId }: { companyId: string }) {
   const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
   const [selected, setSelected] = useState<LedgerAccount | null>(null);
   const [movements, setMovements] = useState<LedgerMovement[]>([]);
+  const [opening, setOpening] = useState('0');
+  const [totals, setTotals] = useState<{ debit: string; credit: string; balance: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMov, setLoadingMov] = useState(false);
+  const [query, setQuery] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
   useEffect(() => {
     api.get<LedgerAccount[]>(`/api/v1/companies/${companyId}/ledger`)
@@ -1812,17 +1817,43 @@ export function LedgerTab({ companyId }: { companyId: string }) {
       .finally(() => setLoading(false));
   }, [companyId]);
 
-  async function selectAccount(acc: LedgerAccount) {
-    setSelected(acc);
+  const loadMovements = useCallback(async (acc: LedgerAccount) => {
     setLoadingMov(true);
     try {
-      const { data } = await api.get<{ movements: LedgerMovement[] }>(
-        `/api/v1/companies/${companyId}/ledger/${acc.accountId}`
-      );
+      const qs = new URLSearchParams();
+      if (from) qs.set('startDate', from);
+      if (to)   qs.set('endDate', to);
+      const { data } = await api.get<{
+        movements: LedgerMovement[];
+        openingBalance?: string;
+        totals?: { debit: string; credit: string; balance: string };
+      }>(`/api/v1/companies/${companyId}/ledger/${acc.accountId}${qs.toString() ? `?${qs}` : ''}`);
       setMovements(data.movements ?? []);
+      setOpening(data.openingBalance ?? '0');
+      setTotals(data.totals ?? null);
     } catch { toast.error('Error al cargar movimientos'); }
     finally { setLoadingMov(false); }
+  }, [companyId, from, to]);
+
+  function selectAccount(acc: LedgerAccount) {
+    setSelected(acc);
+    void loadMovements(acc);
   }
+
+  // Al cambiar el período hay que recargar la cuenta abierta: si no, la tabla
+  // seguiría mostrando los movimientos del rango anterior.
+  useEffect(() => { if (selected) void loadMovements(selected); }, [from, to]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filteredAccounts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return accounts;
+    return accounts.filter((a) =>
+      a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q));
+  }, [accounts, query]);
+
+  const money = (v: number | string) =>
+    '₡' + Number(v || 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const hasPeriod = Boolean(from || to);
 
   const typeColors: Record<string, string> = {
     ASSET:     'bg-blue-50 text-blue-700 border-blue-200',
@@ -1846,6 +1877,36 @@ export function LedgerTab({ companyId }: { companyId: string }) {
   );
 
   return (
+    <div className="space-y-5">
+      <ModuleHeader
+        icon={BookOpen}
+        title="Libro Mayor"
+        subtitle="Movimientos de cada cuenta con saldo corriente — filtrá por período para ver el saldo anterior"
+      />
+
+      {/* Período: define qué movimientos se listan y desde qué saldo arrancan */}
+      <div className="bg-white rounded-card border border-gray-200/70 px-4 py-3 flex flex-wrap items-end gap-3" style={CARD_SHADOW}>
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">Desde</label>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+            className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60" />
+        </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">Hasta</label>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+            className="rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/60" />
+        </div>
+        {hasPeriod && (
+          <button onClick={() => { setFrom(''); setTo(''); }}
+            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-500 transition-colors hover:bg-gray-50">
+            Quitar período
+          </button>
+        )}
+        <p className="ml-auto text-xs text-gray-400">
+          {hasPeriod ? 'El saldo corriente arranca desde el saldo anterior al corte.' : 'Sin período: se muestra todo el historial.'}
+        </p>
+      </div>
+
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       {/* Account list */}
       <div className="lg:col-span-1">
@@ -1860,8 +1921,25 @@ export function LedgerTab({ companyId }: { companyId: string }) {
             <Download className="w-3.5 h-3.5" /> Excel
           </button>
         </div>
+
+        {/* Buscador: el catálogo pasa de 150 cuentas, la lista sola no alcanza */}
+        <div className="relative mb-2">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por código o nombre…"
+            className="w-full rounded-xl border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 transition-colors hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60" />
+        </div>
+        {query && (
+          <p className="mb-2 text-xs text-gray-400 tabular-nums">{filteredAccounts.length} de {accounts.length} cuentas</p>
+        )}
+
         <div className="space-y-1.5">
-          {accounts.map((acc) => (
+          {filteredAccounts.length === 0 && (
+            <p className="rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+              Sin resultados para “{query}”.
+            </p>
+          )}
+          {filteredAccounts.map((acc) => (
             <button key={acc.accountId} onClick={() => selectAccount(acc)}
               className={`w-full text-left p-3 rounded-xl border transition-all ${
                 selected?.accountId === acc.accountId
@@ -1895,21 +1973,37 @@ export function LedgerTab({ companyId }: { companyId: string }) {
         ) : (
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-mono text-gray-400">{selected.code}</p>
                 <h3 className="font-semibold text-gray-900">{selected.name}</h3>
+                <p className="mt-0.5 text-[11px] uppercase tracking-wide text-gray-400">
+                  Naturaleza {selected.normalBalance === 'DEBIT' ? 'deudora' : 'acreedora'}
+                </p>
               </div>
-              <div className="ml-auto grid grid-cols-3 gap-3 text-center">
-                {[
-                  { label: 'Débitos',  value: selected.totalDebit,  color: 'text-blue-700' },
-                  { label: 'Créditos', value: selected.totalCredit, color: 'text-red-600' },
-                  { label: 'Saldo',    value: selected.balance,     color: 'text-gray-900' },
-                ].map((s) => (
-                  <div key={s.label} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
-                    <p className={`text-sm font-bold ${s.color}`}>₡{Number(s.value).toLocaleString('es-CR', { minimumFractionDigits: 0 })}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{s.label}</p>
-                  </div>
-                ))}
+              <div className="ml-auto flex items-center gap-3">
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  {[
+                    // Con período activo mandan los totales del servidor: son los
+                    // del rango, no los históricos de la lista de cuentas.
+                    { label: 'Débitos',  value: totals?.debit   ?? selected.totalDebit,  color: 'text-blue-700' },
+                    { label: 'Créditos', value: totals?.credit  ?? selected.totalCredit, color: 'text-red-600' },
+                    { label: 'Saldo',    value: totals?.balance ?? selected.balance,     color: 'text-gray-900' },
+                  ].map((s) => (
+                    <div key={s.label} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
+                      <p className={`text-sm font-bold tabular-nums ${s.color}`}>₡{Number(s.value).toLocaleString('es-CR', { minimumFractionDigits: 0 })}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => exportToExcel(`mayor-${selected.code}`, movements.map(m => ({
+                    Asiento: m.entryNumber, Fecha: formatDate(m.entryDate), Descripcion: m.description,
+                    Debito: Number(m.debit), Credito: Number(m.credit), Saldo: Number(m.balance),
+                  })))}
+                  disabled={movements.length === 0}
+                  className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-50 disabled:opacity-40">
+                  <Download className="h-3.5 w-3.5" /> Excel
+                </button>
               </div>
             </div>
 
@@ -1927,29 +2021,63 @@ export function LedgerTab({ companyId }: { companyId: string }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
+                    {/* Saldo anterior: de dónde arranca el saldo corriente. Sin
+                        esta fila el mayor del período parece no cuadrar. */}
+                    {hasPeriod && (
+                      <tr className="bg-gray-50/70">
+                        <td className="p-3 text-xs text-gray-400">—</td>
+                        <td className="p-3 text-xs text-gray-500">{from ? formatDate(from) : ''}</td>
+                        <td className="p-3 text-xs font-semibold text-gray-600">Saldo anterior</td>
+                        <td className="p-3 text-right text-xs text-gray-300">—</td>
+                        <td className="p-3 text-right text-xs text-gray-300">—</td>
+                        <td className="p-3 text-right font-mono text-xs font-semibold tabular-nums text-gray-700">
+                          {money(opening)}
+                        </td>
+                      </tr>
+                    )}
                     {movements.map((m, i) => (
                       <tr key={i} className="hover:bg-gray-50">
                         <td className="p-3 text-xs text-gray-400">#{m.entryNumber}</td>
                         <td className="p-3 text-xs text-gray-500">{formatDate(m.entryDate)}</td>
                         <td className="p-3 text-gray-700 text-xs max-w-[200px] truncate">{m.description}</td>
-                        <td className="p-3 text-right text-blue-700 font-mono text-xs">
-                          {Number(m.debit) > 0 ? `₡${Number(m.debit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
+                        <td className="p-3 text-right text-blue-700 font-mono text-xs tabular-nums">
+                          {Number(m.debit) > 0 ? money(m.debit) : '—'}
                         </td>
-                        <td className="p-3 text-right text-red-600 font-mono text-xs">
-                          {Number(m.credit) > 0 ? `₡${Number(m.credit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : '—'}
+                        <td className="p-3 text-right text-red-600 font-mono text-xs tabular-nums">
+                          {Number(m.credit) > 0 ? money(m.credit) : '—'}
                         </td>
-                        <td className="p-3 text-right text-gray-900 font-mono text-xs font-medium">
-                          ₡{Number(m.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 })}
+                        <td className="p-3 text-right text-gray-900 font-mono text-xs font-medium tabular-nums">
+                          {money(m.balance)}
                         </td>
                       </tr>
                     ))}
+                    {movements.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-6 text-center text-sm text-gray-400">
+                          {hasPeriod ? 'Sin movimientos en el período seleccionado.' : 'Esta cuenta no tiene movimientos.'}
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
+                  {movements.length > 0 && totals && (
+                    <tfoot>
+                      <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                        <td className="p-3 text-xs text-gray-600" colSpan={3}>
+                          Totales{hasPeriod ? ' del período' : ''}
+                        </td>
+                        <td className="p-3 text-right font-mono text-xs tabular-nums text-blue-800">{money(totals.debit)}</td>
+                        <td className="p-3 text-right font-mono text-xs tabular-nums text-red-700">{money(totals.credit)}</td>
+                        <td className="p-3 text-right font-mono text-xs tabular-nums text-gray-900">{money(totals.balance)}</td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </table>
               </div>
             )}
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
@@ -3224,6 +3352,16 @@ export function BalanceComprobacionTab({
   const totalC = accounts.reduce((s, a) => s + Number(a.totalCredit), 0);
   const balanced = Math.abs(totalD - totalC) < 0.01;
 
+  // Saldos por naturaleza: la segunda verificación del balance de comprobación.
+  // Σ saldos deudores debe igualar Σ saldos acreedores, igual que las sumas.
+  const esDeudorDe = (a: LedgerAccount) => {
+    const v = Number(a.balance);
+    return a.normalBalance === 'DEBIT' ? v >= 0 : v < 0;
+  };
+  const totalDeudor   = accounts.reduce((s, a) => esDeudorDe(a) ? s + Math.abs(Number(a.balance)) : s, 0);
+  const totalAcreedor = accounts.reduce((s, a) => esDeudorDe(a) ? s : s + Math.abs(Number(a.balance)), 0);
+  const saldosBalanced = Math.abs(totalDeudor - totalAcreedor) < 0.01;
+
   const typeLabels: Record<string, string> = { ASSET: 'Activo', LIABILITY: 'Pasivo', EQUITY: 'Patrimonio', INCOME: 'Ingreso', EXPENSE: 'Gasto' };
   const typeColors: Record<string, string> = { ASSET: 'text-blue-700', LIABILITY: 'text-red-600', EQUITY: 'text-slate-600', INCOME: 'text-emerald-600', EXPENSE: 'text-amber-600' };
 
@@ -3267,7 +3405,14 @@ export function BalanceComprobacionTab({
             balanced ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'
           }`}>
             {balanced ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-            {balanced ? 'ΣDébitos = ΣCréditos ✓' : 'No balanceado ⚠'}
+            {balanced ? 'Sumas: Debe = Haber ✓' : 'Sumas no cuadran ⚠'}
+          </div>
+          {/* Segunda verificación, independiente de la primera */}
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium ${
+            saldosBalanced ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'
+          }`}>
+            {saldosBalanced ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+            {saldosBalanced ? 'Saldos: Deudor = Acreedor ✓' : 'Saldos no cuadran ⚠'}
           </div>
         </div>
       </div>
@@ -3300,33 +3445,55 @@ export function BalanceComprobacionTab({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
+              {/* Formato clásico de 4 columnas: Sumas y Saldos. Permite verificar
+                  el cuadre por dos vías independientes. */}
+              <tr className="bg-gray-50 border-b border-gray-200 text-[11px] text-gray-500 uppercase tracking-wide">
+                <th className="p-2" colSpan={3} />
+                <th className="border-l border-gray-200 p-2 text-center" colSpan={2}>Sumas</th>
+                <th className="border-l border-gray-200 p-2 text-center" colSpan={2}>Saldos</th>
+              </tr>
               <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wide">
                 <th className="text-left p-4">Código</th>
                 <th className="text-left p-4">Cuenta</th>
                 <th className="text-left p-4">Tipo</th>
-                <th className="text-right p-4">Débitos</th>
-                <th className="text-right p-4">Créditos</th>
-                <th className="text-right p-4">Saldo</th>
+                <th className="border-l border-gray-200 p-4 text-right">Debe</th>
+                <th className="p-4 text-right">Haber</th>
+                <th className="border-l border-gray-200 p-4 text-right">Deudor</th>
+                <th className="p-4 text-right">Acreedor</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {accounts.map((acc) => (
-                <tr key={acc.accountId} className="hover:bg-gray-50">
-                  <td className="p-4 font-mono text-xs text-gray-400">{acc.code}</td>
-                  <td className="p-4 font-medium text-gray-700">{acc.name}</td>
-                  <td className="p-4"><span className={`text-xs font-medium ${typeColors[acc.type] ?? 'text-gray-500'}`}>{typeLabels[acc.type] ?? acc.type}</span></td>
-                  <td className="p-4 text-right font-mono text-xs text-blue-700">₡{Number(acc.totalDebit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
-                  <td className="p-4 text-right font-mono text-xs text-red-600">₡{Number(acc.totalCredit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
-                  <td className="p-4 text-right font-mono text-xs font-bold text-gray-800">₡{Number(acc.balance).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
-                </tr>
-              ))}
+              {accounts.map((acc) => {
+                // El saldo va a la columna que corresponde a su naturaleza. Si
+                // quedó invertido (saldo negativo), se muestra del otro lado:
+                // es justo el caso que el estudiante debe detectar y corregir.
+                const saldo = Number(acc.balance);
+                const esDeudor = acc.normalBalance === 'DEBIT' ? saldo >= 0 : saldo < 0;
+                const abs = Math.abs(saldo);
+                return (
+                  <tr key={acc.accountId} className="hover:bg-gray-50">
+                    <td className="p-4 font-mono text-xs text-gray-400">{acc.code}</td>
+                    <td className="p-4 font-medium text-gray-700">{acc.name}</td>
+                    <td className="p-4"><span className={`text-xs font-medium ${typeColors[acc.type] ?? 'text-gray-500'}`}>{typeLabels[acc.type] ?? acc.type}</span></td>
+                    <td className="border-l border-gray-100 p-4 text-right font-mono text-xs tabular-nums text-blue-700">₡{Number(acc.totalDebit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
+                    <td className="p-4 text-right font-mono text-xs tabular-nums text-red-600">₡{Number(acc.totalCredit).toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
+                    <td className="border-l border-gray-100 p-4 text-right font-mono text-xs font-bold tabular-nums text-gray-800">
+                      {esDeudor && abs > 0 ? `₡${abs.toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="p-4 text-right font-mono text-xs font-bold tabular-nums text-gray-800">
+                      {!esDeudor && abs > 0 ? `₡${abs.toLocaleString('es-CR', { minimumFractionDigits: 2 })}` : <span className="text-gray-300">—</span>}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr className="bg-gray-50 border-t-2 border-gray-400 font-bold text-sm">
                 <td colSpan={3} className="p-4 text-gray-700 uppercase tracking-wide text-xs">Totales</td>
-                <td className="p-4 text-right font-mono text-blue-700">₡{totalD.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
-                <td className="p-4 text-right font-mono text-red-700">₡{totalC.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
-                <td className="p-4" />
+                <td className="border-l border-gray-200 p-4 text-right font-mono tabular-nums text-blue-700">₡{totalD.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
+                <td className="p-4 text-right font-mono tabular-nums text-red-700">₡{totalC.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
+                <td className="border-l border-gray-200 p-4 text-right font-mono tabular-nums text-gray-800">₡{totalDeudor.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
+                <td className="p-4 text-right font-mono tabular-nums text-gray-800">₡{totalAcreedor.toLocaleString('es-CR', { minimumFractionDigits: 2 })}</td>
               </tr>
             </tfoot>
           </table>
