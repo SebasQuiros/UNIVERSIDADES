@@ -3,6 +3,7 @@ import {
   NotFoundException, ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { JournalSource, Prisma, PeriodStatus, PeriodType } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreatePeriodDto, ClosePeriodDto } from './dto/periods.dto';
@@ -11,7 +12,10 @@ import { CreatePeriodDto, ClosePeriodDto } from './dto/periods.dto';
 export class PeriodsService {
   private readonly logger = new Logger(PeriodsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLog: ActivityLogService,
+  ) {}
 
   // ── List all periods for a company ───────────────────────────
   async findAll(companyId: string) {
@@ -83,6 +87,16 @@ export class PeriodsService {
       create: { companyId, lastNumber: 0 },
     });
 
+    void this.activityLog.log({
+      userId, companyId,
+      action: 'PERIOD_OPENED', entity: 'AccountingPeriod', entityId: period.id,
+      details: {
+        periodo: period.name,
+        desde: start.toISOString().slice(0, 10),
+        hasta: end.toISOString().slice(0, 10),
+      },
+    });
+
     return period;
   }
 
@@ -106,7 +120,7 @@ export class PeriodsService {
 
     // Run everything inside a single transaction so closing entries and
     // status update are atomic — either all succeed or all roll back.
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
 
       // ── Guard: skip if closing entries already exist ─────────
       const alreadyHasClosingEntries = await tx.journalEntry.findFirst({
@@ -142,6 +156,20 @@ export class PeriodsService {
         closingEntryIds,
       };
     });
+
+    // Cerrar un período congela los libros: es lo más sensible que se puede
+    // hacer sobre la contabilidad, así que queda en la bitácora sí o sí.
+    void this.activityLog.log({
+      userId, companyId,
+      action: 'PERIOD_CLOSED', entity: 'AccountingPeriod', entityId: periodId,
+      details: {
+        periodo: period.name,
+        asientosDeCierre: result.closingEntryIds?.length ?? 0,
+        notas: dto.notes ?? undefined,
+      },
+    });
+
+    return result;
   }
 
   // ── Private helper: build and persist the 2 closing entries ──

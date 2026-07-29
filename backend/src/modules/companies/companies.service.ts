@@ -324,6 +324,10 @@ export class CompaniesService {
       this.prisma.arPayment.deleteMany({ where: { companyId } }),
       this.prisma.payment.deleteMany({ where: { companyId } }),
       this.prisma.inventoryMovement.deleteMany({ where: { companyId } }),
+      // Los ajustes apuntan al producto sin cascada: si no se borran acá, el
+      // borrado de productos revienta por clave foránea y la empresa de
+      // práctica queda imposible de eliminar.
+      this.prisma.inventoryAdjustment.deleteMany({ where: { companyId } }),
       this.prisma.journalEntry.deleteMany({ where: { companyId } }),
       // Planilla y activos fijos
       this.prisma.payrollLine.deleteMany({ where: { payroll: { companyId } } }),

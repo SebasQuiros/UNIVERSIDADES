@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import {
   History, FileText, BookOpen, ShoppingCart, Receipt, User,
   Coins, FileMinus, Users, Building2,
+  ArrowUpRight, ArrowDownLeft, CalendarPlus, Lock, Upload, PackageSearch,
 } from 'lucide-react';
 
 interface LogRow {
@@ -24,6 +25,12 @@ const ACTION_META: Record<string, { label: string; icon: any; variant: any }> = 
   CREDIT_NOTE_ISSUED:    { label: 'Nota de crédito',      icon: FileMinus,    variant: 'red'     },
   PAYROLL_PROCESSED:     { label: 'Planilla procesada',   icon: Users,        variant: 'blue'    },
   ASSET_DEPRECIATED:     { label: 'Depreciación',         icon: Building2,    variant: 'slate'   },
+  TRANSFER_SENT:         { label: 'Transferencia enviada',   icon: ArrowUpRight,   variant: 'red'    },
+  TRANSFER_RECEIVED:     { label: 'Transferencia recibida',  icon: ArrowDownLeft,  variant: 'green'  },
+  PERIOD_OPENED:         { label: 'Período abierto',         icon: CalendarPlus,   variant: 'blue'   },
+  PERIOD_CLOSED:         { label: 'Período cerrado',         icon: Lock,           variant: 'purple' },
+  CHART_OF_ACCOUNTS_IMPORTED: { label: 'Catálogo importado', icon: Upload,         variant: 'amber'  },
+  INVENTORY_ADJUSTED:    { label: 'Ajuste de inventario',    icon: PackageSearch,  variant: 'amber'  },
   LOGIN:                 { label: 'Inicio de sesión',     icon: User,         variant: 'slate'   },
 };
 
@@ -64,6 +71,30 @@ function describe(row: LogRow): string {
   }
   if (row.action === 'ASSET_DEPRECIATED') {
     return [d.periodo, d.monto && `₡${Number(d.monto).toLocaleString('es-CR')}`].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'TRANSFER_SENT') {
+    return [d.destino && `A ${d.destino}`, d.concepto,
+      d.monto && `₡${Number(d.monto).toLocaleString('es-CR')}`].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'TRANSFER_RECEIVED') {
+    return [d.origen && `De ${d.origen}`, d.concepto,
+      d.monto && `₡${Number(d.monto).toLocaleString('es-CR')}`].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'PERIOD_OPENED') {
+    return [d.periodo, d.desde && d.hasta && `${d.desde} → ${d.hasta}`].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'PERIOD_CLOSED') {
+    return [d.periodo, d.asientosDeCierre != null && `${d.asientosDeCierre} asiento(s) de cierre`,
+      d.notas].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'CHART_OF_ACCOUNTS_IMPORTED') {
+    return [d.archivo, d.creadas != null && `${d.creadas} cuenta(s) creada(s)`,
+      d.omitidas ? `${d.omitidas} omitida(s)` : null,
+      d.errores ? `${d.errores} error(es)` : null].filter(Boolean).join(' · ');
+  }
+  if (row.action === 'INVENTORY_ADJUSTED') {
+    return [d.producto, d.tipo, d.cantidad != null && `${d.cantidad} unid.`,
+      d.motivo].filter(Boolean).join(' · ');
   }
   const keys = Object.keys(d);
   return keys.length ? keys.slice(0, 3).map((k) => `${k}: ${d[k]}`).join(' · ') : '';

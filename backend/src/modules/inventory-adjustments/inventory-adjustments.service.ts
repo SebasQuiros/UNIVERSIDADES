@@ -2,6 +2,7 @@ import {
   Injectable, BadRequestException, NotFoundException, Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { InventoryService } from '../inventory/inventory.service';
 import { BusinessEventsService } from '../business/business-events.service';
@@ -36,6 +37,7 @@ export class InventoryAdjustmentsService {
     private readonly prisma:         PrismaService,
     private readonly inventory:      InventoryService,
     private readonly businessEvents: BusinessEventsService,
+    private readonly activityLog:    ActivityLogService,
   ) {}
 
   async list(companyId: string) {
@@ -63,7 +65,7 @@ export class InventoryAdjustmentsService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const adjusted = await this.prisma.$transaction(async (tx) => {
       let unitCost:   Decimal;
       let totalValue: Decimal;
 
@@ -142,5 +144,20 @@ export class InventoryAdjustmentsService {
 
       return tx.inventoryAdjustment.findUnique({ where: { id: adjustment.id } });
     });
+
+    // Un ajuste cambia existencias y costo sin que medie una factura: es de los
+    // movimientos que más se revisan en una auditoría.
+    void this.activityLog.log({
+      userId, companyId,
+      action: 'INVENTORY_ADJUSTED', entity: 'InventoryAdjustment', entityId: adjusted?.id,
+      details: {
+        producto: product.name,
+        tipo: dto.type === 'INCREASE' ? 'Aumento' : 'Disminución',
+        cantidad: dto.quantity,
+        motivo: dto.reason ?? undefined,
+      },
+    });
+
+    return adjusted;
   }
 }

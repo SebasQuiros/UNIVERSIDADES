@@ -3,6 +3,7 @@ import {
   NotFoundException, ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { readSpreadsheet } from '../../common/upload/read-spreadsheet';
 import { AccountType, NormalBalance } from '@prisma/client';
 import { CreateAccountDto, UpdateAccountDto } from './dto/accounts.dto';
@@ -186,7 +187,10 @@ const CHART: Array<{
 
 @Injectable()
 export class AccountsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLog: ActivityLogService,
+  ) {}
 
   // ── Get full chart with hierarchy ────────────────────────────
   async findAll(companyId: string) {
@@ -313,7 +317,7 @@ export class AccountsService {
   // - naturaleza: Debe/Deudora/DEBIT · Haber/Acreedora/CREDIT (opcional: se
   //   infiere del tipo si falta). Nivel y cuenta padre se derivan del código
   //   punteado (p.ej. 1.1.01.01 → nivel 4, padre 1.1.01). Cabecera = tiene hijos.
-  async importFromExcel(companyId: string, fileBuffer: Buffer, originalName = '') {
+  async importFromExcel(companyId: string, fileBuffer: Buffer, originalName = '', userId?: string) {
     // Lectura con exceljs (ver read-spreadsheet.ts): `xlsx` tiene CVEs sin
     // parche y este buffer viene de una subida de usuario.
     const rows: unknown[][] = await readSpreadsheet(fileBuffer, originalName);
@@ -417,6 +421,20 @@ export class AccountsService {
     await this.prisma.journalSequence.upsert({
       where: { companyId }, update: {}, create: { companyId, lastNumber: 0 },
     });
+
+    // Cargar un catálogo altera la estructura contra la que se asienta todo:
+    // queda registrado quién lo hizo y con qué archivo.
+    if (userId) {
+      void this.activityLog.log({
+        userId, companyId,
+        action: 'CHART_OF_ACCOUNTS_IMPORTED', entity: 'Account',
+        details: {
+          archivo: originalName || 'sin nombre',
+          creadas: created, omitidas: skipped, filas: parsed.length,
+          errores: errors.length,
+        },
+      });
+    }
 
     return { created, skipped, total: parsed.length, errors: errors.slice(0, 20) };
   }

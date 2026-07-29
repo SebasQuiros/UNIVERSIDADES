@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch,
   Body, Param, UseGuards, HttpCode, HttpStatus,
-  UploadedFile, UseInterceptors, BadRequestException,
+  UploadedFile, UseInterceptors, BadRequestException, Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SPREADSHEET_UPLOAD } from '../../common/upload/spreadsheet-upload';
@@ -27,9 +27,10 @@ export class AccountsController {
   importExcel(
     @Param('companyId') companyId: string,
     @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
   ) {
     if (!file?.buffer) throw new BadRequestException('No se recibió ningún archivo.');
-    return this.svc.importFromExcel(companyId, file.buffer, file.originalname);
+    return this.svc.importFromExcel(companyId, file.buffer, file.originalname, req.user?.id);
   }
 
   @Get(':id')
