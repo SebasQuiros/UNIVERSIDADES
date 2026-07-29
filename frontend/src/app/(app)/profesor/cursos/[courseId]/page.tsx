@@ -743,7 +743,7 @@ function TemplateModal({ courseId, onClose, onCreated }: {
       .finally(() => setLoading(false));
   }, []);
 
-  async function useTemplate(templateId: string) {
+  async function applyTemplate(templateId: string) {
     setSaving(templateId);
     try {
       await api.post(`/api/v1/courses/${courseId}/exercises/from-template`, { templateId });
@@ -797,7 +797,7 @@ function TemplateModal({ courseId, onClose, onCreated }: {
                       {t.course && <span className="ml-2">· {t.course.name}</span>}
                     </p>
                   </div>
-                  <Button size="sm" onClick={() => useTemplate(t.id)} disabled={saving === t.id} className="flex-shrink-0 cx-press">
+                  <Button size="sm" onClick={() => applyTemplate(t.id)} disabled={saving === t.id} className="flex-shrink-0 cx-press">
                     {saving === t.id ? '…' : 'Usar'}
                   </Button>
                 </div>
