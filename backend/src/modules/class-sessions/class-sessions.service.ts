@@ -751,6 +751,88 @@ export class ClassSessionsService {
   // ════════════════════════════════════════════════════════════
   // Score continuo derivado de la contabilidad real de cada empresa de la
   // sesión (reutiliza getValuation). Read-only, sin mutar nada.
+  /**
+   * Perfil público de una empresa de la sesión: quién es y, sobre todo, cómo
+   * se comporta comercialmente.
+   *
+   * La reputación NO es un número arbitrario: sale de conducta verificable
+   * dentro de la sesión. Si la empresa todavía no hizo negocios se devuelve
+   * `null` en vez de un puntaje inventado — no tener historial no es lo mismo
+   * que tener mal historial.
+   */
+  async companyProfile(sessionId: string, companyId: string) {
+    await this.loadOrThrow(sessionId);
+
+    // La empresa debe pertenecer a ESTA sesión: si no, este endpoint serviría
+    // para espiar empresas de otras aulas.
+    const link = await this.prisma.classSessionCompany.findFirst({
+      where:   { classSessionId: sessionId, companyId },
+      include: { company: { select: { id: true, name: true, economicActivity: true, createdAt: true } } },
+    });
+    if (!link) throw new NotFoundException('Esa empresa no participa en esta sesión.');
+
+    const [vendidas, compradas, negociaciones, productos] = await Promise.all([
+      this.prisma.procurementOrder.groupBy({
+        by: ['status'], where: { sellerCompanyId: companyId }, _count: true,
+      }),
+      this.prisma.procurementOrder.groupBy({
+        by: ['status'], where: { buyerCompanyId: companyId }, _count: true,
+      }),
+      this.prisma.negotiation.groupBy({
+        by: ['status'],
+        where: { OR: [{ buyerCompanyId: companyId }, { sellerCompanyId: companyId }] },
+        _count: true,
+      }),
+      this.prisma.product.findMany({
+        where:  { companyId, isActive: true },
+        select: { id: true, name: true, price: true, unit: true },
+        orderBy: { name: 'asc' },
+        take: 12,
+      }),
+    ]);
+
+    const cuenta = (rows: Array<{ status: string; _count: number }>, estados: string[]) =>
+      rows.filter(r => estados.includes(r.status)).reduce((s, r) => s + Number(r._count), 0);
+
+    // Como VENDEDOR: de lo que le pidieron (sin contar cancelaciones), ¿cuánto
+    // llegó a despachar? Mide si entrega lo que promete.
+    const pedidas    = cuenta(vendidas as any, ['PO_ISSUED', 'DISPATCHED', 'RECEIVED', 'INVOICED', 'PAID']);
+    const despachadas = cuenta(vendidas as any, ['DISPATCHED', 'RECEIVED', 'INVOICED', 'PAID']);
+
+    // Como COMPRADOR: de lo que ya le facturaron, ¿cuánto pagó?
+    const facturadas = cuenta(compradas as any, ['INVOICED', 'PAID']);
+    const pagadas    = cuenta(compradas as any, ['PAID']);
+
+    // Negociando: ¿cierra tratos o abandona conversaciones?
+    const aceptadas = cuenta(negociaciones as any, ['ACEPTADA']);
+    const cerradas  = cuenta(negociaciones as any, ['ACEPTADA', 'RECHAZADA', 'CANCELADA']);
+
+    const pct = (parte: number, total: number) => total > 0 ? Math.round((parte / total) * 100) : null;
+    const entrega   = pct(despachadas, pedidas);
+    const pago      = pct(pagadas, facturadas);
+    const seriedad  = pct(aceptadas, cerradas);
+
+    // La reputación promedia solo las dimensiones con historial real.
+    const dims = [entrega, pago, seriedad].filter((v): v is number => v !== null);
+    const reputacion = dims.length ? Math.round(dims.reduce((s, v) => s + v, 0) / dims.length) : null;
+
+    return {
+      companyId:        link.company.id,
+      name:             link.company.name,
+      economicActivity: link.company.economicActivity,
+      archetype:        link.archetype,
+      reputacion,                       // null = todavía sin historial
+      dimensiones: {
+        entrega:  { valor: entrega,  despachadas, pedidas,    etiqueta: 'Entrega lo que vende' },
+        pago:     { valor: pago,     pagadas,     facturadas, etiqueta: 'Paga lo que compra'   },
+        seriedad: { valor: seriedad, aceptadas,   cerradas,   etiqueta: 'Cierra los tratos'    },
+      },
+      catalogo: productos.map(p => ({
+        id: p.id, name: p.name, price: p.price.toString(), unit: p.unit,
+      })),
+    };
+  }
+
   async ranking(id: string) {
     const session = await this.loadOrThrow(id);
     const groups = await this.prisma.classSessionCompany.findMany({

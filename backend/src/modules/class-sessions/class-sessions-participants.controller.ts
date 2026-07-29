@@ -59,6 +59,14 @@ export class ClassSessionsParticipantsController {
     return this.svc.ranking(id);
   }
 
+  // Perfil público de una empresa del mercado: quién es y cómo se comporta.
+  @Get('class-sessions/:id/companies/:companyId/profile')
+  @Roles('STUDENT', 'TEACHER', 'ADMIN', 'SUPERADMIN')
+  @UseGuards(ClassSessionGuard)
+  companyProfile(@Param('id') id: string, @Param('companyId') companyId: string) {
+    return this.svc.companyProfile(id, companyId);
+  }
+
   // Anuncios/noticias de la sesión — visibles a participantes y staff.
   @Get('class-sessions/:id/announcements')
   @Roles('STUDENT', 'TEACHER', 'ADMIN', 'SUPERADMIN')
