@@ -2,12 +2,13 @@ import {
   Injectable, Logger, NotFoundException, ForbiddenException,
   BadRequestException, ConflictException,
 } from '@nestjs/common';
-import { ClassSessionStatus, TaxDeclarationType } from '@prisma/client';
+import { ClassSessionStatus, TaxDeclarationType, JournalSource, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CompanyMembershipsService } from '../company-memberships/company-memberships.service';
 import { ReportsService } from '../reports/reports.service';
 import { CompaniesService } from '../companies/companies.service';
 import { ClassSessionsOracleService } from './class-sessions-oracle.service';
+import { JournalService } from '../journal/journal.service';
 import { ringAssignments } from './class-sessions.logic';
 import {
   CreateClassSessionDto, CreateSessionGroupDto, UpdateArchetypeDto,
@@ -34,6 +35,7 @@ export class ClassSessionsService {
     private readonly reports: ReportsService,
     private readonly oracle: ClassSessionsOracleService,
     private readonly companies: CompaniesService,
+    private readonly journal: JournalService,
   ) {}
 
   // ════════════════════════════════════════════════════════════
@@ -352,10 +354,85 @@ export class ClassSessionsService {
       });
     }
 
+    // Capital inicial: si el profesor lo configuró, cada empresa arranca con
+    // dinero en el banco contra Capital Social. Se hace ANTES de pasar a
+    // EN_CURSO para que ninguna empresa opere sin su aporte.
+    const capitalSeeded = await this.seedInitialCapital(id, session.initialCapital, session.teacherId);
+
     await this.transition(id, ClassSessionStatus.LOBBY, ClassSessionStatus.EN_CURSO, {
       startedAt: new Date(),
     });
-    return { status: ClassSessionStatus.EN_CURSO, attemptsCreated: participants.length };
+    return {
+      status: ClassSessionStatus.EN_CURSO,
+      attemptsCreated: participants.length,
+      capitalSeeded,
+    };
+  }
+
+  /**
+   * Asienta el aporte de capital inicial en cada empresa de la sesión:
+   * Banco (debe) contra Capital Social (haber).
+   *
+   * Idempotente por empresa: se marca con sourceType SESSION_INITIAL_CAPITAL y
+   * sourceId de la sesión, así que reintentar el arranque no duplica el aporte.
+   *
+   * No toca ingresos ni IVA, así que el oráculo de auditoría —que compara
+   * ventas declaradas contra comprobantes— no se ve afectado.
+   */
+  private async seedInitialCapital(
+    sessionId: string,
+    initialCapital: Prisma.Decimal | null,
+    teacherId: string,
+  ): Promise<number> {
+    const monto = Number(initialCapital ?? 0);
+    if (!monto || monto <= 0) return 0;
+
+    const grupos = await this.prisma.classSessionCompany.findMany({
+      where:   { classSessionId: sessionId },
+      select:  { companyId: true, company: { select: { name: true } } },
+    });
+
+    const BANCO   = '1.1.01.02';
+    const CAPITAL = '3.1.01.01';
+    let sembradas = 0;
+
+    for (const g of grupos) {
+      // El par (sourceType, sourceId) es UNIQUE a nivel de BD y la guarda
+      // anti-duplicados de createAutoEntry busca sin filtrar por empresa. Por
+      // eso el sourceId lleva también la empresa: si fuera solo la sesión, la
+      // primera empresa bloquearía el asiento de todas las demás.
+      const sourceId = `${sessionId}:${g.companyId}`;
+
+      // ¿Ya tiene su aporte? Entonces esto es un reintento.
+      const yaTiene = await this.prisma.journalEntry.findFirst({
+        where:  { companyId: g.companyId, sourceType: 'SESSION_INITIAL_CAPITAL', sourceId },
+        select: { id: true },
+      });
+      if (yaTiene) continue;
+
+      await this.prisma.$transaction(async (tx) => {
+        await this.journal.createAutoEntry(
+          g.companyId,
+          `Aporte de capital inicial — ${g.company.name}`,
+          new Date(),
+          [
+            { accountCode: BANCO,   debit: monto, credit: 0, description: 'Capital aportado por los socios' },
+            { accountCode: CAPITAL, debit: 0, credit: monto, description: 'Capital social suscrito y pagado' },
+          ],
+          teacherId,
+          JournalSource.MANUAL,
+          tx,
+          undefined, undefined,
+          'SESSION_INITIAL_CAPITAL', sourceId,
+        );
+      });
+      sembradas++;
+    }
+
+    if (sembradas > 0) {
+      this.logger.log(`Sesión ${sessionId}: capital inicial de ${monto} sembrado en ${sembradas} empresa(s).`);
+    }
+    return sembradas;
   }
 
   async closeOperations(id: string) {
