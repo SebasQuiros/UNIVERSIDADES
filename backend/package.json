@@ -27,7 +27,7 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.1.28",
-    "@nestjs/swagger": "^11.4.6",
+    "@nestjs/swagger": "^11.4.5",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^5.14.0",
     "@sentry/node": "^10.68.0",
@@ -88,5 +88,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "overrides": {
+    "brace-expansion": "^5.0.8"
   }
 }

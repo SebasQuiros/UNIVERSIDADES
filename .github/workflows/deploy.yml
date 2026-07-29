@@ -4,10 +4,17 @@ on:
   push:
     branches: [main]
 
+# NOTA: el despliegue real lo hacen Railway (backend) y Vercel (frontend) por
+# su propia integración con GitHub; no pasa por acá. Este job existe para un
+# VPS que hoy no está configurado: sin el secret VPS_HOST fallaba en TODOS los
+# push con "missing server host", marcando en rojo commits que en realidad se
+# habían desplegado bien. Ahora se salta solo cuando no hay VPS configurado.
+
 jobs:
   deploy:
     name: Deploy via SSH
     runs-on: ubuntu-latest
+    if: vars.DEPLOY_VIA_SSH == 'true'
     needs: [] # CI jobs run in ci.yml on the same push; add cross-workflow dependency here if needed
     steps:
       - name: Deploy to VPS

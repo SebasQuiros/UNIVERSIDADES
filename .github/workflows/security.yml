@@ -32,13 +32,27 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ matrix.workspace }}/package-lock.json
 
+      # `--legacy-peer-deps` es obligatorio: es el flag con el que se resolvió
+      # el lockfile (igual que en ci.yml y en los Dockerfile). Sin él, npm
+      # resuelve los peers en modo estricto, cree que el lockfile está
+      # desincronizado y aborta — que es por lo que este job llevaba tiempo
+      # fallando ANTES de auditar nada.
       - name: Install (skip scripts to avoid arbitrary code execution)
         working-directory: ${{ matrix.workspace }}
-        run: npm ci --ignore-scripts
+        run: npm ci --ignore-scripts --legacy-peer-deps
 
-      - name: Audit (HIGH+ falla el job)
+      # Lo que decide si esto rompe el build es lo que REALMENTE se despliega.
+      # Las vulnerabilidades de devDependencies (cadena de ESLint, etc.) no
+      # llegan al servidor: la imagen de producción solo copia el build.
+      # Se reportan abajo, pero no bloquean.
+      - name: Audit de dependencias de producción (HIGH+ falla el job)
         working-directory: ${{ matrix.workspace }}
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit incluyendo dev (informativo, no bloquea)
+        if: always()
+        working-directory: ${{ matrix.workspace }}
+        run: npm audit || true
 
       - name: Audit (full report — informativo)
         if: always()
