@@ -45,3 +45,6 @@ Thumbs.db
 
 # Docker volumes
 pgdata/
+
+# Artefacto incremental de TypeScript: se regenera en cada build
+*.tsbuildinfo

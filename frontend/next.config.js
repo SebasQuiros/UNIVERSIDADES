@@ -2,7 +2,9 @@
 const nextConfig = {
   output: 'standalone',
   experimental: {
-    missingSuspenseWithCSRBailout: false,
+    // `missingSuspenseWithCSRBailout` se eliminó en Next 15. Servía para
+    // silenciar el aviso de useSearchParams() sin Suspense; ya no hace falta
+    // porque estas páginas se sirven dinámicamente, no se prerenderizan.
     optimizePackageImports: ['lucide-react', 'recharts', 'date-fns'],
   },
 
