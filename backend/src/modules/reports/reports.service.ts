@@ -112,7 +112,11 @@ export class ReportsService {
   // Uses LEFT JOIN semantics by fetching all accounts then their movements
   async getTrialBalance(companyId: string, filter: ReportFilterDto) {
     const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
-    const accounts = await this.getAccountBalances(companyId, startDate, endDate);
+    // En paralelo: no dependen entre sí y cada ida a la base cuesta ~400 ms.
+    const [accounts, companyInfo] = await Promise.all([
+      this.getAccountBalances(companyId, startDate, endDate),
+      this.getCompanyInfo(companyId),
+    ]);
 
     // Include all accounts (even zero balance) — that's what trial balance requires
     const rows = accounts.filter(a => !a.isHeader);
@@ -123,7 +127,7 @@ export class ReportsService {
 
     return {
       reportType: 'TRIAL_BALANCE',
-      company:    await this.getCompanyInfo(companyId),
+      company:    companyInfo,
       period:     period ?? { startDate, endDate },
       generatedAt: new Date(),
       rows,
@@ -140,11 +144,21 @@ export class ReportsService {
   // Assets = Liabilities + Equity
   // Uses ALL history up to endDate (balance sheet is cumulative)
   async getBalanceSheet(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
-    const { endDate, period } = await this.resolveDates(companyId, filter);
+    // Cada ida y vuelta a la base cuesta ~400 ms, así que lo que pesa no es
+    // el costo de cada consulta sino CUÁNTAS van en fila. Antes esto resolvía
+    // las fechas DOS veces (misma llamada, mismo resultado) y encadenaba tres
+    // lecturas de saldos que no dependen entre sí.
+    const { startDate: filterStart, endDate, period } = await this.resolveDates(companyId, filter);
 
     // Balance sheet is cumulative — start from the beginning of time
     const startDate = new Date('2000-01-01');
-    const allAccounts = await this.getAccountBalances(companyId, startDate, endDate);
+
+    const [allAccounts, incomeAccounts, expenseAccounts, companyInfo] = await Promise.all([
+      this.getAccountBalances(companyId, startDate, endDate),
+      this.getAccountBalances(companyId, filterStart, endDate, ['INCOME']),
+      this.getAccountBalances(companyId, filterStart, endDate, ['EXPENSE']),
+      this.getCompanyInfo(companyId),
+    ]);
 
     const assets      = allAccounts.filter(a => a.type === 'ASSET');
     const liabilities = allAccounts.filter(a => a.type === 'LIABILITY');
@@ -154,10 +168,8 @@ export class ReportsService {
     const totalLiabilities = liabilities.reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
     const totalEquity      = equity.reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
 
-    // Calculate current period net income to include in equity (for mid-period balance)
-    const { startDate: filterStart } = await this.resolveDates(companyId, filter);
-    const incomeAccounts  = await this.getAccountBalances(companyId, filterStart, endDate, ['INCOME']);
-    const expenseAccounts = await this.getAccountBalances(companyId, filterStart, endDate, ['EXPENSE']);
+    // Utilidad del período, para incluirla en el patrimonio (balance a mitad
+    // de período). Los saldos ya vinieron en el lote paralelo de arriba.
     const totalIncome     = incomeAccounts.reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
     const totalExpenses   = expenseAccounts.reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
     const currentNetIncome = totalIncome.minus(totalExpenses);
@@ -169,7 +181,7 @@ export class ReportsService {
 
     return {
       reportType:  'BALANCE_SHEET',
-      company:     await this.getCompanyInfo(companyId),
+      company:     companyInfo,
       asOfDate:    endDate,
       generatedAt: new Date(),
       assets: {
@@ -201,7 +213,10 @@ export class ReportsService {
   // Only covers the specified period (not cumulative)
   async getIncomeStatement(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
     const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
-    const accounts = await this.getAccountBalances(companyId, startDate, endDate, ['INCOME', 'EXPENSE']);
+    const [accounts, companyInfo] = await Promise.all([
+      this.getAccountBalances(companyId, startDate, endDate, ['INCOME', 'EXPENSE']),
+      this.getCompanyInfo(companyId),
+    ]);
 
     const incomeAccounts  = accounts.filter(a => a.type === 'INCOME');
     const expenseAccounts = accounts.filter(a => a.type === 'EXPENSE');
@@ -212,7 +227,7 @@ export class ReportsService {
 
     return {
       reportType:  'INCOME_STATEMENT',
-      company:     await this.getCompanyInfo(companyId),
+      company:     companyInfo,
       period:      period ?? { startDate, endDate },
       generatedAt: new Date(),
       income: {
