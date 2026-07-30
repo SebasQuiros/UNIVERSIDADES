@@ -224,11 +224,18 @@ export class CompanyMembershipsService {
     exerciseId: string,
     user: { id: string; role: string },
   ) {
-    const exercise = await this.prisma.exercise.findUnique({
-      where:  { id: exerciseId },
-      select: { id: true, teacherId: true },
-    });
-    if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
+    // El estudiante se filtra por membresía más abajo. El staff, en cambio,
+    // no tenía NINGÚN filtro: un profesor o admin de otra institución podía
+    // enumerar las empresas de este ejercicio junto con el nombre y el correo
+    // de cada integrante. Ahora debe poder administrar el ejercicio.
+    if (user.role === 'STUDENT') {
+      const existe = await this.prisma.exercise.findUnique({
+        where: { id: exerciseId }, select: { id: true },
+      });
+      if (!existe) throw new NotFoundException('Ejercicio no encontrado');
+    } else {
+      await this._assertCanAdminExercise(exerciseId, user);
+    }
 
     return this.prisma.company.findMany({
       where: {
@@ -409,14 +416,34 @@ export class CompanyMembershipsService {
   ) {
     const exercise = await this.prisma.exercise.findUnique({
       where:  { id: exerciseId },
-      select: { id: true, teacherId: true, isPublished: true },
+      select: {
+        id: true, teacherId: true, isPublished: true,
+        course: { select: { universityId: true } },
+      },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
-    if (user.role === 'TEACHER' && exercise.teacherId !== user.id) {
-      throw new ForbiddenException('No sos el profesor de este ejercicio');
-    }
     if (!['TEACHER', 'ADMIN', 'SUPERADMIN'].includes(user.role)) {
       throw new ForbiddenException('Sin permisos');
+    }
+    if (user.role === 'SUPERADMIN') return exercise;
+
+    if (user.role === 'TEACHER') {
+      if (exercise.teacherId !== user.id) {
+        throw new ForbiddenException('No sos el profesor de este ejercicio');
+      }
+      return exercise;
+    }
+
+    // ADMIN: es el rol que se le vende a CADA institución, no un superusuario.
+    // Sin esta comprobación podía administrar los ejercicios de otro cliente
+    // (y, por esta misma vía, enumerar sus empresas con nombre y correo de
+    // cada integrante). Falla CERRADO si la institución no se resuelve.
+    const yo = await this.prisma.user.findUnique({
+      where: { id: user.id }, select: { universityId: true },
+    });
+    const uniEjercicio = exercise.course?.universityId ?? null;
+    if (!yo?.universityId || !uniEjercicio || yo.universityId !== uniEjercicio) {
+      throw new ForbiddenException('No tenés acceso a ejercicios de otra institución.');
     }
     return exercise;
   }
