@@ -157,6 +157,9 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(LoggerMiddleware)
-      .forRoutes({ path: '*', method: RequestMethod.ALL });
+      // Express 5 (NestJS 11) ya no acepta el comodín suelto `*`: exige un
+      // parámetro con nombre. Nest lo auto-convertía con un warning en cada
+      // arranque, pero esa muleta no es permanente.
+      .forRoutes({ path: '{*path}', method: RequestMethod.ALL });
   }
 }
