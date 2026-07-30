@@ -28,8 +28,14 @@ export class ExerciseConfigService {
    * Usa `upsert` para tolerar carreras concurrentes (dos GET simultáneos
    * sobre un exercise sin config no harán dos creates).
    */
-  async findByExercise(exerciseId: string) {
-    await this._assertExerciseExists(exerciseId);
+  async findByExercise(
+    exerciseId: string,
+    caller?: { id?: string; role?: string; universityId?: string | null },
+  ) {
+    const ej = await this._assertExerciseExists(exerciseId);
+    // Antes no recibia siquiera a quien consultaba: cualquier usuario
+    // autenticado podia leer la configuracion de un ejercicio ajeno.
+    this.assertMismaInstitucion(ej, caller);
     return this.prisma.exerciseConfig.upsert({
       where:  { exerciseId },
       create: { exerciseId },
@@ -40,7 +46,7 @@ export class ExerciseConfigService {
   /** PUT/PATCH: actualiza config; bloqueado si el ejercicio ya está publicado. */
   async update(
     exerciseId: string,
-    user: { id: string; role: string },
+    user: { id: string; role: string; universityId?: string | null },
     dto: UpdateExerciseConfigDto,
   ) {
     const exercise = await this._assertExerciseExists(exerciseId);
@@ -61,6 +67,11 @@ export class ExerciseConfigService {
     // ── Ownership: TEACHER solo sus cursos ────────────────────
     if (user.role === 'TEACHER' && exercise.teacherId !== user.id) {
       throw new ForbiddenException('No sos el profesor de este ejercicio.');
+    }
+    // El ADMIN solo su institucion. Sin esto, el admin de un colegio podia
+    // reconfigurar el ejercicio de otro cliente.
+    if (user.role === 'ADMIN') {
+      this.assertMismaInstitucion(exercise, user as any);
     }
 
     // ── Hook Sesión de Aula: si hay una sesión activa (no DRAFT), la config
@@ -88,9 +99,29 @@ export class ExerciseConfigService {
   private async _assertExerciseExists(exerciseId: string) {
     const exercise = await this.prisma.exercise.findUnique({
       where:  { id: exerciseId },
-      select: { id: true, teacherId: true, isPublished: true, isArchived: true },
+      select: {
+        id: true, teacherId: true, isPublished: true, isArchived: true,
+        course: { select: { universityId: true } },
+      },
     });
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
     return exercise;
+  }
+
+  /**
+   * La configuración de un ejercicio pertenece a la institución de su curso.
+   * Falla CERRADO: sin institución resuelta en cualquiera de los dos lados,
+   * se deniega. SUPERADMIN queda exento; el TEACHER se valida aparte por
+   * propiedad del ejercicio, que es más estricto.
+   */
+  private assertMismaInstitucion(
+    exercise: { course?: { universityId: string | null } | null },
+    caller?: { role?: string; universityId?: string | null },
+  ) {
+    if (caller?.role === 'SUPERADMIN') return;
+    const uni = exercise.course?.universityId ?? null;
+    if (!caller?.universityId || !uni || uni !== caller.universityId) {
+      throw new ForbiddenException('El ejercicio pertenece a otra institución.');
+    }
   }
 }

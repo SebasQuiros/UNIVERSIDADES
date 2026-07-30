@@ -122,6 +122,12 @@ export class AttemptsService {
       });
     }
 
+    // Denegar por defecto. Antes este retorno era el caso final SIN filtro:
+    // hoy solo lo alcanza SUPERADMIN, pero cualquier rol nuevo —o un valor de
+    // rol inesperado— se habría llevado los intentos de TODAS las
+    // instituciones. Ahora hay que ser SUPERADMIN explícitamente.
+    if (userRole !== 'SUPERADMIN') return [];
+
     return this.prisma.exerciseAttempt.findMany({
       include: {
         exercise: { select: { id: true, title: true } },

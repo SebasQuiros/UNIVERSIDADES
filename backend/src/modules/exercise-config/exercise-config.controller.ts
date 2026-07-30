@@ -22,8 +22,8 @@ export class ExerciseConfigController {
   constructor(private readonly svc: ExerciseConfigService) {}
 
   @Get()
-  get(@Param('exerciseId') exerciseId: string) {
-    return this.svc.findByExercise(exerciseId);
+  get(@Param('exerciseId') exerciseId: string, @CurrentUser() user: any) {
+    return this.svc.findByExercise(exerciseId, user);
   }
 
   @Put()
