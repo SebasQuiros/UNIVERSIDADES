@@ -84,7 +84,11 @@ export class ClassSessionsService {
     if (!exercise) throw new NotFoundException('Ejercicio no encontrado');
     if (user.role === 'SUPERADMIN') return exercise;
     if (user.role === 'ADMIN') {
-      if (user.universityId && exercise.course.universityId !== user.universityId) {
+      // FALLA CERRADO: con `user.universityId && ...`, un ADMIN cuya institución
+      // llegara nula podía administrar las sesiones de aula de CUALQUIER
+      // cliente — incluidas las de escritura (crear, arrancar, calificar).
+      const uniEjercicio = exercise.course?.universityId ?? null;
+      if (!user.universityId || !uniEjercicio || uniEjercicio !== user.universityId) {
         throw new ForbiddenException('El ejercicio pertenece a otra universidad.');
       }
       return exercise;

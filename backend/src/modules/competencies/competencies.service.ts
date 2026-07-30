@@ -105,7 +105,24 @@ export class CompetenciesService {
   }
 
   // ── Vínculo Exercise ↔ Competency ─────────────────────────────
-  async getExerciseCompetencies(exerciseId: string) {
+  async getExerciseCompetencies(
+    exerciseId: string,
+    caller?: { id?: string; role?: string; universityId?: string | null },
+  ) {
+    // El catálogo de competencias puede ser propio de cada institución, así que
+    // leer las de un ejercicio ajeno filtra su taxonomía pedagógica. La
+    // escritura ya lo validaba; la lectura no. Falla CERRADO.
+    if (caller?.role !== 'SUPERADMIN') {
+      const ejercicio = await this.prisma.exercise.findUnique({
+        where:  { id: exerciseId },
+        select: { course: { select: { universityId: true } } },
+      });
+      if (!ejercicio) throw new NotFoundException('Ejercicio no encontrado');
+      const uni = ejercicio.course?.universityId ?? null;
+      if (!caller?.universityId || !uni || uni !== caller.universityId) {
+        throw new ForbiddenException('El ejercicio pertenece a otra institución.');
+      }
+    }
     return this.prisma.exerciseCompetency.findMany({
       where: { exerciseId },
       include: { competency: true },

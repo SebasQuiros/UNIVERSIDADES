@@ -69,8 +69,8 @@ export class CompetenciesController {
 
   // ── Vínculo con ejercicios ────────────────────────────────────
   @Get('exercises/:exerciseId/competencies')
-  getForExercise(@Param('exerciseId') exerciseId: string) {
-    return this.svc.getExerciseCompetencies(exerciseId);
+  getForExercise(@Param('exerciseId') exerciseId: string, @CurrentUser() user: any) {
+    return this.svc.getExerciseCompetencies(exerciseId, user);
   }
 
   @Put('exercises/:exerciseId/competencies')

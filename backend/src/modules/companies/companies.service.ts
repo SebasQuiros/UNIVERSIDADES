@@ -154,7 +154,10 @@ export class CompaniesService {
     if (userRole === 'TEACHER' || userRole === 'ADMIN') {
       const ownerUniversityId =
         company.student?.universityId ?? company.exercise?.course?.universityId ?? null;
-      if (universityId && ownerUniversityId !== universityId) {
+      // FALLA CERRADO. Con `universityId && ...` la comprobación se SALTABA
+      // cuando la institución de quien consulta llegaba nula, concediendo
+      // acceso a la empresa de cualquier intento de la plataforma.
+      if (!universityId || !ownerUniversityId || ownerUniversityId !== universityId) {
         throw new ForbiddenException('No tienes acceso a empresas de otras universidades');
       }
       return company;
