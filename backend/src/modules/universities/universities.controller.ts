@@ -37,14 +37,14 @@ export class UniversitiesController {
 
   @Get(':id')
   @Roles('ADMIN', 'SUPERADMIN')
-  findOne(@Param('id') id: string) {
-    return this.svc.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.svc.findOne(id, user);
   }
 
   @Get(':id/stats')
   @Roles('ADMIN', 'SUPERADMIN')
-  getStats(@Param('id') id: string) {
-    return this.svc.getStats(id);
+  getStats(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.svc.getStats(id, user);
   }
 
   @Post()
@@ -59,7 +59,7 @@ export class UniversitiesController {
   @Get(':id/users')
   @Roles('TEACHER', 'ADMIN', 'SUPERADMIN')
   findUsers(@Param('id') id: string, @CurrentUser() user: any) {
-    return this.svc.findUsers(id, user.role);
+    return this.svc.findUsers(id, user.role, user);
   }
 
   /**
@@ -73,8 +73,9 @@ export class UniversitiesController {
   createUser(
     @Param('id') id: string,
     @Body() body: CreateUniversityUserDto,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.createUser(id, { name: body.name, email: body.email, role: body.role });
+    return this.svc.createUser(id, { name: body.name, email: body.email, role: body.role }, user);
   }
 
   /**
@@ -86,8 +87,9 @@ export class UniversitiesController {
     @Param('id')     universityId: string,
     @Param('userId') userId: string,
     @Body() body: UpdateUserRoleDto,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.updateUserRole(universityId, userId, body.role);
+    return this.svc.updateUserRole(universityId, userId, body.role, user);
   }
 
   /**
@@ -98,13 +100,14 @@ export class UniversitiesController {
   toggleUserActive(
     @Param('id')     universityId: string,
     @Param('userId') userId: string,
+    @CurrentUser() user: any,
   ) {
-    return this.svc.toggleUserActive(universityId, userId);
+    return this.svc.toggleUserActive(universityId, userId, user);
   }
 
   @Patch(':id')
   @Roles('ADMIN', 'SUPERADMIN')
-  update(@Param('id') id: string, @Body() dto: UpdateUniversityDto) {
-    return this.svc.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateUniversityDto, @CurrentUser() user: any) {
+    return this.svc.update(id, dto, user);
   }
 }

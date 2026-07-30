@@ -23,8 +23,36 @@ function generateTempPassword(length = 12): string {
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
+/** Quien llama, tal como lo entrega `@CurrentUser()`. */
+export type Caller = { id?: string; role?: string; universityId?: string | null };
+
 @Injectable()
 export class UniversitiesService {
+  /**
+   * Toda operación sobre `/universities/:id/*` debe probar que ese `:id` es la
+   * institución de quien llama. ADMIN es el rol que se le vende a CADA
+   * institución cliente, no un superusuario global: sin esta comprobación, el
+   * administrador de un colegio podía leer y modificar otra institución entera
+   * con solo cambiar el id de la URL.
+   *
+   * Falla CERRADO: si no se sabe quién llama, o no tiene institución asignada,
+   * se deniega. Solo SUPERADMIN (rol global) queda exento.
+   */
+  private assertMismaInstitucion(universityId: string, caller?: Caller): void {
+    if (caller?.role === 'SUPERADMIN') return;
+
+    if (!caller?.universityId || !universityId) {
+      throw new ForbiddenException(
+        'No se pudo verificar tu institución. Acceso denegado.',
+      );
+    }
+    if (caller.universityId !== universityId) {
+      throw new ForbiddenException(
+        'No tenés acceso a los datos de otra institución.',
+      );
+    }
+  }
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
@@ -49,7 +77,11 @@ export class UniversitiesService {
     });
   }
 
-  async findOne(id: string) {
+  /**
+   * Consulta cruda, SIN control de acceso. Solo para uso interno del service,
+   * donde el permiso ya se comprobó antes. No exponer por HTTP.
+   */
+  private async _findOneRaw(id: string) {
     const university = await this.prisma.university.findUnique({
       where:   { id },
       include: {
@@ -59,6 +91,11 @@ export class UniversitiesService {
     });
     if (!university) throw new NotFoundException('Universidad no encontrada');
     return university;
+  }
+
+  async findOne(id: string, caller?: Caller) {
+    this.assertMismaInstitucion(id, caller);
+    return this._findOneRaw(id);
   }
 
   async create(dto: CreateUniversityDto) {
@@ -76,8 +113,9 @@ export class UniversitiesService {
     });
   }
 
-  async findUsers(id: string, callerRole = 'ADMIN') {
-    await this.findOne(id);
+  async findUsers(id: string, callerRole = 'ADMIN', caller?: Caller) {
+    this.assertMismaInstitucion(id, caller);
+    await this._findOneRaw(id);
     // TEACHER only sees students — not other teachers or admins
     const roleFilter = callerRole === 'TEACHER' ? { role: 'STUDENT' as Role } : {};
     return this.prisma.user.findMany({
@@ -98,8 +136,9 @@ export class UniversitiesService {
    */
   async createUser(universityId: string, data: {
     name: string; email: string; password?: string; role: string;
-  }) {
-    await this.findOne(universityId);
+  }, caller?: Caller) {
+    this.assertMismaInstitucion(universityId, caller);
+    await this._findOneRaw(universityId);
     const email = data.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) throw new ConflictException('El correo electrónico ya está registrado');
@@ -144,7 +183,8 @@ export class UniversitiesService {
   /**
    * Change the role of a user within the university (ADMIN cannot promote to SUPERADMIN).
    */
-  async updateUserRole(universityId: string, userId: string, role: string) {
+  async updateUserRole(universityId: string, userId: string, role: string, caller?: Caller) {
+    this.assertMismaInstitucion(universityId, caller);
     if (role === 'SUPERADMIN') {
       throw new ForbiddenException('No se puede asignar el rol SUPERADMIN desde este panel.');
     }
@@ -171,7 +211,8 @@ export class UniversitiesService {
   /**
    * Activate / deactivate a user within the university.
    */
-  async toggleUserActive(universityId: string, userId: string) {
+  async toggleUserActive(universityId: string, userId: string, caller?: Caller) {
+    this.assertMismaInstitucion(universityId, caller);
     const user = await this.prisma.user.findFirst({ where: { id: userId, universityId } });
     if (!user) throw new NotFoundException('Usuario no encontrado en esta universidad');
     if (user.role === 'SUPERADMIN') {
@@ -192,8 +233,9 @@ export class UniversitiesService {
     return updated;
   }
 
-  async update(id: string, dto: UpdateUniversityDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateUniversityDto, caller?: Caller) {
+    this.assertMismaInstitucion(id, caller);
+    await this._findOneRaw(id);
     return this.prisma.university.update({
       where: { id },
       data: {
@@ -233,8 +275,9 @@ export class UniversitiesService {
   }
 
   // ── University analytics / stats ─────────────────────────────────────────────
-  async getStats(universityId: string) {
-    await this.findOne(universityId);
+  async getStats(universityId: string, caller?: Caller) {
+    this.assertMismaInstitucion(universityId, caller);
+    await this._findOneRaw(universityId);
 
     const [users, courses, exercises, attempts] = await Promise.all([
       this.prisma.user.groupBy({
