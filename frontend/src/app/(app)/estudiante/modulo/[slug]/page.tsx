@@ -17,6 +17,7 @@ import { KardexView } from '@/components/modulo/KardexView';
 import { ValorInventarioView } from '@/components/modulo/ValorInventarioView';
 import { CategoriasView } from '@/components/modulo/CategoriasView';
 import { NotasView } from '@/components/modulo/NotasView';
+import { FacturasCompraView } from '@/components/modulo/FacturasCompraView';
 import {
   FileText, ShoppingCart, Package, Landmark, BookOpen, Coins,
   ClipboardList, Tag, Warehouse, Scale, RefreshCw, Building2,
@@ -243,6 +244,7 @@ export default function ModuloPage() {
   if (slug === 'categorias') return <CategoriasView />;
   if (slug === 'notas-credito') return <NotasView kind="credito" />;
   if (slug === 'notas-debito') return <NotasView kind="debito" />;
+  if (slug === 'facturas-compra') return <FacturasCompraView />;
 
   const cfg = C[slug];
 
