@@ -29,6 +29,9 @@ const DEFAULT_SETTINGS = { accountingWeight: 0.6, auditWeight: 0.4 };
 /** Segundos que se comparte la vista en vivo entre todos los participantes. */
 const LIVE_TTL_SECONDS = 3;
 
+/** El ranking se mueve despacio; puede compartirse más tiempo que la vista. */
+const RANKING_TTL_SECONDS = 10;
+
 @Injectable()
 export class ClassSessionsService {
   private readonly logger = new Logger(ClassSessionsService.name);
@@ -69,7 +72,10 @@ export class ClassSessionsService {
     // que se tira la caché de la vista en vivo en vez de dejarlos unos
     // segundos con la fase anterior. Este método es el único punto por el que
     // pasan TODAS las transiciones, así que basta con hacerlo acá.
-    try { await this.redis?.del?.(`sesion:live:${id}`); } catch { /* sin Redis, nada que invalidar */ }
+    try {
+      await this.redis?.del?.(`sesion:live:${id}`);
+      await this.redis?.del?.(`sesion:ranking:${id}`);
+    } catch { /* sin Redis, nada que invalidar */ }
   }
 
   private genCode(): string {
@@ -954,7 +960,30 @@ export class ClassSessionsService {
     };
   }
 
+  /**
+   * Tabla de posiciones. Igual que `live()`: todos los participantes piden lo
+   * mismo, pero acá el costo es peor —3 consultas fijas MÁS 2 por cada empresa
+   * (la valoración)—, así que con 6 equipos son 15 consultas por sondeo y por
+   * alumno. Se comparte unos segundos: el ranking cambia despacio y nadie nota
+   * la diferencia, pero el costo deja de multiplicarse por estudiante.
+   */
   async ranking(id: string) {
+    const clave = `sesion:ranking:${id}`;
+    try {
+      const guardado = await this.redis?.get?.(clave);
+      if (guardado) return JSON.parse(guardado);
+    } catch { /* sin Redis se calcula igual */ }
+
+    const datos = await this._rankingDesdeBD(id);
+
+    try {
+      await this.redis?.setEx?.(clave, RANKING_TTL_SECONDS, JSON.stringify(datos));
+    } catch { /* no poder cachear no es motivo para fallar */ }
+
+    return datos;
+  }
+
+  private async _rankingDesdeBD(id: string) {
     const session = await this.loadOrThrow(id);
     const groups = await this.prisma.classSessionCompany.findMany({
       where:   { classSessionId: id },

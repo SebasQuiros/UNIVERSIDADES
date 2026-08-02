@@ -104,7 +104,6 @@ export const MODULOS_REUTILIZADOS: Record<string, (c: { companyId: string; compa
   'recepcion-comprobantes': ({ companyId }) => <PurchaseOrdersTab companyId={companyId} readonly={false} focusReceiving />,
   'ajustes-inventario':  ({ companyId }) => <InventoryAdjustmentsTab companyId={companyId} readonly={false} />,
   'bancos':              ({ companyId }) => <BankTab companyId={companyId} readonly={false} />,
-  'conciliaciones':      ({ companyId }) => <BankTab companyId={companyId} readonly={false} />,
   'libro-diario':        ({ companyId }) => <JournalTab companyId={companyId} readonly={false} />,
   'asiento-contable':    ({ companyId }) => <JournalTab companyId={companyId} readonly={false} />,
   'libro-mayor':         ({ companyId }) => <LedgerTab companyId={companyId} />,

@@ -19,6 +19,7 @@ import { CategoriasView } from '@/components/modulo/CategoriasView';
 import { NotasView } from '@/components/modulo/NotasView';
 import { FacturasCompraView } from '@/components/modulo/FacturasCompraView';
 import { PagosRecibidosView } from '@/components/modulo/PagosRecibidosView';
+import { ConciliacionView } from '@/components/modulo/ConciliacionView';
 import { BodegasView } from '@/components/modulo/BodegasView';
 import { AtributosView } from '@/components/modulo/AtributosView';
 import { ListasPreciosView } from '@/components/modulo/ListasPreciosView';
@@ -254,6 +255,7 @@ export default function ModuloPage() {
   if (slug === 'notas-debito') return <NotasView kind="debito" />;
   if (slug === 'facturas-compra') return <FacturasCompraView />;
   if (slug === 'pagos-recibidos') return <PagosRecibidosView />;
+  if (slug === 'conciliaciones') return <ConciliacionView />;
   if (slug === 'bodegas') return <BodegasView />;
   if (slug === 'atributos') return <AtributosView />;
   if (slug === 'listas-precios') return <ListasPreciosView />;
