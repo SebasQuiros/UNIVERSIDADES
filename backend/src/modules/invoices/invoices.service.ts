@@ -447,7 +447,15 @@ export class InvoicesService {
             pdfUrl:          pdfPath,
             pdfData:         pdfBuffer, // respaldo en BD — ver getPdfPath()
             haciendaMessage: haciendaResult.message,
-            balanceDue:      invoice.total,
+            // Una venta de CONTADO no deja saldo pendiente: el cliente ya
+            // pagó. Antes se guardaba el total sin mirar la condición, así que
+            // toda factura de contado aparecía como cuenta por cobrar abierta
+            // e inflaba el reporte de antigüedad con deuda que no existe.
+            // El asiento siempre estuvo bien (Caja para contado, CxC para
+            // crédito); lo que mentía era este campo.
+            balanceDue:      invoice.saleCondition === 'CASH'
+              ? new Decimal(0)
+              : invoice.total,
           },
         });
 
