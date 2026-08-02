@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CompanyMode, CompanyRole } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import {
   CreateGroupCompanyDto,
   AddCompanyMemberDto,
@@ -186,8 +187,15 @@ export class CompanyMembershipsService {
 
     const result = companies.map(c => {
       const apOpen = openAP.get(c.id);
+      // Con números de punto flotante esta resta produce colas del tipo
+      // 1233.9999999999998. Es un panel de lectura, no genera asientos, pero
+      // un saldo así en pantalla no inspira confianza en un sistema contable.
       const apOutstanding = apOpen
-        ? Number(apOpen._sum.total ?? 0) - Number(apOpen._sum.paidAmount ?? 0)
+        ? Number(
+            new Decimal((apOpen._sum.total ?? 0).toString())
+              .minus(new Decimal((apOpen._sum.paidAmount ?? 0).toString()))
+              .toFixed(2),
+          )
         : 0;
       return {
         id:                c.id,
