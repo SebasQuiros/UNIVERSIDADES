@@ -18,6 +18,8 @@ import { ValorInventarioView } from '@/components/modulo/ValorInventarioView';
 import { CategoriasView } from '@/components/modulo/CategoriasView';
 import { NotasView } from '@/components/modulo/NotasView';
 import { FacturasCompraView } from '@/components/modulo/FacturasCompraView';
+import { PagosRecibidosView } from '@/components/modulo/PagosRecibidosView';
+import { ModuloWorkspace, MODULOS_REUTILIZADOS } from '@/components/modulo/ModuloWorkspace';
 import {
   FileText, ShoppingCart, Package, Landmark, BookOpen, Coins,
   ClipboardList, Tag, Warehouse, Scale, RefreshCw, Building2,
@@ -245,6 +247,12 @@ export default function ModuloPage() {
   if (slug === 'notas-credito') return <NotasView kind="credito" />;
   if (slug === 'notas-debito') return <NotasView kind="debito" />;
   if (slug === 'facturas-compra') return <FacturasCompraView />;
+  if (slug === 'pagos-recibidos') return <PagosRecibidosView />;
+
+  // Módulos ya construidos y probados dentro del ejercicio: se reutilizan tal
+  // cual resolviendo la empresa activa, en vez de mantener dos versiones.
+  const reutilizado = MODULOS_REUTILIZADOS[slug];
+  if (reutilizado) return <ModuloWorkspace render={reutilizado} />;
 
   const cfg = C[slug];
 
