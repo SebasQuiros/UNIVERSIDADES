@@ -318,6 +318,7 @@ export class ExercisesService {
         await tx.notification.create({
           data: {
             userId:  studentId,
+            link:    '/estudiante/ejercicios',
             title:   `Nuevo ejercicio asignado: ${exercise.title}`,
             body:    exercise.description
               ? `${exercise.description}${exercise.dueDate ? ` — Fecha límite: ${exercise.dueDate.toLocaleDateString('es-CR')}` : ''}`

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { formatDateTime, getErrorMessage, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -23,6 +24,7 @@ const NOTIF_ICONS: Record<string, { icon: React.ElementType; color: string }> = 
 };
 
 export default function NotificacionesPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -119,13 +121,20 @@ export default function NotificacionesPage() {
               return (
                 <button
                   key={notif.id}
-                  onClick={() => !notif.isRead && markRead(notif.id)}
+                  onClick={() => {
+                    // Marcar leída y, si la notificación tiene destino, llevar
+                    // ahí. Antes solo se marcaba: el alumno leía que lo habían
+                    // calificado y tenía que ir a buscar dónde.
+                    if (!notif.isRead) markRead(notif.id);
+                    if (notif.link) router.push(notif.link);
+                  }}
                   className={cn(
                     'w-full flex items-start gap-4 p-4 rounded-card border text-left transition-all cx-pop cx-hop-parent cx-press',
                     i < 6 ? `cx-d${i + 1}` : undefined,
                     notif.isRead
                       ? 'bg-white/70 border-gray-200/70 opacity-70 hover:opacity-100'
                       : 'bg-white border-gray-200/70 shadow-card hover:shadow-card-hover hover:border-gray-300/70',
+                    notif.link ? 'cursor-pointer' : 'cursor-default',
                   )}
                 >
                   <div className={cn(

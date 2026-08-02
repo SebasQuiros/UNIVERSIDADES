@@ -107,6 +107,9 @@ export class GradingService {
         body:    `Obtuviste ${dto.score} de ${maxScore} puntos (${scorePct}%).${dto.feedback ? ` Retroalimentación: ${dto.feedback}` : ''}`,
         type:    'GRADED',
         isRead:  false,
+        // Sin destino, la notificación era un callejón sin salida: el alumno
+        // leía que lo calificaron y tenía que ir a buscar dónde.
+        link:    `/estudiante/ejercicio/${attempt.id}`,
       },
     });
 
@@ -314,6 +317,7 @@ export class GradingService {
         body:   message.trim(),
         type:   'INFO' as any,
         isRead: false,
+        link:   `/estudiante/ejercicios`,
       })),
     });
 
