@@ -60,6 +60,12 @@ import { CourseTemplatesModule }     from './modules/course-templates/course-tem
 import { PedagogyModule }            from './modules/pedagogy/pedagogy.module';
 import { SimulatorModule }           from './modules/simulator/simulator.module';
 import { AccountingEngineModule }    from './modules/accounting-engine/accounting-engine.module';
+import { WarehousesModule }          from './modules/warehouses/warehouses.module';
+import { ProductAttributesModule }   from './modules/product-attributes/product-attributes.module';
+import { PriceListsModule }          from './modules/price-lists/price-lists.module';
+import { RecurringInvoicesModule }   from './modules/recurring-invoices/recurring-invoices.module';
+import { RecurringPaymentsModule }   from './modules/recurring-payments/recurring-payments.module';
+import { DeliveryNotesModule }       from './modules/delivery-notes/delivery-notes.module';
 import { RedisModule }               from './redis/redis.module';
 import { LoggerMiddleware }     from './common/middleware/logger.middleware';
 
@@ -115,6 +121,14 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     ClassSessionsModule,       // "Sesión de Aula" — Kahoot-like sobre Exercise + GROUP companies
     NegotiationsModule,        // Motor de negociación empresarial (Multiempresa cap. 6)
     TransfersModule,           // Transferencias de dinero entre empresas (asiento en ambos lados)
+    // Fase 32 — Módulos operativos: catálogos y programaciones que alimentan
+    // a los módulos que sí contabilizan. Ninguno genera asientos por sí solo.
+    WarehousesModule,
+    ProductAttributesModule,
+    PriceListsModule,
+    RecurringInvoicesModule,
+    RecurringPaymentsModule,
+    DeliveryNotesModule,
     NotificationsModule,
     // Phase 6 — New Features
     FixedAssetsModule,

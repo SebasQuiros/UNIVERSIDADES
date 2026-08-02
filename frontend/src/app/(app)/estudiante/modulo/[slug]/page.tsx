@@ -19,6 +19,12 @@ import { CategoriasView } from '@/components/modulo/CategoriasView';
 import { NotasView } from '@/components/modulo/NotasView';
 import { FacturasCompraView } from '@/components/modulo/FacturasCompraView';
 import { PagosRecibidosView } from '@/components/modulo/PagosRecibidosView';
+import { BodegasView } from '@/components/modulo/BodegasView';
+import { AtributosView } from '@/components/modulo/AtributosView';
+import { ListasPreciosView } from '@/components/modulo/ListasPreciosView';
+import { FacturasRecurrentesView } from '@/components/modulo/FacturasRecurrentesView';
+import { PagosRecurrentesView } from '@/components/modulo/PagosRecurrentesView';
+import { RemisionesView } from '@/components/modulo/RemisionesView';
 import { ModuloWorkspace, MODULOS_REUTILIZADOS } from '@/components/modulo/ModuloWorkspace';
 import {
   FileText, ShoppingCart, Package, Landmark, BookOpen, Coins,
@@ -248,6 +254,12 @@ export default function ModuloPage() {
   if (slug === 'notas-debito') return <NotasView kind="debito" />;
   if (slug === 'facturas-compra') return <FacturasCompraView />;
   if (slug === 'pagos-recibidos') return <PagosRecibidosView />;
+  if (slug === 'bodegas') return <BodegasView />;
+  if (slug === 'atributos') return <AtributosView />;
+  if (slug === 'listas-precios') return <ListasPreciosView />;
+  if (slug === 'facturas-recurrentes') return <FacturasRecurrentesView />;
+  if (slug === 'pagos-recurrentes') return <PagosRecurrentesView />;
+  if (slug === 'remisiones') return <RemisionesView />;
 
   // Módulos ya construidos y probados dentro del ejercicio: se reutilizan tal
   // cual resolviendo la empresa activa, en vez de mantener dos versiones.

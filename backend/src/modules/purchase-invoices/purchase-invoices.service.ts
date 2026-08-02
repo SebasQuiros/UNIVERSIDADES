@@ -48,7 +48,11 @@ export class PurchaseInvoicesService {
   async create(
     dto: CreatePurchaseInvoiceDto,
     companyId: string,
-    attemptId: string,
+    // La columna admite NULL y el código ya lo soporta: una empresa de
+    // práctica no cuelga de ningún ejercicio. La firma decía `string` y era
+    // más estricta que la realidad, lo que obligaba a forzar el tipo desde
+    // afuera para registrar compras en el Espacio Contador.
+    attemptId: string | null,
     userId: string,
   ) {
     await this.verifyOwner(companyId, userId);
