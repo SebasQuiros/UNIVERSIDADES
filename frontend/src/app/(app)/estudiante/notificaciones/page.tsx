@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSondeoVisible } from '@/hooks/useSondeoVisible';
 import { api } from '@/lib/api';
 import { formatDateTime, getErrorMessage, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -40,11 +41,10 @@ export default function NotificacionesPage() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-    const id = setInterval(load, 10_000);
-    return () => clearInterval(id);
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
+  // Solo con la pestaña a la vista: una bandeja de notificaciones abierta en
+  // segundo plano no necesita preguntar nada.
+  useSondeoVisible(load, 20_000);
 
   async function markRead(id: string) {
     try {

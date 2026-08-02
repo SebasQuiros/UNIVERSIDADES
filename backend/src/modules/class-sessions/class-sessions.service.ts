@@ -1,5 +1,5 @@
 import {
-  Injectable, Logger, NotFoundException, ForbiddenException,
+  Injectable, Inject, Logger, NotFoundException, ForbiddenException,
   BadRequestException, ConflictException,
 } from '@nestjs/common';
 import { ClassSessionStatus, TaxDeclarationType, JournalSource, Prisma } from '@prisma/client';
@@ -9,6 +9,7 @@ import { ReportsService } from '../reports/reports.service';
 import { CompaniesService } from '../companies/companies.service';
 import { ClassSessionsOracleService } from './class-sessions-oracle.service';
 import { JournalService } from '../journal/journal.service';
+import { REDIS_CLIENT } from '../../redis/redis.module';
 import { ringAssignments } from './class-sessions.logic';
 import {
   CreateClassSessionDto, CreateSessionGroupDto, UpdateArchetypeDto,
@@ -25,6 +26,9 @@ const IDLE_MS   = 10 * 60 * 1000;
 
 const DEFAULT_SETTINGS = { accountingWeight: 0.6, auditWeight: 0.4 };
 
+/** Segundos que se comparte la vista en vivo entre todos los participantes. */
+const LIVE_TTL_SECONDS = 3;
+
 @Injectable()
 export class ClassSessionsService {
   private readonly logger = new Logger(ClassSessionsService.name);
@@ -36,6 +40,7 @@ export class ClassSessionsService {
     private readonly oracle: ClassSessionsOracleService,
     private readonly companies: CompaniesService,
     private readonly journal: JournalService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
 
   // ════════════════════════════════════════════════════════════
@@ -59,6 +64,12 @@ export class ClassSessionsService {
         `Transición inválida: la sesión no está en el estado esperado (${fromList.join('/')}).`,
       );
     }
+
+    // Un cambio de fase es justo lo que los alumnos están esperando ver, así
+    // que se tira la caché de la vista en vivo en vez de dejarlos unos
+    // segundos con la fase anterior. Este método es el único punto por el que
+    // pasan TODAS las transiciones, así que basta con hacerlo acá.
+    try { await this.redis?.del?.(`sesion:live:${id}`); } catch { /* sin Redis, nada que invalidar */ }
   }
 
   private genCode(): string {
@@ -778,7 +789,36 @@ export class ClassSessionsService {
   }
 
   /** Payload liviano para polling del lobby / tablero. */
+  /**
+   * Vista en vivo de la sesión. La sondean TODOS los participantes cada pocos
+   * segundos, y todos reciben exactamente lo mismo: es la misma sesión.
+   *
+   * Sin caché, el costo crece con la cantidad de alumnos —30 estudiantes en un
+   * aula son 30 veces las mismas consultas— y con 1500 usuarios eso solo no se
+   * sostiene. Con una caché de pocos segundos el costo pasa a depender del
+   * número de SESIONES activas, no de cuánta gente las mira.
+   *
+   * El TTL es corto a propósito: la vista puede ir unos segundos atrasada sin
+   * que nadie lo note, pero no debe quedar pegada. Si Redis no está, se lee de
+   * la base como siempre (falla abierto, nunca rompe la pantalla).
+   */
   async live(id: string) {
+    const clave = `sesion:live:${id}`;
+    try {
+      const guardado = await this.redis?.get?.(clave);
+      if (guardado) return JSON.parse(guardado);
+    } catch { /* Redis caído: se sigue contra la base */ }
+
+    const datos = await this._liveDesdeBD(id);
+
+    try {
+      await this.redis?.setEx?.(clave, LIVE_TTL_SECONDS, JSON.stringify(datos));
+    } catch { /* no poder cachear no es motivo para fallar */ }
+
+    return datos;
+  }
+
+  private async _liveDesdeBD(id: string) {
     const session = await this.loadOrThrow(id);
     const [groups, participantsCount] = await Promise.all([
       this.prisma.classSessionCompany.findMany({

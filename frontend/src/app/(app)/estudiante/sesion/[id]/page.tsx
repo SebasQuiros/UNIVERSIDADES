@@ -5,6 +5,7 @@
 // fase: la fase la determina el servidor.
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSondeoVisible } from '@/hooks/useSondeoVisible';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
@@ -69,12 +70,11 @@ export default function MiSesionPage() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Se sondea SOLO con la pestaña a la vista: con la clase entera dejando la
+  // pantalla abierta, sondear lo invisible multiplica la carga sin que nadie
+  // lo mire. Al volver a la pestaña se refresca de inmediato.
   const bucket = pollIntervalMs(me?.status) <= 4000 ? 'fast' : 'slow';
-  useEffect(() => {
-    const ms = bucket === 'fast' ? 4000 : 9000;
-    const t = setInterval(refresh, ms);
-    return () => clearInterval(t);
-  }, [bucket, refresh]);
+  useSondeoVisible(refresh, bucket === 'fast' ? 6000 : 12000);
 
   // Heartbeat — mantiene el `onlineStatus` en ACTIVE para el tablero del profesor.
   useEffect(() => {
@@ -156,10 +156,7 @@ function LobbyWaitPhase({ sessionId }: { sessionId: string }) {
   }, [sessionId]);
 
   useEffect(() => { loadLive(); }, [loadLive]);
-  useEffect(() => {
-    const t = setInterval(loadLive, 4000);
-    return () => clearInterval(t);
-  }, [loadLive]);
+  useSondeoVisible(loadLive, 8000);
 
   useEffect(() => {
     const id = setInterval(() => setFactIdx((i) => (i + 1) % WAITING_FACTS.length), 4500);
@@ -479,7 +476,7 @@ function SessionAnnouncements({ sessionId }: { sessionId: string }) {
         .catch(() => {});
     };
     load();
-    const t = setInterval(load, 20000);
+    const t = setInterval(() => { if (!document.hidden) load(); }, 20000);
     return () => { alive = false; clearInterval(t); };
   }, [sessionId]);
 
