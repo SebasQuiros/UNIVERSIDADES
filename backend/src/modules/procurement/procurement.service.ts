@@ -234,9 +234,11 @@ export class ProcurementService {
     });
     if (!seller) throw new NotFoundException('Empresa vendedora no encontrada');
 
+    // Además del attemptId hacen falta nombre y cédula: el vendedor registra
+    // al comprador como cliente en sus propios libros.
     const buyer = await this.prisma.company.findUnique({
       where:  { id: order.buyerCompanyId },
-      select: { attemptId: true },
+      select: { attemptId: true, name: true, legalId: true },
     });
 
     const subtotal  = new Decimal(order.subtotal.toString());
@@ -295,10 +297,71 @@ export class ProcurementService {
         date,
       });
 
-      // 3. Enlazar el purchaseInvoiceId (el status ya se movió atómicamente).
+      // 3. El OTRO lado: la empresa vendedora también vendió.
+      //
+      // Antes solo se contabilizaba la compra. En una economía simulada donde
+      // los equipos se venden entre sí, eso dejaba los libros del vendedor
+      // vacíos: sin ingresos y sin cuenta por cobrar. Su estado de resultados
+      // salía en cero y el ranking —que puntúa por rentabilidad— lo castigaba
+      // como si nunca hubiera vendido.
+      //
+      // El comprador ya registró la operación a CRÉDITO, así que el espejo
+      // también es a crédito: el cobro llega cuando pague (ver `pay`).
+      const nombreComprador = buyer?.name ?? 'Empresa compradora';
+      const cedulaComprador = buyer?.legalId ?? '000000000';
+      const cliente =
+        (await tx.client.findFirst({
+          where:  { companyId: order.sellerCompanyId, identification: cedulaComprador },
+          select: { id: true, name: true, identification: true },
+        })) ??
+        (await tx.client.create({
+          data: {
+            companyId:      order.sellerCompanyId,
+            name:           nombreComprador,
+            identification: cedulaComprador,
+            creditDays:     30,
+          },
+          select: { id: true, name: true, identification: true },
+        }));
+
+      const ventaEspejo = await tx.invoice.create({
+        data: {
+          companyId:            order.sellerCompanyId,
+          clientId:             cliente.id,
+          clientName:           cliente.name,
+          clientIdentification: cliente.identification,
+          consecutiveNumber:    `ERP-${order.id.slice(0, 8).toUpperCase()}`,
+          issueDate:            date,
+          createdById:          userId,
+          status:               'ISSUED',
+          saleCondition:        'CREDIT',
+          subtotal,
+          tax:                  taxAmount,
+          total,
+          balanceDue:           total,
+        },
+      });
+
+      await this.businessEvents.recordSale({
+        companyId:         order.sellerCompanyId,
+        userId,
+        tx,
+        invoiceId:         ventaEspejo.id,
+        customerId:        cliente.id,
+        consecutiveNumber: ventaEspejo.consecutiveNumber,
+        customerName:      cliente.name,
+        subtotal:          subtotal.toNumber(),
+        taxAmount:         taxAmount.toNumber(),
+        total:             total.toNumber(),
+        totalCost:         0, // el costo de la mercancía ya salió al despachar
+        paymentType:       'CREDIT',
+        date,
+      });
+
+      // 4. Enlazar el purchaseInvoiceId (el status ya se movió atómicamente).
       return tx.procurementOrder.update({
         where: { id: orderId },
-        data:  { purchaseInvoiceId: purchaseInvoice.id },
+        data:  { purchaseInvoiceId: purchaseInvoice.id, sellerInvoiceId: ventaEspejo.id },
       });
     });
   }
@@ -346,6 +409,47 @@ export class ProcurementService {
         data:  { status: 'INVOICED' },
       });
       throw e;
+    }
+
+    // El otro lado: el VENDEDOR cobra. Sin esto su cuenta por cobrar contra el
+    // comprador quedaba abierta para siempre, aunque ya le hubieran pagado.
+    //
+    // Va aparte del pago del comprador a propósito: si el espejo fallara, el
+    // pago —que es el que el usuario ejecutó— ya quedó firme. Se registra el
+    // problema en vez de tumbar la operación.
+    if (order.sellerInvoiceId) {
+      try {
+        const venta = await this.prisma.invoice.findUnique({
+          where:  { id: order.sellerInvoiceId },
+          select: { id: true, consecutiveNumber: true, clientName: true },
+        });
+        if (venta) {
+          // El ORDEN importa: recordCollection reconcilia la cuenta por cobrar
+          // CONTRA el saldo de la factura, que es su fuente de verdad. Si se
+          // cancela el saldo después, la reconciliación ve la factura todavía
+          // impaga y la CxC queda abierta pese al cobro.
+          // No se toca `status`: InvoiceStatus no tiene PAID (es el estado del
+          // comprobante ante Hacienda, no el de cobro). Lo que marca que ya se
+          // pagó es `balanceDue` en cero, que es de donde lee el aging.
+          await this.prisma.invoice.update({
+            where: { id: venta.id },
+            data:  { balanceDue: 0 },
+          });
+          await this.businessEvents.recordCollection({
+            companyId:         order.sellerCompanyId,
+            userId,
+            invoiceId:         venta.id,
+            consecutiveNumber: venta.consecutiveNumber,
+            customerName:      venta.clientName,
+            amount:            new Decimal(order.total.toString()).toNumber(),
+          });
+        }
+      } catch (e: any) {
+        this.logger?.warn?.(
+          `Orden ${orderId}: el pago del comprador quedó registrado, pero falló el cobro ` +
+          `del vendedor (${order.sellerCompanyId}): ${e?.message}`,
+        );
+      }
     }
 
     return this.getOrderOrThrow(orderId);
