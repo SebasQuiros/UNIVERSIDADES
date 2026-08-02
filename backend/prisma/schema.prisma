@@ -650,6 +650,12 @@ model Company {
   purchaseOrderSequence PurchaseOrderSequence? @relation("PurchaseOrderSequenceCompany")
   inventoryAdjustments  InventoryAdjustment[]
 
+  warehouses        Warehouse[]
+  productAttributes ProductAttribute[]
+  priceLists        PriceList[]
+  recurringInvoices RecurringInvoice[]
+  recurringPayments RecurringPayment[]
+  deliveryNotes     DeliveryNote[]
   @@index([studentId])
   @@index([exerciseId])
   @@index([mode])
@@ -862,6 +868,8 @@ model Client {
   accountsReceivable AccountReceivable[]
   quotes   Quote[]
 
+  recurringInvoices RecurringInvoice[]
+  deliveryNotes     DeliveryNote[]
   @@index([companyId])
   @@map("clients")
 }
@@ -942,6 +950,8 @@ model Product {
   purchaseOrderLines   PurchaseOrderLine[]   @relation("PurchaseOrderLineProduct")
   inventoryAdjustments InventoryAdjustment[] @relation("InventoryAdjustmentProduct")
 
+  priceListItems    PriceListItem[]
+  deliveryNoteLines DeliveryNoteLine[]
   @@index([companyId])
   @@index([cabysCode])
   @@map("products")
@@ -2404,4 +2414,196 @@ model CompanyTransfer {
   @@index([toCompanyId, createdAt])
   @@index([classSessionId])
   @@map("company_transfers")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Fase 32 — Módulos operativos del menú que no tenían respaldo en la base.
+//  Ninguno genera asientos por sí solo: son catálogos y programaciones que
+//  alimentan a los módulos que sí contabilizan (facturas, compras, inventario).
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Frecuencia de un documento programado.
+enum RecurrenceFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  BIMONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
+
+/// Estado de una remisión (entrega de mercancía sin factura).
+enum DeliveryNoteStatus {
+  DRAFT
+  DISPATCHED
+  DELIVERED
+  INVOICED
+  CANCELLED
+}
+
+/// Bodega o almacén donde se guardan las existencias.
+model Warehouse {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String
+  code      String?
+  location  String?
+  isDefault Boolean  @default(false) @map("is_default")
+  isActive  Boolean  @default(true)  @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("warehouses")
+}
+
+/// Atributo de producto (Talla, Color…). Sus valores viven en ProductAttributeValue.
+model ProductAttribute {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  company Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  values  ProductAttributeValue[]
+
+  @@index([companyId])
+  @@map("product_attributes")
+}
+
+model ProductAttributeValue {
+  id          String   @id @default(uuid()) @db.Uuid
+  attributeId String   @map("attribute_id") @db.Uuid
+  value       String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  attribute ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@unique([attributeId, value])
+  @@index([attributeId])
+  @@map("product_attribute_values")
+}
+
+/// Lista de precios: precios alternativos por producto (mayoreo, promoción…).
+model PriceList {
+  id        String   @id @default(uuid()) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  name      String
+  currency  String   @default("CRC")
+  isDefault Boolean  @default(false) @map("is_default")
+  isActive  Boolean  @default(true)  @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  company Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items   PriceListItem[]
+
+  @@index([companyId])
+  @@map("price_lists")
+}
+
+model PriceListItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  priceListId String   @map("price_list_id") @db.Uuid
+  productId   String   @map("product_id")    @db.Uuid
+  price       Decimal  @db.Decimal(15, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt      @map("updated_at")
+
+  priceList PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId],   references: [id], onDelete: Cascade)
+
+  @@unique([priceListId, productId])
+  @@index([priceListId])
+  @@index([productId])
+  @@map("price_list_items")
+}
+
+/// Factura de venta programada. Al generarse crea una Invoice real.
+model RecurringInvoice {
+  id          String              @id @default(uuid()) @db.Uuid
+  companyId   String              @map("company_id") @db.Uuid
+  clientId    String              @map("client_id")  @db.Uuid
+  description String?
+  amount      Decimal             @db.Decimal(15, 2)
+  taxRate     Decimal             @default(13) @map("tax_rate") @db.Decimal(5, 2)
+  frequency   RecurrenceFrequency
+  nextRunAt   DateTime            @map("next_run_at")
+  lastRunAt   DateTime?           @map("last_run_at")
+  timesRun    Int                 @default(0) @map("times_run")
+  isActive    Boolean             @default(true) @map("is_active")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt      @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId],  references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([nextRunAt])
+  @@map("recurring_invoices")
+}
+
+/// Pago programado a proveedor. Al generarse crea una PurchaseInvoice real.
+model RecurringPayment {
+  id           String              @id @default(uuid()) @db.Uuid
+  companyId    String              @map("company_id") @db.Uuid
+  supplierName String              @map("supplier_name")
+  description  String?
+  amount       Decimal             @db.Decimal(15, 2)
+  taxRate      Decimal             @default(13) @map("tax_rate") @db.Decimal(5, 2)
+  frequency    RecurrenceFrequency
+  nextRunAt    DateTime            @map("next_run_at")
+  lastRunAt    DateTime?           @map("last_run_at")
+  timesRun     Int                 @default(0) @map("times_run")
+  isActive     Boolean             @default(true) @map("is_active")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt      @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([nextRunAt])
+  @@map("recurring_payments")
+}
+
+/// Remisión: entrega de mercancía que todavía no se factura.
+model DeliveryNote {
+  id         String             @id @default(uuid()) @db.Uuid
+  companyId  String             @map("company_id") @db.Uuid
+  clientId   String             @map("client_id")  @db.Uuid
+  number     String
+  date       DateTime
+  status     DeliveryNoteStatus @default(DRAFT)
+  notes      String?
+  invoiceId  String?            @map("invoice_id") @db.Uuid
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt      @map("updated_at")
+
+  company Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  client  Client             @relation(fields: [clientId],  references: [id], onDelete: Cascade)
+  lines   DeliveryNoteLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId])
+  @@map("delivery_notes")
+}
+
+model DeliveryNoteLine {
+  id             String   @id @default(uuid()) @db.Uuid
+  deliveryNoteId String   @map("delivery_note_id") @db.Uuid
+  productId      String   @map("product_id")       @db.Uuid
+  description    String
+  quantity       Decimal  @db.Decimal(15, 3)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  deliveryNote DeliveryNote @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId],      references: [id], onDelete: Cascade)
+
+  @@index([deliveryNoteId])
+  @@map("delivery_note_lines")
 }
