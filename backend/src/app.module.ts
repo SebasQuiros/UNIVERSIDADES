@@ -1,6 +1,7 @@
 import { Module, NestModule, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { BulkReadInterceptor } from './common/interceptors/bulk-read.interceptor';
 import { CompanyEnabledGuard } from './common/guards/company-enabled.guard';
@@ -66,9 +67,12 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     RedisModule,
+    // El cupo se cuenta por USUARIO (ver UserThrottlerGuard), no por IP: un
+    // laboratorio entero sale por una sola IP pública y con el conteo por IP
+    // la clase se bloqueaba sola. Las rutas públicas siguen contando por IP.
     ThrottlerModule.forRoot([
-      { name: 'short',  ttl: 1000,  limit: 40  }, // 40 req/s por IP
-      { name: 'medium', ttl: 60000, limit: 500 }, // 500 req/min por IP
+      { name: 'short',  ttl: 1000,  limit: 40  }, // 40 req/s por usuario
+      { name: 'medium', ttl: 60000, limit: 500 }, // 500 req/min por usuario
     ]),
     PrismaModule,
     ActivityLogModule,       // Bitácora de acciones (global)
@@ -146,7 +150,7 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     SimulatorModule,
   ],
   providers: [
-    { provide: APP_GUARD,        useClass: ThrottlerGuard },
+    { provide: APP_GUARD,        useClass: UserThrottlerGuard },
     // Fase 1 — bloquea rutas /companies/:companyId/* si la company tiene
     // isCompanyEnabled=false (excepto staff: TEACHER/ADMIN/SUPERADMIN).
     { provide: APP_GUARD,        useClass: CompanyEnabledGuard },
