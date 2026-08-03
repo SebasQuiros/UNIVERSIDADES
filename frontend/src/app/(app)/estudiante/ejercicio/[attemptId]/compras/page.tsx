@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -131,7 +131,6 @@ const EMPTY_FORM: FormState = {
 
 export default function ComprasPage() {
   const params = useParams();
-  const router = useRouter();
   const attemptId = params.attemptId as string;
 
   const now = new Date();

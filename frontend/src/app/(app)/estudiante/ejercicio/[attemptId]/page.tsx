@@ -4,9 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { formatDate, getErrorMessage, esc } from '@/lib/utils';
-import { exportToExcel } from '@/lib/excel';
-import { DifficultyBadge, StatusBadge, Badge } from '@/components/ui/Badge';
+import { getErrorMessage } from '@/lib/utils';
 import { Button, buttonClasses } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
@@ -18,8 +16,6 @@ import { useAuth } from '@/context/AuthContext';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { IconTile } from '@/components/ui/IconTile';
 import { ArtBalance, SceneStudentDesk, SceneEmptyBox } from '@/components/illustrations';
-import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
-import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import { ExamModeWrapper } from '@/components/exam';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
@@ -28,18 +24,17 @@ import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
 import type { ElementType } from 'react';
 import {
-  ArrowLeft, Building2, Users, Package, FileText, FileSpreadsheet,
-  BookOpen, BarChart2, CheckCircle2, Send, Plus, Trash2,
+  ArrowLeft, Building2, Users, Package, FileText,
+  BookOpen, BarChart2, CheckCircle2, Send, Plus,
   Clock, TrendingUp, X, RefreshCw, ChevronRight, Truck,
-  Printer, Landmark, Award, Star, Zap, Circle, History, Upload,
-  Scale, ClipboardList, ClipboardCheck, Lock, Download, MessageCircle,
-  Lightbulb, ShoppingCart, Search, LineChart, Inbox, GraduationCap,
+  Landmark, Award, Star, Zap, Circle, History,
+  Scale, ClipboardList, ClipboardCheck, Lock, MessageCircle,
+  Lightbulb, ShoppingCart, LineChart, GraduationCap,
   Trophy, PlayCircle, Receipt, FolderOpen, XCircle, Target,
   FileSignature, PackageCheck, SlidersHorizontal, Paperclip,
 } from 'lucide-react';
 import { SocraticTutorPanel } from '@/components/pedagogy/SocraticTutorPanel';
 import {
-  TYPE_LABELS,
   ClientsTab, ProductsTab, SuppliersTab, InvoicesTab, JournalTab, LedgerTab,
   ReportsTab, BankTab, MayorizacionTab, BalanceComprobacionTab, SpecialJournalTab,
   FixedAssetsTab, PayrollTab,
@@ -47,7 +42,6 @@ import {
 } from './workspace-modules';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-interface Company { id: string; name: string; legalId: string | null; email: string | null; phone: string | null; }
 
 // ─── Tab helpers ─────────────────────────────────────────────────────────────
 type Tab = 'dashboard' | 'clients' | 'suppliers' | 'products' | 'invoices' | 'journal' | 'ledger' | 'bank'
@@ -55,30 +49,6 @@ type Tab = 'dashboard' | 'clients' | 'suppliers' | 'products' | 'invoices' | 'jo
          | 'reports' | 'asientos-cierre' | 'balanza-post-cierre' | 'activity'
          | 'fixed-assets' | 'payroll' | 'purchase-proposals' | 'procurement' | 'tutor'
          | 'quotes' | 'purchase-orders' | 'inventory-adjustments';
-
-function TabButton({ id, active, onClick, icon: Icon, label, count }: {
-  id: Tab; active: boolean; onClick: () => void; icon: React.ElementType; label: string; count?: number;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-        active
-          ? 'border-blue-600 text-blue-700'
-          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-      }`}
-    >
-      <Icon className="w-4 h-4" />
-      {label}
-      {count != null && (
-        <span className={`text-xs px-1.5 py-0.5 rounded-full ${active ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-          {count}
-        </span>
-      )}
-    </button>
-  );
-}
-
 
 // ─── Dashboard tab ───────────────────────────────────────────────────────────
 // ── Recorrido del estudiante: Constituir → Operar → Declarar → Cerrar → Analizar ──

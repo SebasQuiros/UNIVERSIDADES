@@ -275,7 +275,7 @@ export default function EstudianteDashboard() {
   const [attempts,  setAttempts]  = useState<ExerciseAttempt[]>([]);
   const [companies, setCompanies] = useState<CompanyLite[]>([]);
   const [loading,   setLoading]   = useState(true);
-  const [starting,  setStarting]  = useState<string | null>(null);
+  const [, setStarting]  = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);

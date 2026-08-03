@@ -100,7 +100,6 @@ export class PageErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
       console.error('[PageErrorBoundary]', error, info.componentStack);
     }
     captureError(error, { componentStack: info.componentStack });

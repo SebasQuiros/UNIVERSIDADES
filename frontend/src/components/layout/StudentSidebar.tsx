@@ -82,7 +82,7 @@ export function StudentSidebar() {
       setActiveId(a?.id ?? null);
     }).catch(() => {});
     didMount.current = true;
-  }, []);
+  }, [user?.role]);
 
   // Vista del profesor: su PROPIO intento de vista previa (isPreview=true,
   // ver exercises.service.ts → previewAsStudent) — así el espacio Educación

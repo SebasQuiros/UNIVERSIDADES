@@ -17,6 +17,20 @@ function crsFmt(value: number): string {
   return `CRC ${value.toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// pdf-lib con las fuentes estandar solo sabe escribir WinAnsi. Un solo
+// caracter fuera de ese juego (un emoji, una comilla tipografica, un guion
+// largo raro) hace que doc.save() reviente y el endpoint devuelva 500. Los
+// nombres de cuenta los escribe el estudiante, asi que hay que asumir de todo.
+function winAnsi(text: string): string {
+  return String(text ?? '')
+    .normalize('NFC')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/…/g, '...')
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
+}
+
 function fmtDate(d: Date | string): string {
   const date = typeof d === 'string' ? new Date(d) : d;
   return date.toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -85,8 +99,178 @@ async function buildBuffer(wb: ExcelJS.Workbook): Promise<Buffer> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// ── Los estados, como una lista de renglones tipados ─────────────────────────
+//
+// El Excel y el PDF dibujaban cada uno su propia version del estado, asi que
+// podian divergir (y divergian: la pantalla ya mostraba el formato escalonado
+// y las exportaciones seguian sacando la lista plana). Ahora ambos recorren
+// ESTA lista, armada una sola vez desde lo que devuelve el backend.
+type Renglon = {
+  kind:   'seccion' | 'bloque' | 'grupo' | 'cuenta' | 'resultado' | 'nota';
+  code?:  string;
+  label:  string;
+  amount?: number | null;
+  ok?:    boolean;     // solo para 'nota': verde si cuadra, rojo si no
+};
+
+const n = (v: any) => Number(v ?? 0);
+
 @Injectable()
 export class ReportsExportService {
+
+  /** Dibuja los renglones en una hoja de Excel. */
+  private renderRenglonesExcel(ws: ExcelJS.Worksheet, renglones: Renglon[], COL: number) {
+    for (const r of renglones) {
+      if (r.kind === 'seccion') {
+        ws.addRow([]);
+        addSectionHeader(ws, r.label, COL);
+        continue;
+      }
+      if (r.kind === 'nota') {
+        ws.addRow([]);
+        const row = ws.addRow([`${r.ok ? '[OK]' : '[X]'} ${r.label}`]);
+        row.getCell(1).font = { bold: true, color: { argb: r.ok ? 'FF065F46' : 'FF991B1B' } };
+        row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: r.ok ? 'FFECFDF5' : 'FFFEF2F2' } };
+        ws.mergeCells(row.number, 1, row.number, COL);
+        continue;
+      }
+      if (r.kind === 'resultado') {
+        addTotalRow(ws, r.label, null, null, Number(r.amount ?? 0), 3);
+        continue;
+      }
+      // 'bloque', 'grupo' y 'cuenta' se distinguen por sangria y peso: es la
+      // jerarquia del estado, y en una hoja de calculo se lee mejor asi que
+      // con colores.
+      const sangria = r.kind === 'bloque' ? 1 : r.kind === 'grupo' ? 2 : 3;
+      const etiqueta = r.kind === 'cuenta' && r.code ? `${r.code}  ${r.label}` : r.label;
+      const row = ws.addRow([etiqueta, '', r.amount === null || r.amount === undefined ? '' : Number(r.amount)]);
+      row.getCell(1).alignment = { indent: sangria };
+      if (r.kind !== 'cuenta') {
+        row.getCell(1).font = { bold: true };
+        row.getCell(3).font = { bold: true };
+      }
+      if (r.kind === 'bloque') {
+        row.getCell(1).font = { bold: true, color: { argb: BRAND_BLUE } };
+      }
+      row.getCell(3).numFmt = '#,##0.00';
+      row.getCell(3).alignment = { horizontal: 'right' };
+    }
+  }
+
+  /** Balance de Situacion clasificado → renglones. */
+  private balanceRenglones(data: any): Renglon[] {
+    const c = data.classified;
+    const out: Renglon[] = [];
+
+    // Respaldo: si el backend todavia no manda la version clasificada, se
+    // exporta la lista plana de siempre en vez de un archivo vacio.
+    if (!c) {
+      for (const [label, sec, totalLabel] of [
+        ['ACTIVOS', data.assets, 'TOTAL ACTIVOS'],
+        ['PASIVOS', data.liabilities, 'TOTAL PASIVOS'],
+        ['PATRIMONIO', data.equity, 'TOTAL PATRIMONIO'],
+      ] as any[]) {
+        out.push({ kind: 'seccion', label });
+        for (const a of (sec?.accounts ?? [])) {
+          out.push({ kind: 'cuenta', code: a.code, label: a.name, amount: n(a.balance ?? a.balanceNum) });
+        }
+        out.push({ kind: 'resultado', label: totalLabel, amount: n(sec?.total) });
+      }
+      const dif = n(data.totals?.difference);
+      out.push({ kind: 'nota', label: Math.abs(dif) < 0.01 ? 'Balance cuadrado' : 'Balance descuadrado', ok: Math.abs(dif) < 0.01 });
+      return out;
+    }
+
+    const bloque = (titulo: string, sec: any) => {
+      if (!sec || (sec.grupos ?? []).length === 0) return;
+      out.push({ kind: 'bloque', label: titulo });
+      for (const g of sec.grupos) {
+        out.push({ kind: 'grupo', label: g.label, amount: n(g.total) });
+        // Un grupo de una sola cuenta ya se lee en su propio renglon: repetirlo
+        // debajo solo alarga el estado.
+        if ((g.accounts ?? []).length > 1) {
+          for (const a of g.accounts) {
+            out.push({ kind: 'cuenta', code: a.altCode ? `${a.code} · ${a.altCode}` : a.code, label: a.name, amount: n(a.amount) });
+          }
+        }
+      }
+      out.push({ kind: 'resultado', label: `Total ${titulo.toLowerCase()}`, amount: n(sec.total) });
+    };
+
+    out.push({ kind: 'seccion', label: 'ACTIVO' });
+    bloque('Activo corriente',    c.activo.corriente);
+    bloque('Activo no corriente', c.activo.noCorriente);
+    out.push({ kind: 'resultado', label: 'TOTAL ACTIVO', amount: n(c.activo.total) });
+
+    out.push({ kind: 'seccion', label: 'PASIVO' });
+    bloque('Pasivo corriente',    c.pasivo.corriente);
+    bloque('Pasivo no corriente', c.pasivo.noCorriente);
+    out.push({ kind: 'resultado', label: 'TOTAL PASIVO', amount: n(c.pasivo.total) });
+
+    out.push({ kind: 'seccion', label: 'PATRIMONIO' });
+    for (const g of (c.patrimonio.grupos ?? [])) {
+      out.push({ kind: 'grupo', label: g.label, amount: n(g.total) });
+      if ((g.accounts ?? []).length > 1) {
+        for (const a of g.accounts) {
+          out.push({ kind: 'cuenta', code: a.altCode ? `${a.code} · ${a.altCode}` : a.code, label: a.name, amount: n(a.amount) });
+        }
+      }
+    }
+    out.push({ kind: 'resultado', label: 'TOTAL PATRIMONIO', amount: n(c.patrimonio.total) });
+
+    out.push({
+      kind: 'nota', ok: c.ecuacion.cuadra,
+      label: `Ecuacion contable: Activo ${crsFmt(n(c.ecuacion.activo))} = Pasivo + Patrimonio ${crsFmt(n(c.ecuacion.pasivoMasPatrimonio))}`
+        + (c.ecuacion.cuadra ? '' : ` — diferencia ${crsFmt(n(c.ecuacion.diferencia))}`),
+    });
+    return out;
+  }
+
+  /** Estado de Resultados escalonado → renglones. */
+  private resultadosRenglones(data: any): Renglon[] {
+    const s = data.structured;
+    const out: Renglon[] = [];
+
+    if (!s) {
+      out.push({ kind: 'seccion', label: 'INGRESOS' });
+      for (const a of (data.income?.accounts ?? [])) {
+        out.push({ kind: 'cuenta', code: a.code, label: a.name, amount: n(a.balance) });
+      }
+      out.push({ kind: 'resultado', label: 'TOTAL INGRESOS', amount: n(data.income?.total ?? data.totals?.totalIncome) });
+      out.push({ kind: 'seccion', label: 'GASTOS' });
+      for (const a of (data.expenses?.accounts ?? [])) {
+        out.push({ kind: 'cuenta', code: a.code, label: a.name, amount: n(a.balance) });
+      }
+      out.push({ kind: 'resultado', label: 'TOTAL GASTOS', amount: n(data.expenses?.total ?? data.totals?.totalExpenses) });
+      const net = n(data.totals?.netIncome);
+      out.push({ kind: 'resultado', label: net >= 0 ? 'UTILIDAD NETA' : 'PERDIDA NETA', amount: net });
+      return out;
+    }
+
+    for (const b of (s.bloques ?? [])) {
+      out.push({ kind: 'seccion', label: `${b.numero}. ${String(b.titulo).toUpperCase()}` });
+      if ((b.grupos ?? []).length === 0) {
+        out.push({ kind: 'cuenta', code: '', label: 'Sin movimiento en el periodo', amount: null });
+      }
+      for (const g of (b.grupos ?? [])) {
+        out.push({ kind: 'grupo', label: g.label, amount: n(g.total) });
+        if ((g.accounts ?? []).length > 1) {
+          for (const a of g.accounts) {
+            out.push({ kind: 'cuenta', code: a.altCode ? `${a.code} · ${a.altCode}` : a.code, label: a.name, amount: n(a.amount) });
+          }
+        }
+      }
+      out.push({ kind: 'resultado', label: b.resultado.label, amount: n(b.resultado.value) });
+    }
+
+    if (s.cuadra === false) {
+      out.push({
+        kind: 'nota', ok: false,
+        label: 'Los escalones no coinciden con ingresos menos gastos: hay una cuenta sin clasificar.',
+      });
+    }
+    return out;
+  }
 
   // ── 1. Balance General — Excel ────────────────────────────────────────────
   async generateBalanceSheetExcel(data: any, companyName: string): Promise<Buffer> {
@@ -120,33 +304,7 @@ export class ReportsExportService {
     });
     colHdr.height = 18;
 
-    // ── Sections ──
-    const sections = [
-      { label: 'ACTIVOS',     accounts: data.assets?.accounts      ?? [], total: Number(data.assets?.total      ?? 0), totalLabel: 'TOTAL ACTIVOS' },
-      { label: 'PASIVOS',     accounts: data.liabilities?.accounts ?? [], total: Number(data.liabilities?.total ?? 0), totalLabel: 'TOTAL PASIVOS' },
-      { label: 'PATRIMONIO',  accounts: data.equity?.accounts      ?? [], total: Number(data.equity?.total      ?? 0), totalLabel: 'TOTAL PATRIMONIO' },
-    ];
-
-    for (const sec of sections) {
-      ws.addRow([]); // spacer
-      addSectionHeader(ws, sec.label, COL);
-      for (const a of sec.accounts) {
-        const row = ws.addRow([`${a.code}  ${a.name}`, '', Number(a.balance ?? a.balanceNum ?? 0)]);
-        row.getCell(1).alignment = { indent: 1 };
-        row.getCell(3).numFmt   = '#,##0.00';
-        row.getCell(3).alignment = { horizontal: 'right' };
-      }
-      addTotalRow(ws, sec.totalLabel, null, null, sec.total, 3);
-    }
-
-    // ── Balance check ──
-    ws.addRow([]);
-    const diff     = Number(data.totals?.difference ?? 0);
-    const balanced = Math.abs(diff) < 0.01;
-    const checkRow = ws.addRow([balanced ? '✓ Balance cuadrado' : '✗ Balance descuadrado']);
-    checkRow.getCell(1).font = { bold: true, color: { argb: balanced ? 'FF065F46' : 'FF991B1B' } };
-    checkRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: balanced ? 'FFECFDF5' : 'FFFEF2F2' } };
-    ws.mergeCells(checkRow.number, 1, checkRow.number, COL);
+    this.renderRenglonesExcel(ws, this.balanceRenglones(data), COL);
 
     // ── Footer ──
     ws.addRow([]);
@@ -191,32 +349,12 @@ export class ReportsExportService {
     });
     colHdr.height = 18;
 
-    // Ingresos
-    ws.addRow([]);
-    addSectionHeader(ws, 'INGRESOS', COL);
-    for (const a of (data.income?.accounts ?? [])) {
-      const row = ws.addRow([`${a.code}  ${a.name}`, '', Number(a.balance ?? 0)]);
-      row.getCell(1).alignment = { indent: 1 };
-      row.getCell(3).numFmt   = '#,##0.00';
-      row.getCell(3).alignment = { horizontal: 'right' };
-    }
-    addTotalRow(ws, 'TOTAL INGRESOS', null, null, Number(data.income?.total ?? data.totals?.totalIncome ?? 0), 3);
+    this.renderRenglonesExcel(ws, this.resultadosRenglones(data), COL);
 
-    // Gastos
+    // El resultado final, destacado: es lo que se busca al abrir el archivo.
     ws.addRow([]);
-    addSectionHeader(ws, 'GASTOS', COL);
-    for (const a of (data.expenses?.accounts ?? [])) {
-      const row = ws.addRow([`${a.code}  ${a.name}`, '', Number(a.balance ?? 0)]);
-      row.getCell(1).alignment = { indent: 1 };
-      row.getCell(3).numFmt   = '#,##0.00';
-      row.getCell(3).alignment = { horizontal: 'right' };
-    }
-    addTotalRow(ws, 'TOTAL GASTOS', null, null, Number(data.expenses?.total ?? data.totals?.totalExpenses ?? 0), 3);
-
-    // Net income
-    ws.addRow([]);
-    const netIncome = Number(data.totals?.netIncome ?? 0);
-    const netRow = ws.addRow(['UTILIDAD / PÉRDIDA NETA', '', netIncome]);
+    const netIncome = Number(data.structured?.resultadoFinal?.value ?? data.totals?.netIncome ?? 0);
+    const netRow = ws.addRow([netIncome >= 0 ? 'UTILIDAD NETA DEL PERÍODO' : 'PÉRDIDA NETA DEL PERÍODO', '', netIncome]);
     netRow.getCell(3).numFmt = '#,##0.00';
     netRow.getCell(3).alignment = { horizontal: 'right' };
     const netColor = netIncome >= 0 ? 'FF065F46' : 'FF991B1B';
@@ -443,7 +581,7 @@ export class ReportsExportService {
       pg.drawText('Sistema Educativo Contable', {
         x: margin, y: pageH - 38, size: 8, font: reg, color: rgb(0.7, 0.8, 1),
       });
-      pg.drawText(companyName.toUpperCase(), {
+      pg.drawText(winAnsi(companyName.toUpperCase()), {
         x: margin, y: pageH - 54, size: 10, font: bold, color: white,
       });
       pg.drawText('BALANCE GENERAL', {
@@ -477,9 +615,9 @@ export class ReportsExportService {
         page.drawRectangle({ x: margin, y: y - 12, width: pageW - margin * 2, height: 16, color: light });
       }
       const font = opts.bold ? bold : reg;
-      page.drawText(code, { x: margin + 4, y: y - 8, size: 8, font: reg, color: gray });
+      page.drawText(winAnsi(code), { x: margin + 4, y: y - 8, size: 8, font: reg, color: gray });
       const nameText = name.length > 48 ? name.slice(0, 46) + '…' : name;
-      page.drawText(nameText, { x: margin + 60, y: y - 8, size: opts.bold ? 9 : 8, font, color: black });
+      page.drawText(winAnsi(nameText), { x: margin + 60, y: y - 8, size: opts.bold ? 9 : 8, font, color: black });
       if (amount !== null) {
         const amtStr = crsFmt(amount);
         const amtW   = bold.widthOfTextAtSize(amtStr, 9);
@@ -493,38 +631,33 @@ export class ReportsExportService {
     const drawSectionTitle = (label: string, color: ReturnType<typeof rgb>) => {
       ensureSpace(22);
       page.drawRectangle({ x: margin, y: y - 16, width: pageW - margin * 2, height: 20, color: light });
-      page.drawText(label, { x: margin + 6, y: y - 11, size: 9, font: bold, color });
+      page.drawText(winAnsi(label), { x: margin + 6, y: y - 11, size: 9, font: bold, color });
       y -= 22;
     };
 
-    // ── Sections ──
-    const sections = [
-      { label: 'ACTIVOS',    color: BRAND_BLUE_PDF, accounts: data.assets?.accounts      ?? [], total: Number(data.assets?.total      ?? 0), totalLabel: 'TOTAL ACTIVOS' },
-      { label: 'PASIVOS',    color: red,             accounts: data.liabilities?.accounts ?? [], total: Number(data.liabilities?.total ?? 0), totalLabel: 'TOTAL PASIVOS' },
-      { label: 'PATRIMONIO', color: rgb(0.49, 0.23, 0.87), accounts: data.equity?.accounts ?? [], total: Number(data.equity?.total    ?? 0), totalLabel: 'TOTAL PATRIMONIO' },
-    ];
+    // ── Renglones del balance clasificado ──
+    const colorSeccion = (label: string) =>
+      label.startsWith('PASIVO') ? red
+      : label.startsWith('PATRIMONIO') ? rgb(0.49, 0.23, 0.87)
+      : BRAND_BLUE_PDF;
 
-    for (const sec of sections) {
-      y -= 8;
-      drawSectionTitle(sec.label, sec.color);
-      for (const a of sec.accounts) {
-        drawRow(a.code, a.name, Number(a.balance ?? a.balanceNum ?? 0));
+    for (const r of this.balanceRenglones(data)) {
+      if (r.kind === 'seccion') { y -= 8; drawSectionTitle(r.label, colorSeccion(r.label)); continue; }
+      if (r.kind === 'nota') {
+        y -= 10;
+        ensureSpace(20);
+        page.drawRectangle({ x: margin, y: y - 14, width: pageW - margin * 2, height: 18,
+                            color: r.ok ? rgb(0.93, 0.99, 0.96) : rgb(1, 0.95, 0.95) });
+        // Helvetica/WinAnsi NO soporta ✓ ✗ — se usan [OK] / [X].
+        page.drawText(winAnsi(`${r.ok ? '[OK]' : '[X]'} ${r.label}`),
+          { x: margin + 6, y: y - 8, size: 7.5, font: bold, color: r.ok ? green : red });
+        continue;
       }
-      drawRow('', sec.totalLabel, sec.total, { bold: true, bg: true });
+      drawRow(r.code ?? '', r.label, r.amount ?? null, {
+        bold: r.kind !== 'cuenta',
+        bg:   r.kind === 'resultado',
+      });
     }
-
-    // Balance check
-    y -= 10;
-    ensureSpace(20);
-    const diff     = Number(data.totals?.difference ?? 0);
-    const balanced = Math.abs(diff) < 0.01;
-    const chkColor = balanced ? green : red;
-    const chkBg    = balanced ? rgb(0.93, 0.99, 0.96) : rgb(1, 0.95, 0.95);
-    page.drawRectangle({ x: margin, y: y - 14, width: pageW - margin * 2, height: 18, color: chkBg });
-    // Helvetica/WinAnsi NO soporta ✓ ✗ — usamos [OK] / [X] equivalentes ASCII.
-    page.drawText(balanced ? '[OK] Balance cuadrado: Activos = Pasivos + Patrimonio' : '[X] Balance descuadrado', {
-      x: margin + 6, y: y - 8, size: 8, font: bold, color: chkColor,
-    });
 
     const pdfBytes = await doc.save();
     return Buffer.from(pdfBytes);
@@ -560,9 +693,9 @@ export class ReportsExportService {
       pg.drawRectangle({ x: 0, y: pageH - 72, width: pageW, height: 72, color: BRAND_BLUE_PDF });
       pg.drawText('SJQA GROUP', { x: margin, y: pageH - 24, size: 14, font: bold, color: white });
       pg.drawText('Sistema Educativo Contable', { x: margin, y: pageH - 38, size: 8, font: reg, color: rgb(0.7, 0.8, 1) });
-      pg.drawText(companyName.toUpperCase(), { x: margin, y: pageH - 54, size: 10, font: bold, color: white });
+      pg.drawText(winAnsi(companyName.toUpperCase()), { x: margin, y: pageH - 54, size: 10, font: bold, color: white });
       pg.drawText('ESTADO DE RESULTADOS', { x: pageW - margin - 155, y: pageH - 30, size: 11, font: bold, color: white });
-      pg.drawText(dateRange, { x: pageW - margin - 155, y: pageH - 46, size: 8, font: reg, color: rgb(0.7, 0.8, 1) });
+      pg.drawText(winAnsi(dateRange), { x: pageW - margin - 155, y: pageH - 46, size: 8, font: reg, color: rgb(0.7, 0.8, 1) });
       pg.drawLine({ start: { x: margin, y: 30 }, end: { x: pageW - margin, y: 30 }, thickness: 0.5, color: gray });
       pg.drawText(`Página ${pNum} · Generado el ${todayStr()} · SJQA GROUP`, { x: margin, y: 18, size: 7, font: reg, color: gray });
     };
@@ -585,9 +718,9 @@ export class ReportsExportService {
         page.drawRectangle({ x: margin, y: y - 12, width: pageW - margin * 2, height: 16, color: light });
       }
       const font = opts.bold ? bold : reg;
-      page.drawText(code, { x: margin + 4, y: y - 8, size: 8, font: reg, color: gray });
+      page.drawText(winAnsi(code), { x: margin + 4, y: y - 8, size: 8, font: reg, color: gray });
       const nameText = name.length > 48 ? name.slice(0, 46) + '…' : name;
-      page.drawText(nameText, { x: margin + 60, y: y - 8, size: opts.bold ? 9 : 8, font, color: black });
+      page.drawText(winAnsi(nameText), { x: margin + 60, y: y - 8, size: opts.bold ? 9 : 8, font, color: black });
       if (amount !== null) {
         const amtStr = crsFmt(amount);
         const amtW   = bold.widthOfTextAtSize(amtStr, 9);
@@ -600,30 +733,34 @@ export class ReportsExportService {
     const drawSectionTitle = (label: string, color: ReturnType<typeof rgb>) => {
       ensureSpace(22);
       page.drawRectangle({ x: margin, y: y - 16, width: pageW - margin * 2, height: 20, color: light });
-      page.drawText(label, { x: margin + 6, y: y - 11, size: 9, font: bold, color });
+      page.drawText(winAnsi(label), { x: margin + 6, y: y - 11, size: 9, font: bold, color });
       y -= 22;
     };
 
-    // Ingresos
-    y -= 8;
-    drawSectionTitle('INGRESOS', green);
-    for (const a of (data.income?.accounts ?? [])) {
-      drawRow(a.code, a.name, Number(a.balance ?? 0));
-    }
-    drawRow('', 'TOTAL INGRESOS', Number(data.income?.total ?? data.totals?.totalIncome ?? 0), { bold: true, bg: true });
+    // ── Renglones del estado escalonado ──
+    // Un color por bloque, en el mismo orden que la pantalla.
+    const tonos = [green, red, BRAND_BLUE_PDF, rgb(0.71, 0.43, 0.03), rgb(0.49, 0.23, 0.87)];
+    let iBloque = 0;
 
-    // Gastos
-    y -= 8;
-    drawSectionTitle('GASTOS', red);
-    for (const a of (data.expenses?.accounts ?? [])) {
-      drawRow(a.code, a.name, Number(a.balance ?? 0));
+    for (const r of this.resultadosRenglones(data)) {
+      if (r.kind === 'seccion') { y -= 8; drawSectionTitle(r.label, tonos[iBloque++ % tonos.length]); continue; }
+      if (r.kind === 'nota') {
+        y -= 10;
+        ensureSpace(20);
+        page.drawRectangle({ x: margin, y: y - 14, width: pageW - margin * 2, height: 18, color: rgb(1, 0.95, 0.95) });
+        page.drawText(winAnsi(`[X] ${r.label}`), { x: margin + 6, y: y - 8, size: 7.5, font: bold, color: red });
+        continue;
+      }
+      drawRow(r.code ?? '', r.label, r.amount ?? null, {
+        bold: r.kind !== 'cuenta',
+        bg:   r.kind === 'resultado',
+      });
     }
-    drawRow('', 'TOTAL GASTOS', Number(data.expenses?.total ?? data.totals?.totalExpenses ?? 0), { bold: true, bg: true });
 
-    // Net income
+    // Resultado final destacado.
     y -= 12;
     ensureSpace(22);
-    const netIncome = Number(data.totals?.netIncome ?? 0);
+    const netIncome = Number(data.structured?.resultadoFinal?.value ?? data.totals?.netIncome ?? 0);
     const isProfit  = netIncome >= 0;
     const netBgPdf  = isProfit ? rgb(0.93, 0.99, 0.96) : rgb(1, 0.95, 0.95);
     const netColorPdf = isProfit ? green : red;

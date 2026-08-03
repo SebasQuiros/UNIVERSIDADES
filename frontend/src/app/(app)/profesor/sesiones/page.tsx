@@ -31,7 +31,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { SceneEmptyBox } from '@/components/illustrations';
 import type { Course, Exercise } from '@/types';
 import {
-  Presentation, Plus, X, Radio, Users, Activity, ShieldCheck, Trophy, Ban,
+  Presentation, Plus, X, Radio, Activity, ShieldCheck, Trophy, Ban,
   CheckCircle2, Building2, ChevronRight, BookOpen, Wifi, ArrowRight, FileClock,
 } from 'lucide-react';
 

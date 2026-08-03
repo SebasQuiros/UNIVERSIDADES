@@ -6,7 +6,6 @@ import { getErrorMessage, cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { ArrowLeftRight, Send, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 interface Concept { key: string; label: string; envia: string; recibe: string; }

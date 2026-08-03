@@ -35,7 +35,6 @@ const ACCENT_L = '#60A5FA';
 const GOLD = '#D4A017';        // acento dorado de marca (positivo / destacado)
 const SLATE = '#94A3B8';       // serie neutra (costos)
 const RED = '#DC2626';
-const INK = '#03080F';
 
 const fmtCRC = (n: number) =>
   '₡' + Number(n || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });

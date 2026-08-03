@@ -17,14 +17,14 @@ import { IconTile } from '@/components/ui/IconTile';
 import { CabysSearch, type CabysItem } from '@/components/cabys/CabysSearch';
 import { ExchangeRateWidget } from '@/components/ui/ExchangeRateWidget';
 import toast from 'react-hot-toast';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip, Legend as RLegend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip } from 'recharts';
 import {
   Building2, Users, Package, FileText, FileSpreadsheet,
   BookOpen, BarChart2, CheckCircle2, Send, Plus, Trash2,
   X, ChevronRight, AlertCircle, Truck,
   Printer, Landmark, Upload,
   Scale, ClipboardList, ClipboardCheck, Download,
-  Lightbulb, Search, Mail, Contact, Receipt, FileCheck2,
+  Lightbulb, Search, Mail, Receipt, FileCheck2,
   FileClock, Wallet, FileSignature, PackageCheck, SlidersHorizontal,
   PackagePlus, PackageMinus, ArrowRightCircle,
   TrendingUp, TrendingDown, Minus, Award, AlertTriangle,
@@ -2354,6 +2354,9 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
     }
   }
 
+  // Solo al cambiar de empresa. `load` se redefine en cada render, asi que
+  // ponerla en las dependencias dispararia una recarga infinita.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load('balance-sheet'); }, [companyId]);
 
   function ReportRow({ label, value, bold, indent }: { label: string; value: number; bold?: boolean; indent?: boolean }) {
@@ -2936,7 +2939,6 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
 const FA_BLUE = '#2563EB';
 const FA_BLUE_D = '#1D4ED8';
 const FA_GOLD = '#D4A017';
-const FA_SLATE = '#94A3B8';
 const FA_RED = '#DC2626';
 const FA_CARD = 'bg-white rounded-card border border-gray-200/70';
 const FA_SHADOW = { boxShadow: '0 4px 16px rgba(27,46,110,0.06)' };
@@ -3635,6 +3637,7 @@ export function BalanceComprobacionTab({
 }: { companyId: string; filterTypes?: string[]; note?: string }) {
   const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const filtroKey = (filterTypes ?? []).join(',');
 
   useEffect(() => {
     api.get<LedgerAccount[]>(`/api/v1/companies/${companyId}/ledger`)
@@ -3645,7 +3648,10 @@ export function BalanceComprobacionTab({
       })
       .catch(() => toast.error('Error al cargar datos'))
       .finally(() => setLoading(false));
-  }, [companyId]);
+    // Se depende del CONTENIDO de filterTypes, no del arreglo: el padre lo
+    // reconstruye en cada render y usarlo directo recargaría sin parar. Antes
+    // no estaba en las dependencias, así que cambiar el filtro no refiltraba.
+  }, [companyId, filtroKey]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
 

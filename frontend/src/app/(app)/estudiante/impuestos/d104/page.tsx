@@ -53,7 +53,7 @@ const WIZARD_STEPS = [
   { id: 'credito',        label: 'Crédito fiscal',      shortLabel: 'Crédito' },
   { id: 'calculo',        label: 'Cálculo del impuesto', shortLabel: 'Cálculo' },
 ];
-const STEP_INFO = 0, STEP_VENTAS = 1, STEP_PAGO_DIFERIDO = 2, STEP_COMPRAS = 3, STEP_CREDITO = 4, STEP_CALCULO = 5;
+const STEP_PAGO_DIFERIDO = 2, STEP_COMPRAS = 3, STEP_CREDITO = 4, STEP_CALCULO = 5;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SUB-COMPONENTS (presentación)

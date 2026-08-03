@@ -4,7 +4,7 @@
 // `GET class-sessions/:id/me`, sondeado con `setInterval`). Sin selector de
 // fase: la fase la determina el servidor.
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSondeoVisible } from '@/hooks/useSondeoVisible';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -18,7 +18,6 @@ import {
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { SectionCard } from '@/components/ui/SectionCard';
-import { StatCard } from '@/components/ui/StatCard';
 import { IconTile } from '@/components/ui/IconTile';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -31,7 +30,7 @@ import { MarketDirectory } from '@/components/session/MarketDirectory';
 import { TransfersPanel } from '@/components/session/TransfersPanel';
 import { CommercialCountdown } from '@/components/session/CommercialCountdown';
 import {
-  Users, Building2, ArrowRight, ShieldCheck, ChevronRight,
+  Users, Building2, ChevronRight,
   ExternalLink, Radar, Clock, Lock, Hourglass, Trophy,
 } from 'lucide-react';
 import type { MeResponse, LiveResponse, AuditAssignment } from '../types';

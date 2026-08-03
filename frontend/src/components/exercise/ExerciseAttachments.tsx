@@ -121,7 +121,7 @@ export function ExerciseAttachments({ courseId, exerciseId, editable = false }: 
         const burl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = burl;
-        a.target = '_blank';
+        a.download = name;   // sin esto el archivo baja sin nombre
         a.rel = 'noopener';
         a.click();
         URL.revokeObjectURL(burl);

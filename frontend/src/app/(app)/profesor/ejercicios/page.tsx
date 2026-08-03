@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { formatDate, getErrorMessage } from '@/lib/utils';
 import { DifficultyBadge } from '@/components/ui/Badge';
@@ -69,7 +68,6 @@ function DeleteModal({
 }
 
 export default function EjerciciosPage() {
-  const { user } = useAuth();
   const [exercises, setExercises]     = useState<ExerciseWithCourse[]>([]);
   const [loading, setLoading]         = useState(true);
   const [toDelete, setToDelete]       = useState<ExerciseWithCourse | null>(null);
@@ -90,7 +88,7 @@ export default function EjerciciosPage() {
       setExercises(all);
     } catch { toast.error('Error al cargar ejercicios'); }
     finally { setLoading(false); }
-  }, [user]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 

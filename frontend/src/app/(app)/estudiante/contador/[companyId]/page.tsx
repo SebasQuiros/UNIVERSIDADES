@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Spinner } from '@/components/ui/Spinner';
@@ -51,7 +51,6 @@ interface Company { id: string; name: string; legalId: string | null; economicAc
 
 export default function PracticeWorkspacePage() {
   const params  = useParams();
-  const router  = useRouter();
   const search  = useSearchParams();
   const companyId = String(params.companyId);
 

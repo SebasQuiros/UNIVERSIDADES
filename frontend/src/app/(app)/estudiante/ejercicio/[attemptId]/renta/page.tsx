@@ -159,7 +159,7 @@ export default function RentaPage() {
   const [companyId,   setCompanyId]   = useState<string | null>(null);
   const [fiscalYear,  setFiscalYear]  = useState<number>(CURRENT_YEAR);
   const [result,      setResult]      = useState<D101Result | null>(null);
-  const [loading,     setLoading]     = useState(false);
+  const [loading]     = useState(false);
   const [calculating, setCalculating] = useState(false);
 
   // Partial payments state
