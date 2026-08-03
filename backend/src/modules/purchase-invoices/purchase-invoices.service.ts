@@ -56,6 +56,13 @@ export class PurchaseInvoicesService {
     userId: string,
   ) {
     await this.verifyOwner(companyId, userId);
+
+    // Igual que en ventas: este método lo llaman otros servicios (pagos
+    // recurrentes, aprovisionamiento) sin pasar por la validación del DTO.
+    if (!(Number(dto.subtotal) > 0)) {
+      throw new BadRequestException('El subtotal de la compra debe ser mayor a cero.');
+    }
+
     // taxRate viene como porcentaje (13), igual que en el resto del sistema.
     const taxRate   = dto.taxRate ?? 13;
     const subtotal  = round2(dto.subtotal);

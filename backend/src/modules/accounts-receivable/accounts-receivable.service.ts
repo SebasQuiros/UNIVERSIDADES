@@ -423,6 +423,15 @@ export class AccountsReceivableService {
     const payAmount  = new Decimal(dto.amount.toString());
     const balanceDue = new Decimal(invoice.balanceDue.toString());
 
+    // Un monto en cero o negativo llegaba hasta la restricción de la base y
+    // salía como "No se pudo generar el asiento contable automático", que no
+    // le dice nada al estudiante sobre lo que hizo mal. Se rechaza acá, con el
+    // motivo real. (Por HTTP el DTO ya lo frena; esto cubre las llamadas entre
+    // servicios y, sobre todo, mejora el mensaje.)
+    if (payAmount.lessThanOrEqualTo(0)) {
+      throw new BadRequestException('El monto del cobro debe ser mayor a cero.');
+    }
+
     if (payAmount.greaterThan(balanceDue)) {
       throw new BadRequestException(
         `El monto del pago (${payAmount.toFixed(2)}) supera el saldo pendiente (${balanceDue.toFixed(2)}).`,

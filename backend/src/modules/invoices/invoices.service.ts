@@ -84,6 +84,28 @@ export class InvoicesService {
 
   // ── Create draft invoice ──────────────────────────────────────
   async create(companyId: string, userId: string, dto: CreateInvoiceDto) {
+    // Las reglas del DTO solo corren por HTTP. Este método también lo llaman
+    // OTROS servicios —facturas recurrentes, espejo entre empresas,
+    // aprovisionamiento— y ahí no hay ValidationPipe: sin esta guarda se podía
+    // crear una factura sin líneas, con cantidad cero o con precio negativo, y
+    // quedaba en los libros como cualquier otra.
+    const lineas = dto.lines ?? [];
+    if (lineas.length === 0) {
+      throw new BadRequestException('La factura debe tener al menos una línea.');
+    }
+    for (const l of lineas) {
+      if (!(Number(l.quantity) > 0)) {
+        throw new BadRequestException(
+          `La cantidad de "${l.description}" debe ser mayor a cero.`,
+        );
+      }
+      if (Number(l.unitPrice) < 0) {
+        throw new BadRequestException(
+          `El precio de "${l.description}" no puede ser negativo.`,
+        );
+      }
+    }
+
     // Validate client exists in this company
     const client = await this.prisma.client.findFirst({
       where: { id: dto.clientId, companyId, isActive: true },
