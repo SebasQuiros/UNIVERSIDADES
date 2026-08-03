@@ -40,7 +40,7 @@ export default function ContadorPage() {
       const { data } = await api.get<PracticeCompany[]>('/api/v1/practice/companies');
       setCompanies(data);
     } catch {
-      toast.error('Error al cargar tus empresas de práctica');
+      toast.error('Error al cargar tus empresas-cliente');
     } finally {
       setLoading(false);
     }
@@ -54,10 +54,10 @@ export default function ContadorPage() {
     (c.legalId ?? '').includes(query)), [companies, query]);
 
   const handleDelete = async (c: PracticeCompany) => {
-    if (!confirm(`¿Eliminar la empresa de práctica "${c.name}"? Se borrarán sus registros. Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`¿Eliminar la empresa-cliente "${c.name}"? Se borrarán sus registros. Esta acción no se puede deshacer.`)) return;
     try {
       await api.delete(`/api/v1/practice/companies/${c.id}`);
-      toast.success('Empresa de práctica eliminada');
+      toast.success('Empresa-cliente eliminada');
       setCompanies((prev) => prev.filter((x) => x.id !== c.id));
     } catch {
       toast.error('No se pudo eliminar');
@@ -319,7 +319,7 @@ function NewPracticeModal({
         phone: form.phone.trim() || undefined,
         email: form.email.trim() || undefined,
       });
-      toast.success('Empresa de práctica creada');
+      toast.success('Empresa-cliente creada');
       onCreated({ ..._blankCounts(data) });
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -335,7 +335,7 @@ function NewPracticeModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <IconTile icon={Building2} tint="#B8860B" size={40} />
-            <h3 className="font-bold text-gray-900">Nueva empresa de práctica</h3>
+            <h3 className="font-bold text-gray-900">Nueva empresa-cliente</h3>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
         </div>

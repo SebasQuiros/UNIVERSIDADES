@@ -86,7 +86,7 @@ export default function PracticeWorkspacePage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <EmptyState
           illustration={<SceneSearchEmpty size={220} className="lp-drift" />}
-          title="No se encontró esta empresa de práctica"
+          title="No se encontró esta empresa-cliente"
           description="Puede que se haya eliminado o que el enlace no sea correcto."
           action={(
             <Link href="/estudiante/contador">

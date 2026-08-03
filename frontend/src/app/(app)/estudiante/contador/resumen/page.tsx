@@ -39,7 +39,7 @@ export default function ContadorResumenPage() {
       const { data } = await api.get<PracticeCompany[]>('/api/v1/practice/companies');
       setCompanies(data);
     } catch {
-      toast.error('Error al cargar tu resumen de práctica');
+      toast.error('Error al cargar el resumen de tus empresas');
     } finally {
       setLoading(false);
     }
@@ -76,8 +76,8 @@ export default function ContadorResumenPage() {
       {/* Encabezado */}
       <PageHeader
         eyebrow="Espacio Contador"
-        title="Resumen de práctica"
-        subtitle="Un vistazo a tus empresas-cliente del Espacio Contador. Es práctica libre: no afecta tu nota y no depende de ningún ejercicio publicado."
+        title="Resumen de mis empresas"
+        subtitle="Un vistazo a las empresas a las que les llevás la contabilidad. Trabajás libre: no afecta tu nota ni depende de ningún ejercicio publicado."
         icon={Calculator}
         iconTint="#B8860B"
         className="lp-in"
@@ -89,7 +89,7 @@ export default function ContadorResumenPage() {
         <Card className="lp-in mt-6">
           <EmptyState
             illustration={<SceneEmptyBox size={220} className="lp-drift" />}
-            title="Aún no tenés empresas de práctica"
+            title="Aún no tenés empresas-cliente"
             description="Creá tu primera empresa-cliente para practicar el ciclo contable a tu ritmo. Acá vas a ver un resumen con tus asientos, facturas y clientes registrados."
             action={(
               <Link href="/estudiante/contador">
@@ -111,7 +111,7 @@ export default function ContadorResumenPage() {
                 </p>
                 <h2 className="text-lg font-bold leading-snug">Tu constancia, en un solo lugar.</h2>
                 <p className="mt-1.5 text-sm text-blue-200/80 max-w-xl">
-                  Reunimos tus asientos, facturas y clientes de todas tus empresas de práctica.
+                  Reunimos tus asientos, facturas y clientes de todas tus empresas-cliente.
                 </p>
               </div>
               <ArtBalance size={150} className="lp-drift flex-shrink-0" />
@@ -120,7 +120,7 @@ export default function ContadorResumenPage() {
 
           {/* KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6 mt-6">
-            <StatCard label="Empresas de práctica" value={String(summary.companies)} icon={Building2} tint="#B8860B" />
+            <StatCard label="Empresas-cliente" value={String(summary.companies)} icon={Building2} tint="#B8860B" />
             <StatCard label="Asientos registrados" value={String(summary.entries)}  icon={FileText}  tint="#059669" />
             <StatCard label="Facturas"             value={String(summary.invoices)} icon={Receipt}   tint="#2563EB" />
             <StatCard label="Clientes"             value={String(summary.clients)}  icon={Users}     tint="#7C3AED" />

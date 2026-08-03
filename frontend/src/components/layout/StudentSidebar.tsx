@@ -204,7 +204,7 @@ export function StudentSidebar() {
   //    (deep-link ?tab=). Sin sección Aprendizaje. (Multiempresa es su propio espacio.)
   const CONTADOR_TOP: Group[] = [
     { key: 'c-emp', label: 'Mis empresas-cliente', icon: Building2, href: '/estudiante/contador', path: '/estudiante/contador', exact: true },
-    { key: 'c-res', label: 'Resumen de práctica', icon: TrendingUp, href: '/estudiante/contador/resumen', path: '/estudiante/contador/resumen' },
+    { key: 'c-res', label: 'Resumen de mis empresas', icon: TrendingUp, href: '/estudiante/contador/resumen', path: '/estudiante/contador/resumen' },
   ];
   // ── Espacio Multiempresa: grupos de práctica + comercio entre empresas.
   const MULTIEMPRESA_TOP: Group[] = [
