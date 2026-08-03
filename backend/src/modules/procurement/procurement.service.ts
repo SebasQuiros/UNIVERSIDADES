@@ -190,7 +190,7 @@ export class ProcurementService {
       }
       for (const item of items) {
         if (!item.cabysCode) continue;
-        const product = await tx.product.findFirst({
+        let product = await tx.product.findFirst({
           where:  {
             companyId:      order.buyerCompanyId,
             cabysCode:      item.cabysCode,
@@ -200,7 +200,35 @@ export class ProcurementService {
           },
           select: { id: true },
         });
-        if (!product) continue; // sin producto trackeable → se omite la línea
+
+        // Si el comprador no tiene ese producto en su catálogo, se da de alta
+        // con los datos de la línea.
+        //
+        // Antes la línea se omitía en silencio, y eso dejaba los libros
+        // peleados consigo mismos: la compra SIEMPRE debita Inventario, así
+        // que el balance mostraba mercadería que el kardex no tenía. Para un
+        // estudiante eso es inexplicable — y no es su error.
+        if (!product) {
+          product = await tx.product.create({
+            data: {
+              companyId:      order.buyerCompanyId,
+              name:           item.description,
+              sku:            `AUTO-${item.cabysCode.slice(-6)}`,
+              cabysCode:      item.cabysCode,
+              price:          new Decimal(item.unitPrice.toString()).mul(1.3).toDecimalPlaces(2),
+              cost:           new Decimal(item.unitPrice.toString()),
+              taxRate:        13,
+              trackInventory: true,
+              isService:      false,
+              isActive:       true,
+            },
+            select: { id: true },
+          });
+          this.logger.log(
+            `Orden ${orderId}: se dio de alta "${item.description}" en el catálogo del ` +
+            `comprador para que la mercadería recibida entre a inventario.`,
+          );
+        }
 
         await this.inventory.addLot(
           {
