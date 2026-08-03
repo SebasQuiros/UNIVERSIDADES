@@ -183,6 +183,121 @@ const CHART: Array<{
   // Gastos de ventas
   { code:'5.2.02.04',  name:'Empaque y Embalaje',              type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
   { code:'5.2.02.05',  name:'Viáticos de Ventas',              type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
+
+  // ═══════════════════════════════════════════
+  //  Catalogo del plan de estudios (carrera de Contabilidad)
+  //
+  //  Se AGREGAN dentro de la jerarquia existente en vez de reemplazarla: el
+  //  motor contable resuelve las cuentas por codigo (1.1.01.01 = Caja,
+  //  1.1.03.01 = Inventario, 4.1.01.01 = Ventas...). Renumerar a los codigos
+  //  de tres digitos del plan dejaria sin cuentas a facturacion, compras,
+  //  nomina, depreciacion e inventario: todo lo automatico.
+  // ═══════════════════════════════════════════
+
+  // Inventarios por naturaleza
+  { code:'1.1.03.06',  name:'Inventario de Suministros de Oficina', type:'ASSET', normal:'DEBIT', level:4, parent:'1.1.03', isHeader:false },
+  { code:'1.1.03.07',  name:'Inventario de Materiales',        type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.03',  isHeader:false },
+  { code:'1.1.03.08',  name:'Inventario de Papeleria y Utiles de Oficina', type:'ASSET', normal:'DEBIT', level:4, parent:'1.1.03', isHeader:false },
+  { code:'1.1.03.09',  name:'Inventario de Materiales Publicitarios', type:'ASSET', normal:'DEBIT', level:4, parent:'1.1.03', isHeader:false },
+  { code:'1.1.03.10',  name:'Inventario de Articulos de Oficina', type:'ASSET',   normal:'DEBIT',  level:4, parent:'1.1.03',  isHeader:false },
+
+  // Gastos pagados por adelantado: cada poliza por separado
+  { code:'1.1.05.03',  name:'Seguro de Incendio Pagado por Adelantado', type:'ASSET', normal:'DEBIT', level:4, parent:'1.1.05', isHeader:false },
+  { code:'1.1.05.04',  name:'Seguro de Vehiculo Pagado por Adelantado', type:'ASSET', normal:'DEBIT', level:4, parent:'1.1.05', isHeader:false },
+  { code:'1.1.05.05',  name:'Seguro de Vida Pagado por Adelantado', type:'ASSET', normal:'DEBIT', level:4, parent:'1.1.05', isHeader:false },
+  { code:'1.1.05.06',  name:'Seguro contra Robo Pagado por Adelantado', type:'ASSET', normal:'DEBIT', level:4, parent:'1.1.05', isHeader:false },
+  { code:'1.1.05.07',  name:'Licencias Pagadas por Adelantado', type:'ASSET',   normal:'DEBIT',  level:4, parent:'1.1.05',  isHeader:false },
+  { code:'1.1.05.08',  name:'Publicidad Pagada por Adelantado', type:'ASSET',   normal:'DEBIT',  level:4, parent:'1.1.05',  isHeader:false },
+
+  // Por cobrar: acumulados e hipoteca
+  { code:'1.1.02.06',  name:'Intereses Acumulados por Cobrar', type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.02',  isHeader:false },
+  { code:'1.1.02.07',  name:'Alquileres Acumulados por Cobrar', type:'ASSET',    normal:'DEBIT',  level:4, parent:'1.1.02',  isHeader:false },
+  { code:'1.1.02.08',  name:'Hipoteca por Cobrar C.P.',        type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.02',  isHeader:false },
+  { code:'1.1.06.03',  name:'Inversiones Transitorias C.P.',   type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.1.06',  isHeader:false },
+
+  // Activo no corriente
+  { code:'1.2.01.09',  name:'Mobiliario y Equipo de Computo',  type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.01',  isHeader:false },
+  { code:'1.2.01.10',  name:'Herramientas Menores',            type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.01',  isHeader:false },
+  { code:'1.2.01.11',  name:'Sistemas de Computo',             type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.01',  isHeader:false },
+  { code:'1.2.01.12',  name:'Rotulo Publicitario',             type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.01',  isHeader:false },
+  { code:'1.2.01.13',  name:'Biblioteca Tecnica',              type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.01',  isHeader:false },
+  { code:'1.2.03.03',  name:'Licencias de Computo',            type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.03',  isHeader:false },
+  { code:'1.2.03.04',  name:'Derecho Telefonico',              type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.03',  isHeader:false },
+  { code:'1.2.04',     name:'Inversiones a Largo Plazo',       type:'ASSET',     normal:'DEBIT',  level:3, parent:'1.2',     isHeader:true  },
+  { code:'1.2.04.01',  name:'Inversiones de Largo Plazo',      type:'ASSET',     normal:'DEBIT',  level:4, parent:'1.2.04',  isHeader:false },
+
+  // Depreciacion acumulada por tipo de activo (contra-activo: saldo CREDITO)
+  { code:'1.2.02.06',  name:'Dep. Acum. Maquinaria y Equipo',  type:'ASSET',     normal:'CREDIT', level:4, parent:'1.2.02',  isHeader:false },
+  { code:'1.2.02.07',  name:'Dep. Acum. Equipo de Reparto',    type:'ASSET',     normal:'CREDIT', level:4, parent:'1.2.02',  isHeader:false },
+  { code:'1.2.02.08',  name:'Dep. Acum. Mobiliario y Equipo de Computo', type:'ASSET', normal:'CREDIT', level:4, parent:'1.2.02', isHeader:false },
+
+  // Pasivo: cobrado por adelantado, acumulados y largo plazo
+  { code:'2.1.06',     name:'Ingresos Recibidos por Adelantado', type:'LIABILITY', normal:'CREDIT', level:3, parent:'2.1',   isHeader:true  },
+  { code:'2.1.06.01',  name:'Ingresos Recibidos por Adelantado', type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.06', isHeader:false },
+  { code:'2.1.06.02',  name:'Honorarios Recibidos por Adelantado', type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.06', isHeader:false },
+  { code:'2.1.03.05',  name:'Gastos Acumulados por Pagar',     type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.03',  isHeader:false },
+  { code:'2.2.01.02',  name:'Documentos por Pagar L.P.',       type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.2.01',  isHeader:false },
+  { code:'2.2.01.03',  name:'Hipotecas por Pagar L.P.',        type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.2.01',  isHeader:false },
+
+  // Patrimonio
+  { code:'3.1.01.02',  name:'Cuenta Capital',                  type:'EQUITY',    normal:'CREDIT', level:4, parent:'3.1.01',  isHeader:false },
+  { code:'3.1.01.03',  name:'Retiros de Capital',              type:'EQUITY',    normal:'DEBIT',  level:4, parent:'3.1.01',  isHeader:false },
+  { code:'3.2.01.02',  name:'Dividendos Pagados',              type:'EQUITY',    normal:'DEBIT',  level:4, parent:'3.2.01',  isHeader:false },
+  { code:'3.2.01.03',  name:'Ganancias y Perdidas',            type:'EQUITY',    normal:'CREDIT', level:4, parent:'3.2.01',  isHeader:false },
+
+  // Ventas: devoluciones y descuentos son CONTRA-ingreso (saldo deudor)
+  { code:'4.1.01.04',  name:'Devoluciones sobre Ventas',       type:'INCOME',    normal:'DEBIT',  level:4, parent:'4.1.01',  isHeader:false },
+  { code:'4.1.01.05',  name:'Descuentos sobre Ventas',         type:'INCOME',    normal:'DEBIT',  level:4, parent:'4.1.01',  isHeader:false },
+  { code:'4.2.01.06',  name:'Ingresos por Servicios Profesionales', type:'INCOME', normal:'CREDIT', level:4, parent:'4.2.01', isHeader:false },
+  { code:'4.2.01.07',  name:'Ingresos por Honorarios',         type:'INCOME',    normal:'CREDIT', level:4, parent:'4.2.01',  isHeader:false },
+  { code:'4.2.01.08',  name:'Ingresos por Venta de Taquillas', type:'INCOME',    normal:'CREDIT', level:4, parent:'4.2.01',  isHeader:false },
+
+  // Compras: SISTEMA PERIODICO.
+  // El motor trabaja con inventario perpetuo (cada venta descarga su costo),
+  // pero el curso enseña primero el periodico. Estas cuentas permiten
+  // registrarlo a mano sin chocar con lo automatico.
+  { code:'5.1.02',     name:'Compras (sistema periodico)',     type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'5.1',     isHeader:true  },
+  { code:'5.1.02.01',  name:'Compras',                         type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.1.02',  isHeader:false },
+  { code:'5.1.02.02',  name:'Fletes sobre Compras',            type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.1.02',  isHeader:false },
+  { code:'5.1.02.03',  name:'Devoluciones sobre Compras',      type:'EXPENSE',   normal:'CREDIT', level:4, parent:'5.1.02',  isHeader:false },
+  { code:'5.1.02.04',  name:'Descuentos sobre Compras',        type:'EXPENSE',   normal:'CREDIT', level:4, parent:'5.1.02',  isHeader:false },
+
+  // Gastos administrativos que faltaban
+  { code:'5.2.01.17',  name:'Gastos por Agua',                 type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.18',  name:'Reparacion y Mantenimiento de Maquinaria', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.01', isHeader:false },
+  { code:'5.2.01.19',  name:'Reparacion y Mantenimiento de Equipo', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.01', isHeader:false },
+  { code:'5.2.01.20',  name:'Reparacion y Mantenimiento de Edificios', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.01', isHeader:false },
+  { code:'5.2.01.21',  name:'Reparacion y Mantenimiento de Equipo de Computo', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.01', isHeader:false },
+  { code:'5.2.01.22',  name:'Reparacion y Mantenimiento de Vehiculos', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.01', isHeader:false },
+  { code:'5.2.01.23',  name:'Gastos por Fotocopias',           type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.24',  name:'Gastos por Servicios Telefonicos', type:'EXPENSE',  normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.25',  name:'Materiales de Reparacion',        type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.26',  name:'Gastos por Licencias de Operacion', type:'EXPENSE', normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.27',  name:'Gastos por Seguros de Incendio',  type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.28',  name:'Gastos por Seguros de Vehiculos', type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.29',  name:'Gastos por Cuentas Incobrables',  type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.30',  name:'Gastos por Suministros de Oficina', type:'EXPENSE', normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+  { code:'5.2.01.31',  name:'Gastos por Articulos de Oficina', type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.01',  isHeader:false },
+
+  // Gasto por depreciacion, separado por activo
+  { code:'5.2.03',     name:'Gastos por Depreciacion',         type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'5.2',     isHeader:true  },
+  { code:'5.2.03.01',  name:'Gasto por Depreciacion de Edificios', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.03', isHeader:false },
+  { code:'5.2.03.02',  name:'Gasto por Depreciacion de Maquinaria y Equipo', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.03', isHeader:false },
+  { code:'5.2.03.03',  name:'Gasto por Depreciacion de Vehiculos', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.03', isHeader:false },
+  { code:'5.2.03.04',  name:'Gasto por Depreciacion de Equipo de Reparto', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.03', isHeader:false },
+  { code:'5.2.03.05',  name:'Gasto por Depreciacion de Mobiliario y Equipo de Oficina', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.03', isHeader:false },
+  { code:'5.2.03.06',  name:'Gasto por Depreciacion de Equipo de Computo', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.03', isHeader:false },
+
+  // Gastos de VENTAS: el plan los separa de los administrativos
+  { code:'5.2.02.06',  name:'Gastos por Salarios de Ventas',   type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
+  { code:'5.2.02.07',  name:'Gastos por Electricidad - Ventas', type:'EXPENSE',  normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
+  { code:'5.2.02.08',  name:'Gastos por Agua - Ventas',        type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
+  { code:'5.2.02.09',  name:'Gastos por Combustibles - Ventas', type:'EXPENSE',  normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
+  { code:'5.2.02.10',  name:'Gastos por Alquileres - Ventas',  type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
+  { code:'5.2.02.11',  name:'Reparacion y Mantenimiento - Ventas', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.02', isHeader:false },
+  { code:'5.2.02.12',  name:'Gastos por Patentes Municipales - Ventas', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.02', isHeader:false },
+  { code:'5.2.02.13',  name:'Gasto por Depreciacion Mobiliario y Equipo - Ventas', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.02', isHeader:false },
+  { code:'5.2.02.14',  name:'Gastos por Incobrables - Ventas', type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
 ];
 
 @Injectable()
