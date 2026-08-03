@@ -3,6 +3,7 @@ import {
   ConflictException, BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ReportesCache } from '../../redis/reportes-cache.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
   CreateProductDto, UpdateProductDto, AdjustStockDto,
@@ -11,7 +12,10 @@ import {
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reportesCache: ReportesCache,
+  ) {}
 
   async findAll(companyId: string) {
     return this.prisma.product.findMany({
@@ -71,6 +75,7 @@ export class ProductsService {
     // su asiento (Inventario contra Capital), como un aporte en especie.
     if (!isService && stock.greaterThan(0) && cost.greaterThan(0)) {
       await this.seedOpeningInventory(companyId, product.id, stock, cost, userId);
+      await this.reportesCache.marcarCambio(companyId);
     }
 
     return product;

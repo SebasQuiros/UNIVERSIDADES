@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { JournalEntryStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ReportesCache } from '../../redis/reportes-cache.service';
 
 /**
  * ────────────────────────────────────────────────────────────────
@@ -29,7 +30,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class JournalApprovalService {
   private readonly logger = new Logger(JournalApprovalService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reportesCache: ReportesCache,
+  ) {}
 
   /**
    * Confirma un asiento PENDING. Lo deja CONFIRMED y empieza a contar
@@ -46,6 +50,9 @@ export class JournalApprovalService {
       },
       include: { lines: { include: { account: true } } },
     });
+
+    // Confirmar un PENDING lo mete a los saldos: el balance cambia.
+    await this.reportesCache.marcarCambio(companyId);
 
     this.logger.log(
       `[approve] entry #${updated.entryNumber} confirmado por user=${userId} ` +

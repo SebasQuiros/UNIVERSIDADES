@@ -1,8 +1,10 @@
 import { Module, Global, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'redis';
+import { REDIS_CLIENT } from './redis.constants';
+import { ReportesCache } from './reportes-cache.service';
 
-export const REDIS_CLIENT = 'REDIS_CLIENT';
+export { REDIS_CLIENT } from './redis.constants';
 
 const redisLogger = new Logger('RedisModule');
 
@@ -51,7 +53,8 @@ const redisLogger = new Logger('RedisModule');
       },
       inject: [ConfigService],
     },
+    ReportesCache,
   ],
-  exports: [REDIS_CLIENT],
+  exports: [REDIS_CLIENT, ReportesCache],
 })
 export class RedisModule {}

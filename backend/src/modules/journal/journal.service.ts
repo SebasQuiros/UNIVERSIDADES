@@ -3,6 +3,7 @@ import {
   NotFoundException, ForbiddenException, Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ReportesCache } from '../../redis/reportes-cache.service';
 import { PeriodsService } from '../periods/periods.service';
 import { ActivityLogService } from '../../common/activity/activity-log.service';
 import { JournalSource, JournalEntryStatus, Prisma } from '@prisma/client';
@@ -21,7 +22,21 @@ export class JournalService {
     private readonly prisma:  PrismaService,
     private readonly periods: PeriodsService,
     private readonly activityLog: ActivityLogService,
+    private readonly reportesCache: ReportesCache,
   ) {}
+
+  /**
+   * Sube la version contable de la empresa.
+   *
+   * Los estados financieros se cachean por empresa y la clave lleva esta
+   * version adentro: subirla hace que el proximo balance se recalcule. Se
+   * llama despues de TODA escritura en el diario — si se olvidara en alguna,
+   * el estudiante veria su asiento nuevo sin efecto hasta que venza el TTL,
+   * que es justo el tipo de fallo que nadie reporta y todos desconfian.
+   */
+  private marcarCambio(companyId: string) {
+    return this.reportesCache.marcarCambio(companyId);
+  }
 
   // ── List journal entries ──────────────────────────────────────
   async findAll(companyId: string, filter: JournalFilterDto) {
@@ -173,7 +188,7 @@ export class JournalService {
     }
 
     // ══ STEPS 3-7 — Atomic transaction ══════════════════════════
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const creado = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
 
       // Step 3a — Re-validate period inside transaction (close the time window)
       const period = await tx.accountingPeriod.findFirst({
@@ -283,6 +298,9 @@ export class JournalService {
 
       return savedEntry;
     });
+
+    await this.marcarCambio(companyId);
+    return creado;
   }
 
   // ── REVERSE ENTRY — creates inverse entry, marks original ────
@@ -351,11 +369,30 @@ export class JournalService {
       JournalSource.REVERSAL,
     );
 
-    // Mark original as reversed
-    await this.prisma.journalEntry.update({
-      where: { id: entryId },
-      data:  { isReversed: true, reversedById: (reverseEntry as any)?.id },
-    });
+    // ── Los DOS quedan marcados, no solo el original ──────────────────────
+    //
+    // En todo el sistema `isReversed: false` significa "este asiento cuenta
+    // para los saldos". Marcar solo el original dejaba la reversa contando
+    // sola: revertir una venta de 250.000 no devolvia el saldo a su lugar,
+    // lo dejaba en MENOS 250.000, y hacia desaparecer ese dinero del activo.
+    // La partida doble seguia cuadrando, asi que nada avisaba.
+    //
+    // El par entero sale de los saldos y el neto vuelve a ser cero, que es lo
+    // que una reversion debe hacer. Ambos siguen en el libro diario, visibles
+    // y marcados: el estudiante tiene que ver su error y su correccion.
+    const idReversa = (reverseEntry as any)?.id;
+    await this.prisma.$transaction([
+      this.prisma.journalEntry.update({
+        where: { id: entryId },
+        data:  { isReversed: true, reversedById: idReversa },
+      }),
+      ...(idReversa ? [this.prisma.journalEntry.update({
+        where: { id: idReversa },
+        data:  { isReversed: true },
+      })] : []),
+    ]);
+
+    await this.marcarCambio(companyId);
 
     return {
       original:  { id: original.id, entryNumber: original.entryNumber },
@@ -527,6 +564,9 @@ export class JournalService {
         })),
       });
 
+      // No se espera: el asiento ya esta grabado y el llamador suele estar
+      // dentro de una transaccion. Invalidar es best-effort.
+      void this.marcarCambio(companyId);
       return entry;
 
     } catch (error) {

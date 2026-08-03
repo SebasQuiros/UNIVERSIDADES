@@ -1,11 +1,65 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { ReportFilterDto } from './dto/reports.dto';
+import { REDIS_CLIENT } from '../../redis/redis.module';
+
+// Los estados financieros son CAROS: recorren el catálogo completo y agregan
+// todas las líneas del diario. Y en clase se miran muchísimo más de lo que se
+// escriben: un grupo entero abre el balance, discute, lo vuelve a abrir.
+//
+// El TTL es corto, pero la invalidación no depende de él: cada asiento sube
+// la versión de la empresa, que va dentro de la clave. Un asiento nuevo se ve
+// de inmediato, y las claves viejas se caen solas al vencer.
+const REPORTES_TTL_SEGUNDOS = 120;
 
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: any,
+  ) {}
+
+  /**
+   * Versión actual de los datos contables de una empresa.
+   *
+   * Se usa como parte de la clave de caché en vez de borrar por comodín:
+   * borrar `reportes:<empresa>:*` obliga a recorrer el espacio de claves
+   * (SCAN), que con muchas empresas es caro y se hace en el peor momento —
+   * justo cuando alguien está asentando.
+   */
+  private async versionDe(companyId: string): Promise<string> {
+    try {
+      const v = await this.redis?.get?.(`reportes:ver:${companyId}`);
+      return v ?? '0';
+    } catch { return 'sin-cache'; }
+  }
+
+  /** Lo llama quien escriba en el diario: el siguiente reporte se recalcula. */
+  async invalidar(companyId: string): Promise<void> {
+    try { await this.redis?.incr?.(`reportes:ver:${companyId}`); } catch { /* Redis caído: el TTL cubre */ }
+  }
+
+  /**
+   * Envuelve un reporte con caché. Si Redis no está, calcula y ya: nunca
+   * falla por no poder cachear.
+   */
+  private async cacheado<T>(companyId: string, nombre: string, filtro: any, calcular: () => Promise<T>): Promise<T> {
+    if (!this.redis) return calcular();
+    const ver = await this.versionDe(companyId);
+    if (ver === 'sin-cache') return calcular();
+    const clave = `reportes:${companyId}:${nombre}:${ver}:${JSON.stringify(filtro ?? {})}`;
+    try {
+      const guardado = await this.redis?.get?.(clave);
+      if (guardado) return JSON.parse(guardado);
+    } catch { /* se sigue contra la base */ }
+
+    const datos = await calcular();
+    try {
+      await this.redis?.setEx?.(clave, REPORTES_TTL_SEGUNDOS, JSON.stringify(datos));
+    } catch { /* no poder cachear no es motivo para fallar */ }
+    return datos;
+  }
 
   // ── Resolve date range from filter ────────────────────────────
   private async resolveDates(companyId: string, filter: ReportFilterDto) {
@@ -37,14 +91,9 @@ export class ReportsService {
     };
   }
 
-  // ── Get account balances (internal helper) ────────────────────
-  private async getAccountBalances(
-    companyId: string,
-    startDate: Date,
-    endDate: Date,
-    types?: string[],
-  ) {
-    const accounts = await this.prisma.account.findMany({
+  // ── Catálogo de la empresa (una sola lectura) ─────────────────
+  private loadAccounts(companyId: string, types?: string[]) {
+    return this.prisma.account.findMany({
       where: {
         companyId,
         isActive: true,
@@ -52,7 +101,32 @@ export class ReportsService {
       },
       orderBy: { code: 'asc' },
     });
+  }
 
+  // ── Get account balances (internal helper) ────────────────────
+  private async getAccountBalances(
+    companyId: string,
+    startDate: Date,
+    endDate: Date,
+    types?: string[],
+  ) {
+    return this.balancesDe(companyId, await this.loadAccounts(companyId, types), startDate, endDate);
+  }
+
+  // Saldos de un catálogo YA leído, en una ventana de fechas.
+  //
+  // Está separado de la lectura del catálogo a propósito. Un reporte suele
+  // necesitar los mismos saldos en dos ventanas (acumulado y del período), y
+  // antes eso releía el catálogo entero cada vez: más consultas simultáneas,
+  // y cada consulta ocupa una conexión del pool mientras dura. Con 21
+  // conexiones, un puñado de estudiantes mirando reportes agotaba el pool y
+  // los demás recibían "Timed out fetching a new connection".
+  private async balancesDe(
+    companyId: string,
+    accounts: any[],
+    startDate: Date,
+    endDate: Date,
+  ) {
     // Fase 5 — fix N+1: antes era 1 aggregate por cuenta. Reemplazamos por
     // UNA sola groupBy sobre todas las cuentas a la vez. Pasa de N round-trips
     // a 1, sin importar si la empresa tiene 10 o 1000 cuentas.
@@ -112,6 +186,10 @@ export class ReportsService {
   // Shows ALL accounts (including those with zero balance)
   // Uses LEFT JOIN semantics by fetching all accounts then their movements
   async getTrialBalance(companyId: string, filter: ReportFilterDto) {
+    return this.cacheado(companyId, 'comprobacion', filter, () => this._trialBalance(companyId, filter));
+  }
+
+  private async _trialBalance(companyId: string, filter: ReportFilterDto) {
     const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
     // En paralelo: no dependen entre sí y cada ida a la base cuesta ~400 ms.
     const [accounts, companyInfo] = await Promise.all([
@@ -189,6 +267,10 @@ export class ReportsService {
   // Assets = Liabilities + Equity
   // Uses ALL history up to endDate (balance sheet is cumulative)
   async getBalanceSheet(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
+    return this.cacheado(companyId, 'balance', filter, () => this._balanceSheet(companyId, filter));
+  }
+
+  private async _balanceSheet(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
     // Cada ida y vuelta a la base cuesta ~400 ms, así que lo que pesa no es
     // el costo de cada consulta sino CUÁNTAS van en fila. Antes esto resolvía
     // las fechas DOS veces (misma llamada, mismo resultado) y encadenaba tres
@@ -198,12 +280,22 @@ export class ReportsService {
     // Balance sheet is cumulative — start from the beginning of time
     const startDate = new Date('2000-01-01');
 
-    const [allAccounts, incomeAccounts, expenseAccounts, companyInfo] = await Promise.all([
-      this.getAccountBalances(companyId, startDate, endDate),
-      this.getAccountBalances(companyId, filterStart, endDate, ['INCOME']),
-      this.getAccountBalances(companyId, filterStart, endDate, ['EXPENSE']),
+    // El catálogo se lee UNA vez y se reusa para las dos ventanas (acumulado
+    // y período). Antes eran tres lecturas del catálogo + tres agregados =
+    // siete consultas simultáneas por balance; con 21 conexiones en el pool,
+    // tres estudiantes mirando el balance a la vez ya lo agotaban.
+    const [accounts, companyInfo] = await Promise.all([
+      this.loadAccounts(companyId),
       this.getCompanyInfo(companyId),
     ]);
+    const resultado = accounts.filter(a => a.type === 'INCOME' || a.type === 'EXPENSE');
+
+    const [allAccounts, resultadoDelPeriodo] = await Promise.all([
+      this.balancesDe(companyId, accounts,  startDate,   endDate),
+      this.balancesDe(companyId, resultado, filterStart, endDate),
+    ]);
+    const incomeAccounts  = resultadoDelPeriodo.filter(a => a.type === 'INCOME');
+    const expenseAccounts = resultadoDelPeriodo.filter(a => a.type === 'EXPENSE');
 
     const assets      = allAccounts.filter(a => a.type === 'ASSET');
     const liabilities = allAccounts.filter(a => a.type === 'LIABILITY');
@@ -351,6 +443,10 @@ export class ReportsService {
   // ── 3. INCOME STATEMENT — Estado de Resultados ───────────────
   // Only covers the specified period (not cumulative)
   async getIncomeStatement(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
+    return this.cacheado(companyId, 'resultados', filter, () => this._incomeStatement(companyId, filter));
+  }
+
+  private async _incomeStatement(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
     const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
     const [accounts, companyInfo] = await Promise.all([
       this.getAccountBalances(companyId, startDate, endDate, ['INCOME', 'EXPENSE']),
@@ -492,11 +588,13 @@ export class ReportsService {
     const prevStart = new Date(prevEnd.getTime() - spanMs);
     const inception = new Date(2000, 0, 1);
 
+    // El catálogo del período anterior se lee UNA vez para las dos ventanas.
+    const catalogo = await this.loadAccounts(companyId);
     const [curIS, curBS, prevIncExp, prevBal] = await Promise.all([
       this.getIncomeStatement(companyId, filter),
       this.getBalanceSheet(companyId, filter),
-      this.getAccountBalances(companyId, prevStart, prevEnd, ['INCOME', 'EXPENSE']),
-      this.getAccountBalances(companyId, inception, prevEnd, ['ASSET', 'LIABILITY', 'EQUITY']),
+      this.balancesDe(companyId, catalogo.filter(a => a.type === 'INCOME' || a.type === 'EXPENSE'), prevStart, prevEnd),
+      this.balancesDe(companyId, catalogo.filter(a => a.type === 'ASSET' || a.type === 'LIABILITY' || a.type === 'EQUITY'), inception, prevEnd),
     ]);
 
     const num = (v: any) => new Decimal((v ?? 0).toString());
@@ -581,7 +679,15 @@ export class ReportsService {
     // Desglose Corriente/No Corriente — misma ventana acumulada que usa
     // getBalanceSheet (desde el origen hasta endDate).
     const inception = new Date('2000-01-01');
-    const allAccounts = await this.getAccountBalances(companyId, inception, endDate, ['ASSET', 'LIABILITY']);
+    // Catálogo compartido entre este desglose y el comparativo de más abajo:
+    // son tres ventanas de fechas sobre las MISMAS cuentas.
+    const catalogo = await this.loadAccounts(companyId);
+    const patrimoniales = catalogo.filter(a =>
+      a.type === 'ASSET' || a.type === 'LIABILITY' || a.type === 'EQUITY');
+    const resultado = catalogo.filter(a => a.type === 'INCOME' || a.type === 'EXPENSE');
+
+    const allAccounts = await this.balancesDe(
+      companyId, patrimoniales.filter(a => a.type !== 'EQUITY'), inception, endDate);
     const leaf = allAccounts.filter(a => !a.isHeader);
 
     const sumBy = (pred: (code: string) => boolean) =>
@@ -645,8 +751,8 @@ export class ReportsService {
     let comparison: any = null;
     if (previousEndDate && previousStartDate) {
       const [prevAssetsLiab, prevIncomeExpense] = await Promise.all([
-        this.getAccountBalances(companyId, inception, previousEndDate, ['ASSET', 'LIABILITY', 'EQUITY']),
-        this.getAccountBalances(companyId, previousStartDate, previousEndDate, ['INCOME', 'EXPENSE']),
+        this.balancesDe(companyId, patrimoniales, inception, previousEndDate),
+        this.balancesDe(companyId, resultado, previousStartDate, previousEndDate),
       ]);
       const prevLeaf = prevAssetsLiab.filter(a => !a.isHeader);
       const prevTotalAssets      = prevLeaf.filter(a => a.type === 'ASSET').reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
@@ -721,10 +827,17 @@ export class ReportsService {
   async getJournalBook(companyId: string, filter: ReportFilterDto) {
     const { startDate, endDate, period } = await this.resolveDates(companyId, filter);
 
+    // El libro diario los muestra TODOS, incluidos los revertidos y sus
+    // reversas. Un diario del que desaparecen asientos no es un diario: el
+    // asiento equivocado y su corrección son parte del registro, y el
+    // estudiante tiene que poder verlos. Cada renglón trae `isReversed` para
+    // que la pantalla los marque.
+    //
+    // Para SALDOS es al revés: ahí el par revertido no cuenta (ver
+    // balancesDe y reverseEntry).
     const entries = await this.prisma.journalEntry.findMany({
       where: {
         companyId,
-        isReversed: false,
         entryDate: { gte: startDate, lte: endDate },
       },
       orderBy: [{ entryDate: 'asc' }, { entryNumber: 'asc' }],

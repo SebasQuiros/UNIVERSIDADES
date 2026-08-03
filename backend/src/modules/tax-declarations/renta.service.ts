@@ -15,6 +15,7 @@ import {
   Injectable, Inject, NotFoundException, BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { ReportesCache } from '../../redis/reportes-cache.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
   SchedulePartialPaymentsDto,
@@ -58,6 +59,7 @@ export class RentaService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(REDIS_CLIENT) private readonly redis: any,
+    private readonly reportesCache: ReportesCache,
   ) {}
 
   // ── Resolve company + verify access ──────────────────────────────────────
@@ -336,7 +338,7 @@ export class RentaService {
     // NOTA: el enrutado por BusinessEventsService (escritor único, RulesEngine,
     // AccountingMode) es parte de F4 (ver I-AT-2 en el manifiesto). Aquí solo se
     // corrige la atomicidad y se agrega trazabilidad source/sourceType/sourceId.
-    return this.prisma.$transaction(async (tx) => {
+    const creada = await this.prisma.$transaction(async (tx) => {
       const retencion = await tx.retencion.create({
         data: {
           companyId,
@@ -423,6 +425,9 @@ export class RentaService {
 
       return retencion;
     });
+
+    await this.reportesCache.marcarCambio(companyId);
+    return creada;
   }
 
   // ── List retenciones (optionally filter by year) ─────────────────────────

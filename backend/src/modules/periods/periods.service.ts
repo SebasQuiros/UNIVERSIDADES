@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ActivityLogService } from '../../common/activity/activity-log.service';
+import { ReportesCache } from '../../redis/reportes-cache.service';
 import { JournalSource, Prisma, PeriodStatus, PeriodType } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { CreatePeriodDto, ClosePeriodDto } from './dto/periods.dto';
@@ -15,6 +16,7 @@ export class PeriodsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLog: ActivityLogService,
+    private readonly reportesCache: ReportesCache,
   ) {}
 
   // ── List all periods for a company ───────────────────────────
@@ -168,6 +170,9 @@ export class PeriodsService {
         notas: dto.notes ?? undefined,
       },
     });
+
+    // El cierre asienta contra resultados: todo reporte cacheado quedo viejo.
+    await this.reportesCache.marcarCambio(companyId);
 
     return result;
   }

@@ -208,7 +208,19 @@ function EntryRow({
           #{entry.entryNumber}
         </span>
         <span className="text-xs text-gray-500 w-24 flex-shrink-0">{fmtDate(entry.entryDate)}</span>
-        <span className="flex-1 text-sm font-medium text-gray-900 truncate">{entry.description}</span>
+        <span className={cn(
+          'flex-1 text-sm font-medium truncate',
+          // Un asiento revertido sigue en el diario (es parte del registro),
+          // pero ya no cuenta para los saldos: tiene que verse distinto o el
+          // estudiante lo suma mentalmente y no le cuadra con el balance.
+          entry.isReversed ? 'text-gray-400 line-through' : 'text-gray-900',
+        )}>{entry.description}</span>
+        {entry.isReversed && (
+          <span className="hidden sm:inline-flex flex-shrink-0 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200"
+                title="Anulado por una reversión: no afecta los saldos">
+            Revertido
+          </span>
+        )}
         <span className="hidden md:inline-flex flex-shrink-0">
           <SourceChip type={entry.sourceType} />
         </span>
