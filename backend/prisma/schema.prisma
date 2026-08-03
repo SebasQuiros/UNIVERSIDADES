@@ -711,6 +711,10 @@ model Account {
   id            String        @id @default(uuid()) @db.Uuid
   companyId     String        @map("company_id") @db.Uuid
   code          String                               // "1.1.02.01"
+  // Codigo del plan de estudios del profesor ("103", "110", "400"...). El
+  // motor contable SIEMPRE resuelve por `code`; este es solo para que el
+  // estudiante reconozca la cuenta con la numeracion que ve en clase.
+  altCode       String?       @map("alt_code")
   name          String
   type          AccountType
   subType       String?       @map("sub_type")

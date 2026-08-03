@@ -2081,6 +2081,217 @@ export function LedgerTab({ companyId }: { companyId: string }) {
     </div>
   );
 }
+// ─── Estados financieros: presentación formal ─────────────────────────────────
+//
+// La estructura (qué grupo va en qué bloque, y en qué orden) la arma el
+// backend en `classified` / `structured`. Acá solo se dibuja: así el PDF, el
+// Excel y la pantalla no pueden discrepar sobre qué es un gasto operativo.
+
+const colonesEF = (n: any) =>
+  `₡${Number(n ?? 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Monto negativo entre paréntesis, como en los estados formales. */
+function MontoEF({ value, negativo }: { value: any; negativo?: boolean }) {
+  const n = Number(value ?? 0);
+  const entreParentesis = negativo || n < 0;
+  return (
+    <span className={`font-mono text-sm tabular-nums ${entreParentesis ? 'text-rose-700' : 'text-gray-800'}`}>
+      {entreParentesis ? `(${colonesEF(Math.abs(n))})` : colonesEF(n)}
+    </span>
+  );
+}
+
+/** Renglón de cuenta: código del sistema, código del profesor si lo hay, nombre. */
+function CuentaEF({ a, negativo }: { a: any; negativo?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-2 py-1 pl-5 pr-4 border-b border-gray-100 last:border-b-0">
+      {a.code ? (
+        <span className="font-mono text-[11px] text-gray-400 shrink-0">{a.code}</span>
+      ) : null}
+      {a.altCode ? (
+        <span className="shrink-0 rounded bg-indigo-50 px-1.5 py-px font-mono text-[10px] font-semibold text-indigo-700"
+              title="Código del plan del curso">
+          {a.altCode}
+        </span>
+      ) : null}
+      <span className="flex-1 truncate text-sm text-gray-600">{a.name}</span>
+      <MontoEF value={a.amount} negativo={negativo} />
+    </div>
+  );
+}
+
+/** Grupo con su subtotal (Efectivo y equivalentes, Gastos de administración…). */
+function GrupoEF({ g }: { g: any }) {
+  const cuentas = g.accounts ?? [];
+  return (
+    <div className="mb-1">
+      <div className="flex items-baseline justify-between px-4 py-1.5">
+        <span className="text-sm font-semibold text-gray-800">{g.label}</span>
+        <MontoEF value={g.total} negativo={g.negativo} />
+      </div>
+      {cuentas.length > 1 && cuentas.map((a: any, i: number) => (
+        <CuentaEF key={a.id ?? i} a={a} negativo={g.negativo} />
+      ))}
+    </div>
+  );
+}
+
+/** Estado de Resultados escalonado: cinco bloques, cada uno con su resultado. */
+function EstadoResultadosEF({ data, companyName }: { data: any; companyName?: string }) {
+  const s = data.structured;
+  const desde = data.period?.startDate ? new Date(data.period.startDate) : null;
+  const hasta = data.period?.endDate   ? new Date(data.period.endDate)   : null;
+  const f = (d: Date | null) => d ? d.toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+
+  // Un color por bloque, igual que el formato: ayuda a leer los escalones.
+  const tonos = [
+    { borde: 'border-emerald-200', fondo: 'bg-emerald-50/60',  titulo: 'text-emerald-800', barra: 'bg-emerald-100' },
+    { borde: 'border-rose-200',    fondo: 'bg-rose-50/60',     titulo: 'text-rose-800',    barra: 'bg-rose-100' },
+    { borde: 'border-sky-200',     fondo: 'bg-sky-50/60',      titulo: 'text-sky-800',     barra: 'bg-sky-100' },
+    { borde: 'border-amber-200',   fondo: 'bg-amber-50/60',    titulo: 'text-amber-800',   barra: 'bg-amber-100' },
+    { borde: 'border-violet-200',  fondo: 'bg-violet-50/60',   titulo: 'text-violet-800',  barra: 'bg-violet-100' },
+  ];
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-5 rounded-xl bg-slate-900 px-5 py-4 text-center text-white">
+        <p className="text-base font-bold tracking-wide">{companyName ?? data.company?.name ?? 'Mi Empresa'}</p>
+        <p className="text-sm font-semibold text-slate-200">ESTADO DE RESULTADOS</p>
+        {desde && hasta && <p className="text-xs text-slate-400">Del {f(desde)} al {f(hasta)}</p>}
+        <p className="text-[11px] text-slate-500">(Cifras en colones)</p>
+      </div>
+
+      {(s.bloques ?? []).map((b: any, i: number) => {
+        const t = tonos[i % tonos.length];
+        // Un bloque sin movimiento se dibuja igual: el estudiante tiene que
+        // ver los cinco escalones aunque alguno vaya en cero.
+        return (
+          <div key={b.numero} className={`mb-3 overflow-hidden rounded-xl border ${t.borde} ${t.fondo}`}>
+            <div className={`px-4 py-2 text-xs font-bold uppercase tracking-wide ${t.titulo}`}>
+              {b.numero}. {b.titulo}
+            </div>
+            {(b.grupos ?? []).length === 0 ? (
+              <p className="px-4 pb-2 text-xs italic text-gray-400">Sin movimiento en el período</p>
+            ) : (
+              b.grupos.map((g: any, j: number) => <GrupoEF key={j} g={g} />)
+            )}
+            <div className={`flex items-baseline justify-between px-4 py-2 ${t.barra} border-t ${t.borde}`}>
+              <span className={`text-sm font-bold ${t.titulo}`}>{b.resultado.label}</span>
+              <span className="font-mono text-sm font-bold tabular-nums text-gray-900">
+                {colonesEF(b.resultado.value)}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className={`mt-4 flex items-center justify-between rounded-xl px-5 py-4 ${
+        s.resultadoFinal?.esUtilidad ? 'bg-emerald-600' : 'bg-rose-600'} text-white`}>
+        <div>
+          <p className="text-sm font-bold uppercase tracking-wide">Utilidad neta del período</p>
+          <p className="text-[11px] text-white/70">
+            Si es positiva = utilidad · si es negativa = pérdida
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="font-mono text-xl font-bold tabular-nums">{colonesEF(s.resultadoFinal?.value)}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wide">{s.resultadoFinal?.etiqueta}</p>
+        </div>
+      </div>
+
+      {s.cuadra === false && (
+        <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2 text-xs text-amber-800 border border-amber-200">
+          Los escalones no dan lo mismo que ingresos menos gastos. Hay alguna cuenta
+          que no está cayendo en ningún bloque — avisá al profesor.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Balance de Situación clasificado: corriente / no corriente. */
+function BalanceSituacionEF({ data, companyName }: { data: any; companyName?: string }) {
+  const c = data.classified;
+  const fecha = data.asOfDate ? new Date(data.asOfDate) : new Date();
+
+  const Bloque = ({ titulo, seccion }: { titulo: string; seccion: any }) =>
+    (seccion?.grupos ?? []).length === 0 ? null : (
+      <div className="mb-2">
+        <p className="px-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-gray-400">{titulo}</p>
+        {seccion.grupos.map((g: any, i: number) => <GrupoEF key={i} g={g} />)}
+        <div className="mx-4 flex items-baseline justify-between border-t border-gray-300 py-1.5">
+          <span className="text-sm font-semibold text-gray-700">Total {titulo.toLowerCase()}</span>
+          <MontoEF value={seccion.total} />
+        </div>
+      </div>
+    );
+
+  const Seccion = ({ titulo, color, children, total, totalLabel }: any) => (
+    <div className={`overflow-hidden rounded-xl border ${color.borde} ${color.fondo}`}>
+      <div className={`px-4 py-2 text-xs font-bold uppercase tracking-wide ${color.titulo}`}>{titulo}</div>
+      <div className="py-1">{children}</div>
+      <div className={`flex items-baseline justify-between px-4 py-2 ${color.barra} border-t ${color.borde}`}>
+        <span className={`text-sm font-bold ${color.titulo}`}>{totalLabel}</span>
+        <span className="font-mono text-sm font-bold tabular-nums text-gray-900">{colonesEF(total)}</span>
+      </div>
+    </div>
+  );
+
+  const azul   = { borde: 'border-sky-200',    fondo: 'bg-sky-50/60',    titulo: 'text-sky-800',    barra: 'bg-sky-100' };
+  const rojo   = { borde: 'border-rose-200',   fondo: 'bg-rose-50/60',   titulo: 'text-rose-800',   barra: 'bg-rose-100' };
+  const morado = { borde: 'border-violet-200', fondo: 'bg-violet-50/60', titulo: 'text-violet-800', barra: 'bg-violet-100' };
+
+  return (
+    <div>
+      <div className="mb-5 rounded-xl bg-slate-900 px-5 py-4 text-center text-white">
+        <p className="text-base font-bold tracking-wide">{companyName ?? data.company?.name ?? 'Mi Empresa'}</p>
+        <p className="text-sm font-semibold text-slate-200">BALANCE DE SITUACIÓN</p>
+        <p className="text-xs text-slate-400">
+          Al {fecha.toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' })}
+        </p>
+        <p className="text-[11px] text-slate-500">(Cifras en colones)</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Seccion titulo="Activo" color={azul} total={c.activo.total} totalLabel="TOTAL ACTIVO">
+          <Bloque titulo="Activo corriente"    seccion={c.activo.corriente} />
+          <Bloque titulo="Activo no corriente" seccion={c.activo.noCorriente} />
+        </Seccion>
+
+        <div className="space-y-4">
+          <Seccion titulo="Pasivo" color={rojo} total={c.pasivo.total} totalLabel="TOTAL PASIVO">
+            <Bloque titulo="Pasivo corriente"    seccion={c.pasivo.corriente} />
+            <Bloque titulo="Pasivo no corriente" seccion={c.pasivo.noCorriente} />
+          </Seccion>
+
+          <Seccion titulo="Patrimonio" color={morado} total={c.patrimonio.total} totalLabel="TOTAL PATRIMONIO">
+            <div className="py-1">
+              {(c.patrimonio.grupos ?? []).map((g: any, i: number) => <GrupoEF key={i} g={g} />)}
+            </div>
+          </Seccion>
+        </div>
+      </div>
+
+      {/* Ecuación contable: es la prueba de que el balance es un balance. */}
+      <div className={`mt-5 rounded-xl px-5 py-4 text-white ${c.ecuacion.cuadra ? 'bg-slate-900' : 'bg-rose-700'}`}>
+        <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-white/60">Ecuación contable</p>
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 font-mono text-sm">
+          <span className="font-bold">{colonesEF(c.ecuacion.activo)}</span>
+          <span className="text-white/50">Activo</span>
+          <span className="text-lg">=</span>
+          <span className="font-bold">{colonesEF(c.ecuacion.pasivoMasPatrimonio)}</span>
+          <span className="text-white/50">Pasivo + Patrimonio</span>
+        </div>
+        <p className="mt-2 text-center text-xs font-semibold">
+          {c.ecuacion.cuadra
+            ? '✓ El balance cuadra'
+            : `✗ Descuadrado por ${colonesEF(c.ecuacion.diferencia)} — revisá los asientos`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Reports tab ──────────────────────────────────────────────────────────────
 export function ReportsTab({ companyId, companyName }: { companyId: string; companyName?: string }) {
   const [subTab, setSubTab] = useState<'resumen' | 'estados' | 'analisis'>('resumen');
@@ -2160,7 +2371,90 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
     return '₡' + (n ?? 0).toLocaleString('es-CR', { minimumFractionDigits: 2 });
   }
 
+  // ── Impresión: mismos bloques que la pantalla ─────────────────────────
+  // Un monto negativo se imprime entre paréntesis, como en los estados
+  // formales; el signo menos se pierde en una fotocopia.
+  function montoHtml(v: any, negativo?: boolean) {
+    const n = Number(v ?? 0);
+    return (negativo || n < 0)
+      ? `<span style="color:#9f1239">(${fmt(Math.abs(n))})</span>`
+      : fmt(n);
+  }
+  function grupoHtml(g: any): string {
+    const cuentas = g.accounts ?? [];
+    return `
+      <div class="row" style="font-weight:600">
+        <span class="code"></span><span class="name">${esc(g.label)}</span>
+        <span class="amount">${montoHtml(g.total, g.negativo)}</span>
+      </div>
+      ${cuentas.length > 1 ? cuentas.map((a: any) => `
+        <div class="row">
+          <span class="code">${esc(a.code ?? '')}${a.altCode ? ` · ${esc(a.altCode)}` : ''}</span>
+          <span class="name" style="padding-left:10px;color:#6b7280">${esc(a.name)}</span>
+          <span class="amount">${montoHtml(a.amount, g.negativo)}</span>
+        </div>`).join('') : ''}`;
+  }
+
+  function buildIncomeStatementStructuredHtml(d: any): string {
+    const s = d.structured;
+    return `
+      ${(s.bloques ?? []).map((b: any) => `
+        <div class="section">
+          <div class="section-header">${b.numero}. ${esc(b.titulo)}</div>
+          ${(b.grupos ?? []).length === 0
+            ? `<div class="row"><span class="code"></span><span class="name" style="font-style:italic;color:#9ca3af">Sin movimiento en el período</span><span class="amount"></span></div>`
+            : b.grupos.map(grupoHtml).join('')}
+          <div class="row total">
+            <span class="code"></span><span class="name">${esc(b.resultado.label)}</span>
+            <span class="amount">${fmt(Number(b.resultado.value))}</span>
+          </div>
+        </div>`).join('')}
+      <div class="row total ${s.resultadoFinal?.esUtilidad ? 'profit' : 'loss'}">
+        <span class="code"></span>
+        <span class="name">UTILIDAD NETA DEL PERÍODO — ${esc(s.resultadoFinal?.etiqueta ?? '')}</span>
+        <span class="amount">${fmt(Number(s.resultadoFinal?.value ?? 0))}</span>
+      </div>`;
+  }
+
+  function buildBalanceSheetClassifiedHtml(d: any): string {
+    const c = d.classified;
+    const bloque = (titulo: string, sec: any) =>
+      (sec?.grupos ?? []).length === 0 ? '' : `
+        <div class="row" style="background:#f9fafb;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280">
+          <span class="code"></span><span class="name">${esc(titulo)}</span><span class="amount"></span>
+        </div>
+        ${sec.grupos.map(grupoHtml).join('')}
+        <div class="row" style="font-weight:600;border-top:1px solid #d1d5db">
+          <span class="code"></span><span class="name">Total ${esc(titulo.toLowerCase())}</span>
+          <span class="amount">${montoHtml(sec.total)}</span>
+        </div>`;
+
+    return `
+      <div class="section">
+        <div class="section-header" style="color:#0369a1">ACTIVO</div>
+        ${bloque('Activo corriente', c.activo.corriente)}
+        ${bloque('Activo no corriente', c.activo.noCorriente)}
+        <div class="row total"><span class="code"></span><span class="name">TOTAL ACTIVO</span><span class="amount">${fmt(Number(c.activo.total))}</span></div>
+      </div>
+      <div class="section">
+        <div class="section-header" style="color:#be123c">PASIVO</div>
+        ${bloque('Pasivo corriente', c.pasivo.corriente)}
+        ${bloque('Pasivo no corriente', c.pasivo.noCorriente)}
+        <div class="row total"><span class="code"></span><span class="name">TOTAL PASIVO</span><span class="amount">${fmt(Number(c.pasivo.total))}</span></div>
+      </div>
+      <div class="section">
+        <div class="section-header" style="color:#6d28d9">PATRIMONIO</div>
+        ${(c.patrimonio.grupos ?? []).map(grupoHtml).join('')}
+        <div class="row total"><span class="code"></span><span class="name">TOTAL PATRIMONIO</span><span class="amount">${fmt(Number(c.patrimonio.total))}</span></div>
+      </div>
+      <div class="balance-check ${c.ecuacion.cuadra ? 'ok' : 'fail'}">
+        Ecuación contable: Activo ${fmt(Number(c.ecuacion.activo))} = Pasivo + Patrimonio ${fmt(Number(c.ecuacion.pasivoMasPatrimonio))}
+        ${c.ecuacion.cuadra ? ' ✓' : ` ✗ diferencia ${fmt(Number(c.ecuacion.diferencia))}`}
+      </div>`;
+  }
+
   function buildBalanceSheetHtml(d: any): string {
+    if (d.classified) return buildBalanceSheetClassifiedHtml(d);
     const assets      = d.assets?.accounts      ?? [];
     const liabilities = d.liabilities?.accounts ?? [];
     const equity      = d.equity?.accounts      ?? [];
@@ -2197,6 +2491,7 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
   }
 
   function buildIncomeStatementHtml(d: any): string {
+    if (d.structured) return buildIncomeStatementStructuredHtml(d);
     const income   = d.income?.accounts   ?? [];
     const expenses = d.expenses?.accounts ?? [];
     const totalI   = Number(d.income?.total   ?? d.totals?.totalIncome   ?? 0);
@@ -2282,7 +2577,7 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
     const win = window.open('', '_blank');
     if (!win) return;
     const isBS     = report === 'balance-sheet';
-    const title    = isBS ? 'Balance General' : 'Estado de Resultados';
+    const title    = isBS ? 'Balance de Situación' : 'Estado de Resultados';
     const body     = isBS ? buildBalanceSheetHtml(data) : buildIncomeStatementHtml(data);
     const dateStr  = new Date().toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' });
     win.document.write(`<!DOCTYPE html>
@@ -2436,7 +2731,10 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
       {loading ? (
         <div className="flex justify-center py-10"><Spinner /></div>
       ) : !data ? null : report === 'balance-sheet' ? (
-        <div id="print-report-area">{(() => {
+        <div id="print-report-area">{data.classified ? (
+          <BalanceSituacionEF data={data} companyName={companyName} />
+        ) : (() => {
+          // Respaldo mientras el backend nuevo termina de desplegarse.
           // ── Balance de Situación (formato clásico: corriente / no corriente) ──
           const bal = (a: any) => Number(a.balance ?? a.balanceNum ?? 0);
           const grp = (list: any[], pref: string) =>
@@ -2498,7 +2796,10 @@ export function ReportsTab({ companyId, companyName }: { companyId: string; comp
         })()}</div>
       ) : (
         <div id="print-report-area">
-          {(() => {
+          {data.structured ? (
+            <EstadoResultadosEF data={data} companyName={companyName} />
+          ) : (() => {
+            // Respaldo mientras el backend nuevo termina de desplegarse.
             // ── Estado de Resultados escalonado (formato clásico) ──
             // Se agrupan las cuentas por prefijo de código del catálogo.
             const accs = [...(data.income?.accounts ?? []), ...(data.expenses?.accounts ?? [])];

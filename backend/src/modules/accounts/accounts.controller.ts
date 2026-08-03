@@ -33,6 +33,22 @@ export class AccountsController {
     return this.svc.importFromExcel(companyId, file.buffer, file.originalname, req.user?.id);
   }
 
+  /**
+   * POST .../accounts/alt-codes — asigna los codigos del plan del profesor.
+   * Cuerpo: { "1.1.01.04": "103", "1.1.03.01": "110", ... }
+   * Los codigos que la empresa no tenga vuelven en `notFound` (no es error:
+   * un plan casi siempre trae cuentas que esta empresa no usa).
+   */
+  @Post('alt-codes')
+  @HttpCode(HttpStatus.OK)
+  setAltCodes(
+    @Param('companyId') companyId: string,
+    @Body() body: Record<string, string>,
+    @Request() req: any,
+  ) {
+    return this.svc.setAltCodes(companyId, body, req.user?.id);
+  }
+
   @Get(':id')
   findOne(@Param('companyId') companyId: string, @Param('id') id: string) {
     return this.svc.findOne(companyId, id);

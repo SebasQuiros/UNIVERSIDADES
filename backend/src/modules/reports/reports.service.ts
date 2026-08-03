@@ -94,6 +94,7 @@ export class ReportsService {
       return {
         id:            account.id,
         code:          account.code,
+        altCode:       account.altCode,   // codigo del plan del profesor
         name:          account.name,
         type:          account.type,
         level:         account.level,
@@ -140,6 +141,50 @@ export class ReportsService {
     };
   }
 
+  // ── Agrupador por reglas de codigo ────────────────────────────
+  //
+  // Los estados financieros formales no se presentan como una lista plana de
+  // cuentas: se presentan agrupados (Efectivo y equivalentes, Cuentas por
+  // cobrar, Inventarios...). Cada regla es una lista de prefijos de codigo y
+  // gana LA PRIMERA que calce, de modo que un caso particular pueda ir antes
+  // que su grupo general (Documentos por Pagar es 2.1.01.02 y vive dentro de
+  // 2.1.01 Cuentas por Pagar, pero el balance clasificado los separa).
+  //
+  // La ultima regla de cada bloque puede ser [''] (calza con todo): asi
+  // ninguna cuenta se queda afuera y los subtotales SIEMPRE reconcilian con
+  // el total del tipo, incluso con cuentas creadas a mano por el estudiante.
+  private groupByRules(
+    accounts: any[],
+    rules: Array<{ label: string; match: string[] }>,
+  ) {
+    const restantes = accounts.filter(a => a.balanceNum.abs().greaterThan(0));
+    const grupos = rules.map(r => ({
+      label:    r.label,
+      accounts: [] as any[],
+      total:    '0.00',
+      totalNum: new Decimal(0),
+    }));
+
+    for (const acc of restantes) {
+      const code = String(acc.code ?? '');
+      const i = rules.findIndex(r => r.match.some(p => p === '' || code.startsWith(p)));
+      if (i < 0) continue;   // sin catch-all, una cuenta rara puede no calzar
+      grupos[i].accounts.push({
+        id: acc.id, code: acc.code, altCode: acc.altCode ?? null,
+        name: acc.name, amount: acc.balance,
+      });
+      grupos[i].totalNum = grupos[i].totalNum.plus(acc.balanceNum);
+    }
+
+    grupos.forEach(g => { g.total = g.totalNum.toFixed(2); });
+    // Un grupo vacio no se dibuja: el estado quedaria lleno de renglones en cero.
+    return grupos.filter(g => g.accounts.length > 0);
+  }
+
+  private sumGroups(grupos: Array<{ totalNum: Decimal }>) {
+    return grupos.reduce((s, g) => s.plus(g.totalNum), new Decimal(0));
+  }
+
   // ── 2. BALANCE SHEET — Balance General ────────────────────────
   // Assets = Liabilities + Equity
   // Uses ALL history up to endDate (balance sheet is cumulative)
@@ -179,8 +224,102 @@ export class ReportsService {
     const totalLiabEquity = totalLiabilities.plus(adjustedEquity);
     const isBalanced      = totalAssets.minus(totalLiabEquity).abs().lessThanOrEqualTo(new Decimal('0.01'));
 
+    // ── Presentacion clasificada (Activo / Pasivo / Patrimonio) ──────────
+    //
+    // Corriente vs no corriente, y dentro de cada uno los grupos con los que
+    // se enseña el estado. Depreciacion acumulada va JUNTO a Propiedad,
+    // planta y equipo, no en un bloque aparte: ahi es donde resta.
+    const activoCorriente = this.groupByRules(assets, [
+      { label: 'Efectivo y equivalentes',        match: ['1.1.01'] },
+      { label: 'Cuentas por cobrar',             match: ['1.1.02'] },
+      { label: 'Inventarios',                    match: ['1.1.03'] },
+      { label: 'Gastos pagados por anticipado',  match: ['1.1.05'] },
+      { label: 'Otros activos corrientes',       match: ['1.1'] },
+    ]);
+    // El bloque "no corriente" lleva el comodin (para que ninguna cuenta se
+    // pierda), asi que tiene que correr sobre lo que NO se llevo el corriente:
+    // si no, se traga tambien caja, clientes e inventarios.
+    const noEmpieza = (pref: string) => (a: any) => !String(a.code ?? '').startsWith(pref);
+    const activoNoCorriente = this.groupByRules(assets.filter(noEmpieza('1.1')), [
+      { label: 'Propiedad, planta y equipo',     match: ['1.2.01', '1.2.02'] },
+      { label: 'Activos intangibles',            match: ['1.2.03'] },
+      { label: 'Inversiones a largo plazo',      match: ['1.2.04'] },
+      // Catch-all: cualquier activo que no sea 1.1.* cae aca y el total cierra.
+      { label: 'Otros activos no corrientes',    match: ['1.2', ''] },
+    ]);
+
+    const pasivoCorriente = this.groupByRules(liabilities, [
+      // Documentos por pagar vive DENTRO de 2.1.01, y va antes a proposito.
+      { label: 'Documentos por pagar',           match: ['2.1.01.02'] },
+      { label: 'Cuentas por pagar',              match: ['2.1.01'] },
+      { label: 'Impuestos por pagar',            match: ['2.1.02'] },
+      { label: 'Provisiones',                    match: ['2.1.03', '2.1.04'] },
+      { label: 'Otros pasivos corrientes',       match: ['2.1'] },
+    ]);
+    const pasivoNoCorriente = this.groupByRules(liabilities.filter(noEmpieza('2.1')), [
+      { label: 'Préstamos a largo plazo',        match: ['2.2.01.01'] },
+      { label: 'Obligaciones financieras',       match: ['2.2.01'] },
+      { label: 'Provisiones a largo plazo',      match: ['2.2.02'] },
+      { label: 'Otros pasivos no corrientes',    match: ['2.2', ''] },
+    ]);
+
+    const patrimonioGrupos = this.groupByRules(equity, [
+      { label: 'Capital social',                 match: ['3.1.01.01'] },
+      { label: 'Aportes de socios',              match: ['3.1.01'] },
+      { label: 'Reservas',                       match: ['3.1.02'] },
+      { label: 'Utilidades retenidas',           match: ['3.2.01'] },
+      { label: 'Resultados acumulados',          match: ['3.2', '3.1', ''] },
+    ]);
+    // La utilidad del periodo todavia NO esta asentada en una cuenta de
+    // patrimonio (eso pasa al cierre), pero el balance a mitad de periodo no
+    // cuadra sin ella. Va como renglon propio, igual que en el formato.
+    const patrimonioClasificado = [
+      ...patrimonioGrupos,
+      {
+        label: 'Utilidad o pérdida del período',
+        accounts: [{
+          id: 'resultado-periodo', code: '', altCode: null,
+          name: currentNetIncome.greaterThanOrEqualTo(0)
+            ? 'Utilidad del período' : 'Pérdida del período',
+          amount: currentNetIncome.toFixed(2),
+        }],
+        total:    currentNetIncome.toFixed(2),
+        totalNum: currentNetIncome,
+      },
+    ];
+
+    const totalActivoCorriente   = this.sumGroups(activoCorriente);
+    const totalActivoNoCorriente = this.sumGroups(activoNoCorriente);
+    const totalPasivoCorriente   = this.sumGroups(pasivoCorriente);
+    const totalPasivoNoCorriente = this.sumGroups(pasivoNoCorriente);
+
+    const sinCentavos = (g: any) => ({ label: g.label, accounts: g.accounts, total: g.total });
+
     return {
       reportType:  'BALANCE_SHEET',
+      // Presentacion clasificada — es la que dibuja la pantalla y el PDF.
+      classified: {
+        activo: {
+          corriente:    { label: 'Activo corriente',     grupos: activoCorriente.map(sinCentavos),   total: totalActivoCorriente.toFixed(2) },
+          noCorriente:  { label: 'Activo no corriente',  grupos: activoNoCorriente.map(sinCentavos), total: totalActivoNoCorriente.toFixed(2) },
+          total: totalAssets.toFixed(2),
+        },
+        pasivo: {
+          corriente:    { label: 'Pasivo corriente',     grupos: pasivoCorriente.map(sinCentavos),   total: totalPasivoCorriente.toFixed(2) },
+          noCorriente:  { label: 'Pasivo no corriente',  grupos: pasivoNoCorriente.map(sinCentavos), total: totalPasivoNoCorriente.toFixed(2) },
+          total: totalLiabilities.toFixed(2),
+        },
+        patrimonio: {
+          grupos: patrimonioClasificado.map(sinCentavos),
+          total:  adjustedEquity.toFixed(2),
+        },
+        ecuacion: {
+          activo:            totalAssets.toFixed(2),
+          pasivoMasPatrimonio: totalLiabEquity.toFixed(2),
+          diferencia:        totalAssets.minus(totalLiabEquity).toFixed(2),
+          cuadra:            isBalanced,
+        },
+      },
       company:     companyInfo,
       asOfDate:    endDate,
       generatedAt: new Date(),
@@ -225,8 +364,98 @@ export class ReportsService {
     const totalExpenses = expenseAccounts.reduce((s, a) => s.plus(a.balanceNum), new Decimal(0));
     const netIncome     = totalIncome.minus(totalExpenses);
 
+    // ── Presentacion escalonada ─────────────────────────────────────────
+    //
+    // Los cinco bloques del formato, cada uno cerrando en su propio
+    // resultado: ingresos → utilidad bruta → utilidad operativa → utilidad
+    // antes de impuestos → utilidad neta.
+    //
+    // La clasificacion es una PARTICION: cada cuenta cae en exactamente un
+    // bloque (el ultimo de cada tipo calza con todo), asi la utilidad neta
+    // escalonada da identica a totalIngresos - totalGastos. Eso se verifica
+    // abajo y se reporta en `cuadra`.
+    // "Ventas netas" es neta de veras: las devoluciones y descuentos sobre
+    // ventas (4.1.01.04/.05 y 4.1.02.*) son contra-ingreso con saldo deudor,
+    // asi que entran con signo negativo y restan solas.
+    const ordinarios = this.groupByRules(incomeAccounts, [
+      { label: 'Servicios prestados',       match: ['4.1.01.02'] },
+      { label: 'Ventas netas',              match: ['4.1.01', '4.1.02'] },
+      { label: 'Otros ingresos operativos', match: ['4.1'] },
+    ]);
+    const costoVentas = this.groupByRules(expenseAccounts, [
+      { label: 'Costo de ventas',              match: ['5.1.01', '5.1.02'] },
+      { label: 'Costo de servicios prestados', match: ['5.1'] },
+    ]);
+    const gastosOperativos = this.groupByRules(expenseAccounts, [
+      { label: 'Gastos de administración', match: ['5.2.01', '5.2.03', '6'] },
+      { label: 'Gastos de ventas',         match: ['5.2.02'] },
+      { label: 'Otros gastos operativos',  match: ['5.2'] },
+    ]);
+    const impuestos = this.groupByRules(expenseAccounts, [
+      { label: 'Impuesto sobre la renta', match: ['5.4'] },
+    ]);
+
+    // El bloque 4 recoge el sobrante, asi que sus catch-all tienen que correr
+    // sobre lo que NO se llevaron los bloques anteriores: si no, una cuenta
+    // de gasto operativo aparecería contada dos veces.
+    const noEs = (prefs: string[]) => (a: any) =>
+      !prefs.some(p => String(a.code ?? '').startsWith(p));
+    const otrosIngresosNeto = this.groupByRules(incomeAccounts.filter(noEs(['4.1'])), [
+      { label: 'Ingresos financieros',         match: ['4.2.01.01'] },
+      { label: 'Otros ingresos no operativos', match: [''] },
+    ]);
+    const otrosGastosNeto = this.groupByRules(
+      expenseAccounts.filter(noEs(['5.1', '5.2', '5.4', '6'])), [
+      { label: 'Gastos financieros',         match: ['5.3'] },
+      { label: 'Otros gastos no operativos', match: [''] },
+    ]);
+
+    const totalOrdinarios  = this.sumGroups(ordinarios);
+    const totalCosto       = this.sumGroups(costoVentas);
+    const utilidadBruta    = totalOrdinarios.minus(totalCosto);
+    const totalOperativos  = this.sumGroups(gastosOperativos);
+    const utilidadOperativa = utilidadBruta.minus(totalOperativos);
+    const totalOtrosIng    = this.sumGroups(otrosIngresosNeto);
+    const totalOtrosGas    = this.sumGroups(otrosGastosNeto);
+    const utilidadAntesImp = utilidadOperativa.plus(totalOtrosIng).minus(totalOtrosGas);
+    const totalImpuestos   = this.sumGroups(impuestos);
+    const utilidadNeta     = utilidadAntesImp.minus(totalImpuestos);
+
+    const sinCentavos = (g: any) => ({ label: g.label, accounts: g.accounts, total: g.total });
+
     return {
       reportType:  'INCOME_STATEMENT',
+      // Presentacion escalonada — es la que dibuja la pantalla y el PDF.
+      structured: {
+        bloques: [
+          { numero: 1, titulo: 'Ingresos de actividades ordinarias', signo: '+',
+            grupos: ordinarios.map(sinCentavos),
+            resultado: { label: 'TOTAL INGRESOS', value: totalOrdinarios.toFixed(2) } },
+          { numero: 2, titulo: 'Costo de ventas o prestación de servicios', signo: '-',
+            grupos: costoVentas.map(sinCentavos),
+            resultado: { label: 'UTILIDAD BRUTA', value: utilidadBruta.toFixed(2) } },
+          { numero: 3, titulo: 'Gastos operativos', signo: '-',
+            grupos: gastosOperativos.map(sinCentavos),
+            resultado: { label: 'UTILIDAD OPERATIVA', value: utilidadOperativa.toFixed(2) } },
+          { numero: 4, titulo: 'Otros ingresos y gastos', signo: '+/-',
+            grupos: [
+              ...otrosIngresosNeto.map(sinCentavos),
+              ...otrosGastosNeto.map((g: any) => ({ ...sinCentavos(g), negativo: true })),
+            ],
+            resultado: { label: 'UTILIDAD ANTES DE IMPUESTOS', value: utilidadAntesImp.toFixed(2) } },
+          { numero: 5, titulo: 'Impuestos', signo: '-',
+            grupos: impuestos.map((g: any) => ({ ...sinCentavos(g), negativo: true })),
+            resultado: { label: 'UTILIDAD NETA DEL PERÍODO', value: utilidadNeta.toFixed(2) } },
+        ],
+        resultadoFinal: {
+          value:     utilidadNeta.toFixed(2),
+          esUtilidad: utilidadNeta.greaterThanOrEqualTo(0),
+          etiqueta:  utilidadNeta.greaterThanOrEqualTo(0) ? 'UTILIDAD' : 'PÉRDIDA',
+        },
+        // Los escalones tienen que dar lo mismo que ingresos - gastos. Si esto
+        // dijera false habria una cuenta escapandose de la particion.
+        cuadra: utilidadNeta.minus(netIncome).abs().lessThanOrEqualTo(new Decimal('0.01')),
+      },
       company:     companyInfo,
       period:      period ?? { startDate, endDate },
       generatedAt: new Date(),

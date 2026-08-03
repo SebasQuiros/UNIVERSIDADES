@@ -25,6 +25,8 @@ type NormalBalance = 'DEBIT' | 'CREDIT';
 interface Account {
   id: string;
   code: string;
+  /** Código del plan del curso ("103", "400"). Solo se muestra; no se opera con él. */
+  altCode?: string | null;
   name: string;
   type: AccountType;
   normalBalance: NormalBalance;
@@ -240,6 +242,8 @@ export function CatalogoCuentasView() {
     );
   }
 
+  // Si nadie cargó el plan del profesor, la columna sobra y solo estorba.
+  const hayCodigosProfesor = accounts.some((a) => !!a.altCode);
   const detailCount = accounts.filter((a) => !a.isHeader).length;
   const headerCount = accounts.filter((a) => a.isHeader).length;
 
@@ -249,7 +253,9 @@ export function CatalogoCuentasView() {
   const q = query.trim().toLowerCase();
   const visibles = !q ? accounts : (() => {
     const hits = accounts.filter((a) =>
-      a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q));
+      a.code.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)
+      // También por el código del profesor: es el que el estudiante tiene a mano.
+      || (a.altCode ?? '').toLowerCase().includes(q));
     const keep = new Set<string>();
     hits.forEach((h) => {
       keep.add(h.id);
@@ -299,6 +305,12 @@ export function CatalogoCuentasView() {
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-wider text-gray-500 bg-gray-50 border-b border-gray-100">
                   <th className="px-4 py-2.5 font-semibold w-40">Código</th>
+                  {/* Solo aparece si esta empresa tiene el plan del curso cargado. */}
+                  {hayCodigosProfesor && (
+                    <th className="px-4 py-2.5 font-semibold w-24" title="Numeración del plan del curso">
+                      Cód. curso
+                    </th>
+                  )}
                   <th className="px-4 py-2.5 font-semibold">Cuenta</th>
                   <th className="px-4 py-2.5 font-semibold w-32">Tipo</th>
                   <th className="px-4 py-2.5 font-semibold w-32">Naturaleza</th>
@@ -306,7 +318,7 @@ export function CatalogoCuentasView() {
               </thead>
               <tbody>
                 {visibles.length === 0 && (
-                  <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-gray-500">
+                  <tr><td colSpan={hayCodigosProfesor ? 5 : 4} className="px-4 py-10 text-center text-sm text-gray-500">
                     Sin resultados para “{query}”.
                   </td></tr>
                 )}
@@ -326,6 +338,15 @@ export function CatalogoCuentasView() {
                       <td className="px-4 py-2.5 font-mono tabular-nums text-xs text-gray-500 whitespace-nowrap">
                         {acc.code}
                       </td>
+                      {hayCodigosProfesor && (
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          {acc.altCode && (
+                            <span className="rounded bg-indigo-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-indigo-700">
+                              {acc.altCode}
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-4 py-2.5">
                         <span
                           style={{ paddingLeft: indent }}

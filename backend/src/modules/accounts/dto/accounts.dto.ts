@@ -38,6 +38,13 @@ export class CreateAccountDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  // Codigo del plan del profesor ("103", "400"). Solo informativo: el motor
+  // contable resuelve por `code`.
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  altCode?: string;
 }
 
 export class UpdateAccountDto {
@@ -50,4 +57,10 @@ export class UpdateAccountDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  // Cadena vacia = borrar el codigo del profesor de esta cuenta.
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  altCode?: string;
 }

@@ -298,6 +298,15 @@ const CHART: Array<{
   { code:'5.2.02.12',  name:'Gastos por Patentes Municipales - Ventas', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.02', isHeader:false },
   { code:'5.2.02.13',  name:'Gasto por Depreciacion Mobiliario y Equipo - Ventas', type:'EXPENSE', normal:'DEBIT', level:4, parent:'5.2.02', isHeader:false },
   { code:'5.2.02.14',  name:'Gastos por Incobrables - Ventas', type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'5.2.02',  isHeader:false },
+
+  // ── 5.4 IMPUESTO SOBRE LA RENTA ──────────────────────────────────────────
+  // El Estado de Resultados escalonado lo presenta DESPUES de la utilidad
+  // antes de impuestos, en su propio renglon. Existia el pasivo (2.1.02.04
+  // Impuesto Renta por Pagar) pero no el gasto contra el cual asentarlo, asi
+  // que el ultimo escalon del estado no se podia registrar.
+  { code:'5.4',        name:'Impuesto sobre la Renta',         type:'EXPENSE',   normal:'DEBIT',  level:2, parent:'5',       isHeader:true  },
+  { code:'5.4.01',     name:'Impuesto sobre la Renta',         type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'5.4',     isHeader:true  },
+  { code:'5.4.01.01',  name:'Gasto por Impuesto sobre la Renta', type:'EXPENSE', normal:'DEBIT',  level:4, parent:'5.4.01',  isHeader:false },
 ];
 
 @Injectable()
@@ -367,6 +376,7 @@ export class AccountsService {
         level,
         isHeader:      dto.isHeader ?? (level < 4),
         description:   dto.description,
+        altCode:       dto.altCode?.trim() || null,
         isActive:      true,
       },
     });
@@ -381,8 +391,54 @@ export class AccountsService {
 
     return this.prisma.account.update({
       where: { id: accountId },
-      data:  { name: dto.name ?? account.name, description: dto.description },
+      data: {
+        name:        dto.name ?? account.name,
+        description: dto.description,
+        // `undefined` = no lo tocamos; cadena vacia = el profesor lo quita.
+        ...(dto.altCode === undefined ? {} : { altCode: dto.altCode.trim() || null }),
+      },
     });
+  }
+
+  // ── Codigos del profesor, en lote ─────────────────────────────
+  //
+  // Recibe { "1.1.01.04": "103", "1.1.03.01": "110", ... }: codigo del sistema
+  // → codigo del plan del curso. Devuelve cuales no existen en la empresa en
+  // vez de fallar entera, porque un plan suele traer cuentas que esta empresa
+  // no usa. Un valor vacio borra el codigo alterno de esa cuenta.
+  async setAltCodes(companyId: string, mapping: Record<string, string>, userId?: string) {
+    const codes = Object.keys(mapping ?? {}).map(c => c.trim()).filter(Boolean);
+    if (codes.length === 0) {
+      throw new BadRequestException('No se recibio ningun codigo.');
+    }
+
+    const existing = await this.prisma.account.findMany({
+      where:  { companyId, code: { in: codes } },
+      select: { id: true, code: true },
+    });
+    const byCode = new Map(existing.map(a => [a.code, a.id]));
+
+    let updated = 0;
+    const noEncontradas: string[] = [];
+    for (const code of codes) {
+      const id = byCode.get(code);
+      if (!id) { noEncontradas.push(code); continue; }
+      await this.prisma.account.update({
+        where: { id },
+        data:  { altCode: String(mapping[code] ?? '').trim() || null },
+      });
+      updated++;
+    }
+
+    if (userId) {
+      void this.activityLog.log({
+        userId, companyId,
+        action: 'ACCOUNT_ALT_CODES_SET', entity: 'Account',
+        details: { actualizadas: updated, noEncontradas: noEncontradas.length },
+      });
+    }
+
+    return { updated, notFound: noEncontradas };
   }
 
   // ── Seed 50-account standard chart ───────────────────────────
@@ -448,6 +504,9 @@ export class AccountsService {
     const iName = col('nombre', 'descripcion', 'name');
     const iType = col('tipo', 'type', 'clase');
     const iNat  = col('naturaleza', 'saldo', 'normal', 'naturalezasaldo');
+    // Columna opcional con la numeracion del plan del curso ("103", "400").
+    const iAlt  = col('codigoprofesor', 'codigo profesor', 'codigo alterno',
+                      'codigoalterno', 'codigo curso', 'codigocurso', 'altcode');
     if (iCode < 0 || iName < 0) {
       throw new BadRequestException('Faltan columnas obligatorias: "codigo" y "nombre".');
     }
@@ -472,7 +531,7 @@ export class AccountsService {
     };
 
     // Parsear filas → cuentas normalizadas
-    type Parsed = { code: string; name: string; type: AccountType; normal: NormalBalance; level: number; parent: string | null };
+    type Parsed = { code: string; name: string; type: AccountType; normal: NormalBalance; level: number; parent: string | null; alt: string | null };
     const parsed: Parsed[] = [];
     const errors: string[] = [];
     const seenCodes = new Set<string>();
@@ -490,7 +549,8 @@ export class AccountsService {
       const segs = code.split('.').filter(Boolean);
       const level = Math.min(segs.length, 4);
       const parent = segs.length > 1 ? segs.slice(0, -1).join('.') : null;
-      parsed.push({ code, name: name.slice(0, 150), type, normal, level, parent });
+      const alt = iAlt >= 0 ? String(row[iAlt] ?? '').trim().slice(0, 20) : '';
+      parsed.push({ code, name: name.slice(0, 150), type, normal, level, parent, alt: alt || null });
     }
     if (parsed.length === 0) {
       throw new BadRequestException(`No se importó ninguna cuenta válida. ${errors.slice(0, 3).join(' ')}`);
@@ -510,9 +570,19 @@ export class AccountsService {
 
     // Crear por niveles (padres primero) para resolver parentId por código.
     parsed.sort((a, b) => a.level - b.level || a.code.localeCompare(b.code));
-    let created = 0, skipped = 0;
+    let created = 0, skipped = 0, altUpdated = 0;
     for (const p of parsed) {
-      if (existingCodes.has(p.code)) { skipped++; continue; }
+      if (existingCodes.has(p.code)) {
+        // La cuenta ya existe. Si el archivo trae codigo del profesor, ese
+        // dato SI es nuevo: se aplica en vez de descartar la fila entera.
+        if (p.alt && codeToId[p.code]) {
+          await this.prisma.account.update({
+            where: { id: codeToId[p.code] }, data: { altCode: p.alt },
+          }).then(() => { altUpdated++; }).catch(() => {});
+        }
+        skipped++;
+        continue;
+      }
       const parentId = p.parent ? (codeToId[p.parent] ?? null) : null;
       try {
         const acc = await this.prisma.account.create({
@@ -520,6 +590,7 @@ export class AccountsService {
             companyId, code: p.code, name: p.name, type: p.type,
             normalBalance: p.normal, level: p.level, parentId,
             isHeader: isHeaderOf(p.code) || p.level < 4,
+            altCode: p.alt,
             isActive: true,
           },
         });
@@ -546,11 +617,11 @@ export class AccountsService {
         details: {
           archivo: originalName || 'sin nombre',
           creadas: created, omitidas: skipped, filas: parsed.length,
-          errores: errors.length,
+          errores: errors.length, codigosProfesor: altUpdated,
         },
       });
     }
 
-    return { created, skipped, total: parsed.length, errors: errors.slice(0, 20) };
+    return { created, skipped, altUpdated, total: parsed.length, errors: errors.slice(0, 20) };
   }
 }
