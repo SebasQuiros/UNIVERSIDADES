@@ -448,6 +448,35 @@ export class AccountsReceivableService {
     const cashAccountCode = method === 'CASH' ? '1.1.01.01' : '1.1.02.01';
 
     return this.prisma.$transaction(async (tx) => {
+      // 2.5 RESERVAR el saldo de forma atómica, antes de registrar nada.
+      //
+      // Las validaciones de arriba leyeron `balanceDue` FUERA de la
+      // transacción. Con dos integrantes cobrando a la vez —o un doble clic—
+      // las dos lecturas ven el mismo saldo, las dos validan y las dos
+      // cobran. Medido: 4 cobros simultáneos de una factura de 11.300
+      // metieron 45.200 a caja. Y la partida doble seguía cuadrando, porque
+      // ambos lados se asentaron 4 veces: no salta ninguna alarma.
+      //
+      // El `where` con `balanceDue: { gte: monto }` es la reserva: la primera
+      // lo descuenta y las demás ya no encuentran saldo suficiente.
+      const reservado = await tx.invoice.updateMany({
+        where: {
+          id: dto.invoiceId,
+          companyId,
+          balanceDue: { gte: payAmount },
+        },
+        data: {
+          balanceDue: { decrement: payAmount },
+          paidAmount: { increment: payAmount },
+        },
+      });
+      if (reservado.count === 0) {
+        throw new BadRequestException(
+          `El monto del cobro (${payAmount.toFixed(2)}) supera el saldo pendiente. ` +
+          'Puede que alguien de tu equipo ya lo haya registrado: actualizá la pantalla.',
+        );
+      }
+
       // 3. Create ArPayment record
       const arPayment = await tx.arPayment.create({
         data: {
@@ -461,20 +490,15 @@ export class AccountsReceivableService {
         },
       });
 
-      // 4. Update invoice paid amount and balance
-      const newPaid    = new Decimal(invoice.paidAmount.toString()).plus(payAmount);
-      const newBalance = balanceDue.minus(payAmount);
-      const newStatus  = newBalance.lessThanOrEqualTo(new Decimal('0.01'))
-        ? 'ACCEPTED'  // fully paid (keep ACCEPTED status but balanceDue = 0)
-        : invoice.status;
-
-      await tx.invoice.update({
-        where: { id: dto.invoiceId },
-        data: {
-          paidAmount: newPaid,
-          balanceDue: newBalance.lessThan(0) ? new Decimal(0) : newBalance,
-        },
+      // 4. El saldo YA quedó descontado en la reserva de arriba, de forma
+      //    atómica. Volver a escribirlo acá con el valor leído antes de la
+      //    transacción sería reintroducir la misma carrera que se acaba de
+      //    cerrar: la última en escribir pisaría a las demás.
+      const trasCobro = await tx.invoice.findUnique({
+        where:  { id: dto.invoiceId },
+        select: { balanceDue: true },
       });
+      const newBalance = new Decimal((trasCobro?.balanceDue ?? 0).toString());
 
       // 5. Asiento contable + actualización de AR record vía BusinessEvents
       //    (respeta accountingMode del ejercicio, mantiene AR table sync)

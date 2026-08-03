@@ -435,6 +435,29 @@ export class InvoicesService {
     const pdfPath  = path.join(pdfDir, `${filename}.pdf`);
     const xmlPath  = path.join(xmlDir, `${filename}.xml`);
 
+    // ── STEP 9.5: Reservar la factura ANTES de tocar nada ──────────────
+    //
+    // El chequeo del STEP 0 lee el estado y decide, pero entre esa lectura y
+    // la escritura final hay todo el trabajo de arriba. Dos integrantes del
+    // mismo equipo emitiendo a la vez —o un doble clic— pasaban los dos el
+    // chequeo y ejecutaban los dos: medido, 5 emisiones simultáneas
+    // descontaron el inventario 3 VECES (9 unidades en vez de 3) y dejaron 3
+    // movimientos de venta. El asiento se salvaba por la guarda anti-duplicados
+    // del diario, pero el inventario no tenía quien lo protegiera.
+    //
+    // `updateMany` con el estado en el `where` es atómico: la primera lo mueve
+    // a ISSUED y las demás no encuentran nada que actualizar. Es el mismo
+    // patrón que ya usa aprovisionamiento para sus transiciones.
+    const reservada = await this.prisma.invoice.updateMany({
+      where: { id: invoiceId, companyId, status: 'DRAFT' },
+      data:  { status: 'ISSUED' },
+    });
+    if (reservada.count === 0) {
+      throw new BadRequestException(
+        'Esta factura ya se está emitiendo o fue emitida. Actualizá la pantalla para ver su estado.',
+      );
+    }
+
     // ── STEP 10: Transaction — accounting + inventory + update invoice ─
     let committed = false;
     try {
@@ -687,6 +710,17 @@ export class InvoicesService {
       if (!committed) {
         try { fs.unlinkSync(pdfPath); } catch {}
         try { fs.unlinkSync(xmlPath); } catch {}
+
+        // Devolver la reserva: si algo falló después de marcarla ISSUED, la
+        // factura quedaría trabada —ni emitida de verdad ni editable— y el
+        // estudiante no podría reintentar. Solo se revierte si sigue sin
+        // clave, o sea si nunca llegó a emitirse de verdad.
+        try {
+          await this.prisma.invoice.updateMany({
+            where: { id: invoiceId, companyId, status: 'ISSUED', clave: null },
+            data:  { status: 'DRAFT' },
+          });
+        } catch { /* si esto falla, el error original manda */ }
       }
       throw error;
     }
