@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto, UpdateSupplierDto } from './dto/supplier.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
@@ -12,6 +12,16 @@ export class SuppliersController {
   @Get()
   findAll(@Param('companyId') companyId: string) {
     return this.svc.findAll(companyId);
+  }
+
+  /** Ficha del proveedor: datos, historial de compras, órdenes y pagos. */
+  @Get(':id/resumen')
+  resumen(
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Query('anio') anio?: string,
+  ) {
+    return this.svc.resumen(companyId, id, anio ? Number(anio) : undefined);
   }
 
   @Post()

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { ClienteDetalle } from '@/components/modulo/ClienteDetalle';
+import { ProveedorDetalle } from '@/components/modulo/ProveedorDetalle';
+import { CotizacionDetalle } from '@/components/modulo/CotizacionDetalle';
 import { formatDate, getErrorMessage, esc } from '@/lib/utils';
 import { exportToExcel } from '@/lib/excel';
 import { Button } from '@/components/ui/Button';
@@ -159,6 +161,7 @@ export interface LedgerMovement {
 export interface Supplier {
   id: string; name: string; email: string | null; identification: string | null; isActive: boolean;
   totalPurchased?: number; orderCount?: number;
+  phone?: string | null; address?: string | null; createdAt?: string;
 }
 export interface ValidationCheck { field: string; status: 'ok' | 'missing' | 'invalid' | 'warning'; message: string; }
 export interface ValidationResult { isValid: boolean; checks: ValidationCheck[]; }
@@ -623,6 +626,8 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', identification: '', idType: '02', phone: '', address: '' });
   const [query, setQuery] = useState('');
+  // Proveedor abierto en la ficha lateral (null = ninguno).
+  const [abierto, setAbierto] = useState<Supplier | null>(null);
 
   const load = useCallback(() => {
     api.get<Supplier[]>(`/api/v1/companies/${companyId}/suppliers`)
@@ -740,6 +745,9 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
           />
         </div>
       ) : (
+        <div className={abierto
+          ? 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 items-start'
+          : ''}>
         <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
           {/* ── Barra de herramientas: buscador client-side ── */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
@@ -774,7 +782,12 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filtered.map((s) => (
-                    <tr key={s.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                    <tr key={s.id}
+                      onClick={() => setAbierto(s)}
+                      className={`cursor-pointer transition-colors ${
+                        abierto?.id === s.id
+                          ? 'bg-amber-50/70 ring-1 ring-inset ring-amber-200'
+                          : 'odd:bg-white even:bg-gray-50/40 hover:bg-amber-50/40'}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
@@ -799,6 +812,17 @@ export function SuppliersTab({ companyId, readonly }: { companyId: string; reado
               </table>
             </div>
           )}
+        </div>
+
+        {abierto && (
+          <ProveedorDetalle
+            companyId={companyId}
+            proveedor={abierto}
+            readonly={readonly}
+            onClose={() => setAbierto(null)}
+            onSaved={load}
+          />
+        )}
         </div>
       )}
     </div>
@@ -4903,6 +4927,8 @@ export function QuotesTab({ companyId, readonly, attemptId }: { companyId: strin
   }
 
   const clientNameOf = (q: Quote) => q.clientName ?? q.client?.name ?? '—';
+  // Cotización abierta en la ficha lateral (null = ninguna).
+  const [abierta, setAbierta] = useState<Quote | null>(null);
   const numberOf = (q: Quote) => q.consecutiveNumber ?? q.number ?? q.id.slice(0, 8);
 
   const draftCount = useMemo(() => quotes.filter((q) => q.status === 'DRAFT').length, [quotes]);
@@ -5037,6 +5063,9 @@ export function QuotesTab({ companyId, readonly, attemptId }: { companyId: strin
           />
         </div>
       ) : (
+        <div className={abierta
+          ? 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 items-start'
+          : ''}>
         <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
@@ -5069,7 +5098,12 @@ export function QuotesTab({ companyId, readonly, attemptId }: { companyId: strin
                 {filtered.map((q) => {
                   const badge = QUOTE_STATUS_BADGE[q.status] ?? { variant: 'slate' as const, label: q.status };
                   return (
-                    <tr key={q.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                    <tr key={q.id}
+                      onClick={() => setAbierta(q)}
+                      className={`cursor-pointer transition-colors ${
+                        abierta?.id === q.id
+                          ? 'bg-blue-50/70 ring-1 ring-inset ring-blue-200'
+                          : 'odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40'}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
@@ -5089,7 +5123,9 @@ export function QuotesTab({ companyId, readonly, attemptId }: { companyId: strin
                           {badge.label}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3">
+                      {/* Los botones de acción no deben abrir la ficha: el clic
+                          se detiene acá antes de llegar a la fila. */}
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1 justify-end">
                           {!readonly && q.status === 'DRAFT' && (
                             <Button size="sm" variant="secondary" onClick={() => handleSend(q.id)} loading={sendingId === q.id}>
@@ -5109,6 +5145,15 @@ export function QuotesTab({ companyId, readonly, attemptId }: { companyId: strin
               </tbody>
             </table>
           </div>
+        </div>
+
+        {abierta && (
+          <CotizacionDetalle
+            companyId={companyId}
+            cotizacion={abierta}
+            onClose={() => setAbierta(null)}
+          />
+        )}
         </div>
       )}
     </div>

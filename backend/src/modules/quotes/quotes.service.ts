@@ -83,11 +83,15 @@ export class QuotesService {
   // ════════════════════════════════════════════════════════════════
 
   async list(companyId: string) {
-    return this.prisma.quote.findMany({
+    // El cliente viene incluido a proposito: la lista lo muestra en su propia
+    // columna y sin esto salia un guion en todas las filas — la cotizacion SI
+    // tiene cliente, solo que la consulta no lo traia.
+    const quotes = await this.prisma.quote.findMany({
       where:   { companyId },
-      include: { lines: true },
+      include: { lines: true, client: { select: { id: true, name: true, identification: true } } },
       orderBy: { createdAt: 'desc' },
     });
+    return quotes.map(q => ({ ...q, clientName: q.client?.name ?? null }));
   }
 
   async get(companyId: string, id: string) {

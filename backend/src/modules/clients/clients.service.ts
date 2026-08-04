@@ -83,10 +83,15 @@ export class ClientsService {
         select: { issueDate: true },
         orderBy: { issueDate: 'desc' },
       }),
-      this.prisma.payment.findMany({
-        where:   { companyId, clientId },
-        select:  { id: true, amount: true, paidAt: true, reference: true, method: true, status: true },
-        orderBy: { paidAt: 'desc' },
+      // Los cobros del módulo de Cuentas por Cobrar viven en ArPayment y
+      // cuelgan de la FACTURA, no del cliente. (Existe además una tabla
+      // Payment ligada al cliente, de un flujo anterior; mirar ahí devolvía
+      // cero cobros aunque la factura estuviera cobrada.)
+      this.prisma.arPayment.findMany({
+        where:   { companyId, invoice: { clientId } },
+        select:  { id: true, amount: true, paymentDate: true, reference: true,
+                   method: true, invoice: { select: { consecutiveNumber: true } } },
+        orderBy: { paymentDate: 'desc' },
         take: 10,
       }),
     ]);

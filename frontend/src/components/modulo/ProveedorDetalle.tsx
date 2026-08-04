@@ -1,15 +1,15 @@
 'use client';
 
 /**
- * Ficha de cliente.
+ * Ficha de proveedor.
  *
- * Se abre al hacer clic en una fila de la lista. La lista responde "quién es
- * mi cliente"; esta ficha responde "cómo va la relación con él": cuánto le
- * facturé, cuánto me debe, cuánto crédito le queda, y qué documentos hay.
+ * El espejo de la ficha de cliente, del otro lado del negocio: cuánto le
+ * compré, cuánto le debo, qué órdenes tengo abiertas con él.
  *
- * Cuatro pestañas, en el orden en que se consultan: Resumen para la respuesta
- * corta, Información para los datos de contacto (y editarlos), Comercial para
- * las condiciones de crédito, Documentos para el detalle factura por factura.
+ * Un detalle del modelo que se nota acá: las órdenes de compra apuntan al
+ * proveedor por id, pero las facturas de compra guardan el nombre y la cédula
+ * como texto. El backend arma el historial por los dos lados; si un proveedor
+ * se cargó sin identificación, sus facturas se encuentran por nombre.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -19,12 +19,11 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import toast from 'react-hot-toast';
-import { X, Pencil, Mail, Phone, MapPin, CreditCard, FileText, Receipt, Check } from 'lucide-react';
+import { X, Pencil, Mail, Phone, MapPin, CreditCard, FileText, Banknote, ShoppingCart, Check } from 'lucide-react';
 
-export interface ClienteLista {
-  id: string; name: string; email: string | null; identification: string | null;
-  phone?: string | null; address?: string | null; idType?: string;
-  creditDays?: number; creditLimit?: number | string; isActive: boolean; createdAt?: string;
+export interface ProveedorLista {
+  id: string; name: string; email?: string | null; identification?: string | null;
+  phone?: string | null; address?: string | null; isActive: boolean; createdAt?: string;
 }
 
 const crc = (v: any) =>
@@ -34,54 +33,52 @@ const crc0 = (v: any) =>
 const fecha = (d: any) =>
   d ? new Date(d).toLocaleDateString('es-CR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
-const TIPOS_ID: Record<string, string> = {
-  '01': 'Cédula física', '02': 'Cédula jurídica', '03': 'DIMEX', '04': 'NITE',
+const ESTADO_ORDEN: Record<string, { texto: string; clase: string }> = {
+  DRAFT:     { texto: 'Borrador',  clase: 'bg-gray-100 text-gray-600 ring-gray-200' },
+  ISSUED:    { texto: 'Emitida',   clase: 'bg-blue-50 text-blue-700 ring-blue-200' },
+  RECEIVED:  { texto: 'Recibida',  clase: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  INVOICED:  { texto: 'Facturada', clase: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  CANCELLED: { texto: 'Anulada',   clase: 'bg-rose-50 text-rose-700 ring-rose-200' },
 };
 
 type Pestana = 'resumen' | 'informacion' | 'comercial' | 'documentos';
 
-export function ClienteDetalle({
-  companyId, cliente, onClose, onSaved, readonly,
+export function ProveedorDetalle({
+  companyId, proveedor, onClose, onSaved, readonly,
 }: {
   companyId: string;
-  cliente: ClienteLista;
+  proveedor: ProveedorLista;
   onClose: () => void;
   onSaved: () => void;
   readonly?: boolean;
 }) {
   const [pestana, setPestana] = useState<Pestana>('resumen');
-  const [datos, setDatos]     = useState<any>(null);
+  const [datos, setDatos] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({
-    name: cliente.name, email: cliente.email ?? '', phone: cliente.phone ?? '',
-    address: cliente.address ?? '', creditDays: String(cliente.creditDays ?? 0),
-    creditLimit: String(cliente.creditLimit ?? 0),
+    name: proveedor.name, email: proveedor.email ?? '', phone: proveedor.phone ?? '',
+    address: proveedor.address ?? '', identification: proveedor.identification ?? '',
   });
 
   const cargar = useCallback(() => {
     setCargando(true);
-    api.get(`/api/v1/companies/${companyId}/clients/${cliente.id}/resumen`)
+    api.get(`/api/v1/companies/${companyId}/suppliers/${proveedor.id}/resumen`)
       .then(({ data }) => {
         setDatos(data);
-        // El formulario se rearma con lo que dice el servidor, no con lo que
-        // traía la fila de la lista: la lista puede estar desactualizada.
-        const c = data.cliente ?? {};
+        const p = data.proveedor ?? {};
         setForm({
-          name: c.name ?? '', email: c.email ?? '', phone: c.phone ?? '',
-          address: c.address ?? '', creditDays: String(c.creditDays ?? 0),
-          creditLimit: String(c.creditLimit ?? 0),
+          name: p.name ?? '', email: p.email ?? '', phone: p.phone ?? '',
+          address: p.address ?? '', identification: p.identification ?? '',
         });
       })
-      .catch(() => toast.error('No se pudo cargar la ficha del cliente'))
+      .catch(() => toast.error('No se pudo cargar la ficha del proveedor'))
       .finally(() => setCargando(false));
-  }, [companyId, cliente.id]);
+  }, [companyId, proveedor.id]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  // Cerrar con Escape: el panel tapa la tabla y hay que poder salir sin buscar
-  // la X con el mouse.
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => { if (e.key === 'Escape' && !editando) onClose(); };
     window.addEventListener('keydown', alTeclear);
@@ -93,18 +90,14 @@ export function ClienteDetalle({
     if (!form.name.trim()) { toast.error('El nombre no puede quedar vacío'); return; }
     setGuardando(true);
     try {
-      await api.patch(`/api/v1/companies/${companyId}/clients/${cliente.id}`, {
+      await api.patch(`/api/v1/companies/${companyId}/suppliers/${proveedor.id}`, {
         name:    form.name.trim(),
-        // Cadena vacía = borrar el dato. Mandar "" tal cual dejaria el campo
-        // en blanco en vez de nulo, y despues "sin correo" no se distingue
-        // de "correo vacio".
         email:   form.email.trim()   || null,
         phone:   form.phone.trim()   || null,
         address: form.address.trim() || null,
-        creditDays:  Number(form.creditDays)  || 0,
-        creditLimit: Number(form.creditLimit) || 0,
+        identification: form.identification.trim() || null,
       });
-      toast.success('Cliente actualizado');
+      toast.success('Proveedor actualizado');
       setEditando(false);
       cargar();
       onSaved();
@@ -112,7 +105,7 @@ export function ClienteDetalle({
     finally { setGuardando(false); }
   }
 
-  const c = datos?.cliente ?? cliente;
+  const p = datos?.proveedor ?? proveedor;
   const com = datos?.comercial;
 
   const Dato = ({ icono: Icono, etiqueta, valor }: { icono: any; etiqueta: string; valor: any }) => (
@@ -134,22 +127,21 @@ export function ClienteDetalle({
 
   return (
     <aside className="flex h-full w-full flex-col overflow-hidden rounded-card border border-gray-200/70 bg-white shadow-card">
-      {/* ── Cabecera ── */}
       <div className="flex items-start gap-3 border-b border-gray-100 px-5 py-4">
-        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-50 to-blue-100 text-lg font-bold text-blue-700 ring-1 ring-blue-200/60">
-          {c.name?.charAt(0).toUpperCase()}
+        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-50 to-amber-100 text-lg font-bold text-amber-700 ring-1 ring-amber-200/60">
+          {p.name?.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate text-base font-bold text-gray-900">{c.name}</h3>
+            <h3 className="truncate text-base font-bold text-gray-900">{p.name}</h3>
             <span className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${
-              c.isActive
+              p.isActive
                 ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                 : 'bg-gray-100 text-gray-500 ring-gray-200'}`}>
-              {c.isActive ? 'Activo' : 'Inactivo'}
+              {p.isActive ? 'Activo' : 'Inactivo'}
             </span>
           </div>
-          <p className="text-xs text-gray-400">Cliente desde {fecha(c.createdAt)}</p>
+          <p className="text-xs text-gray-400">Proveedor desde {fecha(p.createdAt)}</p>
         </div>
         <button onClick={onClose} aria-label="Cerrar ficha"
           className="rounded-lg p-1.5 text-gray-300 transition-colors hover:bg-gray-50 hover:text-gray-600">
@@ -157,7 +149,6 @@ export function ClienteDetalle({
         </button>
       </div>
 
-      {/* ── Pestañas ── */}
       <div className="flex gap-1 border-b border-gray-100 px-3">
         {([
           ['resumen', 'Resumen'], ['informacion', 'Información'],
@@ -183,51 +174,49 @@ export function ClienteDetalle({
                 <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Información general</p>
                 {!readonly && (
                   <button onClick={() => { setPestana('informacion'); setEditando(true); }}
-                    aria-label="Editar cliente"
+                    aria-label="Editar proveedor"
                     className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-700">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Dato icono={CreditCard} etiqueta="Identificación" valor={c.identification} />
-                <Dato icono={Mail}   etiqueta="Correo"         valor={c.email} />
-                <Dato icono={Phone}  etiqueta="Teléfono"       valor={c.phone} />
-                <Dato icono={MapPin} etiqueta="Dirección"      valor={c.address} />
+                <Dato icono={CreditCard} etiqueta="Identificación" valor={p.identification} />
+                <Dato icono={Mail}       etiqueta="Correo"         valor={p.email} />
+                <Dato icono={Phone}      etiqueta="Teléfono"       valor={p.phone} />
+                <Dato icono={MapPin}     etiqueta="Dirección"      valor={p.address} />
               </div>
             </div>
 
             <div className="rounded-xl border border-gray-200/70 p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-500">
-                Resumen comercial
-              </p>
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-500">Resumen comercial</p>
               <div className="grid grid-cols-3 gap-4">
-                <Cifra etiqueta="Facturado" valor={crc0(com?.facturadoTotal)} />
-                <Cifra etiqueta="Cobrado"   valor={crc0(com?.cobradoTotal)} />
-                <Cifra etiqueta="Saldo pendiente" valor={crc0(com?.saldoPendiente)}
-                       tono={Number(com?.saldoPendiente) > 0 ? 'text-rose-700' : 'text-gray-900'} />
+                <Cifra etiqueta="Comprado" valor={crc0(com?.compradoTotal)} />
+                <Cifra etiqueta="Pagado"   valor={crc0(com?.pagadoTotal)} />
+                <Cifra etiqueta="Saldo por pagar" valor={crc0(com?.saldoPorPagar)}
+                       tono={Number(com?.saldoPorPagar) > 0 ? 'text-rose-700' : 'text-gray-900'} />
               </div>
               <div className="mt-4 grid grid-cols-3 gap-4">
-                <Cifra etiqueta="Documentos" valor={String(com?.documentos ?? 0)} />
-                <Cifra etiqueta="Días crédito" valor={`${com?.diasCredito ?? 0} días`} />
+                <Cifra etiqueta="Facturas" valor={String(com?.documentos ?? 0)} />
+                <Cifra etiqueta="Órdenes abiertas" valor={String(com?.ordenesPendientes ?? 0)} />
                 <Cifra etiqueta="Última compra" valor={fecha(com?.ultimaCompra)} />
               </div>
             </div>
 
-            {(datos?.documentos ?? []).length > 0 && (
+            {(datos?.facturas ?? []).length > 0 && (
               <div className="rounded-xl border border-gray-200/70 p-4">
                 <p className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-500">Actividad reciente</p>
                 <div className="space-y-2.5">
-                  {datos.documentos.slice(0, 4).map((d: any) => (
-                    <div key={d.id} className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                  {datos.facturas.slice(0, 4).map((f: any) => (
+                    <div key={f.id} className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
                         <FileText className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-gray-800">Factura {d.consecutiveNumber}</p>
-                        <p className="text-[11px] text-gray-400">{fecha(d.issueDate)}</p>
+                        <p className="truncate text-sm text-gray-800">Factura {f.invoiceNumber}</p>
+                        <p className="text-[11px] text-gray-400">{fecha(f.date)}</p>
                       </div>
-                      <span className="flex-shrink-0 font-mono text-sm tabular-nums text-gray-700">{crc(d.total)}</span>
+                      <span className="flex-shrink-0 font-mono text-sm tabular-nums text-gray-700">{crc(f.total)}</span>
                     </div>
                   ))}
                 </div>
@@ -239,19 +228,23 @@ export function ClienteDetalle({
             <form onSubmit={guardar} className="space-y-3">
               <Input label="Nombre *" value={form.name}
                      onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input label="Identificación" value={form.identification}
+                     onChange={(e) => setForm({ ...form, identification: e.target.value })} />
               <Input label="Correo" type="email" value={form.email}
                      onChange={(e) => setForm({ ...form, email: e.target.value })} />
               <Input label="Teléfono" value={form.phone}
                      onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               <Input label="Dirección" value={form.address}
                      onChange={(e) => setForm({ ...form, address: e.target.value })} />
-              {/* La identificación NO se edita: es la llave con la que se
-                  emitieron las facturas ya timbradas. Cambiarla dejaría los
-                  documentos existentes a nombre de otro. */}
-              <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-500">
-                La identificación ({c.identification}) no se puede cambiar: las facturas
-                ya emitidas se timbraron con ella.
-              </div>
+              {/* Las facturas de compra guardan la cédula como texto: cambiarla
+                  acá NO reescribe las que ya están registradas, y el historial
+                  se arma con ese dato. Se avisa en vez de dejar que sorprenda. */}
+              {(datos?.facturas ?? []).length > 0 && (
+                <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  Este proveedor tiene {datos.facturas.length} factura(s) registradas con la
+                  identificación actual. Si la cambiás, esas facturas dejan de aparecer en su historial.
+                </div>
+              )}
               <div className="flex gap-2 pt-1">
                 <Button type="button" variant="secondary" className="flex-1"
                         onClick={() => { setEditando(false); cargar(); }}>Cancelar</Button>
@@ -263,10 +256,10 @@ export function ClienteDetalle({
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
-                <Dato icono={CreditCard} etiqueta={TIPOS_ID[c.idType ?? '01'] ?? 'Identificación'} valor={c.identification} />
-                <Dato icono={Mail}   etiqueta="Correo"    valor={c.email} />
-                <Dato icono={Phone}  etiqueta="Teléfono"  valor={c.phone} />
-                <Dato icono={MapPin} etiqueta="Dirección" valor={c.address} />
+                <Dato icono={CreditCard} etiqueta="Identificación" valor={p.identification} />
+                <Dato icono={Mail}       etiqueta="Correo"    valor={p.email} />
+                <Dato icono={Phone}      etiqueta="Teléfono"  valor={p.phone} />
+                <Dato icono={MapPin}     etiqueta="Dirección" valor={p.address} />
               </div>
               {!readonly && (
                 <Button size="sm" variant="secondary" onClick={() => setEditando(true)}>
@@ -279,93 +272,94 @@ export function ClienteDetalle({
           <div className="space-y-4">
             <div className="rounded-xl border border-gray-200/70 p-4">
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-500">
-                Condiciones de crédito
+                Movimiento del año {com?.anio}
               </p>
-              <div className="grid grid-cols-2 gap-4">
-                <Cifra etiqueta="Días de crédito" valor={`${com?.diasCredito ?? 0} días`} />
-                <Cifra etiqueta="Límite de crédito"
-                       valor={Number(com?.limiteCredito) > 0 ? crc(com?.limiteCredito) : 'Sin límite'} />
-                <Cifra etiqueta="Saldo pendiente" valor={crc(com?.saldoPendiente)}
-                       tono={Number(com?.saldoPendiente) > 0 ? 'text-rose-700' : 'text-gray-900'} />
-                <Cifra etiqueta="Crédito disponible"
-                       valor={com?.creditoDisponible !== null && com?.creditoDisponible !== undefined
-                         ? crc(com.creditoDisponible) : 'Sin límite'}
-                       tono={com?.creditoDisponible !== null && Number(com?.creditoDisponible) === 0
-                         ? 'text-rose-700' : 'text-emerald-700'} />
+              <div className="grid grid-cols-3 gap-4">
+                <Cifra etiqueta="Comprado" valor={crc0(com?.compradoAnio)} />
+                <Cifra etiqueta="Pagado"   valor={crc0(com?.pagadoAnio)} />
+                <Cifra etiqueta="Facturas" valor={String(com?.documentosAnio ?? 0)} />
               </div>
             </div>
 
             <div className="rounded-xl border border-gray-200/70 p-4">
               <p className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-500">
-                Movimiento del año {com?.anio}
+                Órdenes de compra ({datos?.ordenes?.length ?? 0})
               </p>
-              <div className="grid grid-cols-3 gap-4">
-                <Cifra etiqueta="Facturado" valor={crc0(com?.facturadoAnio)} />
-                <Cifra etiqueta="Cobrado"   valor={crc0(com?.cobradoAnio)} />
-                <Cifra etiqueta="Documentos" valor={String(com?.documentosAnio ?? 0)} />
-              </div>
+              {(datos?.ordenes ?? []).length === 0 ? (
+                <p className="text-sm text-gray-400">Sin órdenes de compra con este proveedor.</p>
+              ) : (
+                <div className="space-y-2">
+                  {datos.ordenes.map((o: any) => {
+                    const e = ESTADO_ORDEN[o.status] ?? { texto: o.status, clase: 'bg-gray-100 text-gray-600 ring-gray-200' };
+                    return (
+                      <div key={o.id} className="flex items-center gap-3">
+                        <ShoppingCart className="h-4 w-4 flex-shrink-0 text-gray-300" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-mono text-xs text-gray-700">OC-{o.orderNumber}</p>
+                          <p className="text-[11px] text-gray-400">{fecha(o.issueDate)}</p>
+                        </div>
+                        <span className={`flex-shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${e.clase}`}>
+                          {e.texto}
+                        </span>
+                        <span className="flex-shrink-0 font-mono text-sm tabular-nums text-gray-900">{crc(o.total)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-
-            {!readonly && !editando && (
-              <Button size="sm" variant="secondary"
-                      onClick={() => { setPestana('informacion'); setEditando(true); }}>
-                <Pencil className="h-4 w-4" /> Cambiar condiciones
-              </Button>
-            )}
           </div>
         ) : (
           <div className="space-y-4">
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">
-                Facturas ({datos?.documentos?.length ?? 0})
+                Facturas de compra ({datos?.facturas?.length ?? 0})
               </p>
-              {(datos?.documentos ?? []).length === 0 ? (
+              {(datos?.facturas ?? []).length === 0 ? (
                 <p className="rounded-lg bg-gray-50 px-3 py-6 text-center text-sm text-gray-400">
-                  Todavía no se le ha facturado a este cliente.
+                  Todavía no hay compras registradas a este proveedor.
                 </p>
               ) : (
                 <div className="divide-y divide-gray-50 overflow-hidden rounded-xl border border-gray-200/70">
-                  {datos.documentos.map((d: any) => (
-                    <div key={d.id} className="flex items-center gap-3 px-3 py-2.5">
-                      <FileText className="h-4 w-4 flex-shrink-0 text-gray-300" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-mono text-xs text-gray-700">{d.consecutiveNumber}</p>
-                        <p className="text-[11px] text-gray-400">{fecha(d.issueDate)}</p>
+                  {datos.facturas.map((f: any) => {
+                    const saldo = Number(f.total) - Number(f.paidAmount ?? 0);
+                    return (
+                      <div key={f.id} className="flex items-center gap-3 px-3 py-2.5">
+                        <FileText className="h-4 w-4 flex-shrink-0 text-gray-300" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-mono text-xs text-gray-700">{f.invoiceNumber}</p>
+                          <p className="text-[11px] text-gray-400">{fecha(f.date)}</p>
+                        </div>
+                        <div className="flex-shrink-0 text-right">
+                          <p className="font-mono text-sm tabular-nums text-gray-900">{crc(f.total)}</p>
+                          {saldo > 0.01 && (
+                            <p className="font-mono text-[11px] tabular-nums text-rose-600">
+                              debo {crc(saldo)}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-shrink-0 text-right">
-                        <p className="font-mono text-sm tabular-nums text-gray-900">{crc(d.total)}</p>
-                        {Number(d.balanceDue) > 0 && (
-                          <p className="font-mono text-[11px] tabular-nums text-rose-600">
-                            debe {crc(d.balanceDue)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            {(datos?.cobros ?? []).length > 0 && (
+            {(datos?.pagos ?? []).length > 0 && (
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">
-                  Cobros recibidos ({datos.cobros.length})
+                  Pagos realizados ({datos.pagos.length})
                 </p>
                 <div className="divide-y divide-gray-50 overflow-hidden rounded-xl border border-gray-200/70">
-                  {datos.cobros.map((p: any) => (
-                    <div key={p.id} className="flex items-center gap-3 px-3 py-2.5">
-                      <Receipt className="h-4 w-4 flex-shrink-0 text-emerald-400" />
+                  {datos.pagos.map((g: any) => (
+                    <div key={g.id} className="flex items-center gap-3 px-3 py-2.5">
+                      <Banknote className="h-4 w-4 flex-shrink-0 text-emerald-400" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs text-gray-700">
-                          {p.reference || p.method}
-                          {p.invoice?.consecutiveNumber && (
-                            <span className="text-gray-400"> · factura {p.invoice.consecutiveNumber}</span>
-                          )}
-                        </p>
-                        <p className="text-[11px] text-gray-400">{fecha(p.paymentDate)}</p>
+                        <p className="truncate text-xs text-gray-700">{g.reference || g.method}</p>
+                        <p className="text-[11px] text-gray-400">{fecha(g.paymentDate)}</p>
                       </div>
                       <span className="flex-shrink-0 font-mono text-sm tabular-nums text-emerald-700">
-                        {crc(p.amount)}
+                        {crc(g.amount)}
                       </span>
                     </div>
                   ))}
