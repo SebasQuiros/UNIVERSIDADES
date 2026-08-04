@@ -790,69 +790,6 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
 
 
 
-// ─── AI Assistant (Feature 8) ─────────────────────────────────────────────────
-function AiAssistant({ activeTab, companyName }: { activeTab: string; companyName: string }) {
-  const [open, setOpen] = useState(false);
-  const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function handleAsk(e: React.FormEvent) {
-    e.preventDefault();
-    if (!question.trim()) return;
-    setLoading(true);
-    setAnswer('');
-    try {
-      const { data } = await api.post('/api/v1/ai/suggest', { question, tab: activeTab, companyName });
-      setAnswer(typeof data === 'string' ? data : (data as any).text ?? JSON.stringify(data));
-    } catch (err: any) {
-      const msg = err?.response?.data?.message ?? getErrorMessage(err);
-      setAnswer(msg.includes('ANTHROPIC_API_KEY') || msg.includes('no configurada') ? 'La IA no está configurada en este servidor.' : `Error: ${msg}`);
-    }
-    finally { setLoading(false); }
-  }
-
-  return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="cx-press cx-bounce fixed bottom-6 right-6 z-40 w-14 h-14 text-white rounded-full shadow-[0_10px_30px_rgba(27,46,110,0.35)] flex items-center justify-center transition-all bg-gradient-to-br from-blue-600 to-csq-mid hover:shadow-card-hover"
-        title="Asistente IA">
-        <MessageCircle className="w-6 h-6" />
-      </button>
-      {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 bg-white border border-gray-200/70 rounded-card shadow-card-hover flex flex-col overflow-hidden cx-pop">
-          <div className="flex items-center justify-between p-4 bg-gradient-to-br from-csq-mid to-csq-active text-white">
-            <div>
-              <p className="text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gold-500">Aprendizaje</p>
-              <p className="font-bold text-sm">Asistente Contable IA</p>
-            </div>
-            <button onClick={() => setOpen(false)} className="cx-press text-blue-200/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="p-4 flex-1">
-            {answer && (
-              <div className="mb-3 p-3 bg-gray-50 rounded-xl text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto cx-pop">{answer}</div>
-            )}
-            <form onSubmit={handleAsk} className="space-y-2">
-              <textarea
-                value={question}
-                onChange={e => setQuestion(e.target.value)}
-                placeholder="¿Tienes alguna pregunta contable?"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 resize-none transition-colors"
-                rows={3}
-                maxLength={500}
-              />
-              <Button type="submit" loading={loading} className="w-full cx-press">Preguntar</Button>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
 // ─── Company Setup ────────────────────────────────────────────────────────────
 function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: () => void }) {
   const [saving, setSaving] = useState(false);
@@ -1254,10 +1191,6 @@ export default function ExerciseWorkspacePage() {
         );
       })()}
 
-      {/* Feature 8: AI Assistant floating button */}
-      {company && attempt.status === 'IN_PROGRESS' && (
-        <AiAssistant activeTab={activeTab} companyName={company.name} />
-      )}
     </div>
     </ExamModeWrapper>
   );

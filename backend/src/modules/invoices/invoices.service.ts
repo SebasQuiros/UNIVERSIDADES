@@ -16,6 +16,7 @@ import { BusinessEventsService } from '../business/business-events.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { InterCompanyService } from '../inter-company/inter-company.service';
 import { ActivityLogService } from '../../common/activity/activity-log.service';
+import { DownloadsService } from '../downloads/downloads.service';
 import { AccountingModeResolver } from '../accounting/accounting-mode.resolver';
 import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
 import * as fs   from 'fs';
@@ -42,6 +43,8 @@ export class InvoicesService {
     private readonly interCompany:   InterCompanyService,
     // ── Bitácora de acciones ────────────────────────────────────
     private readonly activityLog:    ActivityLogService,
+    // ── Enlaces de descarga firmados ────────────────────────────
+    private readonly downloads:      DownloadsService,
   ) {}
 
   // ── List invoices (paginated) ─────────────────────────────────
@@ -69,7 +72,20 @@ export class InvoicesService {
       this.prisma.invoice.count({ where }),
     ]);
 
-    return { invoices, total, page, limit, pages: Math.ceil(total / limit) };
+    // Enlace de descarga firmado para el XML, solo en las facturas que ya lo
+    // tienen. Va en la lista a proposito: permite que el boton sea un
+    // `<a href download>` de verdad, con el clic del usuario, en vez de un
+    // Blob armado despues de un await — que es lo que hacia que el navegador
+    // marcara el .xml como "podria danar el dispositivo".
+    const conEnlace = invoices.map((f: any) => ({
+      ...f,
+      xmlUrl: f.xml && f.status !== 'DRAFT'
+        ? `/api/v1/descargas/xml?t=${this.downloads.firmar({
+            companyId, recursoId: f.id, tipo: 'factura-xml' })}`
+        : null,
+    }));
+
+    return { invoices: conEnlace, total, page, limit, pages: Math.ceil(total / limit) };
   }
 
   // ── Get one invoice ───────────────────────────────────────────

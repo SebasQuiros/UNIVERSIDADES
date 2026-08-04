@@ -40,6 +40,89 @@ export class ClientsService {
     return client;
   }
 
+  /**
+   * Ficha completa de un cliente: sus datos, su historial comercial y sus
+   * documentos.
+   *
+   * Todo lo agregado sale de UNA tanda de consultas en paralelo. Es la
+   * pantalla que se abre al hacer clic en un cliente de la lista, o sea la
+   * que más se va a abrir: si acá se encadenan consultas, se nota.
+   */
+  async resumen(companyId: string, clientId: string, anio?: number) {
+    const client = await this.findOne(companyId, clientId);
+
+    // Sin año explícito, el año en curso. El estudiante compara "este año"
+    // contra el total, que es como se lee un historial comercial.
+    const y = anio ?? new Date().getFullYear();
+    const desde = new Date(`${y}-01-01T00:00:00.000Z`);
+    const hasta = new Date(`${y}-12-31T23:59:59.999Z`);
+
+    // Solo cuentan las facturas EMITIDAS: un borrador no es una venta.
+    const emitidas = { companyId, clientId, status: { not: 'DRAFT' as any } };
+
+    const [agregado, delAnio, documentos, ultima, cobros] = await Promise.all([
+      this.prisma.invoice.aggregate({
+        where: emitidas,
+        _sum:  { total: true, paidAmount: true, balanceDue: true },
+        _count: true,
+      }),
+      this.prisma.invoice.aggregate({
+        where: { ...emitidas, issueDate: { gte: desde, lte: hasta } },
+        _sum:  { total: true, paidAmount: true },
+        _count: true,
+      }),
+      this.prisma.invoice.findMany({
+        where:  emitidas,
+        select: { id: true, consecutiveNumber: true, issueDate: true, total: true,
+                  balanceDue: true, status: true },
+        orderBy: { issueDate: 'desc' },
+        take: 20,
+      }),
+      this.prisma.invoice.findFirst({
+        where:  emitidas,
+        select: { issueDate: true },
+        orderBy: { issueDate: 'desc' },
+      }),
+      this.prisma.payment.findMany({
+        where:   { companyId, clientId },
+        select:  { id: true, amount: true, paidAt: true, reference: true, method: true, status: true },
+        orderBy: { paidAt: 'desc' },
+        take: 10,
+      }),
+    ]);
+
+    const n = (v: any) => Number(v ?? 0);
+    const facturado = n(agregado._sum.total);
+    const cobrado   = n(agregado._sum.paidAmount);
+
+    return {
+      cliente: client,
+      comercial: {
+        anio: y,
+        facturadoTotal:  facturado.toFixed(2),
+        cobradoTotal:    cobrado.toFixed(2),
+        // El saldo se toma del campo de la factura, no de facturado - cobrado:
+        // una nota de crédito baja el saldo sin ser un cobro, y restar daria
+        // una deuda que no existe.
+        saldoPendiente:  n(agregado._sum.balanceDue).toFixed(2),
+        documentos:      agregado._count,
+        facturadoAnio:   n(delAnio._sum.total).toFixed(2),
+        cobradoAnio:     n(delAnio._sum.paidAmount).toFixed(2),
+        documentosAnio:  delAnio._count,
+        ultimaCompra:    ultima?.issueDate ?? null,
+        diasCredito:     client.creditDays,
+        limiteCredito:   n(client.creditLimit).toFixed(2),
+        // Cuánto del límite ya está consumido: es el dato que decide si se le
+        // puede seguir vendiendo a crédito.
+        creditoDisponible: n(client.creditLimit) > 0
+          ? Math.max(0, n(client.creditLimit) - n(agregado._sum.balanceDue)).toFixed(2)
+          : null,
+      },
+      documentos,
+      cobros,
+    };
+  }
+
   async create(companyId: string, dto: CreateClientDto) {
     // Validate no duplicate identification within same company
     const existing = await this.prisma.client.findFirst({

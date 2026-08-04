@@ -8,7 +8,6 @@ import { TopBar } from '@/components/layout/TopBar';
 import { CommandPalette } from '@/components/layout/CommandPalette';
 import { AppShellSkeleton } from '@/components/layout/AppShellSkeleton';
 import { PageErrorBoundary } from '@/components/ui/ErrorBoundary';
-import AiAssistant from '@/components/ai/AiAssistant';
 
 export default function EstudianteLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -35,8 +34,6 @@ export default function EstudianteLayout({ children }: { children: React.ReactNo
           <PageErrorBoundary>{children}</PageErrorBoundary>
         </div>
       </main>
-      {/* Floating AI assistant — available on all student pages */}
-      <AiAssistant />
       {/* Buscador inteligente ⌘K */}
       <CommandPalette />
     </div>

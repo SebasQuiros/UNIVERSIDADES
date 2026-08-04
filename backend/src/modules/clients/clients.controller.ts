@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Body, Param, UseGuards, HttpCode, HttpStatus,
+  Body, Param, Query, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { CreateClientDto, UpdateClientDto } from './dto/clients.dto';
@@ -20,6 +20,16 @@ export class ClientsController {
   @Get(':id')
   findOne(@Param('companyId') companyId: string, @Param('id') id: string) {
     return this.svc.findOne(companyId, id);
+  }
+
+  /** Ficha del cliente: datos, resumen comercial, documentos y cobros. */
+  @Get(':id/resumen')
+  resumen(
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Query('anio') anio?: string,
+  ) {
+    return this.svc.resumen(companyId, id, anio ? Number(anio) : undefined);
   }
 
   @Post()

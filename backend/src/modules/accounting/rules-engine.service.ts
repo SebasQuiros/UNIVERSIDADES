@@ -62,6 +62,18 @@ export interface PurchaseInput {
   paymentType:       PaymentType;
   documentReference: string;
   counterpartyLabel: string;
+  /**
+   * Cuenta que recibe el débito.
+   *
+   * Solo una compra que de verdad entra al kardex debe debitar Inventario.
+   * Una compra de servicios, un recibo de electricidad o una compra agregada
+   * sin líneas de producto no crean existencias: debitarlas a Inventario
+   * infla el activo, esconde el gasto, y deja el kardex diciendo una cosa y
+   * el balance otra — con la partida doble cuadrando igual.
+   *
+   * Si no viene, se asume compra sin kardex y va a Compras (periódico).
+   */
+  debitAccountCode?: string;
 }
 
 export interface CollectionInput {
@@ -146,14 +158,16 @@ export class RulesEngineService {
 
   /**
    * Compra a contado:
-   *   D Inventario
+   *   D Inventario (si alimenta el kardex) o Compras
    *   D IVA crédito  (si hay)
    *   C Caja
    *
    * Compra a crédito:
-   *   D Inventario
+   *   D Inventario o Compras
    *   D IVA crédito
    *   C Cuentas por pagar
+   *
+   * Quién decide cuál de las dos: ver `debitAccountCode` en PurchaseInput.
    */
   forPurchase(input: PurchaseInput): JournalEntrySpec {
     const creditAccount = input.paymentType === 'CASH'
@@ -162,7 +176,7 @@ export class RulesEngineService {
 
     const lines: JournalLineSpec[] = [
       {
-        accountCode: ACCOUNT_CODES.INVENTORY,
+        accountCode: input.debitAccountCode ?? ACCOUNT_CODES.PURCHASES,
         debit:       input.subtotal,
         credit:      0,
         description: `Compra ${input.documentReference}`,

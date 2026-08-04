@@ -67,12 +67,14 @@ import { RecurringInvoicesModule }   from './modules/recurring-invoices/recurrin
 import { RecurringPaymentsModule }   from './modules/recurring-payments/recurring-payments.module';
 import { DeliveryNotesModule }       from './modules/delivery-notes/delivery-notes.module';
 import { RedisModule }               from './redis/redis.module';
+import { DownloadsModule }           from './modules/downloads/downloads.module';
 import { LoggerMiddleware }     from './common/middleware/logger.middleware';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     RedisModule,
+    DownloadsModule,
     // El cupo se cuenta por USUARIO (ver UserThrottlerGuard), no por IP: un
     // laboratorio entero sale por una sola IP pública y con el conteo por IP
     // la clase se bloqueaba sola. Las rutas públicas siguen contando por IP.

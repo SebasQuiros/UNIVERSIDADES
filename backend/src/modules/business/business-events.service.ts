@@ -78,6 +78,12 @@ export interface RecordPurchaseInput extends BaseEventInput {
   taxAmount:         number;
   total:             number;
   paymentType:       PaymentType;
+  /**
+   * Cuenta que recibe el débito de la compra. Solo se manda Inventario
+   * cuando la compra ENTRA al kardex; si no, la compra va contra Compras.
+   * Ver RulesEngine.forPurchase.
+   */
+  debitAccountCode?: string;
 }
 
 export interface RecordCollectionInput extends BaseEventInput {
@@ -280,6 +286,7 @@ export class BusinessEventsService {
       paymentType:       input.paymentType,
       documentReference: input.invoiceNumber,
       counterpartyLabel: input.supplierName,
+      debitAccountCode:  input.debitAccountCode,
     });
 
     return this._runEvent(

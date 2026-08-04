@@ -28,6 +28,9 @@ export const ACCOUNT_CODES = {
 
   // ── Gastos ──────────────────────────────────────────────────────
   COGS:                 '5.1.01.01', // Costo de mercadería vendida
+  // Compras que NO alimentan el kardex (servicios, gastos, compra agregada).
+  // Ver forPurchase: debitar Inventario en esos casos inventa existencias.
+  PURCHASES:            '5.1.02.01', // Compras (sistema periódico)
   INVENTORY_ADJUSTMENT_EXPENSE: '5.1.01.02', // Ajuste de inventario — merma (Fase 19)
   DEPRECIATION_EXPENSE: '5.2.01.05', // Gasto por depreciación
   WAGES_EXPENSE:        '6.1.01.01', // Sueldos y salarios

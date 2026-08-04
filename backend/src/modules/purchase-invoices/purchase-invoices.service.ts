@@ -12,6 +12,7 @@ import {
 import { BusinessEventsService } from '../business/business-events.service';
 import { assertCompanyAccess } from '../../common/auth/company-access.helper';
 import { InventoryService } from '../inventory/inventory.service';
+import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
 import { AccountingModeResolver } from '../accounting/accounting-mode.resolver';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 
@@ -116,6 +117,10 @@ export class PurchaseInvoicesService {
       // la automatización CONTABLE, no si el inventario se lleva. Antes estaba
       // atado a ese flag y una compra no aumentaba el stock (ni aparecía en el
       // Kardex) en empresas de práctica.
+      // ¿Esta compra alimenta el kardex? Solo si trae lineas con producto.
+      const alimentaInventario = !!(isAccepted && dto.lines && dto.lines.length > 0
+                                    && dto.lines.some(l => l.productId));
+
       if (isAccepted && dto.lines && dto.lines.length > 0) {
         for (const line of dto.lines) {
           await this.inventory.addLot(
@@ -153,6 +158,15 @@ export class PurchaseInvoicesService {
             total,
             paymentType:       'CREDIT',
             date:              new Date(dto.date),
+            // Solo una compra que de verdad crea lotes debita Inventario.
+            // Una compra agregada (servicios, electricidad, alquiler) no
+            // genera existencias: mandarla a Inventario infla el activo y
+            // deja el kardex vacio contra un balance que dice que hay
+            // mercaderia. Va a Compras (5.1.02.01), que es donde el curso
+            // registra el metodo periodico.
+            debitAccountCode: alimentaInventario
+              ? ACCOUNT_CODES.INVENTORY
+              : ACCOUNT_CODES.PURCHASES,
           });
         } catch (err) {
           // Comportamiento histórico: no propagar para no bloquear, pero log.

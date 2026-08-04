@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { ClienteDetalle } from '@/components/modulo/ClienteDetalle';
 import { formatDate, getErrorMessage, esc } from '@/lib/utils';
 import { exportToExcel } from '@/lib/excel';
 import { Button } from '@/components/ui/Button';
@@ -84,6 +85,8 @@ function StatTile({
 export interface Client  {
   id: string; name: string; email: string | null; identification: string | null; isActive: boolean;
   totalPurchased?: number; invoiceCount?: number;
+  phone?: string | null; address?: string | null; idType?: string;
+  creditDays?: number; creditLimit?: number | string; createdAt?: string;
 }
 export interface Product { id: string; name: string; price: number | string; stock: number | string; isActive: boolean; cabysCode: string | null; taxRate: number | string; category: { id: string; name: string } | null; }
 export interface Invoice {
@@ -91,6 +94,8 @@ export interface Invoice {
   clientName: string;
   subtotal?: number | string; tax?: number | string;
   items?: Array<{ description: string; quantity: number; unitPrice: number; total: number; taxRate?: number }>;
+  /** Enlace firmado al XML. Lo manda el backend solo si la factura ya se emitió. */
+  xmlUrl?: string | null;
 }
 export interface JournalEntry {
   id: string; entryDate: string; entryNumber: number; description: string; reference: string | null;
@@ -176,6 +181,8 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', identification: '', idType: '01', phone: '' });
   const [query, setQuery] = useState('');
+  // Cliente abierto en la ficha lateral (null = ninguno).
+  const [abierto, setAbierto] = useState<Client | null>(null);
 
   const load = useCallback(() => {
     api.get<Client[]>(`/api/v1/companies/${companyId}/clients`)
@@ -291,6 +298,9 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
           />
         </div>
       ) : (
+        <div className={abierto
+          ? 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4 items-start'
+          : ''}>
         <div className="bg-white rounded-card border border-gray-200/70 overflow-hidden" style={CARD_SHADOW}>
           {/* ── Barra de herramientas: buscador client-side ── */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
@@ -325,7 +335,12 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filtered.map((c) => (
-                    <tr key={c.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
+                    <tr key={c.id}
+                      onClick={() => setAbierto(c)}
+                      className={`cursor-pointer transition-colors ${
+                        abierto?.id === c.id
+                          ? 'bg-blue-50/70 ring-1 ring-inset ring-blue-200'
+                          : 'odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40'}`}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 flex items-center justify-center text-blue-700 font-bold text-sm flex-shrink-0">
@@ -350,6 +365,19 @@ export function ClientsTab({ companyId, readonly, attemptId }: { companyId: stri
               </table>
             </div>
           )}
+        </div>
+
+        {abierto && (
+          <ClienteDetalle
+            companyId={companyId}
+            cliente={abierto}
+            readonly={readonly}
+            onClose={() => setAbierto(null)}
+            // Al guardar se recarga la lista: el nombre o el correo que se
+            // acaban de cambiar tienen que verse en la tabla de al lado.
+            onSaved={load}
+          />
+        )}
         </div>
       )}
     </div>
@@ -787,7 +815,6 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving]     = useState(false);
   const [issuing, setIssuing]   = useState<string | null>(null);
-  const [downloadingXml, setDownloadingXml] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [validating, setValidating]   = useState<string | null>(null);
   const [validation, setValidation]   = useState<{ invoiceId: string; result: ValidationResult } | null>(null);
@@ -894,23 +921,7 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
     finally { setIssuing(null); }
   }
 
-  async function handleDownloadXml(inv: Invoice) {
-    setDownloadingXml(inv.id);
-    try {
-      const response = await api.get(
-        `/api/v1/companies/${companyId}/invoices/${inv.id}/xml`,
-        { responseType: 'blob' },
-      );
-      const url  = URL.createObjectURL(new Blob([response.data], { type: 'application/xml' }));
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = `FE-${inv.consecutiveNumber}.xml`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('XML descargado correctamente');
-    } catch (err) { toast.error(getErrorMessage(err)); }
-    finally { setDownloadingXml(null); }
-  }
+
 
   // Descarga el PDF real de la factura (el que genera el backend con pdf-lib + QR).
   async function handleDownloadPdf(inv: Invoice) {
@@ -1479,15 +1490,19 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
                           </button>
                           {(inv.status === 'ISSUED' || inv.status === 'ACCEPTED') && (
                             <>
-                              <button
-                                onClick={() => handleDownloadXml(inv)}
-                                disabled={downloadingXml === inv.id}
-                                title="Descargar XML Hacienda v4.4"
-                                className="p-1.5 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40">
-                                {downloadingXml === inv.id
-                                  ? <Spinner />
-                                  : <Download className="w-3.5 h-3.5" />}
-                              </button>
+                              {/* Enlace de verdad, no un Blob: ver DownloadsService
+                                  en el backend — un clic sintético después de un
+                                  await hacía que el navegador marcara el .xml
+                                  como "podría dañar el dispositivo". */}
+                              {inv.xmlUrl && (
+                                <a
+                                  href={`${process.env.NEXT_PUBLIC_API_URL ?? ''}${inv.xmlUrl}`}
+                                  download
+                                  title="Descargar XML Hacienda v4.4"
+                                  className="p-1.5 text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors inline-flex">
+                                  <Download className="w-3.5 h-3.5" />
+                                </a>
+                              )}
                               <button
                                 onClick={() => handleDownloadPdf(inv)}
                                 disabled={downloadingPdf === inv.id}

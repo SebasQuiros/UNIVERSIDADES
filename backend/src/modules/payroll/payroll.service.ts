@@ -162,14 +162,23 @@ export class PayrollService {
 
     // Run everything in a single transaction
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1. Empresa + creador (GROUP exige studentId concreto).
+      // 1. Empresa + creador del asiento.
+      //
+      // Antes esto salía SOLO de company.studentId, que es null en las
+      // empresas de modo GROUP — y GROUP es como trabaja una clase entera.
+      // Resultado: la planilla no se podía procesar en el modo normal del
+      // producto, y el error ni siquiera decía eso ("implementación
+      // pendiente"), así que parecía una función a medio hacer en vez de un
+      // caso no contemplado.
+      //
+      // El autor del asiento es quien lo procesa. En una empresa individual
+      // sigue siendo el estudiante dueño, así que el orden cubre los dos.
       const company = await tx.company.findUnique({ where: { id: companyId } });
       if (!company) throw new NotFoundException('Empresa no encontrada');
-      const createdById = company.studentId;
+      const createdById = userId ?? company.studentId;
       if (!createdById) {
-        throw new Error(
-          'Payroll: la empresa no tiene studentId (modo GROUP). ' +
-          'Implementación pendiente para asentar planilla en companies grupales.',
+        throw new BadRequestException(
+          'No se puede determinar quién procesa la planilla. Iniciá sesión y volvé a intentar.',
         );
       }
 
