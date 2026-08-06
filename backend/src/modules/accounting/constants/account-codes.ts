@@ -16,6 +16,8 @@ export const ACCOUNT_CODES = {
 
   // ── Pasivo ──────────────────────────────────────────────────────
   ACCOUNTS_PAYABLE:     '2.1.01.01', // Cuentas por pagar — proveedores
+  // Mercadería recibida sin factura: puente entre recepción y factura.
+  GOODS_RECEIVED:       '2.1.01.05', // Mercadería recibida por facturar
   IVA_PAYABLE:          '2.1.02.01', // IVA por pagar (ventas)
   WAGES_PAYABLE:        '2.1.04.01', // Sueldos por pagar
   CCSS_PAYABLE:         '2.1.04.02', // CCSS por pagar

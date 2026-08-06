@@ -5,6 +5,9 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { InventoryService } from '../inventory/inventory.service';
+import { JournalService } from '../journal/journal.service';
+import { JournalSource } from '@prisma/client';
+import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
 import {
   CreatePurchaseOrderDto, UpdatePurchaseOrderDto, CreatePurchaseOrderLineDto,
 } from './dto/purchase-orders.dto';
@@ -32,6 +35,7 @@ export class PurchaseOrdersService {
   constructor(
     private readonly prisma:    PrismaService,
     private readonly inventory: InventoryService,
+    private readonly journal:   JournalService,
   ) {}
 
   // ════════════════════════════════════════════════════════════════
@@ -234,6 +238,11 @@ export class PurchaseOrdersService {
         );
       }
 
+      // Lo que de verdad entra al inventario, y cuánto vale. Ese mismo monto
+      // es el que tiene que asentarse: si el kardex sube y los libros no, el
+      // inventario físico y el contable se separan sin que nada avise.
+      let valorRecibido = new Decimal(0);
+
       for (const line of order.lines) {
         if (!line.productId) continue; // línea sin producto (servicio) — no toca inventario
         const product = await tx.product.findUnique({
@@ -254,6 +263,45 @@ export class PurchaseOrdersService {
             createdById: userId,
           },
           tx,
+        );
+
+        valorRecibido = valorRecibido.plus(
+          new Decimal(line.quantity.toString()).times(line.unitCost.toString()),
+        );
+      }
+
+      // ── Asiento de recepción ──────────────────────────────────────────
+      //
+      //   D Inventario de Mercadería
+      //   C Mercadería Recibida por Facturar
+      //
+      // Todavía NO es una cuenta por pagar: el proveedor no ha facturado. Es
+      // una obligación por mercadería que ya se tiene. Cuando llega la
+      // factura, ese puente se cancela contra Cuentas por Pagar (ver
+      // PurchaseInvoicesService).
+      //
+      // Sin IVA a propósito: el crédito fiscal nace con la factura, que es el
+      // documento que lo respalda ante Hacienda.
+      if (valorRecibido.greaterThan(0)) {
+        await this.journal.createAutoEntry(
+          companyId,
+          `Recepción de mercadería — orden OC-${order.orderNumber}`,
+          new Date(),
+          [
+            { accountCode: ACCOUNT_CODES.INVENTORY,      debit: valorRecibido.toNumber(), credit: 0,
+              description: `Entrada por recepción OC-${order.orderNumber}` },
+            { accountCode: ACCOUNT_CODES.GOODS_RECEIVED, debit: 0, credit: valorRecibido.toNumber(),
+              description: `Pendiente de facturar — OC-${order.orderNumber}` },
+          ],
+          userId,
+          JournalSource.AUTO_PURCHASE,
+          tx,
+          undefined,             // invoiceId — la factura todavía no existe
+          undefined,             // paymentId
+          // Trazabilidad (V-5) e idempotencia: recibir dos veces la misma
+          // orden no puede generar dos asientos.
+          'purchase_order_receipt',
+          order.id,
         );
       }
 

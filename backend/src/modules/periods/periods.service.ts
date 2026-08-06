@@ -287,7 +287,21 @@ export class PeriodsService {
 
     const netResult = totalIncome.minus(totalExpenses); // positive = net income, negative = net loss
     const createdEntryIds: string[] = [];
-    const entryDate = period.endDate;
+
+    // ── Fecha del asiento de cierre ────────────────────────────────────
+    //
+    // Lo natural sería fecharlo al último día del período. El problema: un
+    // curso cierra su ejercicio en agosto y el período anual termina el 31 de
+    // diciembre. Con esa fecha, el asiento queda EN EL FUTURO, y todo reporte
+    // que corte "a hoy" —que es el default de balance, resultados y balanza—
+    // no lo ve. El estudiante cierra el período, la pantalla le dice que se
+    // cerró, y los estados siguen mostrando ingresos y gastos sin cerrar.
+    //
+    // Se fecha al día del cierre cuando el período todavía no ha terminado.
+    // Es seguro: el período queda CLOSED, así que no puede entrar nada
+    // después de esa fecha.
+    const ahora = new Date();
+    const entryDate = period.endDate > ahora ? ahora : period.endDate;
 
     // ══════════════════════════════════════════════════════════════
     // ENTRY 1 — Close income and expenses to 3.2.02.01

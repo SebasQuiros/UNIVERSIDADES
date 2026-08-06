@@ -8,6 +8,7 @@ import { assertCompanyAccess } from '../../common/auth/company-access.helper';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 import { BusinessEventsService } from '../business/business-events.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
 import { AccountsPayableService } from '../accounts-payable/accounts-payable.service';
 import { CreateProcurementOrderDto } from './dto/procurement.dto';
 
@@ -323,6 +324,12 @@ export class ProcurementService {
         total:             total.toNumber(),
         paymentType:       'CREDIT',
         date,
+        // La mercadería YA entró al kardex del comprador en el paso `receive`
+        // (ver addLot más arriba). Sin decirlo explícitamente, la compra iría
+        // contra Compras y el inventario en libros quedaría en cero mientras
+        // el kardex muestra existencias: el balance y el kardex diciendo cosas
+        // distintas, que es exactamente lo que este flujo ya arregló una vez.
+        debitAccountCode:  ACCOUNT_CODES.INVENTORY,
       });
 
       // 3. El OTRO lado: la empresa vendedora también vendió.

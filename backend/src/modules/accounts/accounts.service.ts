@@ -168,6 +168,12 @@ const CHART: Array<{
   { code:'1.2.02.05',  name:'Dep. Acum. Mobiliario y Equipo',  type:'ASSET',     normal:'CREDIT', level:4, parent:'1.2.02',  isHeader:false },
   // Pasivos
   { code:'2.1.01.04',  name:'Acreedores Varios',               type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.01',  isHeader:false },
+  // Puente entre la RECEPCION y la FACTURA de compra. La mercaderia ya entro
+  // (esta en el kardex y hay que responder por ella), pero el proveedor
+  // todavia no factura, asi que no es una cuenta por pagar todavia. Sin esta
+  // cuenta, recibir mercaderia subia el kardex y no tocaba los libros: el
+  // inventario fisico y el contable se separaban en silencio.
+  { code:'2.1.01.05',  name:'Mercaderia Recibida por Facturar', type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.01',  isHeader:false },
   { code:'2.1.03.03',  name:'Intereses por Pagar',             type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.03',  isHeader:false },
   { code:'2.1.03.04',  name:'Servicios Públicos por Pagar',    type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.03',  isHeader:false },
   // Ingresos

@@ -117,11 +117,27 @@ export class PurchaseInvoicesService {
       // la automatización CONTABLE, no si el inventario se lleva. Antes estaba
       // atado a ese flag y una compra no aumentaba el stock (ni aparecía en el
       // Kardex) en empresas de práctica.
-      // ¿Esta compra alimenta el kardex? Solo si trae lineas con producto.
-      const alimentaInventario = !!(isAccepted && dto.lines && dto.lines.length > 0
+      // ── ¿Esta mercadería YA entró con una recepción? ──────────────────
+      //
+      // Si la factura viene contra una orden ya RECIBIDA, el inventario ya
+      // está en el kardex y ya está asentado (D Inventario / C Mercadería
+      // Recibida por Facturar). Volver a crear lotes duplicaría existencias,
+      // y volver a debitar Inventario duplicaría el activo. Lo que toca ahora
+      // es cancelar ese puente contra Cuentas por Pagar.
+      const yaRecibida = dto.purchaseOrderId
+        ? !!(await tx.purchaseOrder.findFirst({
+            where:  { id: dto.purchaseOrderId, companyId, status: { in: ['RECEIVED', 'INVOICED'] } },
+            select: { id: true },
+          }))
+        : false;
+
+      // ¿Esta compra alimenta el kardex? Solo si trae lineas con producto y
+      // la mercaderia no entro ya por una recepcion.
+      const alimentaInventario = !!(isAccepted && !yaRecibida
+                                    && dto.lines && dto.lines.length > 0
                                     && dto.lines.some(l => l.productId));
 
-      if (isAccepted && dto.lines && dto.lines.length > 0) {
+      if (isAccepted && !yaRecibida && dto.lines && dto.lines.length > 0) {
         for (const line of dto.lines) {
           await this.inventory.addLot(
             {
@@ -164,9 +180,11 @@ export class PurchaseInvoicesService {
             // deja el kardex vacio contra un balance que dice que hay
             // mercaderia. Va a Compras (5.1.02.01), que es donde el curso
             // registra el metodo periodico.
-            debitAccountCode: alimentaInventario
-              ? ACCOUNT_CODES.INVENTORY
-              : ACCOUNT_CODES.PURCHASES,
+            debitAccountCode: yaRecibida
+              ? ACCOUNT_CODES.GOODS_RECEIVED   // cancela el puente de la recepción
+              : alimentaInventario
+                ? ACCOUNT_CODES.INVENTORY
+                : ACCOUNT_CODES.PURCHASES,
           });
         } catch (err) {
           // Comportamiento histórico: no propagar para no bloquear, pero log.
