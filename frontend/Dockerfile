@@ -23,6 +23,10 @@ FROM dependencies AS build
 COPY . .
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Dominio público del sitio — se hornea en build para canonical/OG/sitemap/robots (SEO).
+# Debe fijarse al dominio real en producción; si falta, cae al fallback de src/lib/seo.ts.
+ARG NEXT_PUBLIC_SITE_URL=https://contasj.cr
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN npm run build
 
 # ── Stage: production ────────────────────────────────────────

@@ -428,7 +428,8 @@ export default function Home() {
     }}>
 
       {/* ── NAVBAR ─────────────────────────────────────────────── */}
-      <nav style={{
+      <header>
+      <nav aria-label="Navegación principal" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
         height: navScrolled ? 58 : 64,
         background: navScrolled
@@ -511,6 +512,7 @@ export default function Home() {
           </button>
         </div>
       </nav>
+      </header>
 
       {/* ── DRAWER MÓVIL ───────────────────────────────────────── */}
       <div
@@ -574,6 +576,9 @@ export default function Home() {
           </button>
         </div>
       </aside>
+
+      {/* ── MAIN ───────────────────────────────────────────────── */}
+      <main>
 
       {/* ── HERO ───────────────────────────────────────────────── */}
       <section id="hero" className="lp-hero" style={{
@@ -726,7 +731,7 @@ export default function Home() {
       </section>
 
       {/* ── STATS BAR ──────────────────────────────────────────── */}
-      <section ref={statsSection.ref} style={{
+      <section ref={statsSection.ref} aria-label="Indicadores de la plataforma" style={{
         background: 'linear-gradient(135deg, #1B2E6E 0%, #1E3A8A 50%, #0F2657 100%)',
         position: 'relative',
         overflow: 'hidden',
@@ -919,7 +924,7 @@ export default function Home() {
       </section>
 
       {/* ── QUOTE ──────────────────────────────────────────────── */}
-      <section ref={quoteSection.ref} style={{
+      <section ref={quoteSection.ref} aria-label="Frases sobre contabilidad y finanzas" style={{
         padding: 'clamp(60px,8vw,90px) clamp(20px,5vw,60px)',
         background: 'linear-gradient(135deg,#1B2E6E 0%,#1E3A8A 50%,#0F2657 100%)',
         textAlign: 'center', position: 'relative', overflow: 'hidden',
@@ -1003,7 +1008,8 @@ export default function Home() {
                     border: '3px solid #FFFFFF',
                     boxShadow: '0 0 0 3px #1B2E6E, 0 16px 40px rgba(27,46,110,0.25)',
                   }}>
-                    <img src="/founder.jpg" alt="Sebastián Quirós Arroyo"
+                    <img src="/founder.jpg" alt="Retrato de Sebastián Quirós Arroyo, fundador de ContaSJ"
+                      loading="lazy" decoding="async" width={150} height={198}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%' }}
                     />
                   </div>
@@ -1077,6 +1083,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      </main>
 
       {/* ── FOOTER ─────────────────────────────────────────────── */}
       <footer style={{ background: '#0F172A', padding: '28px clamp(20px,5vw,60px)', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}>
