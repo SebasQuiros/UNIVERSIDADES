@@ -77,7 +77,12 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     DownloadsModule,
     // El cupo se cuenta por USUARIO (ver UserThrottlerGuard), no por IP: un
     // laboratorio entero sale por una sola IP pública y con el conteo por IP
-    // la clase se bloqueaba sola. Las rutas públicas siguen contando por IP.
+    // la clase se bloquearía sola. Las rutas públicas siguen contando por IP.
+    //
+    // Los nombres importan: `@SkipThrottle()` y `@Throttle({ default: ... })`
+    // sin argumentos apuntan a un throttler llamado 'default'. Como acá se
+    // llaman 'short' y 'medium', esos decoradores no hacen NADA si no se
+    // nombran explícitamente. Ya pasó dos veces (health y demo-login).
     ThrottlerModule.forRoot([
       { name: 'short',  ttl: 1000,  limit: 40  }, // 40 req/s por usuario
       { name: 'medium', ttl: 60000, limit: 500 }, // 500 req/min por usuario

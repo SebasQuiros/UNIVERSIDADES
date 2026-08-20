@@ -29,7 +29,11 @@ export class HealthController {
 
   @Get()
   @Public()        // exime del JwtAuthGuard global (auth.module APP_GUARD)
-  @SkipThrottle()
+  // Los throttlers configurados se llaman 'short' y 'medium'. `@SkipThrottle()`
+  // sin argumentos marca uno llamado 'default', que no existe acá: el
+  // decorador estaba puesto, se veia correcto, y no eximia de nada. Medido:
+  // /health devolvia 429 bajo concurrencia. Hay que nombrarlos.
+  @SkipThrottle({ short: true, medium: true })
   async check() {
     let db: 'up' | 'down' = 'down';
     let dbMs: number | null = null;

@@ -41,7 +41,10 @@ export class AuthController {
   @Post('demo-login')
   @Public()
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { ttl: 60000, limit: 5 } })
+  // Igual que en /health: 'default' no es ninguno de los throttlers
+  // configurados ('short', 'medium'), asi que este limite de 5/min no se
+  // aplicaba y la ruta quedaba con el limite general.
+  @Throttle({ short: { ttl: 60000, limit: 5 }, medium: { ttl: 60000, limit: 5 } })
   demoLogin(@Body() dto: DemoLoginDto) {
     return this.authService.demoLogin(dto.token, dto.as);
   }
