@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, ForbiddenException , BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SupabaseAdminService } from '../../common/supabase/supabase-admin.service';
 import { CreateUniversityDto, UpdateUniversityDto } from './dto/universities.dto';
@@ -178,6 +178,112 @@ export class UniversitiesService {
 
     // Return the plaintext temp password only at creation time
     return { ...user, temporaryPassword: tempPassword };
+  }
+
+  /**
+   * Alta MASIVA de usuarios.
+   *
+   * Una clase no se carga de a uno. Con 500 estudiantes, crear las cuentas a
+   * mano no es "incomodo": es imposible en la practica, y era el unico camino
+   * que existia.
+   *
+   * Decisiones que importan:
+   *
+   * - NO es transaccional a proposito. Cada usuario se crea o falla por su
+   *   cuenta y el resultado dice cual fue cual. Abortar 499 altas buenas
+   *   porque un correo venia repetido seria peor: el profesor no sabria
+   *   cuales quedaron y tendria que empezar de nuevo.
+   *
+   * - Va en serie, no en paralelo. Cada alta toca Supabase Auth, y 500
+   *   llamadas simultaneas contra su API terminan en limite de peticiones —
+   *   con una parte de la clase creada y otra no, que es el peor estado
+   *   posible.
+   *
+   * - Las contrasenas temporales se devuelven UNA vez, aca. No quedan
+   *   guardadas en ningun lado: Supabase solo tiene el hash. Si se pierde
+   *   esta respuesta, hay que restablecerlas.
+   */
+  async createUsersBulk(
+    universityId: string,
+    usuarios: Array<{ name: string; email: string; role?: string }>,
+    caller?: Caller,
+  ) {
+    this.assertMismaInstitucion(universityId, caller);
+    await this._findOneRaw(universityId);
+
+    if (!Array.isArray(usuarios) || usuarios.length === 0) {
+      throw new BadRequestException('No se recibio ningun usuario.');
+    }
+    // Tope por llamada: mantiene la peticion dentro de un tiempo razonable y
+    // evita que un archivo equivocado dispare miles de altas.
+    if (usuarios.length > 500) {
+      throw new BadRequestException(
+        `Maximo 500 usuarios por carga (se recibieron ${usuarios.length}). Dividi la lista.`,
+      );
+    }
+
+    // Correos repetidos DENTRO del archivo: se detectan antes de tocar nada,
+    // porque si no el primero se crea y el segundo falla con "ya existe" y
+    // parece un error del sistema en vez de un error del archivo.
+    const vistos = new Set<string>();
+    const creados: any[] = [];
+    const fallidos: Array<{ fila: number; email: string; motivo: string }> = [];
+
+    for (let i = 0; i < usuarios.length; i++) {
+      const fila = i + 1;
+      const u = usuarios[i] ?? ({} as any);
+      const email = String(u.email ?? '').toLowerCase().trim();
+      const name  = String(u.name ?? '').trim();
+      const role  = String(u.role ?? 'STUDENT').toUpperCase();
+
+      if (!email || !name) {
+        fallidos.push({ fila, email, motivo: 'Falta el nombre o el correo.' });
+        continue;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        fallidos.push({ fila, email, motivo: 'El correo no tiene un formato valido.' });
+        continue;
+      }
+      if (vistos.has(email)) {
+        fallidos.push({ fila, email, motivo: 'Repetido dentro de la misma lista.' });
+        continue;
+      }
+      // Un ADMIN no puede fabricarse un SUPERADMIN por la puerta de atras.
+      if (!['STUDENT', 'TEACHER', 'ADMIN'].includes(role)) {
+        fallidos.push({ fila, email, motivo: `Rol no permitido: ${role}` });
+        continue;
+      }
+      vistos.add(email);
+
+      try {
+        const creado = await this.createUser(universityId, { name, email, role }, caller);
+        creados.push({
+          fila,
+          nombre:             creado.name,
+          email:              creado.email,
+          rol:                creado.role,
+          contrasenaTemporal: creado.temporaryPassword,
+        });
+      } catch (e: any) {
+        fallidos.push({ fila, email, motivo: e?.message ?? 'Error desconocido' });
+      }
+    }
+
+    return {
+      creados,
+      fallidos,
+      resumen: {
+        recibidos: usuarios.length,
+        creados:   creados.length,
+        fallidos:  fallidos.length,
+      },
+      // Que el llamador sepa si el correo salio de verdad: si no hay SMTP, la
+      // unica copia de estas contrasenas es esta respuesta.
+      correoEnviado: this.email.isConfigured(),
+      aviso: this.email.isConfigured()
+        ? 'Las credenciales tambien se enviaron por correo a cada persona.'
+        : 'NO hay correo configurado: esta respuesta es la UNICA copia de las contrasenas. Descargala antes de cerrar.',
+    };
   }
 
   /**

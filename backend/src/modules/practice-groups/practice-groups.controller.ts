@@ -24,7 +24,9 @@ export class PracticeGroupsController {
   // Unirse a un grupo existente por código.
   // Límite anti fuerza bruta del código de invitación (igual que el join de
   // Sesión de Aula): 10 intentos por minuto.
-  @Throttle({ default: { ttl: 60000, limit: 10 } })
+  // Ver onboarding.controller: 'default' no es ninguno de los throttlers
+  // configurados, asi que este limite no se aplicaba.
+  @Throttle({ short: { ttl: 60000, limit: 10 }, medium: { ttl: 60000, limit: 10 } })
   @Post('join')
   join(@Body() dto: JoinGroupDto, @Request() req: any) {
     return this.svc.joinGroup(req.user.id, dto);

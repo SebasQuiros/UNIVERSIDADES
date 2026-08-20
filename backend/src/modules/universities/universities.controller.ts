@@ -5,7 +5,7 @@ import {
 import { UniversitiesService } from './universities.service';
 import {
   CreateUniversityDto, UpdateUniversityDto,
-  CreateUniversityUserDto, UpdateUserRoleDto,
+  CreateUniversityUserDto, BulkCreateUniversityUsersDto, UpdateUserRoleDto,
 } from './dto/universities.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
 import { UniversityScopeGuard } from '../../common/guards/university-scope.guard';
@@ -76,6 +76,27 @@ export class UniversitiesController {
     @CurrentUser() user: any,
   ) {
     return this.svc.createUser(id, { name: body.name, email: body.email, role: body.role }, user);
+  }
+
+  /**
+   * Alta MASIVA: crea toda una clase de una vez.
+   *
+   * Cuerpo: { "usuarios": [ { "name": "...", "email": "...", "role": "STUDENT" }, ... ] }
+   *
+   * Devuelve las contrasenas temporales UNA sola vez, junto con la lista de
+   * los que fallaron y por que. No es todo-o-nada: una fila mala no cancela
+   * las demas, porque abortar 499 altas buenas por un correo repetido dejaria
+   * al profesor sin saber cuales quedaron.
+   */
+  @Post(':id/users/lote')
+  @HttpCode(HttpStatus.CREATED)
+  @Roles('ADMIN', 'SUPERADMIN')
+  createUsersBulk(
+    @Param('id') id: string,
+    @Body() body: BulkCreateUniversityUsersDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.svc.createUsersBulk(id, body.usuarios, user);
   }
 
   /**

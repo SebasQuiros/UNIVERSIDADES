@@ -128,10 +128,27 @@ export class OnboardingService {
       this.logger.error(`Error enviando email de bienvenida: ${err.message}`);
     });
 
+    // ── Las credenciales se devuelven acá, no solo por correo ──────────
+    //
+    // Antes se mandaban UNICAMENTE por email. Si el SMTP no esta configurado
+    // —y no lo esta, el servicio de correo avisa al arrancar— quien registra
+    // su institucion no recibe nunca su contrasena y no puede entrar jamas.
+    // El registro decia "revise su correo" y ese correo no existia.
+    //
+    // Se devuelve en la respuesta de la peticion que acaba de crear la
+    // cuenta: viaja por HTTPS a quien la esta creando en ese mismo momento, y
+    // es la unica vez que se puede ver. No queda guardada en ningun lado —
+    // Supabase solo tiene el hash.
     return {
       success:      true,
       universityId: university.id,
-      message:      'Solicitud procesada. Revise su correo para obtener sus credenciales de acceso.',
+      credenciales: {
+        email:               dto.adminEmail.toLowerCase().trim(),
+        contrasenaTemporal:  tempPassword,
+        aviso: 'Anotala ahora: es la unica vez que se muestra. Cambiala al entrar.',
+      },
+      correoEnviado: this.emailService.isConfigured(),
+      message: 'Institucion registrada. Guarda las credenciales que aparecen abajo.',
     };
   }
 

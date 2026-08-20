@@ -1,7 +1,9 @@
 import {
   IsString, IsOptional, IsUUID, IsInt, IsEmail,
   IsIn, Min, MaxLength, MinLength,
+  IsArray, ArrayMinSize, ArrayMaxSize, ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 // ── User management DTOs ───────────────────────────────────────────────────
 
@@ -19,6 +21,33 @@ export class CreateUniversityUserDto {
 
   @IsIn(ALLOWED_ROLES, { message: `role must be one of: ${ALLOWED_ROLES.join(', ')}` })
   role: string;
+}
+
+/** Fila de la carga masiva. El rol es opcional: sin el, es estudiante. */
+export class BulkUserRowDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(100)
+  name: string;
+
+  @IsEmail()
+  @MaxLength(200)
+  email: string;
+
+  @IsOptional()
+  @IsIn(ALLOWED_ROLES, { message: `role must be one of: ${ALLOWED_ROLES.join(', ')}` })
+  role?: string;
+}
+
+export class BulkCreateUniversityUsersDto {
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Enviá al menos un usuario.' })
+  // El tope tambien se valida en el servicio: acá corta antes de gastar
+  // trabajo, y allá protege a quien llame al servicio sin pasar por HTTP.
+  @ArrayMaxSize(500, { message: 'Máximo 500 usuarios por carga. Dividí la lista.' })
+  @ValidateNested({ each: true })
+  @Type(() => BulkUserRowDto)
+  usuarios: BulkUserRowDto[];
 }
 
 export class UpdateUserRoleDto {

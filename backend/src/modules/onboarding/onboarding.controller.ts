@@ -32,7 +32,11 @@ export class OnboardingController {
   @Public()
   @HttpCode(HttpStatus.CREATED)
   // Rate limit: max 3 requests per IP per hour
-  @Throttle({ default: { ttl: 3600000, limit: 3 } })
+  // Nombrados a proposito: los throttlers configurados son 'short' y
+  // 'medium', asi que `{ default: ... }` no se aplicaba y esta ruta PUBLICA
+  // —que crea una institucion y un usuario en Supabase por llamada— quedaba
+  // con el limite general en vez de con 3 por hora.
+  @Throttle({ short: { ttl: 3600000, limit: 3 }, medium: { ttl: 3600000, limit: 3 } })
   @ApiOperation({ summary: 'Registrar nueva universidad (onboarding público)' })
   @ApiResponse({ status: 201, description: 'Universidad registrada exitosamente' })
   @ApiResponse({ status: 400, description: 'Datos inválidos o email ya registrado' })

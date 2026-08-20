@@ -11,6 +11,18 @@ export class EmailService {
     this.init();
   }
 
+  /**
+   * ¿Hay SMTP de verdad?
+   *
+   * Quien manda credenciales por correo necesita saberlo: si no hay SMTP, el
+   * mensaje se descarta en silencio y la persona se queda esperando un correo
+   * que nunca sale. Con esto, el llamador puede mostrar las credenciales en
+   * pantalla en vez de prometer un envio que no va a ocurrir.
+   */
+  isConfigured(): boolean {
+    return this.configured;
+  }
+
   private async init() {
     const host = this.config.get<string>('SMTP_HOST');
     const user = this.config.get<string>('SMTP_USER');
