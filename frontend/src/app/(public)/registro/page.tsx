@@ -10,7 +10,7 @@ import { SceneWelcome } from '@/components/illustrations';
 import {
   CheckCircle2, ArrowRight, ArrowLeft, Building2,
   User, ClipboardList, GraduationCap, ShieldCheck, Sparkles,
-  Globe, Phone, Mail, AlertCircle, Check,
+  Globe, Phone, Mail, AlertCircle, Check, KeyRound, Copy,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -34,6 +34,13 @@ type StepErrors = Partial<Record<keyof FormData, string>>;
 /** Respuesta del endpoint público de onboarding (sólo lo que consumimos). */
 interface OnboardingResponse {
   message?: string | string[];
+  /**
+   * Credenciales del administrador recién creado. Vienen acá y no solo por
+   * correo: si el SMTP no está configurado, el correo no sale nunca y quien
+   * se registra queda sin poder entrar jamás, sin ningún error a la vista.
+   */
+  credenciales?: { email: string; contrasenaTemporal: string; aviso?: string };
+  correoEnviado?: boolean;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -148,7 +155,11 @@ export default function RegistroPage() {
   const [submitting, setSubmitting]   = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [success, setSuccess]         = useState(false);
-  const [successData, setSuccessData] = useState({ universityName: '', adminEmail: '' });
+  const [successData, setSuccessData] = useState<{
+    universityName: string; adminEmail: string;
+    contrasenaTemporal?: string; correoEnviado?: boolean;
+  }>({ universityName: '', adminEmail: '' });
+  const [copiado, setCopiado] = useState(false);
   const [errors, setErrors]           = useState<StepErrors>({});
 
   const [form, setForm] = useState<FormData>({
@@ -226,7 +237,12 @@ export default function RegistroPage() {
         const msg = data?.message || 'Error al procesar la solicitud.';
         throw new Error(Array.isArray(msg) ? msg[0] : msg);
       }
-      setSuccessData({ universityName: form.universityName.trim(), adminEmail: form.adminEmail.trim() });
+      setSuccessData({
+        universityName:     form.universityName.trim(),
+        adminEmail:         data.credenciales?.email ?? form.adminEmail.trim(),
+        contrasenaTemporal: data.credenciales?.contrasenaTemporal,
+        correoEnviado:      data.correoEnviado,
+      });
       setSuccess(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
@@ -352,24 +368,70 @@ export default function RegistroPage() {
               </p>
 
               <div className="mt-7 space-y-3 text-left">
+                {/* ── Las credenciales, en pantalla ──────────────────────────
+                    Antes esta pantalla decía "revisa tu correo" y nada más. Si
+                    el SMTP no está configurado ese correo no sale nunca, y
+                    quien se registraba quedaba sin poder entrar jamás: cuenta
+                    creada, contraseña generada, y ninguna forma de conocerla.
+                    Ahora se muestran acá, que es donde con seguridad llegan. */}
+                {successData.contrasenaTemporal && (
+                  <div className="p-4 rounded-card bg-gold-50 border-2 border-gold-300">
+                    <div className="flex gap-3.5">
+                      <IconTile icon={KeyRound} tint="#B8860B" size={40} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-gold-900">
+                          Tus credenciales — anotalas ahora
+                        </p>
+                        <p className="text-xs text-gold-900/80 mt-0.5 leading-relaxed">
+                          Es la única vez que se muestran. Cambiá la contraseña al entrar.
+                        </p>
+
+                        <div className="mt-3 space-y-1.5">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-gold-900/60">Correo</p>
+                            <p className="font-mono text-sm text-gray-900 break-all">{successData.adminEmail}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-gold-900/60">Contraseña temporal</p>
+                            <p className="font-mono text-sm font-bold text-gray-900 break-all">
+                              {successData.contrasenaTemporal}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard
+                              ?.writeText(`${successData.adminEmail}
+${successData.contrasenaTemporal}`)
+                              .then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2500); })
+                              .catch(() => {});
+                          }}
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gold-300 bg-white px-3 py-1.5 text-xs font-semibold text-gold-900 transition-colors hover:bg-gold-50"
+                        >
+                          {copiado
+                            ? <><CheckCircle2 className="w-3.5 h-3.5" /> Copiado</>
+                            : <><Copy className="w-3.5 h-3.5" /> Copiar credenciales</>}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-3.5 p-4 rounded-card bg-blue-50/70 border border-blue-100">
                   <IconTile icon={Mail} tint="#2563EB" size={40} />
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-gray-800">Revisa tu correo</p>
-                    <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
-                      Enviamos las credenciales de acceso a{' '}
-                      <strong className="text-gray-800 break-all">{successData.adminEmail}</strong>.
-                      Si no lo ves, revisa la carpeta de spam.
+                    <p className="text-sm font-bold text-gray-800">
+                      {successData.correoEnviado ? 'También te las enviamos por correo' : 'Correo no configurado'}
                     </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3.5 p-4 rounded-card bg-gold-50 border border-gold-100">
-                  <IconTile icon={GraduationCap} tint="#B8860B" size={40} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-gold-900">Activa tu acceso</p>
-                    <p className="text-xs text-gold-900/80 mt-0.5 leading-relaxed">
-                      Recibirás un correo para confirmar la cuenta y definir tu contraseña.
+                    <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                      {successData.correoEnviado ? (
+                        <>Revisá <strong className="text-gray-800 break-all">{successData.adminEmail}</strong>.
+                        Si no lo ves, mirá la carpeta de spam.</>
+                      ) : (
+                        <>Esta pantalla es la única copia de tu contraseña. Guardala antes de salir.</>
+                      )}
                     </p>
                   </div>
                 </div>
