@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import * as crypto from 'crypto';
 
 /**
@@ -16,14 +16,54 @@ import * as crypto from 'crypto';
  * el clic es del usuario, la respuesta viene del servidor con su
  * Content-Type y su Content-Disposition, y no hay Blob de por medio.
  *
- * La firma es HMAC con un secreto de proceso. No hace falta que sobreviva a
- * un reinicio: los enlaces duran minutos, y que un reinicio los invalide es
- * el comportamiento correcto, no un problema.
+ * La firma es HMAC con una clave que TIENE que ser la misma en todas las
+ * instancias — ver `resolverSecreto`.
  */
 @Injectable()
 export class DownloadsService {
-  private readonly secreto =
-    process.env.DOWNLOAD_SECRET || crypto.randomBytes(32).toString('hex');
+  private readonly logger = new Logger(DownloadsService.name);
+
+  /**
+   * Clave de firma. Tiene que ser LA MISMA en todas las instancias.
+   *
+   * Estaba como `crypto.randomBytes(32)` por proceso. Con una sola instancia
+   * funciona; con dos —que es lo que hace falta para una carga real, y lo que
+   * pasa tambien durante un despliegue sin corte— el enlace lo firma una y lo
+   * verifica la otra, la firma no calza, y el estudiante ve "Enlace de
+   * descarga invalido" en unas descargas si y en otras no, sin ningun patron.
+   * Ese tipo de falla intermitente es de las mas caras de diagnosticar.
+   *
+   * Se deriva de un secreto que ya existe y ya es igual en todas las
+   * instancias, para no depender de que alguien recuerde configurar una
+   * variable nueva. Nunca se usa el secreto en crudo: se firma con su hash.
+   */
+  private readonly secreto = DownloadsService.resolverSecreto();
+
+  private static resolverSecreto(): string {
+    const propio = process.env.DOWNLOAD_SECRET;
+    if (propio) return propio;
+
+    const compartido =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_JWT_SECRET ||
+      process.env.DATABASE_URL;
+
+    if (compartido) {
+      return crypto.createHash('sha256')
+        .update('descargas-firmadas:' + compartido)
+        .digest('hex');
+    }
+
+    // Sin nada compartido: se firma con algo aleatorio y se avisa fuerte,
+    // porque en cuanto haya mas de una instancia las descargas fallan a
+    // medias y el sintoma no va a apuntar aca.
+    new Logger(DownloadsService.name).warn(
+      'DOWNLOAD_SECRET sin definir y sin secreto compartido del que derivarlo: ' +
+      'los enlaces de descarga solo funcionaran con UNA instancia. ' +
+      'Defini DOWNLOAD_SECRET en el entorno antes de escalar.',
+    );
+    return crypto.randomBytes(32).toString('hex');
+  }
 
   private static readonly VIDA_SEGUNDOS = 1800;   // 30 min
 
