@@ -14,11 +14,12 @@ import { IconTile } from '@/components/ui/IconTile';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
+import { CargaMasivaUsuarios } from '@/components/admin/CargaMasivaUsuarios';
 import {
   Users, Plus, Search, X, GraduationCap, BookOpen,
   ShieldCheck, Copy, CheckCheck, AlertTriangle,
   ChevronDown, RefreshCw, UserCheck, UserX,
-  KeyRound, Download,
+  KeyRound, Download, Upload,
 } from 'lucide-react';
 
 // ── CSV export helper ─────────────────────────────────────────────────────────
@@ -393,6 +394,7 @@ export default function UsuariosPage() {
   const [roleFilter, setRoleFilter]       = useState('');
   const [statusFilter, setStatusFilter]   = useState('');
   const [showCreate, setShowCreate]       = useState(false);
+  const [showLote, setShowLote]           = useState(false);
   const [createdUser, setCreatedUser]     = useState<CreatedUserResult | null>(null);
   const [togglingId, setTogglingId]       = useState<string | null>(null);
 
@@ -481,6 +483,16 @@ export default function UsuariosPage() {
           onCreated={handleCreated}
         />
       )}
+
+      {showLote && universityId && (
+        <CargaMasivaUsuarios
+          universityId={universityId}
+          onClose={() => setShowLote(false)}
+          // Se recarga la lista, pero el panel sigue abierto: cerrarlo solo
+          // borraría las contraseñas de la pantalla antes de descargarlas.
+          onCreated={load}
+        />
+      )}
       {createdUser && (
         <CredentialsModal
           user={createdUser}
@@ -515,6 +527,14 @@ export default function UsuariosPage() {
                 <Download className="w-4 h-4" /> CSV
               </Button>
             )}
+            <Button
+              variant="secondary"
+              onClick={() => setShowLote(true)}
+              title="Crear varias personas de una vez pegando una lista"
+              className="cx-press"
+            >
+              <Upload className="w-4 h-4" /> Carga masiva
+            </Button>
             <Button onClick={() => setShowCreate(true)} className="cx-press">
               <Plus className="w-4 h-4" /> Nuevo usuario
             </Button>
