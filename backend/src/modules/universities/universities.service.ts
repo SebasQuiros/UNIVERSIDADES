@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, ConflictException, ForbiddenException , BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException, ConflictException, ForbiddenException , BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SupabaseAdminService } from '../../common/supabase/supabase-admin.service';
 import { CreateUniversityDto, UpdateUniversityDto } from './dto/universities.dto';
@@ -28,6 +28,8 @@ export type Caller = { id?: string; role?: string; universityId?: string | null 
 
 @Injectable()
 export class UniversitiesService {
+  private readonly logger = new Logger(UniversitiesService.name);
+
   /**
    * Toda operación sobre `/universities/:id/*` debe probar que ese `:id` es la
    * institución de quien llama. ADMIN es el rol que se le vende a CADA
@@ -169,12 +171,25 @@ export class UniversitiesService {
       },
     });
 
-    // Send welcome email (fire-and-forget — never throw)
+    // El correo va sin bloquear: la cuenta ya existe y la contraseña se
+    // devuelve abajo, así que un fallo de SMTP no debe impedir el alta.
+    //
+    // Pero SÍ se registra. Antes se descartaba en silencio, y con la carga
+    // masiva eso se vuelve peligroso: el panel dice "se enviaron las
+    // credenciales por correo", el profesor confía y no descarga el archivo,
+    // y si los envíos venían fallando nadie se entera hasta que 500
+    // estudiantes no pueden entrar — sin una sola línea en los registros que
+    // explique por qué.
     this.email.send(
       email,
       'Bienvenido a SJQA GROUP — Credenciales de acceso',
       this.email.newUserCredentialsHtml(data.name, email, tempPassword),
-    ).catch(() => {});
+    ).catch((err) => {
+      this.logger.warn(
+        `No se pudo enviar las credenciales a ${email}: ${(err as Error).message}. ` +
+        'La contraseña temporal solo queda en la respuesta de esta petición.',
+      );
+    });
 
     // Return the plaintext temp password only at creation time
     return { ...user, temporaryPassword: tempPassword };
