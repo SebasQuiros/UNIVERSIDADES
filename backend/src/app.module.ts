@@ -4,7 +4,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { BulkReadInterceptor } from './common/interceptors/bulk-read.interceptor';
-import { CompanyEnabledGuard } from './common/guards/company-enabled.guard';
 import { SupabaseModule }       from './common/supabase/supabase.module';
 import { PrismaModule }         from './prisma/prisma.module';
 import { ActivityLogModule }    from './common/activity/activity-log.module';
@@ -171,10 +170,11 @@ import { LoggerMiddleware }     from './common/middleware/logger.middleware';
     SimulatorModule,
   ],
   providers: [
+    // El limitador va PRIMERO a proposito: es lo mas barato y protege todo
+    // lo que viene detras.
     { provide: APP_GUARD,        useClass: UserThrottlerGuard },
-    // Fase 1 — bloquea rutas /companies/:companyId/* si la company tiene
-    // isCompanyEnabled=false (excepto staff: TEACHER/ADMIN/SUPERADMIN).
-    { provide: APP_GUARD,        useClass: CompanyEnabledGuard },
+    // CompanyEnabledGuard se registra en AuthModule, no aca: necesita correr
+    // DESPUES de autenticar. Ver el comentario ahi.
     { provide: APP_INTERCEPTOR,  useClass: BulkReadInterceptor },
   ],
 })
