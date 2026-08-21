@@ -1,5 +1,5 @@
 import {
-  Injectable, Inject, NotFoundException, BadRequestException, ForbiddenException,
+  Injectable, Inject, Logger, NotFoundException, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ActivityLogService } from '../../common/activity/activity-log.service';
@@ -28,6 +28,8 @@ function round2(n: number): number {
 
 @Injectable()
 export class PurchaseInvoicesService {
+  private readonly logger = new Logger(PurchaseInvoicesService.name);
+
   constructor(
     private readonly prisma:        PrismaService,
     private readonly journal:       JournalService,
@@ -156,9 +158,23 @@ export class PurchaseInvoicesService {
       }
 
       // ── Asiento + AP record vía BusinessEventsService ──
-      // Antes el catch silenciaba TODAS las fallas para que un plan contable
-      // incompleto no bloqueara el guardado. Ahora seguimos tolerando, pero
-      // logueamos para no esconder bugs reales.
+      //
+      // Si esto falla, la compra NO se guarda. Antes se atrapaba el error y
+      // se seguía: quedaba una factura de compra registrada, con su saldo en
+      // cuentas por pagar, y SIN asiento. El auxiliar y el mayor se separaban
+      // en silencio, que es justo el tipo de descuadre que nadie encuentra
+      // hasta que el balance no cierra y ya no se sabe por qué.
+      //
+      // La razón histórica del catch era que un plan contable incompleto no
+      // bloqueara el guardado. Hoy toda empresa nace con el catálogo completo
+      // sembrado, así que esa red ya no protege de nada — solo esconde.
+      //
+      // El caso realista que esto ahora impide: registrar una compra en un
+      // período CERRADO. Antes "funcionaba" y no dejaba asiento. Ahora falla
+      // y dice por qué, que es lo correcto: el período está cerrado.
+      //
+      // Va dentro de la transacción, así que al propagar se revierte también
+      // la factura: o quedan las dos cosas, o no queda ninguna.
       if (isAccepted) {
         try {
           await this.businessEvents.recordPurchase({
@@ -187,9 +203,14 @@ export class PurchaseInvoicesService {
                 : ACCOUNT_CODES.PURCHASES,
           });
         } catch (err) {
-          // Comportamiento histórico: no propagar para no bloquear, pero log.
-          // eslint-disable-next-line no-console
-          console.warn('[purchase-invoice] recordPurchase falló:', (err as Error).message);
+          const motivo = (err as Error).message;
+          this.logger.error(`[purchase-invoice] recordPurchase falló: ${motivo}`);
+          // Se conserva el mensaje original: casi siempre dice exactamente
+          // qué pasó ("el período está cerrado", "falta la cuenta X"), y
+          // reemplazarlo por uno genérico obligaría a ir a los registros.
+          throw new BadRequestException(
+            `No se registró la compra porque no se pudo generar su asiento contable. ${motivo}`,
+          );
         }
       }
 
