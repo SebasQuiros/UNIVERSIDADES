@@ -31,6 +31,10 @@ interface CompanyLite {
   isCompanyEnabled: boolean;
   exercise?: { id: string; title: string } | null;
   attempt?: { id: string; status: string; exercise?: { id: string; title: string } } | null;
+  /** Ejercicio unificado que arma el backend: directo (GROUP) o via attempt. */
+  linkedExercise?: { id: string; title: string } | null;
+  /** Siempre false en este listado: las de practica viven en otra ruta. */
+  isPractice?: boolean;
 }
 
 // Textura de puntos sutil para las bandas hero (fondo azul noche).
@@ -321,10 +325,13 @@ export default function EstudianteDashboard() {
   const done    = attempts.filter((a) => a.status === 'SUBMITTED' || a.status === 'GRADED');
 
   const firstName = user?.name?.split(' ')[0] ?? 'Estudiante';
-  // Empresa activa del estudiante (si existe); si no hay, el dashboard se
-  // muestra en ceros — como una cuenta nueva.
-  const activeCompanyId =
-    companies.find((c) => c.isCompanyEnabled)?.id ?? companies[0]?.id ?? null;
+  // Empresa activa del ESPACIO EDUCACION. `/api/v1/companies` devuelve solo
+  // empresas de ejercicio: las del Espacio Contador viven en su propia ruta y
+  // no deben asomarse aca. Si no hay ninguna, el panel se queda vacio, que es
+  // lo correcto para quien todavia no ha iniciado un ejercicio.
+  const activeCompany =
+    companies.find((c) => c.isCompanyEnabled) ?? companies[0] ?? null;
+  const activeCompanyId = activeCompany?.id ?? null;
 
   const groupCompanies = companies.filter((c) => c.mode === 'GROUP');
 
@@ -381,6 +388,17 @@ export default function EstudianteDashboard() {
       {/* ── Resumen del negocio (siempre visible) ── */}
       <section className="mb-10">
         <SectionHeading icon={Wallet} eyebrow="Tu empresa" title="Resumen del negocio" />
+        {/* Decir DE CUAL empresa son las cifras: un estudiante puede tener
+            varias, y un panel sin nombre invita a atribuirle los numeros a la
+            empresa equivocada. */}
+        {!loading && activeCompany && (
+          <p className="-mt-2 mb-3 text-xs text-gray-500">
+            Cifras de <span className="font-semibold text-gray-700">{activeCompany.name}</span>
+            {activeCompany.linkedExercise?.title
+              ? <> · ejercicio <span className="text-gray-700">{activeCompany.linkedExercise.title}</span></>
+              : null}
+          </p>
+        )}
         {loading
           ? <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-gray-100 rounded-card animate-pulse" />)}
@@ -388,7 +406,8 @@ export default function EstudianteDashboard() {
           : <ExecutiveDashboard companyId={activeCompanyId} compact />}
         {!loading && !activeCompanyId && (
           <p className="text-xs text-gray-400 mt-3">
-            Aún no tienes una empresa. Al iniciar un ejercicio y constituir tu empresa, este panel cobra vida con tus datos reales.
+            Aún no tienes una empresa de ejercicio. Al iniciar un ejercicio y constituir tu empresa, este panel cobra vida con tus datos reales.
+            Tus empresas del Espacio Contador se manejan aparte y no se mezclan con las de tus cursos.
           </p>
         )}
       </section>

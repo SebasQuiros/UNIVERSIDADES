@@ -49,9 +49,24 @@ export class CompaniesService {
   // ── Get company by student ────────────────────────────────────
   // Fase 1: incluye companies INDIVIDUAL (dueño directo) + GROUP donde
   // el estudiante figura en CompanyMembership.
+  /**
+   * Empresas del ESPACIO EDUCACION: las ligadas a un ejercicio.
+   *
+   * El Espacio Contador y el Espacio Educacion son dos mundos separados y no
+   * deben verse entre si. Esta consulta no excluia las empresas de practica,
+   * asi que un estudiante que hubiera creado una empresa en el Espacio
+   * Contador veia sus cifras -IVA por pagar, utilidad del periodo- en el
+   * panel de Educacion SIN haber iniciado ningun ejercicio. Los datos eran
+   * suyos, pero estaban en el lugar equivocado: al alumno le parecia que el
+   * sistema se invento numeros, y al profesor le habria parecido que el
+   * alumno adelanto trabajo.
+   *
+   * Las empresas de practica se listan por su propia ruta (listPractice).
+   */
   async findByStudent(studentId: string) {
     const companies = await this.prisma.company.findMany({
       where: {
+        isPractice: false,
         OR: [
           { studentId },
           { memberships: { some: { userId: studentId } } },
