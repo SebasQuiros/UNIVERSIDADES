@@ -45,7 +45,19 @@ interface OnboardingResponse {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+/**
+ * Origen del backend, SIN el prefijo de la API.
+ *
+ * Acá estaba con `/api/v1` incluido en el valor por defecto, asumiendo que la
+ * variable de entorno tambien lo traia. No lo trae: en el resto de la app
+ * (ver lib/api.ts) NEXT_PUBLIC_API_URL es solo el origen y el prefijo se pone
+ * en cada llamada. Resultado: el registro hacia POST a <origen>/onboarding/
+ * university y el servidor respondia "Cannot POST /onboarding/university".
+ *
+ * En local coincidia por casualidad, porque el valor por defecto SI traia el
+ * prefijo. Solo fallaba en produccion.
+ */
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const COUNTRIES = [
   'Costa Rica', 'Guatemala', 'El Salvador', 'Honduras', 'Nicaragua',
@@ -218,7 +230,7 @@ export default function RegistroPage() {
     setSubmitting(true);
     setSubmitError('');
     try {
-      const res = await fetch(`${API_BASE}/onboarding/university`, {
+      const res = await fetch(`${API_BASE}/api/v1/onboarding/university`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
