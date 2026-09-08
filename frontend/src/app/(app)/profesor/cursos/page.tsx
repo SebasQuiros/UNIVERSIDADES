@@ -96,6 +96,14 @@ function CreateCourseModal({
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Universidad *
             </label>
+            {universities.length === 1 ? (
+              <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700">
+                <Building2 className="h-4 w-4 text-gray-400" />
+                {universities[0].shortName
+                  ? `${universities[0].shortName} — ${universities[0].name}`
+                  : universities[0].name}
+              </div>
+            ) : (
             <div className="relative">
               <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <select
@@ -110,6 +118,7 @@ function CreateCourseModal({
                 ))}
               </select>
             </div>
+            )}
             {errors.universityId && <p className="text-xs text-red-600 mt-1">{errors.universityId}</p>}
           </div>
 
@@ -324,6 +333,19 @@ export default function CursosPage() {
   const [toDelete, setToDelete]         = useState<CourseWithUniversity | null>(null);
   const [deleting, setDeleting]         = useState(false);
 
+  // Un boton gris y mudo es peor que un error: el profesor no sabe si el
+  // sistema fallo o si le falta un permiso. Explicamos el motivo real.
+  function abrirNuevoCurso() {
+    if (universities.length === 0) {
+      toast.error(
+        'Tu cuenta todavia no esta asociada a una institucion. Pidele a la administracion que te asigne una.',
+        { duration: 6000 },
+      );
+      return;
+    }
+    setShowModal(true);
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -338,14 +360,26 @@ export default function CursosPage() {
           uniMap.set(c.university.id, c.university as unknown as University);
         }
       }
-      // Also try fetching universities (works for ADMIN roles); silently ignore 403
+      // El listado completo de universidades es solo para ADMIN/SUPERADMIN.
       try {
         const unisRes = await api.get<University[]>('/api/v1/universities');
-        setUniversities(unisRes.data);
+        if (unisRes.data?.length) { setUniversities(unisRes.data); return; }
       } catch {
-        // TEACHER role — derive university list from loaded courses
-        setUniversities(Array.from(uniMap.values()));
+        // 403 esperado para un TEACHER: seguimos con su propia institucion.
       }
+
+      // Un profesor solo trabaja en su institucion. Antes esta lista se deducia
+      // de sus cursos, lo que creaba un circulo vicioso: sin cursos no habia
+      // universidad, sin universidad el boton "Nuevo curso" quedaba
+      // deshabilitado, y por tanto un profesor recien creado no podia crear
+      // NUNCA su primer curso. /universities/mine no exige rol admin.
+      try {
+        const mia = await api.get<University | null>('/api/v1/universities/mine');
+        if (mia.data?.id) uniMap.set(mia.data.id, mia.data as University);
+      } catch {
+        // Sin institucion asignada: el aviso de mas abajo lo explica.
+      }
+      setUniversities(Array.from(uniMap.values()));
     } catch {
       toast.error('Error al cargar cursos');
     } finally {
@@ -423,7 +457,7 @@ export default function CursosPage() {
         icon={GraduationCap}
         className="mb-6"
         actions={
-          <Button onClick={() => setShowModal(true)} disabled={universities.length === 0} className="cx-press">
+          <Button onClick={abrirNuevoCurso} className="cx-press">
             <Plus className="w-4 h-4" />
             Nuevo curso
           </Button>
@@ -488,7 +522,7 @@ export default function CursosPage() {
             title="Aún no tienes cursos"
             description="Crea tu primer curso para inscribir estudiantes y publicar ejercicios."
             action={
-              <Button onClick={() => setShowModal(true)} disabled={universities.length === 0} className="cx-press">
+              <Button onClick={abrirNuevoCurso} className="cx-press">
                 <Plus className="w-4 h-4" /> Crear curso
               </Button>
             }

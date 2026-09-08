@@ -93,6 +93,49 @@ export class CoursesService {
     return course;
   }
 
+  /**
+   * Resuelve quien queda como responsable del curso.
+   *
+   * Un TEACHER solo puede quedar como responsable de sus propios cursos. Un
+   * ADMIN casi nunca da clase: crea el curso y se lo asigna a alguien de su
+   * claustro, asi que para el la persona responsable es un dato obligatorio en
+   * la practica (si no manda ninguna, queda a su nombre).
+   *
+   * Se valida que la persona exista, este activa, pertenezca a ESTA institucion
+   * y pueda dar clase. Sin la comprobacion de universityId un ADMIN podria
+   * asignarle un curso a un profesor de otra institucion pasando su UUID.
+   */
+  private async resolverResponsable(
+    universityId: string,
+    caller: { id: string; role: string },
+    teacherId?: string,
+  ): Promise<string> {
+    if (!teacherId || teacherId === caller.id) return caller.id;
+
+    if (caller.role !== 'ADMIN' && caller.role !== 'SUPERADMIN') {
+      throw new ForbiddenException(
+        'Solo la administracion de la institucion puede asignar el curso a otra persona',
+      );
+    }
+
+    const docente = await this.prisma.user.findFirst({
+      where:  { id: teacherId, universityId },
+      select: { id: true, role: true, isActive: true, name: true },
+    });
+    if (!docente) {
+      throw new BadRequestException('La persona responsable no pertenece a esta institucion');
+    }
+    if (!docente.isActive) {
+      throw new BadRequestException(`La cuenta de ${docente.name} esta desactivada`);
+    }
+    if (docente.role !== 'TEACHER' && docente.role !== 'ADMIN' && docente.role !== 'SUPERADMIN') {
+      throw new BadRequestException(
+        `${docente.name} no tiene rol docente: solo profesorado o administracion puede quedar a cargo de un curso`,
+      );
+    }
+    return docente.id;
+  }
+
   async create(
     universityId: string,
     caller: { id: string; role: string; universityId: string | null },
@@ -101,7 +144,7 @@ export class CoursesService {
     // A staff member may only create courses inside their own university.
     this.assertTenantScope(caller, universityId);
     await this._checkUniversity(universityId);
-    const teacherId = caller.id;
+    const teacherId = await this.resolverResponsable(universityId, caller, dto.teacherId);
     return this.prisma.course.create({
       data: {
         universityId,
@@ -131,9 +174,15 @@ export class CoursesService {
       throw new ForbiddenException('Solo el profesor del curso puede modificarlo');
     }
 
+    const nuevoResponsable =
+      dto.teacherId !== undefined && dto.teacherId !== course.teacherId
+        ? await this.resolverResponsable(universityId, caller, dto.teacherId)
+        : undefined;
+
     return this.prisma.course.update({
       where: { id: courseId },
       data: {
+        ...(nuevoResponsable !== undefined && { teacherId: nuevoResponsable }),
         ...(dto.name        !== undefined && { name:        dto.name        }),
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.code        !== undefined && { code:        dto.code        }),

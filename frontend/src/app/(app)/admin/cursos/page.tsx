@@ -13,15 +13,173 @@ import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import {
-  BookOpen, Users, FileText, Calendar, Search, ChevronRight, X, CheckCircle2, GraduationCap,
+  BookOpen, Users, FileText, Calendar, Search, ChevronRight, X, CheckCircle2,
+  GraduationCap, Plus, UserCog,
 } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
+import { getErrorMessage } from '@/lib/utils';
 import type { Course } from '@/types';
+
+interface Docente { id: string; name: string; email: string; role: string; isActive: boolean }
+
+/**
+ * Alta de curso desde administracion.
+ *
+ * Esta pantalla era de solo lectura: la administracion podia ver los cursos
+ * pero no crear ninguno, y el estado vacio decia "cuando el profesorado cree
+ * cursos apareceran aqui". En una institucion real quien arma la oferta
+ * academica es la administracion, y ademas designa a la persona responsable,
+ * asi que hace falta poder elegirla desde aqui.
+ */
+function NuevoCursoModal({
+  universityId,
+  onClose,
+  onCreated,
+}: {
+  universityId: string;
+  onClose: () => void;
+  onCreated: (c: Course) => void;
+}) {
+  const [docentes, setDocentes] = useState<Docente[]>([]);
+  const [cargandoDocentes, setCargandoDocentes] = useState(true);
+  const [form, setForm] = useState({ name: '', code: '', period: '', description: '', teacherId: '' });
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get<Docente[]>(`/api/v1/universities/${universityId}/users`);
+        // Solo quien puede quedar a cargo de un curso, y solo cuentas activas:
+        // ofrecer una cuenta desactivada termina en un error del backend.
+        setDocentes(
+          data.filter((u) => u.isActive && (u.role === 'TEACHER' || u.role === 'ADMIN' || u.role === 'SUPERADMIN')),
+        );
+      } catch {
+        toast.error('No se pudo cargar la lista de profesores');
+      } finally {
+        setCargandoDocentes(false);
+      }
+    })();
+  }, [universityId]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) errs.name = 'El nombre es requerido';
+    if (!form.teacherId) errs.teacherId = 'Elige quien queda a cargo del curso';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+
+    setSaving(true);
+    try {
+      const { data } = await api.post<Course>(`/api/v1/universities/${universityId}/courses`, {
+        name: form.name,
+        teacherId: form.teacherId,
+        code: form.code || undefined,
+        period: form.period || undefined,
+        description: form.description || undefined,
+      });
+      toast.success('Curso creado');
+      onCreated(data);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 pb-4 pt-5">
+          <div className="flex items-center gap-3">
+            <IconTile icon={BookOpen} tint="#2563EB" size={40} />
+            <div>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.13em] text-gold-900">Administracion</p>
+              <h3 className="font-bold tracking-tight text-gray-900">Nuevo curso</h3>
+            </div>
+          </div>
+          <button onClick={onClose} aria-label="Cerrar" className="text-gray-400 transition-colors hover:text-gray-700 cx-press">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
+          <Input
+            label="Nombre del curso *"
+            placeholder="Contabilidad I - 2026"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            error={errors.name}
+          />
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Persona responsable *
+            </label>
+            <div className="relative">
+              <UserCog className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <select
+                value={form.teacherId}
+                onChange={(e) => setForm({ ...form, teacherId: e.target.value })}
+                disabled={cargandoDocentes}
+                className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60 disabled:bg-gray-50"
+              >
+                <option value="">
+                  {cargandoDocentes ? 'Cargando profesorado...' : 'Selecciona a quien queda a cargo'}
+                </option>
+                {docentes.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name} - {d.email}</option>
+                ))}
+              </select>
+            </div>
+            {errors.teacherId && <p className="mt-1 text-xs text-red-600">{errors.teacherId}</p>}
+            {!cargandoDocentes && docentes.length === 0 && (
+              <p className="mt-1 text-xs text-amber-700">
+                Todavia no hay profesores en la institucion. Crealos en Usuarios y vuelve aqui.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Codigo"
+              placeholder="CONT-101"
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value })}
+            />
+            <Input
+              label="Periodo"
+              placeholder="2026-I"
+              value={form.period}
+              onChange={(e) => setForm({ ...form, period: e.target.value })}
+            />
+          </div>
+
+          <Input
+            label="Descripcion"
+            placeholder="Ciclo contable completo"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={onClose} className="cx-press">Cancelar</Button>
+            <Button type="submit" loading={saving} className="cx-press">Crear curso</Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminCursosPage() {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
+  const [showNuevo, setShowNuevo] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.universityId) return;
@@ -52,7 +210,20 @@ export default function AdminCursosPage() {
         icon={BookOpen}
         iconTint="#2563EB"
         className="mb-8"
+        actions={
+          <Button onClick={() => setShowNuevo(true)} className="cx-press">
+            <Plus className="h-4 w-4" /> Nuevo curso
+          </Button>
+        }
       />
+
+      {showNuevo && user?.universityId && (
+        <NuevoCursoModal
+          universityId={user.universityId}
+          onClose={() => setShowNuevo(false)}
+          onCreated={(c) => { setCourses((prev) => [c, ...prev]); setShowNuevo(false); }}
+        />
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
@@ -119,7 +290,12 @@ export default function AdminCursosPage() {
             <EmptyState
               illustration={<SceneEmptyBox size={200} className="lp-drift" />}
               title="Aún no hay cursos"
-              description="Cuando el profesorado cree cursos en esta universidad, aparecerán en este listado."
+              description="Crea el primer curso y asígnaselo a una persona del profesorado."
+              action={
+                <Button onClick={() => setShowNuevo(true)} className="cx-press">
+                  <Plus className="h-4 w-4" /> Crear curso
+                </Button>
+              }
             />
           )}
         </div>

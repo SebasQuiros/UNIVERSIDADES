@@ -22,6 +22,17 @@ export class CreateCourseDto {
   @IsString()
   @MaxLength(20)
   period?: string;
+
+  /**
+   * Persona responsable del curso.
+   *
+   * Solo ADMIN/SUPERADMIN pueden designar a otra persona: para un TEACHER el
+   * servicio ignora este campo y lo deja como responsable a el mismo, porque
+   * si no un profesor podria colgarle un curso a un colega sin que se entere.
+   */
+  @IsOptional()
+  @IsUUID()
+  teacherId?: string;
 }
 
 export class UpdateCourseDto {
@@ -45,6 +56,17 @@ export class UpdateCourseDto {
   @IsString()
   @MaxLength(20)
   period?: string;
+
+  /**
+   * Persona responsable del curso.
+   *
+   * Solo ADMIN/SUPERADMIN pueden designar a otra persona: para un TEACHER el
+   * servicio ignora este campo y lo deja como responsable a el mismo, porque
+   * si no un profesor podria colgarle un curso a un colega sin que se entere.
+   */
+  @IsOptional()
+  @IsUUID()
+  teacherId?: string;
 }
 
 export class EnrollStudentDto {
