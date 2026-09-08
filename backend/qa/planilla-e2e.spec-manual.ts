@@ -99,6 +99,45 @@ async function main() {
       { employeeId: alberto.id, viaticos: 80_000 },
     ];
 
+    console.log('\n--- 2b. El alta por el SERVICIO guarda hijos y deducciones ---');
+    // Se crea por el service, NO por prisma directo: es el camino que recorre
+    // el formulario, y era justo donde los campos se descartaban en silencio.
+    const porServicio: any = await payroll.createEmployee(companyId, {
+      name: MARCA + 'ConFamilia',
+      identification: '333333333',
+      salary: 2_000_000,
+      startDate: '2025-01-01',
+      tieneConyuge: true,
+      cantidadHijos: 2,
+      pensionAlimenticia: 50_000,
+      tasaAhorroAsociacion: 0.05,
+      prestamoAsociacion: 25_000,
+    } as any, userId);
+    chequear('guarda el conyuge', porServicio.tieneConyuge === true, String(porServicio.tieneConyuge));
+    chequear('guarda los hijos', porServicio.cantidadHijos === 2, String(porServicio.cantidadHijos));
+    chequear('guarda la pension', igual(porServicio.pensionAlimenticia, 50_000));
+    chequear('guarda la tasa de ahorro', igual(porServicio.tasaAhorroAsociacion, 0.05, 0.0001));
+    chequear('guarda el prestamo', igual(porServicio.prestamoAsociacion, 25_000));
+
+    const previaFamilia: any = await payroll.previewPayroll(
+      companyId, PERIODO, [porServicio.id], userId,
+    );
+    const cf = previaFamilia.lines[0].calc;
+    chequear('el credito por conyuge llega al calculo',
+      igual(cf.detalleRenta.creditoConyuge, 2_580), String(cf.detalleRenta.creditoConyuge));
+    chequear('el credito por 2 hijos llega al calculo',
+      igual(cf.detalleRenta.creditoHijos, 3_420), String(cf.detalleRenta.creditoHijos));
+    chequear('la pension alimenticia se descuenta',
+      igual(cf.pensionAlimenticia, 50_000), String(cf.pensionAlimenticia));
+    chequear('el ahorro es el 5% del bruto',
+      igual(cf.ahorroAsociacion, 100_000), String(cf.ahorroAsociacion));
+    chequear('el prestamo se descuenta',
+      igual(cf.prestamoAsociacion, 25_000), String(cf.prestamoAsociacion));
+    chequear('los creditos rebajan el impuesto en 6.000 exactos',
+      igual(cf.detalleRenta.impuestoBruto - cf.impuestoRenta, 6_000),
+      `${cf.detalleRenta.impuestoBruto} - ${cf.impuestoRenta}`);
+    await prisma.employee.delete({ where: { id: porServicio.id } });
+
     console.log('\n--- 3. Vista previa antes de asentar ---');
     const previa: any = await payroll.previewPayroll(companyId, PERIODO, undefined, userId, movimientos);
     chequear('la previa trae el asiento para revisarlo', Array.isArray(previa.asiento) && previa.asiento.length > 0);

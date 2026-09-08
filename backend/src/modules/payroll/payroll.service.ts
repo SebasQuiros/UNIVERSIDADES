@@ -55,6 +55,15 @@ export class PayrollService {
         salary:         new Decimal(dto.salary),
         salaryType:     dto.salaryType ?? 'MENSUAL',
         startDate:      new Date(dto.startDate),
+        // Situacion familiar y deducciones fijas. Sin esto la ficha se creaba
+        // siempre sin hijos ni conyuge y el credito fiscal nunca se aplicaba,
+        // aunque la pantalla lo preguntara: los campos llegaban y se
+        // descartaban en silencio, que es la peor forma de perder un dato.
+        tieneConyuge:         dto.tieneConyuge ?? false,
+        cantidadHijos:        dto.cantidadHijos ?? 0,
+        pensionAlimenticia:   new Decimal(dto.pensionAlimenticia ?? 0),
+        tasaAhorroAsociacion: new Decimal(dto.tasaAhorroAsociacion ?? 0),
+        prestamoAsociacion:   new Decimal(dto.prestamoAsociacion ?? 0),
       },
     });
   }
@@ -71,6 +80,14 @@ export class PayrollService {
         department: dto.department ?? emp.department,
         salary:     dto.salary !== undefined ? new Decimal(dto.salary) : emp.salary,
         isActive:   dto.isActive   ?? emp.isActive,
+        tieneConyuge:  dto.tieneConyuge  ?? emp.tieneConyuge,
+        cantidadHijos: dto.cantidadHijos ?? emp.cantidadHijos,
+        pensionAlimenticia: dto.pensionAlimenticia !== undefined
+          ? new Decimal(dto.pensionAlimenticia) : emp.pensionAlimenticia,
+        tasaAhorroAsociacion: dto.tasaAhorroAsociacion !== undefined
+          ? new Decimal(dto.tasaAhorroAsociacion) : emp.tasaAhorroAsociacion,
+        prestamoAsociacion: dto.prestamoAsociacion !== undefined
+          ? new Decimal(dto.prestamoAsociacion) : emp.prestamoAsociacion,
       },
     });
   }

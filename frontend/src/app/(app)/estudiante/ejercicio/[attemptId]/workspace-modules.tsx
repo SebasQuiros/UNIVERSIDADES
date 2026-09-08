@@ -8,7 +8,7 @@ import { ClienteDetalle } from '@/components/modulo/ClienteDetalle';
 import { ProveedorDetalle } from '@/components/modulo/ProveedorDetalle';
 import { CotizacionDetalle } from '@/components/modulo/CotizacionDetalle';
 import { formatDate, getErrorMessage, esc } from '@/lib/utils';
-import { exportToExcel } from '@/lib/excel';
+import { exportToExcel, exportToExcelMultiSheet } from '@/lib/excel';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
@@ -4286,10 +4286,19 @@ export function PayrollTab({ companyId }: { companyId: string }) {
   const defaultPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const [period, setPeriod] = useState(defaultPeriod);
 
-  const [empForm, setEmpForm] = useState({
+  const EMP_VACIO = {
     name: '', identification: '', position: '', department: '', salary: '',
     startDate: now.toISOString().split('T')[0],
-  });
+    // Situacion familiar: es lo que mueve el impuesto sobre la renta via
+    // creditos fiscales. Sin estos campos el motor calculaba bien pero nadie
+    // podia decirle cuantos hijos tiene la persona.
+    tieneConyuge: false,
+    cantidadHijos: '0',
+    pensionAlimenticia: '',
+    tasaAhorroAsociacion: '',
+    prestamoAsociacion: '',
+  };
+  const [empForm, setEmpForm] = useState(EMP_VACIO);
 
   // ── Load data ──────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -4328,10 +4337,16 @@ export function PayrollTab({ companyId }: { companyId: string }) {
         department:     empForm.department || undefined,
         salary:         Number(empForm.salary),
         startDate:      empForm.startDate,
+        tieneConyuge:         empForm.tieneConyuge,
+        cantidadHijos:        Number(empForm.cantidadHijos || 0),
+        pensionAlimenticia:   Number(empForm.pensionAlimenticia || 0),
+        // La pantalla pide un porcentaje (5) y el backend espera la fraccion.
+        tasaAhorroAsociacion: Number(empForm.tasaAhorroAsociacion || 0) / 100,
+        prestamoAsociacion:   Number(empForm.prestamoAsociacion || 0),
       });
       toast.success('Empleado registrado');
       setShowEmpModal(false);
-      setEmpForm({ name: '', identification: '', position: '', department: '', salary: '', startDate: now.toISOString().split('T')[0] });
+      setEmpForm(EMP_VACIO);
       load();
     } catch (err) { toast.error(getErrorMessage(err)); }
     finally { setSavingEmp(false); }
@@ -4356,6 +4371,95 @@ export function PayrollTab({ companyId }: { companyId: string }) {
   const asientoPrevio: any[] = previewData?.asiento ?? [];
   const sumaDebe  = asientoPrevio.reduce((acc, l) => acc + Number(l.debit ?? 0), 0);
   const sumaHaber = asientoPrevio.reduce((acc, l) => acc + Number(l.credit ?? 0), 0);
+
+  /**
+   * Exporta la planilla a Excel, con dos hojas: la planilla y su asiento.
+   *
+   * Es el formato en que se entrega una planilla de verdad, y es lo que se
+   * archiva. Sirve tanto para la vista previa (antes de registrar) como para
+   * una planilla ya procesada del historial.
+   */
+  function exportarPlanilla(origen: 'previa' | 'historial', planilla?: any) {
+    const n = (v: any) => Number(v ?? 0);
+
+    // Se normalizan las dos procedencias a una sola forma: la vista previa
+    // trae el calculo en `calc`, y el historial las columnas guardadas.
+    const filas = origen === 'previa'
+      ? (previewData?.lines ?? []).map((l: any) => ({ nombre: l.employeeName, c: l.calc ?? {} }))
+      : (planilla?.lines ?? []).map((l: any) => ({
+          nombre: l.employee?.name ?? '—',
+          c: lineaGuardadaAModal(l),
+        }));
+
+    if (filas.length === 0) { toast.error('No hay nada que exportar'); return; }
+
+    const periodo = origen === 'previa' ? previewData?.period : planilla?.period;
+
+    const hojaPlanilla = filas.map(({ nombre, c }: any) => ({
+      'Colaborador':            nombre,
+      'Salario base':           n(c.salarioBase),
+      'Comisiones':             n(c.comisiones),
+      'Horas extra':            n(c.horasExtra),
+      'Bono fijo':              n(c.bonoFijo),
+      'SALARIO BRUTO':          n(c.salarioBruto),
+      'SEM obrero 5,50%':       n(c.cuotasObreras?.sem),
+      'IVM obrero 4,33%':       n(c.cuotasObreras?.ivm),
+      'Banco Popular 1,00%':    n(c.cuotasObreras?.bancoPopular),
+      'Impuesto de renta':      n(c.impuestoRenta),
+      'Pension alimenticia':    n(c.pensionAlimenticia),
+      'Ahorro asociacion':      n(c.ahorroAsociacion),
+      'Prestamo asociacion':    n(c.prestamoAsociacion),
+      'Otras deducciones':      n(c.otrasDeducciones),
+      'TOTAL DEDUCCIONES':      n(c.totalDeducciones),
+      'SALARIO NETO':           n(c.salarioNeto),
+      'Viaticos (no salarial)': n(c.viaticos),
+      'Regalos (no salarial)':  n(c.regalos),
+      'TOTAL A PAGAR':          n(c.totalEfectivoAPagar),
+      'SEM patrono 9,25%':      n(c.cargasPatronales?.sem),
+      'IVM patrono 5,58%':      n(c.cargasPatronales?.ivm),
+      'FODESAF 5,00%':          n(c.cargasPatronales?.fodesaf),
+      'INA 1,50%':              n(c.cargasPatronales?.ina),
+      'IMAS 0,50%':             n(c.cargasPatronales?.imas),
+      'Banco Popular pat. 0,50%': n(c.cargasPatronales?.bancoPopularPatrono),
+      'FCL 3,00%':              n(c.cargasPatronales?.fcl),
+      'ROP 1,25%':              n(c.cargasPatronales?.rop),
+      'Banco Popular LPT 0,25%': n(c.cargasPatronales?.bancoPopularLpt),
+      'Aguinaldo 8,33%':        n(c.provisionAguinaldo),
+      'Vacaciones 4,16%':       n(c.provisionVacaciones),
+      'Poliza INS 1,50%':       n(c.polizaINS),
+      'COSTO TOTAL PATRONO':    n(c.costoTotalPatrono),
+    }));
+
+    // Fila de totales: una planilla sin totales no sirve para cuadrar nada.
+    const totales: Record<string, unknown> = { 'Colaborador': 'TOTALES' };
+    for (const k of Object.keys(hojaPlanilla[0])) {
+      if (k === 'Colaborador') continue;
+      totales[k] = hojaPlanilla.reduce((acc: number, f: any) => acc + n(f[k]), 0);
+    }
+    hojaPlanilla.push(totales as any);
+
+    // Hoja del asiento. En la vista previa lo trae el backend; para una
+    // planilla del historial se reconstruye desde sus lineas guardadas.
+    const hojaAsiento = origen === 'previa'
+      ? (previewData?.asiento ?? []).map((l: any) => ({
+          'Cuenta': l.accountCode, 'Descripcion': l.description,
+          'Debe': n(l.debit) || '', 'Haber': n(l.credit) || '',
+        }))
+      : [];
+
+    const hojas: Array<{ name: string; rows: Record<string, unknown>[] }> = [
+      { name: 'Planilla', rows: hojaPlanilla },
+    ];
+    if (hojaAsiento.length) {
+      const sd = hojaAsiento.reduce((a: number, r: any) => a + n(r['Debe']), 0);
+      const sh = hojaAsiento.reduce((a: number, r: any) => a + n(r['Haber']), 0);
+      hojaAsiento.push({ 'Cuenta': '', 'Descripcion': 'SUMAS IGUALES', 'Debe': sd, 'Haber': sh });
+      hojas.push({ name: 'Asiento Contable', rows: hojaAsiento });
+    }
+
+    exportToExcelMultiSheet(`planilla-${periodo ?? 'sin-periodo'}`, hojas);
+    toast.success('Planilla exportada');
+  }
 
   async function handleProcessPayroll() {
     if (!previewData) return;
@@ -4470,6 +4574,77 @@ export function PayrollTab({ companyId }: { companyId: string }) {
                   </p>
                 )}
                 <Input label="Fecha de ingreso" type="date" value={empForm.startDate} onChange={e => setEmpForm({ ...empForm, startDate: e.target.value })} />
+
+                {/* ── Situacion familiar ── */}
+                <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 space-y-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-blue-800">Situación familiar</p>
+                    <p className="mt-0.5 text-[11px] text-blue-700">
+                      Rebaja el impuesto sobre la renta: ₡2.580 por cónyuge y ₡1.710 por cada
+                      hijo menor o estudiante, al mes.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      label="Hijos menores / estudiantes"
+                      type="number" min="0" max="20" step="1"
+                      value={empForm.cantidadHijos}
+                      onChange={e => setEmpForm({ ...empForm, cantidadHijos: e.target.value })}
+                    />
+                    <label className="flex cursor-pointer items-center gap-2 self-end pb-2.5 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={empForm.tieneConyuge}
+                        onChange={e => setEmpForm({ ...empForm, tieneConyuge: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      Tiene cónyuge
+                    </label>
+                  </div>
+                  {(Number(empForm.cantidadHijos || 0) > 0 || empForm.tieneConyuge) && (
+                    <p className="text-[11px] font-semibold text-blue-800">
+                      Crédito fiscal mensual:{' '}
+                      {fmt(Number(empForm.cantidadHijos || 0) * 1710 + (empForm.tieneConyuge ? 2580 : 0))}
+                    </p>
+                  )}
+                </div>
+
+                {/* ── Deducciones fijas ── */}
+                <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-3 space-y-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-orange-800">
+                      Deducciones fijas (opcionales)
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-orange-700">
+                      Se repiten mes a mes. Lo que varía —comisiones, horas extra, viáticos—
+                      se registra al calcular la planilla.
+                    </p>
+                  </div>
+                  <Input
+                    label="Pensión alimenticia (₡ al mes)"
+                    type="number" min="0" step="1"
+                    value={empForm.pensionAlimenticia}
+                    onChange={e => setEmpForm({ ...empForm, pensionAlimenticia: e.target.value })}
+                    placeholder="0"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      label="Ahorro asociación (%)"
+                      type="number" min="0" max="100" step="0.1"
+                      value={empForm.tasaAhorroAsociacion}
+                      onChange={e => setEmpForm({ ...empForm, tasaAhorroAsociacion: e.target.value })}
+                      placeholder="5"
+                    />
+                    <Input
+                      label="Préstamo asociación (₡)"
+                      type="number" min="0" step="1"
+                      value={empForm.prestamoAsociacion}
+                      onChange={e => setEmpForm({ ...empForm, prestamoAsociacion: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex gap-3 pt-2">
                   <Button type="button" variant="secondary" onClick={() => setShowEmpModal(false)} className="flex-1">Cancelar</Button>
                   <Button type="submit" loading={savingEmp} className="flex-1">Crear empleado</Button>
@@ -4731,8 +4906,11 @@ export function PayrollTab({ companyId }: { companyId: string }) {
                 )}
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Button variant="secondary" onClick={() => setPreviewData(null)} className="flex-1">Cancelar</Button>
+                <Button variant="secondary" onClick={() => exportarPlanilla('previa')} className="flex-1">
+                  <Download className="h-4 w-4" /> Exportar a Excel
+                </Button>
                 <Button onClick={handleProcessPayroll} loading={processing} className="flex-1">
                   <CheckCircle2 className="w-4 h-4" /> Confirmar y registrar planilla
                 </Button>
@@ -4779,6 +4957,11 @@ export function PayrollTab({ companyId }: { companyId: string }) {
                 {expandedPayroll === p.id && (
                   <div className="border-t border-gray-200 p-4 space-y-4">
                     {/* Aggregate summary */}
+                    <div className="flex justify-end">
+                      <Button size="sm" variant="secondary" onClick={() => exportarPlanilla('historial', p)}>
+                        <Download className="h-3.5 w-3.5" /> Exportar a Excel
+                      </Button>
+                    </div>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
                       <div className="bg-gray-50 rounded-lg p-2 text-center"><p className="text-gray-400">Bruto total</p><p className="font-bold font-mono">{fmt(p.totalGross)}</p></div>
                       <div className="bg-orange-50 rounded-lg p-2 text-center"><p className="text-orange-400">CCSS trab.</p><p className="font-bold font-mono text-orange-700">{fmt(p.totalTrabajador)}</p></div>
