@@ -712,3 +712,58 @@ body {
   transform: none !important;
 }
 .tribu-calm .animate-pulse { animation: none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Impresión de estados financieros
+   ═══════════════════════════════════════════════════════════════════════════
+   Un estado financiero se imprime y se firma: la impresión no es un extra.
+
+   Antes había DOS renderizadores —el de pantalla en React y otro que armaba
+   HTML a mano para una ventana nueva— y podían discrepar sobre qué es un
+   gasto operativo. Ahora se imprime el MISMO nodo que se está viendo, así que
+   no pueden divergir.
+
+   `visibility` en vez de `display:none` a propósito: ocultar con display
+   colapsa la maquetación y los anchos de la tabla se recalculan mal.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  body.imprimiendo-estado * {
+    visibility: hidden;
+  }
+
+  body.imprimiendo-estado #print-report-area,
+  body.imprimiendo-estado #print-report-area * {
+    visibility: visible;
+  }
+
+  body.imprimiendo-estado #print-report-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* Los fondos de las cabeceras azul marino son parte de la lectura del
+     estado: sin ellos no se distingue un subtotal de un renglón cualquiera. */
+  body.imprimiendo-estado #print-report-area * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Que un rubro no quede partido entre dos páginas. */
+  body.imprimiendo-estado #print-report-area tr {
+    break-inside: avoid;
+  }
+
+  /* Las firmas van juntas al pie, nunca solas en una página. */
+  body.imprimiendo-estado #print-report-area footer {
+    break-inside: avoid;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+}

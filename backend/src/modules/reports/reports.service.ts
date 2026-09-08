@@ -442,6 +442,195 @@ export class ReportsService {
 
   // ── 3. INCOME STATEMENT — Estado de Resultados ───────────────
   // Only covers the specified period (not cumulative)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Presentación comparativa
+  //
+  // Un estado financiero formal se presenta con el período anterior al lado y
+  // la variación en monto y en porcentaje. No es decoración: las NIIF exigen
+  // cifras comparativas, y es la columna donde de verdad se lee el negocio —
+  // un gasto de ₡800.000 no dice nada hasta que se ve que el año pasado fue
+  // ₡200.000.
+  //
+  // Se calcula corriendo el MISMO reporte sobre la ventana de hace un año y
+  // cruzando por etiqueta de grupo. No se toca el cálculo original: si algún
+  // día cambia la clasificación, ambas columnas cambian juntas.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Corre el año hacia atrás manteniendo día y mes. */
+  private unAnioAntes(fecha: Date): Date {
+    const d = new Date(fecha);
+    d.setFullYear(d.getFullYear() - 1);
+    return d;
+  }
+
+  private variacion(actual: number, anterior: number) {
+    const monto = Math.round((actual - anterior) * 100) / 100;
+    // Sin base anterior no hay porcentaje que valga: dividir entre cero daría
+    // "infinito" y mostrar 100% sería mentira. Se deja en null y la pantalla
+    // pinta un guion, igual que un estado impreso.
+    const porcentaje = anterior === 0 ? null : Math.round((monto / Math.abs(anterior)) * 10000) / 100;
+    return { monto, porcentaje };
+  }
+
+  /** Índice etiqueta → total, para cruzar el período anterior. */
+  private indexarGrupos(bloques: any[]): Map<string, number> {
+    const m = new Map<string, number>();
+    for (const b of bloques ?? []) {
+      for (const g of b.grupos ?? []) {
+        m.set(`${b.numero}|${g.label}`, Number(g.total ?? 0));
+        for (const a of g.accounts ?? []) {
+          m.set(`${b.numero}|${g.label}|${a.code ?? a.name}`, Number(a.amount ?? 0));
+        }
+      }
+      if (b.resultado?.label) m.set(`R|${b.resultado.label}`, Number(b.resultado.value ?? 0));
+    }
+    return m;
+  }
+
+  /** Estado de Resultados con el período anterior y la variación. */
+  async getIncomeStatementComparativo(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
+    const actual: any = await this.getIncomeStatement(companyId, filter);
+
+    const inicioAnt = this.unAnioAntes(new Date(actual.period.startDate));
+    const finAnt    = this.unAnioAntes(new Date(actual.period.endDate));
+    const anterior: any = await this._incomeStatement(companyId, {
+      startDate: inicioAnt.toISOString(),
+      endDate:   finAnt.toISOString(),
+    } as any);
+
+    const idx = this.indexarGrupos(anterior.structured?.bloques ?? []);
+
+    const bloques = (actual.structured?.bloques ?? []).map((b: any) => ({
+      ...b,
+      grupos: (b.grupos ?? []).map((g: any) => {
+        const ant = idx.get(`${b.numero}|${g.label}`) ?? 0;
+        return {
+          ...g,
+          anterior: ant.toFixed(2),
+          variacion: this.variacion(Number(g.total ?? 0), ant),
+          accounts: (g.accounts ?? []).map((a: any) => {
+            const aAnt = idx.get(`${b.numero}|${g.label}|${a.code ?? a.name}`) ?? 0;
+            return {
+              ...a,
+              anterior: aAnt.toFixed(2),
+              variacion: this.variacion(Number(a.amount ?? 0), aAnt),
+            };
+          }),
+        };
+      }),
+      resultado: {
+        ...b.resultado,
+        anterior: (idx.get(`R|${b.resultado?.label}`) ?? 0).toFixed(2),
+        variacion: this.variacion(
+          Number(b.resultado?.value ?? 0),
+          idx.get(`R|${b.resultado?.label}`) ?? 0,
+        ),
+      },
+    }));
+
+    return {
+      ...actual,
+      comparativo: {
+        etiquetaActual:   String(new Date(actual.period.endDate).getFullYear()),
+        etiquetaAnterior: String(finAnt.getFullYear()),
+        periodoAnterior:  { startDate: inicioAnt, endDate: finAnt },
+      },
+      structured: {
+        ...actual.structured,
+        bloques,
+        resultadoFinal: {
+          ...actual.structured?.resultadoFinal,
+          anterior: String(anterior.netIncome ?? '0'),
+          variacion: this.variacion(
+            Number(actual.structured?.resultadoFinal?.value ?? 0),
+            Number(anterior.netIncome ?? 0),
+          ),
+        },
+      },
+    };
+  }
+
+  /** Estado de Situación Financiera con el año anterior y la variación. */
+  async getBalanceSheetComparativo(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
+    const actual: any = await this.getBalanceSheet(companyId, filter);
+
+    const corteAnt = this.unAnioAntes(new Date(actual.asOfDate));
+    const anterior: any = await this._balanceSheet(companyId, {
+      ...(filter as any),
+      endDate: corteAnt.toISOString(),
+    } as any);
+
+    // El balance se cruza por etiqueta de grupo dentro de cada sección.
+    const idx = new Map<string, number>();
+    const indexarSeccion = (nombre: string, seccion: any) => {
+      for (const g of seccion?.grupos ?? []) {
+        idx.set(`${nombre}|${g.label}`, Number(g.total ?? 0));
+        for (const a of g.accounts ?? []) {
+          idx.set(`${nombre}|${g.label}|${a.code ?? a.name}`, Number(a.amount ?? 0));
+        }
+      }
+      if (seccion) idx.set(`T|${nombre}`, Number(seccion.total ?? 0));
+    };
+    const cA = anterior.classified ?? {};
+    indexarSeccion('activo.corriente',     cA.activo?.corriente);
+    indexarSeccion('activo.noCorriente',   cA.activo?.noCorriente);
+    indexarSeccion('pasivo.corriente',     cA.pasivo?.corriente);
+    indexarSeccion('pasivo.noCorriente',   cA.pasivo?.noCorriente);
+    indexarSeccion('patrimonio',           cA.patrimonio);
+
+    const conComparativo = (nombre: string, seccion: any) => {
+      if (!seccion) return seccion;
+      return {
+        ...seccion,
+        anterior: (idx.get(`T|${nombre}`) ?? 0).toFixed(2),
+        variacion: this.variacion(Number(seccion.total ?? 0), idx.get(`T|${nombre}`) ?? 0),
+        grupos: (seccion.grupos ?? []).map((g: any) => {
+          const ant = idx.get(`${nombre}|${g.label}`) ?? 0;
+          return {
+            ...g,
+            anterior: ant.toFixed(2),
+            variacion: this.variacion(Number(g.total ?? 0), ant),
+            accounts: (g.accounts ?? []).map((a: any) => {
+              const aAnt = idx.get(`${nombre}|${g.label}|${a.code ?? a.name}`) ?? 0;
+              return {
+                ...a,
+                anterior: aAnt.toFixed(2),
+                variacion: this.variacion(Number(a.amount ?? 0), aAnt),
+              };
+            }),
+          };
+        }),
+      };
+    };
+
+    const c = actual.classified ?? {};
+    return {
+      ...actual,
+      comparativo: {
+        etiquetaActual:   String(new Date(actual.asOfDate).getFullYear()),
+        etiquetaAnterior: String(corteAnt.getFullYear()),
+        corteAnterior:    corteAnt,
+      },
+      classified: {
+        ...c,
+        activo: {
+          ...c.activo,
+          corriente:   conComparativo('activo.corriente',   c.activo?.corriente),
+          noCorriente: conComparativo('activo.noCorriente', c.activo?.noCorriente),
+          anterior:    Number(anterior.totals?.totalAssets ?? 0).toFixed(2),
+        },
+        pasivo: {
+          ...c.pasivo,
+          corriente:   conComparativo('pasivo.corriente',   c.pasivo?.corriente),
+          noCorriente: conComparativo('pasivo.noCorriente', c.pasivo?.noCorriente),
+          anterior:    Number(anterior.totals?.totalLiabilities ?? 0).toFixed(2),
+        },
+        patrimonio: conComparativo('patrimonio', c.patrimonio),
+      },
+    };
+  }
+
   async getIncomeStatement(companyId: string, filter: ReportFilterDto = {} as ReportFilterDto) {
     return this.cacheado(companyId, 'resultados', filter, () => this._incomeStatement(companyId, filter));
   }
@@ -1005,9 +1194,15 @@ export class ReportsService {
 
   // ── Helper — get company info for report header ───────────────
   private async getCompanyInfo(companyId: string) {
+    // Un estado financiero formal lleva en el encabezado la razón social, la
+    // cédula jurídica, la dirección y el teléfono. Antes solo se traía el
+    // nombre, así que el encabezado quedaba a medias.
     const company = await this.prisma.company.findUnique({
       where:  { id: companyId },
-      select: { id: true, name: true, legalId: true, email: true },
+      select: {
+        id: true, name: true, legalId: true, legalIdType: true, email: true,
+        address: true, phone: true, currency: true,
+      },
     });
     if (!company) throw new NotFoundException('Empresa no encontrada');
     return company;

@@ -51,6 +51,20 @@ export class ReportsController {
     return this.svc.getIncomeStatement(id, f);
   }
 
+  // ── Presentación formal: con el período anterior y la variación ───────────
+  // Las NIIF exigen cifras comparativas, y es la columna donde se lee el
+  // negocio. Va en rutas aparte para no encarecer las pantallas que solo
+  // necesitan el período actual: el comparativo corre el reporte dos veces.
+  @Get('income-statement/comparativo')
+  incomeStatementComparativo(@Param('companyId') id: string, @Query() f: ReportFilterDto) {
+    return this.svc.getIncomeStatementComparativo(id, f);
+  }
+
+  @Get('balance-sheet/comparativo')
+  balanceSheetComparativo(@Param('companyId') id: string, @Query() f: ReportFilterDto) {
+    return this.svc.getBalanceSheetComparativo(id, f);
+  }
+
   // ── Estados y Análisis: ratios + comparativo vs período anterior ──────────
   @Get('financial-analysis')
   financialAnalysis(@Param('companyId') id: string, @Query() f: ReportFilterDto) {
