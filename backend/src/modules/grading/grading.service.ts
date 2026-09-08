@@ -305,7 +305,9 @@ export class GradingService {
         exerciseId,
         status: { in: ['NOT_STARTED', 'IN_PROGRESS'] as any },
       },
-      select: { studentId: true },
+      // Hace falta el id del intento, no solo el del estudiante: la
+      // notificacion lleva a cada quien a SU intento.
+      select: { id: true, studentId: true },
     });
 
     if (attempts.length === 0) return { sent: 0, message: 'No hay estudiantes activos' };
