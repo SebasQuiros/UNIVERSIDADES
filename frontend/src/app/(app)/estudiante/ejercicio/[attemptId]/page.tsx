@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { IconTile } from '@/components/ui/IconTile';
 import { ArtBalance, SceneStudentDesk, SceneEmptyBox } from '@/components/illustrations';
 import { ExamModeWrapper } from '@/components/exam';
+import { TabErrorBoundary } from '@/components/ui/TabErrorBoundary';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import { CompanyStockCard } from '@/components/dashboard/CompanyStockCard';
 import { FinancialAdvisorCard } from '@/components/dashboard/FinancialAdvisorCard';
@@ -1178,6 +1179,15 @@ export default function ExerciseWorkspacePage() {
 
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto p-6">
+            {/* Cada modulo aislado: un error de dibujado en uno NO puede
+                congelar el espacio de trabajo entero. Paso: un cambio en la
+                forma de la planilla dejo una lectura sobre undefined, React
+                aborto el render completo y el estudiante quedo sin poder ni
+                cambiar de pestaña. La clave por activeTab remonta el limite al
+                cambiar de modulo, asi que el que fallo se reintenta solo.
+                Nota: la seccion "Entregar ejercicio" queda FUERA a proposito,
+                para que entregar siga siendo posible aunque un modulo falle. */}
+            <TabErrorBoundary key={activeTab} modulo={tabs.find((x) => x.id === activeTab)?.label ?? 'este módulo'}>
             {activeTab === 'dashboard' && <DashboardTab  companyId={company.id} attempt={attempt} />}
             {activeTab === 'clients'   && <ClientsTab    companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
             {activeTab === 'quotes'    && <QuotesTab     companyId={company.id} readonly={isReadonly} attemptId={attemptId} />}
@@ -1200,6 +1210,7 @@ export default function ExerciseWorkspacePage() {
             {activeTab === 'fixed-assets'       && <FixedAssetsTab       companyId={company.id} />}
             {activeTab === 'payroll'            && <PayrollTab           companyId={company.id} />}
             {activeTab === 'tutor'              && <SocraticTutorPanel   attemptId={attemptId} companyId={company.id} />}
+            </TabErrorBoundary>
 
             {/* Sección "Entregar ejercicio" — solo en el Resumen (parte final), no en el header */}
             {activeTab === 'dashboard' && attempt.status === 'IN_PROGRESS' && company && (

@@ -4088,73 +4088,181 @@ export function FixedAssetsTab({ companyId }: { companyId: string }) {
   );
 }
 // ─── Payroll Tab — CCSS Costa Rica 2026 ──────────────────────────────────────
+/**
+ * Traduce una linea de planilla YA GUARDADA a la forma que espera el modal.
+ *
+ * La fila de la base usa los nombres de sus columnas (salaryGross, netSalary,
+ * ccssWorker...) y el desglose fino vive en la columna `breakdown`. El modal
+ * habla el idioma del calculador. Sin esta traduccion, abrir el desglose desde
+ * el historial mostraba todo en cero.
+ */
+function lineaGuardadaAModal(l: any) {
+  const bd = l.breakdown ?? {};
+  return {
+    employee:            l.employee,
+    salarioBase:         l.salaryGross,
+    comisiones:          l.comisiones,
+    horasExtra:          l.overtime,
+    bonoFijo:            l.bonus,
+    salarioBruto:        l.totalGross,
+    cuotasObreras:       bd.cuotasObreras ?? { total: l.ccssWorker },
+    impuestoRenta:       l.rentaDeduccion,
+    detalleRenta:        bd.detalleRenta ?? {},
+    pensionAlimenticia:  l.pensionAlimenticia,
+    ahorroAsociacion:    l.ahorroAsociacion,
+    prestamoAsociacion:  l.prestamoAsociacion,
+    otrasDeducciones:    l.otherDeductions,
+    totalDeducciones:    l.totalDeductions,
+    salarioNeto:         l.netSalary,
+    viaticos:            l.viaticos,
+    regalos:             l.regalos,
+    totalEfectivoAPagar: l.totalEfectivoAPagar,
+    cargasPatronales:    bd.cargasPatronales ?? { total: l.ccssPatrono },
+    provisionAguinaldo:  l.aguinaldo,
+    provisionVacaciones: l.provisionVacaciones,
+    polizaINS:           l.polizaINS,
+    costoTotalPatrono:   l.totalEmployerCost,
+    bajoSalarioMinimo:   bd.bajoSalarioMinimo ?? false,
+  };
+}
+
 function PayrollBreakdownModal({ line, onClose }: { line: any; onClose: () => void }) {
   const emp  = line.employee ?? {};
-  const bd   = line.breakdown ?? {};
-  const pat  = bd.patrono  ?? {};
-  const trab = bd.trabajador ?? {};
-  const tax  = bd.taxBrackets ?? [];
+  const obr  = line.cuotasObreras ?? {};
+  const pat  = line.cargasPatronales ?? {};
+  const renta = line.detalleRenta ?? {};
+  const tramos = renta.tramos ?? [];
+
+  const Fila = ({ etiqueta, valor, tenue }: { etiqueta: string; valor: any; tenue?: boolean }) => (
+    <div className="flex justify-between text-xs">
+      <span className={tenue ? 'text-gray-500' : 'text-gray-600'}>{etiqueta}</span>
+      <span className="font-mono">{fmt(valor ?? 0)}</span>
+    </div>
+  );
+
   return (
-    <Modal title={`Detalle de nómina — ${emp.name ?? 'Empleado'}`} onClose={onClose}>
+    <Modal title={`Detalle de planilla — ${emp.name ?? 'Empleado'}`} onClose={onClose}>
       <div className="space-y-4 text-sm">
-        {/* Ingresos */}
+        {/* ── Devengado ── */}
         <div className="bg-gray-50 rounded-lg p-3">
-          <p className="font-semibold text-gray-700 mb-2">Ingresos</p>
-          <div className="flex justify-between"><span className="text-gray-500">Salario bruto</span><span className="font-mono">{fmt(line.salaryGross)}</span></div>
-          {Number(line.overtime) > 0 && <div className="flex justify-between"><span className="text-gray-500">Horas extra</span><span className="font-mono">{fmt(line.overtime)}</span></div>}
-          {Number(line.bonus) > 0 && <div className="flex justify-between"><span className="text-gray-500">Bonificación</span><span className="font-mono">{fmt(line.bonus)}</span></div>}
-          <div className="flex justify-between font-semibold border-t border-gray-200 mt-1 pt-1"><span>Total bruto</span><span className="font-mono">{fmt(line.totalGross)}</span></div>
+          <p className="font-semibold text-gray-700 mb-2">Devengado</p>
+          <Fila etiqueta="Salario base" valor={line.salarioBase} tenue />
+          {Number(line.comisiones) > 0 && <Fila etiqueta="Comisiones" valor={line.comisiones} tenue />}
+          {Number(line.horasExtra) > 0 && <Fila etiqueta="Horas extra" valor={line.horasExtra} tenue />}
+          {Number(line.bonoFijo)   > 0 && <Fila etiqueta="Bono fijo"   valor={line.bonoFijo} tenue />}
+          <div className="flex justify-between font-semibold border-t border-gray-200 mt-1 pt-1">
+            <span>Salario bruto</span><span className="font-mono">{fmt(line.salarioBruto)}</span>
+          </div>
         </div>
 
-        {/* Deducciones trabajador */}
+        {/* ── Deducciones del trabajador ── */}
         <div className="bg-orange-50 rounded-lg p-3">
           <p className="font-semibold text-orange-700 mb-2">Deducciones del trabajador</p>
-          <p className="text-xs text-gray-500 font-medium mb-1">CCSS Trabajador (10.34%)</p>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">SEM 5.50%</span><span className="font-mono">{fmt(trab.sem ?? 0)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">IVM 3.84%</span><span className="font-mono">{fmt(trab.ivm ?? 0)}</span></div>
-          <div className="flex justify-between text-xs border-b border-orange-200 pb-1 mb-1"><span className="text-gray-500">Banco Popular 1.00%</span><span className="font-mono">{fmt(trab.bancoPop ?? 0)}</span></div>
-          <div className="flex justify-between text-xs font-semibold text-orange-800"><span>Subtotal CCSS</span><span className="font-mono">{fmt(trab.total ?? 0)}</span></div>
+          <p className="text-xs font-medium text-gray-500 mb-1">Cuota obrera CCSS (10,83%)</p>
+          <Fila etiqueta="SEM 5,50%" valor={obr.sem} tenue />
+          <Fila etiqueta="IVM 4,33%" valor={obr.ivm} tenue />
+          <div className="border-b border-orange-200 pb-1 mb-1">
+            <Fila etiqueta="Banco Popular 1,00%" valor={obr.bancoPopular} tenue />
+          </div>
+          <div className="flex justify-between text-xs font-semibold text-orange-800">
+            <span>Subtotal cuota obrera</span><span className="font-mono">{fmt(obr.total)}</span>
+          </div>
 
-          {Number(line.rentaDeduccion) > 0 && (
+          {/* El impuesto se muestra SIEMPRE que haya tramos con monto, aunque
+              el neto sea cero: el estudiante tiene que ver por que no paga. */}
+          {tramos.length > 0 && (
             <>
-              <p className="text-xs text-gray-500 font-medium mt-2 mb-1">Impuesto sobre la Renta (escalas)</p>
-              {tax.map((b: any, i: number) => b.amount > 0 && (
-                <div key={i} className="flex justify-between text-xs">
-                  <span className="text-gray-500">{(b.rate*100).toFixed(0)}% sobre {fmt(b.from)} – {b.to ? fmt(b.to) : '∞'}</span>
-                  <span className="font-mono">{fmt(b.amount)}</span>
+              <p className="text-xs font-medium text-gray-500 mt-3 mb-1">
+                Impuesto sobre la renta — por tramos, sobre el bruto
+              </p>
+              {tramos.map((t: any, i: number) => (
+                <div key={i} className={`flex justify-between text-xs ${t.montoDelTramo > 0 ? '' : 'opacity-40'}`}>
+                  <span className="text-gray-500">
+                    {(t.tarifa * 100).toFixed(0)}% · {fmt(t.desde)} – {t.hasta ? fmt(t.hasta) : 'en adelante'}
+                    {t.montoDelTramo > 0 && <span className="text-gray-400"> (sobre {fmt(t.montoDelTramo)})</span>}
+                  </span>
+                  <span className="font-mono">{fmt(t.impuesto)}</span>
                 </div>
               ))}
+              <div className="mt-1 border-t border-orange-200 pt-1">
+                <Fila etiqueta="Impuesto antes de créditos" valor={renta.impuestoBruto} />
+              </div>
+              {Number(renta.creditoConyuge) > 0 && (
+                <Fila etiqueta="− Crédito por cónyuge" valor={renta.creditoConyuge} tenue />
+              )}
+              {Number(renta.creditoHijos) > 0 && (
+                <Fila etiqueta="− Crédito por hijos" valor={renta.creditoHijos} tenue />
+              )}
               <div className="flex justify-between text-xs font-semibold text-orange-800 border-t border-orange-200 pt-1 mt-1">
-                <span>Subtotal renta</span><span className="font-mono">{fmt(line.rentaDeduccion)}</span>
+                <span>Impuesto a retener</span><span className="font-mono">{fmt(line.impuestoRenta)}</span>
               </div>
             </>
           )}
 
+          {Number(line.pensionAlimenticia) > 0 && (
+            <div className="mt-2"><Fila etiqueta="Pensión alimenticia" valor={line.pensionAlimenticia} /></div>
+          )}
+          {Number(line.ahorroAsociacion) > 0 && <Fila etiqueta="Ahorro asociación" valor={line.ahorroAsociacion} />}
+          {Number(line.prestamoAsociacion) > 0 && <Fila etiqueta="Préstamo asociación" valor={line.prestamoAsociacion} />}
+          {Number(line.otrasDeducciones) > 0 && <Fila etiqueta="Otras deducciones" valor={line.otrasDeducciones} />}
+
           <div className="flex justify-between font-semibold border-t border-orange-300 mt-2 pt-1 text-orange-900">
-            <span>Total deducciones</span><span className="font-mono">{fmt(line.totalDeductions)}</span>
+            <span>Total deducciones</span><span className="font-mono">{fmt(line.totalDeducciones)}</span>
           </div>
           <div className="flex justify-between font-bold text-emerald-700 mt-1">
-            <span>Salario neto</span><span className="font-mono">{fmt(line.netSalary)}</span>
+            <span>Salario neto</span><span className="font-mono">{fmt(line.salarioNeto)}</span>
           </div>
         </div>
 
-        {/* Cargas patronales */}
+        {/* ── No salariales ── */}
+        {(Number(line.viaticos) > 0 || Number(line.regalos) > 0) && (
+          <div className="rounded-lg bg-emerald-50 p-3">
+            <p className="mb-2 font-semibold text-emerald-800">Pagos no salariales</p>
+            <p className="mb-1 text-xs text-emerald-700">No cotizan ni pagan renta, pero sí se entregan.</p>
+            {Number(line.viaticos) > 0 && <Fila etiqueta="Viáticos" valor={line.viaticos} tenue />}
+            {Number(line.regalos)  > 0 && <Fila etiqueta="Regalos y atenciones" valor={line.regalos} tenue />}
+            <div className="flex justify-between font-bold text-emerald-800 border-t border-emerald-200 mt-1 pt-1">
+              <span>Total efectivo a pagar</span><span className="font-mono">{fmt(line.totalEfectivoAPagar)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* ── Costo del patrono ── */}
         <div className="bg-blue-50 rounded-lg p-3">
-          <p className="font-semibold text-blue-700 mb-2">Cargas Sociales Patronales (22.17%)</p>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">SEM 9.25%</span><span className="font-mono">{fmt(pat.sem ?? 0)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">IVM 5.42%</span><span className="font-mono">{fmt(pat.ivm ?? 0)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">Banco Popular 0.25%</span><span className="font-mono">{fmt(pat.bancoPop ?? 0)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">ASFA 0.50%</span><span className="font-mono">{fmt(pat.asfa ?? 0)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">FODESAF 0.50%</span><span className="font-mono">{fmt(pat.fodesaf ?? 0)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">INA 1.50%</span><span className="font-mono">{fmt(pat.ina ?? 0)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">FCL 3.00%</span><span className="font-mono">{fmt(pat.fcl ?? 0)}</span></div>
-          <div className="flex justify-between text-xs border-b border-blue-200 pb-1 mb-1"><span className="text-gray-500">INS 1.75%</span><span className="font-mono">{fmt(pat.ins ?? 0)}</span></div>
-          <div className="flex justify-between text-xs font-semibold text-blue-800"><span>Subtotal CCSS patrono</span><span className="font-mono">{fmt(pat.total ?? 0)}</span></div>
-          <div className="flex justify-between text-xs mt-1"><span className="text-gray-500">Aguinaldo prov. 8.33%</span><span className="font-mono">{fmt(line.aguinaldo)}</span></div>
+          <p className="font-semibold text-blue-700 mb-2">Cargas sociales patronales (26,83%)</p>
+          <p className="mb-1 text-[11px] font-medium text-blue-600">CCSS 14,83%</p>
+          <Fila etiqueta="SEM 9,25%" valor={pat.sem} tenue />
+          <Fila etiqueta="IVM 5,58%" valor={pat.ivm} tenue />
+          <p className="mb-1 mt-2 text-[11px] font-medium text-blue-600">Otras instituciones sociales 7,50%</p>
+          <Fila etiqueta="FODESAF 5,00%" valor={pat.fodesaf} tenue />
+          <Fila etiqueta="INA 1,50%" valor={pat.ina} tenue />
+          <Fila etiqueta="IMAS 0,50%" valor={pat.imas} tenue />
+          <Fila etiqueta="Banco Popular 0,50%" valor={pat.bancoPopularPatrono} tenue />
+          <p className="mb-1 mt-2 text-[11px] font-medium text-blue-600">Ley de Protección al Trabajador 4,50%</p>
+          <Fila etiqueta="FCL 3,00%" valor={pat.fcl} tenue />
+          <Fila etiqueta="ROP 1,25%" valor={pat.rop} tenue />
+          <div className="border-b border-blue-200 pb-1 mb-1">
+            <Fila etiqueta="Banco Popular 0,25%" valor={pat.bancoPopularLpt} tenue />
+          </div>
+          <div className="flex justify-between text-xs font-semibold text-blue-800">
+            <span>Subtotal cargas patronales</span><span className="font-mono">{fmt(pat.total)}</span>
+          </div>
+
+          <p className="mb-1 mt-3 text-[11px] font-medium text-blue-600">Provisiones y póliza</p>
+          <Fila etiqueta="Aguinaldo 8,33%" valor={line.provisionAguinaldo} tenue />
+          <Fila etiqueta="Vacaciones 4,16%" valor={line.provisionVacaciones} tenue />
+          <Fila etiqueta="Póliza INS 1,50%" valor={line.polizaINS} tenue />
+
           <div className="flex justify-between font-bold text-blue-900 border-t border-blue-300 mt-2 pt-1">
-            <span>Costo total empleador</span><span className="font-mono">{fmt(line.totalEmployerCost)}</span>
+            <span>Costo total del patrono</span><span className="font-mono">{fmt(line.costoTotalPatrono)}</span>
           </div>
         </div>
+
+        {line.bajoSalarioMinimo && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            El salario base está por debajo del mínimo de ley.
+          </p>
+        )}
       </div>
     </Modal>
   );
@@ -4239,6 +4347,15 @@ export function PayrollTab({ companyId }: { companyId: string }) {
     } catch (err) { toast.error(getErrorMessage(err)); }
     finally { setPreviewLoading(false); }
   }
+
+  // Totales de la planilla en vista previa. Se toleran ausentes para que un
+  // cambio de forma en el backend NO tumbe la pantalla entera: antes bastaba
+  // leer una propiedad de undefined para que React abortara el render y el
+  // espacio de trabajo quedara congelado, sin poder ni cambiar de pestaña.
+  const t = previewData?.totales ?? {};
+  const asientoPrevio: any[] = previewData?.asiento ?? [];
+  const sumaDebe  = asientoPrevio.reduce((acc, l) => acc + Number(l.debit ?? 0), 0);
+  const sumaHaber = asientoPrevio.reduce((acc, l) => acc + Number(l.credit ?? 0), 0);
 
   async function handleProcessPayroll() {
     if (!previewData) return;
@@ -4450,120 +4567,168 @@ export function PayrollTab({ companyId }: { companyId: string }) {
             )}
           </div>
 
-          {/* Preview table */}
+          {/* Vista previa de la planilla */}
           {previewData && (
             <div className="space-y-4">
-              {previewData.minWageWarnings?.length > 0 && (
+              {previewData.avisosSalarioMinimo?.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                   <p className="text-sm text-amber-700">
-                    <span className="font-semibold">Alerta salario mínimo:</span> {previewData.minWageWarnings.join(', ')} — salario menor a {fmt(SALARIO_MINIMO_2026)}/mes.
+                    <span className="font-semibold">Salario bajo el mínimo:</span>{' '}
+                    {previewData.avisosSalarioMinimo.join(', ')} — menos de {fmt(SALARIO_MINIMO_2026)}/mes.
                   </p>
                 </div>
               )}
 
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                  <p className="text-sm font-semibold text-gray-700">Vista previa — Planilla {previewData.period}</p>
-                  <p className="text-xs text-gray-400">Haga clic en una fila para ver el desglose completo</p>
+                  <p className="text-sm font-semibold text-gray-700">Planilla {previewData.period} — vista previa</p>
+                  <p className="text-xs text-gray-400">
+                    Hacé clic en una fila para ver el desglose completo: cuotas, tramos de renta y cargas patronales.
+                  </p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead className="border-b border-gray-200">
                       <tr className="text-gray-400">
-                        <th className="text-left px-3 py-2">Empleado</th>
-                        <th className="text-right px-3 py-2">Sal. Bruto</th>
-                        <th className="text-right px-3 py-2 text-orange-500">CCSS Trab.</th>
+                        <th className="text-left px-3 py-2">Colaborador</th>
+                        <th className="text-right px-3 py-2">Sal. bruto</th>
+                        <th className="text-right px-3 py-2 text-orange-500">Cuota obrera</th>
                         <th className="text-right px-3 py-2 text-orange-500">Renta</th>
-                        <th className="text-right px-3 py-2 text-emerald-600">Sal. Neto</th>
-                        <th className="text-right px-3 py-2 text-blue-600">CCSS Pat.</th>
-                        <th className="text-right px-3 py-2 text-blue-600">Aguinaldo</th>
-                        <th className="text-right px-3 py-2">Costo Total</th>
+                        <th className="text-right px-3 py-2 text-orange-500">Otras ded.</th>
+                        <th className="text-right px-3 py-2 text-emerald-600">Sal. neto</th>
+                        <th className="text-right px-3 py-2 text-emerald-600">A pagar</th>
+                        <th className="text-right px-3 py-2 text-blue-600">Cargas pat.</th>
+                        <th className="text-right px-3 py-2">Costo total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {previewData.lines.map((l: any) => (
-                        <tr
-                          key={l.employeeId}
-                          className="hover:bg-blue-50 cursor-pointer transition-colors"
-                          onClick={() => setDetailLine({ ...l.calc, employee: { name: l.employeeName, position: l.position } })}
-                        >
-                          <td className="px-3 py-2 font-medium text-gray-800">
-                            {l.employeeName}
-                            {l.position && <span className="text-gray-400 font-normal"> · {l.position}</span>}
-                            {l.calc.belowMinWage && <span className="ml-1 text-amber-500" title="Bajo salario mínimo">⚠</span>}
-                          </td>
-                          <td className="px-3 py-2 text-right font-mono">{fmt(l.calc.totalGross)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(l.calc.ccssWorker)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(l.calc.rentaDeduccion)}</td>
-                          <td className="px-3 py-2 text-right font-mono font-bold text-emerald-700">{fmt(l.calc.netSalary)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(l.calc.ccssPatrono)}</td>
-                          <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(l.calc.aguinaldo)}</td>
-                          <td className="px-3 py-2 text-right font-mono font-bold">{fmt(l.calc.totalEmployerCost)}</td>
-                        </tr>
-                      ))}
+                      {(previewData.lines ?? []).map((l: any) => {
+                        const c = l.calc ?? {};
+                        const otras =
+                          Number(c.pensionAlimenticia ?? 0) + Number(c.ahorroAsociacion ?? 0) +
+                          Number(c.prestamoAsociacion ?? 0) + Number(c.otrasDeducciones ?? 0);
+                        return (
+                          <tr
+                            key={l.employeeId}
+                            className="hover:bg-blue-50 cursor-pointer transition-colors"
+                            onClick={() => setDetailLine({ ...c, employee: { name: l.employeeName, position: l.position } })}
+                          >
+                            <td className="px-3 py-2 font-medium text-gray-800">
+                              {l.employeeName}
+                              {l.position && <span className="text-gray-400 font-normal"> · {l.position}</span>}
+                              {c.bajoSalarioMinimo && <span className="ml-1 text-amber-500" title="Bajo el salario mínimo">⚠</span>}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono">{fmt(c.salarioBruto)}</td>
+                            <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(c.cuotasObreras?.total)}</td>
+                            <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(c.impuestoRenta)}</td>
+                            <td className="px-3 py-2 text-right font-mono text-orange-600">
+                              {otras > 0 ? `-${fmt(otras)}` : <span className="text-gray-300">—</span>}
+                            </td>
+                            <td className="px-3 py-2 text-right font-mono font-bold text-emerald-700">{fmt(c.salarioNeto)}</td>
+                            <td className="px-3 py-2 text-right font-mono text-emerald-700">{fmt(c.totalEfectivoAPagar)}</td>
+                            <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(c.cargasPatronales?.total)}</td>
+                            <td className="px-3 py-2 text-right font-mono font-bold">{fmt(c.costoTotalPatrono)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
                       <tr>
                         <td className="px-3 py-2 text-gray-700">TOTALES</td>
-                        <td className="px-3 py-2 text-right font-mono">{fmt(previewData.totals.totalGross)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(previewData.totals.totalTrabajador)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(previewData.totals.totalRenta)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-emerald-700">{fmt(previewData.totals.totalNet)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(previewData.totals.totalPatrono)}</td>
-                        <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(previewData.totals.totalAguinaldo)}</td>
-                        <td className="px-3 py-2 text-right font-mono">{fmt(previewData.totals.totalCost)}</td>
+                        <td className="px-3 py-2 text-right font-mono">{fmt(t.salarioBruto)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(t.cuotasObreras)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-orange-600">-{fmt(t.impuestoRenta)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-orange-600">
+                          -{fmt(Number(t.pensionAlimenticia ?? 0) + Number(t.ahorroAsociacion ?? 0) + Number(t.prestamoAsociacion ?? 0) + Number(t.otrasDeducciones ?? 0))}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono text-emerald-700">{fmt(t.salarioNeto)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-emerald-700">{fmt(t.totalEfectivoAPagar)}</td>
+                        <td className="px-3 py-2 text-right font-mono text-blue-700">{fmt(t.cargasPatronales)}</td>
+                        <td className="px-3 py-2 text-right font-mono">{fmt(t.costoTotalPatrono)}</td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
               </div>
 
-              {/* CCSS summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 text-center">
-                  <p className="text-xs text-orange-500 font-medium">CCSS Trabajadores</p>
-                  <p className="text-lg font-bold text-orange-700 font-mono mt-0.5">{fmt(previewData.totals.totalTrabajador)}</p>
-                  <p className="text-xs text-orange-400">10.34% del bruto</p>
+              {/* Lo que cuesta la planilla, por concepto */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <div className="rounded-xl border border-orange-100 bg-orange-50 p-3 text-center">
+                  <p className="text-xs font-medium text-orange-500">Cuota obrera</p>
+                  <p className="mt-0.5 font-mono text-base font-bold text-orange-700">{fmt(t.cuotasObreras)}</p>
+                  <p className="text-[11px] text-orange-400">10,83% del bruto</p>
                 </div>
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
-                  <p className="text-xs text-blue-600 font-medium">CCSS Patrono</p>
-                  <p className="text-lg font-bold text-blue-700 font-mono mt-0.5">{fmt(previewData.totals.totalPatrono)}</p>
-                  <p className="text-xs text-blue-500">22.17% del bruto</p>
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-center">
+                  <p className="text-xs font-medium text-blue-600">Cargas patronales</p>
+                  <p className="mt-0.5 font-mono text-base font-bold text-blue-700">{fmt(t.cargasPatronales)}</p>
+                  <p className="text-[11px] text-blue-500">26,83% del bruto</p>
                 </div>
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
-                  <p className="text-xs text-blue-600 font-medium">Aguinaldo provisión</p>
-                  <p className="text-lg font-bold text-blue-700 font-mono mt-0.5">{fmt(previewData.totals.totalAguinaldo)}</p>
-                  <p className="text-xs text-blue-500">8.33% del bruto</p>
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-center">
+                  <p className="text-xs font-medium text-blue-600">Aguinaldo</p>
+                  <p className="mt-0.5 font-mono text-base font-bold text-blue-700">{fmt(t.provisionAguinaldo)}</p>
+                  <p className="text-[11px] text-blue-500">8,33% del bruto</p>
                 </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
-                  <p className="text-xs text-gray-500 font-medium">Total a pagar CCSS</p>
-                  <p className="text-lg font-bold text-gray-800 font-mono mt-0.5">{fmt(previewData.ccssPayableToday)}</p>
-                  <p className="text-xs text-gray-400">Patrono + trabajador</p>
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-center">
+                  <p className="text-xs font-medium text-blue-600">Vacaciones</p>
+                  <p className="mt-0.5 font-mono text-base font-bold text-blue-700">{fmt(t.provisionVacaciones)}</p>
+                  <p className="text-[11px] text-blue-500">4,16% del bruto</p>
+                </div>
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-center">
+                  <p className="text-xs font-medium text-blue-600">Póliza INS</p>
+                  <p className="mt-0.5 font-mono text-base font-bold text-blue-700">{fmt(t.polizaINS)}</p>
+                  <p className="text-[11px] text-blue-500">1,50% del bruto</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center">
+                  <p className="text-xs font-medium text-gray-500">Sale por banco</p>
+                  <p className="mt-0.5 font-mono text-base font-bold text-gray-800">{fmt(t.totalEfectivoAPagar)}</p>
+                  <p className="text-[11px] text-gray-400">neto + no salariales</p>
                 </div>
               </div>
 
-              {/* Journal entry preview */}
+              {/* Asiento contable: lo arma el BACKEND y se muestra tal cual.
+                  Antes se reescribia a mano aqui, y las dos versiones podian
+                  discrepar sobre que cuentas se tocan. */}
               <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Asiento contable que se generará</p>
-                <table className="w-full text-xs font-mono">
-                  <thead><tr className="text-gray-400 border-b border-gray-100">
-                    <th className="text-left pb-1">Cuenta</th>
-                    <th className="text-right pb-1">Débito</th>
-                    <th className="text-right pb-1">Crédito</th>
-                  </tr></thead>
-                  <tbody className="divide-y divide-gray-50">
-                    <tr><td className="py-1 text-gray-700">6.1.01.01 Sueldos y Salarios</td><td className="py-1 text-right">{fmt(previewData.totals.totalGross)}</td><td className="py-1 text-right text-gray-300">—</td></tr>
-                    <tr><td className="py-1 text-gray-700">6.1.02.01 Cargas Sociales Patrono</td><td className="py-1 text-right">{fmt(previewData.totals.totalPatrono)}</td><td className="py-1 text-right text-gray-300">—</td></tr>
-                    <tr><td className="py-1 text-gray-700">6.1.03.01 Aguinaldo — Provisión</td><td className="py-1 text-right">{fmt(previewData.totals.totalAguinaldo)}</td><td className="py-1 text-right text-gray-300">—</td></tr>
-                    <tr><td className="py-1 text-gray-700">2.1.04.01 Sueldos por Pagar</td><td className="py-1 text-right text-gray-300">—</td><td className="py-1 text-right">{fmt(previewData.totals.totalNet)}</td></tr>
-                    <tr><td className="py-1 text-gray-700">2.1.04.02 CCSS por Pagar</td><td className="py-1 text-right text-gray-300">—</td><td className="py-1 text-right">{fmt(previewData.totals.totalTrabajador + previewData.totals.totalPatrono)}</td></tr>
-                    <tr><td className="py-1 text-gray-700">2.1.04.03 Aguinaldo por Pagar</td><td className="py-1 text-right text-gray-300">—</td><td className="py-1 text-right">{fmt(previewData.totals.totalAguinaldo)}</td></tr>
-                    {previewData.totals.totalRenta > 0 && (
-                      <tr><td className="py-1 text-gray-700">2.1.04.04 Retención Imp. Renta</td><td className="py-1 text-right text-gray-300">—</td><td className="py-1 text-right">{fmt(previewData.totals.totalRenta)}</td></tr>
-                    )}
-                  </tbody>
-                </table>
+                <p className="text-sm font-semibold text-gray-700 mb-3">Asiento contable que se va a registrar</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs font-mono">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-gray-400">
+                        <th className="pb-1 text-left">Cuenta</th>
+                        <th className="pb-1 text-right">Debe</th>
+                        <th className="pb-1 text-right">Haber</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {(previewData.asiento ?? []).map((l: any, i: number) => (
+                        <tr key={i}>
+                          <td className="py-1 text-gray-700">
+                            <span className="text-gray-400">{l.accountCode}</span> {l.description}
+                          </td>
+                          <td className="py-1 text-right">
+                            {l.debit > 0 ? fmt(l.debit) : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-1 text-right">
+                            {l.credit > 0 ? fmt(l.credit) : <span className="text-gray-300">—</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="border-t-2 border-gray-300 font-bold">
+                      <tr>
+                        <td className="py-1 text-gray-700">SUMAS IGUALES</td>
+                        <td className="py-1 text-right">{fmt(sumaDebe)}</td>
+                        <td className="py-1 text-right">{fmt(sumaHaber)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                {Math.abs(sumaDebe - sumaHaber) > 0.5 && (
+                  <p className="mt-2 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                    El asiento no cuadra. No registrés esta planilla y avisale al profesor.
+                  </p>
+                )}
               </div>
 
               <div className="flex gap-3">
@@ -4604,7 +4769,7 @@ export function PayrollTab({ companyId }: { companyId: string }) {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-400">Costo total</p>
-                    <p className="font-bold text-gray-800 font-mono">{fmt(Number(p.totalGross) + Number(p.totalPatrono) + Number(p.totalAguinaldo))}</p>
+                    <p className="font-bold text-gray-800 font-mono">{fmt(Number(p.totalCostoPatrono ?? 0) || (Number(p.totalGross) + Number(p.totalPatrono) + Number(p.totalAguinaldo)))}</p>
                     {p.journalEntryId && (
                       <p className="text-xs text-emerald-500 mt-0.5">Asiento registrado</p>
                     )}
@@ -4639,7 +4804,7 @@ export function PayrollTab({ companyId }: { companyId: string }) {
                           </tr></thead>
                           <tbody className="divide-y divide-gray-50">
                             {p.lines.map((l: any) => (
-                              <tr key={l.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setDetailLine(l)}>
+                              <tr key={l.id} className="hover:bg-blue-50 cursor-pointer" onClick={() => setDetailLine(lineaGuardadaAModal(l))}>
                                 <td className="py-1 font-medium text-gray-700">{l.employee?.name ?? '—'}</td>
                                 <td className="py-1 text-right font-mono">{fmt(l.totalGross)}</td>
                                 <td className="py-1 text-right font-mono text-orange-600">-{fmt(l.ccssWorker)}</td>
