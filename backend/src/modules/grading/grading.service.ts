@@ -317,7 +317,8 @@ export class GradingService {
         body:   message.trim(),
         type:   'INFO' as any,
         isRead: false,
-        link:   `/estudiante/ejercicios`,
+        // Cada quien a SU intento. /estudiante/ejercicios no existe.
+        link:   `/estudiante/ejercicio/${a.id}`,
       })),
     });
 

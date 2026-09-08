@@ -318,7 +318,13 @@ export class ExercisesService {
         await tx.notification.create({
           data: {
             userId:  studentId,
-            link:    '/estudiante/ejercicios',
+            // Al intento recien creado, no a un listado: /estudiante/ejercicios
+            // NO existe como ruta -la lista vive en /estudiante- asi que la
+            // notificacion llevaba a un 404. El estudiante abria "nuevo
+            // ejercicio asignado" y se topaba con pagina no encontrada,
+            // mientras que entrando desde inicio funcionaba: la peor clase de
+            // error, porque parece que el ejercicio no le llego.
+            link:    `/estudiante/ejercicio/${attempt.id}`,
             title:   `Nuevo ejercicio asignado: ${exercise.title}`,
             body:    exercise.description
               ? `${exercise.description}${exercise.dueDate ? ` — Fecha límite: ${exercise.dueDate.toLocaleDateString('es-CR')}` : ''}`

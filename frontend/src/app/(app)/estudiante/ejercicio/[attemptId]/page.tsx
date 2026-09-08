@@ -791,15 +791,44 @@ function ActivityTab({ attemptId }: { attemptId: string }) {
 
 
 // ─── Company Setup ────────────────────────────────────────────────────────────
-function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: () => void }) {
+//
+// El enunciado va PRIMERO, y no se puede saltar.
+//
+// Antes esta pantalla abría directo con el formulario y ninguna instrucción a
+// la vista. El estudiante inventaba el nombre y el código de actividad
+// económica a ciegas, cuando el ejercicio es el que define de qué es la
+// empresa: si el profesor planteó una empresa de servicios y el alumno
+// constituye una comercializadora, todo lo que registre después queda mal
+// desde el asiento de apertura, y no hay forma de darse cuenta hasta el final.
+//
+// Por eso: primero se lee, se confirma la lectura, y el enunciado QUEDA a la
+// vista mientras se llena el formulario — que es justo cuando hace falta
+// consultarlo.
+function CompanySetup({
+  attemptId, exercise, onCreated,
+}: {
+  attemptId: string;
+  exercise?: any;
+  onCreated: () => void;
+}) {
+  const [leido, setLeido] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: '', legalId: '', legalIdType: '02', economicActivity: '',
     email: '', phone: '', address: '',
   });
 
+  const hayEnunciado = !!(exercise?.instructions?.trim() || exercise?.description?.trim());
+  // Sin enunciado no se puede exigir leerlo: un ejercicio que el profesor dejó
+  // sin instrucciones no debe dejar al estudiante encerrado.
+  const puedeConstituir = leido || !hayEnunciado;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!puedeConstituir) {
+      toast.error('Leé primero el enunciado del ejercicio.');
+      return;
+    }
     if (!form.name.trim()) { toast.error('El nombre de la empresa es requerido'); return; }
     if (!form.legalId.trim()) { toast.error('La cédula jurídica es requerida'); return; }
     if (!form.economicActivity || form.economicActivity.length !== 6) {
@@ -838,13 +867,86 @@ function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: 
           </div>
         </Card>
 
+        {/* ── El enunciado del ejercicio ── */}
+        {hayEnunciado && (
+          <SectionCard
+            eyebrow="Antes de constituir"
+            title={exercise?.title ?? 'Enunciado del ejercicio'}
+            description="Leé de qué se trata: la empresa que constituyas tiene que corresponder a este ejercicio."
+            icon={ClipboardList}
+            iconTint="#B8860B"
+            className="cx-pop"
+          >
+            <div className="space-y-4">
+              {exercise?.description?.trim() && (
+                <p className="text-sm leading-relaxed text-gray-700">{exercise.description}</p>
+              )}
+              {exercise?.instructions?.trim() && (
+                <div className="rounded-xl border border-gray-200 bg-gray-50/70 p-4">
+                  <p className="mb-2 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-gray-500">
+                    Instrucciones
+                  </p>
+                  {/* whitespace-pre-line: el profesor escribe en párrafos y
+                      viñetas; aplastarlo a un bloque lo vuelve ilegible. */}
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
+                    {exercise.instructions}
+                  </p>
+                </div>
+              )}
+
+              {/* Los adjuntos son parte del enunciado: muchas veces el detalle
+                  del negocio viene en un PDF, no en el texto. */}
+              {exercise?.id && exercise?.courseId && (
+                <ExerciseAttachments
+                  courseId={exercise.courseId}
+                  exerciseId={exercise.id}
+                  editable={false}
+                />
+              )}
+
+              {exercise?.dueDate && (
+                <p className="text-xs text-gray-500">
+                  Fecha límite:{' '}
+                  <span className="font-semibold text-gray-700">
+                    {new Date(exercise.dueDate).toLocaleDateString('es-CR', {
+                      day: '2-digit', month: 'long', year: 'numeric',
+                    })}
+                  </span>
+                </p>
+              )}
+
+              {!leido ? (
+                <div className="rounded-xl border border-gold-300 bg-gold-50/60 p-4">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Fijate bien en qué vende y a qué se dedica.</span>{' '}
+                    De eso dependen el nombre y el código de actividad económica que vas a
+                    poner ahora — y todo lo que registres después.
+                  </p>
+                  <Button onClick={() => setLeido(true)} className="mt-3 cx-press">
+                    <CheckCircle2 className="h-4 w-4" /> Ya leí el enunciado
+                  </Button>
+                </div>
+              ) : (
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Enunciado leído — podés constituir la empresa
+                </p>
+              )}
+            </div>
+          </SectionCard>
+        )}
+
+        {/* ── El formulario, ya con el enunciado arriba para consultarlo ── */}
         <SectionCard
           eyebrow="Datos de la empresa"
           title="Configura tu empresa"
-          description="Campos obligatorios para emitir facturas electrónicas (Hacienda v4.3)."
+          description={
+            puedeConstituir
+              ? 'Campos obligatorios para emitir facturas electrónicas (Hacienda v4.3). Que correspondan al ejercicio.'
+              : 'Se habilita cuando confirmés que leíste el enunciado.'
+          }
           icon={Building2}
           iconTint="#1B2E6E"
-          className="cx-pop cx-d1"
+          className={`cx-pop cx-d1 ${puedeConstituir ? '' : 'pointer-events-none opacity-50'}`}
         >
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Nombre de la empresa *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -873,7 +975,7 @@ function CompanySetup({ attemptId, onCreated }: { attemptId: string; onCreated: 
             </div>
             <Input label="Dirección" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
               placeholder="San José, Costa Rica" />
-            <Button type="submit" loading={saving} className="w-full cx-press" size="lg">
+            <Button type="submit" loading={saving} disabled={!puedeConstituir} className="w-full cx-press" size="lg">
               <Building2 className="w-4 h-4" /> Crear empresa
             </Button>
           </form>
@@ -1029,7 +1131,7 @@ export default function ExerciseWorkspacePage() {
 
       {/* No company yet — show setup */}
       {showSetup && (
-        <CompanySetup attemptId={attemptId} onCreated={load} />
+        <CompanySetup attemptId={attemptId} exercise={attempt.exercise} onCreated={load} />
       )}
 
       {/* Main workspace */}
