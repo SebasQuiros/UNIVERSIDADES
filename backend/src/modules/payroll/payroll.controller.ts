@@ -65,18 +65,29 @@ export class PayrollController {
     @Body() dto: PreviewPayrollDto,
     @Request() req: any,
   ) {
-    return this.svc.previewPayroll(companyId, dto.period, dto.employeeIds, req.user.id);
+    return this.svc.previewPayroll(companyId, dto.period, dto.employeeIds, req.user.id, dto.movimientos);
   }
 
-  // ── Quick calculator (pure, no employees needed) ──────────────────────────
-  // POST /companies/:id/payrolls/calculate { salary, overtime?, bonus? }
+  // ── Calculadora suelta: no necesita empleados dados de alta ───────────────
+  //
+  // Sirve para que el estudiante juegue con un salario y vea el efecto de los
+  // hijos, las comisiones o la pension alimenticia sin tener que crear una
+  // ficha. Devuelve el desglose completo, incluidos los tramos de renta.
   @Post('payrolls/calculate')
   calculateSingle(@Body() body: CalculatePayrollLineDto) {
-    return this.calculator.calculatePayrollLine(
-      Number(body.salary),
-      Number(body.overtime ?? 0),
-      Number(body.bonus ?? 0),
-    );
+    return this.calculator.calcularLinea({
+      salarioBase:          Number(body.salary),
+      horasExtra:           Number(body.overtime ?? 0),
+      bonoFijo:             Number(body.bonus ?? 0),
+      comisiones:           Number(body.comisiones ?? 0),
+      tieneConyuge:         !!body.tieneConyuge,
+      cantidadHijos:        Number(body.cantidadHijos ?? 0),
+      pensionAlimenticia:   Number(body.pensionAlimenticia ?? 0),
+      tasaAhorroAsociacion: Number(body.tasaAhorroAsociacion ?? 0),
+      prestamoAsociacion:   Number(body.prestamoAsociacion ?? 0),
+      viaticos:             Number(body.viaticos ?? 0),
+      regalos:              Number(body.regalos ?? 0),
+    });
   }
 
   // ── Process & persist payroll ─────────────────────────────────────────────

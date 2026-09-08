@@ -1,7 +1,8 @@
 import {
   IsString, IsNumber, IsOptional, IsDateString, IsBoolean,
-  IsArray, IsUUID, Min, Max,
+  IsArray, IsUUID, Min, Max, IsInt, ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateEmployeeDto {
   @IsString()
@@ -25,6 +26,38 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString()
   salaryType?: string; // MENSUAL | QUINCENAL | SEMANAL
+
+
+  // ── Situación familiar ────────────────────────────────────────────────────
+  // Mueve el impuesto sobre la renta: ₡2.580 de crédito por cónyuge y ₡1.710
+  // por cada hijo menor o estudiante, mensuales.
+  @IsOptional()
+  @IsBoolean()
+  tieneConyuge?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  cantidadHijos?: number;
+
+  // ── Deducciones fijas, mes a mes ─────────────────────────────────────────
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  pensionAlimenticia?: number;
+
+  /** Porcentaje del bruto que ahorra en la asociación solidarista: 0.05 = 5%. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  tasaAhorroAsociacion?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  prestamoAsociacion?: number;
 
   @IsDateString()
   startDate: string;
@@ -51,6 +84,81 @@ export class UpdateEmployeeDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  // ── Situación familiar ────────────────────────────────────────────────────
+  // Mueve el impuesto sobre la renta: ₡2.580 de crédito por cónyuge y ₡1.710
+  // por cada hijo menor o estudiante, mensuales.
+  @IsOptional()
+  @IsBoolean()
+  tieneConyuge?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  cantidadHijos?: number;
+
+  // ── Deducciones fijas, mes a mes ─────────────────────────────────────────
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  pensionAlimenticia?: number;
+
+  /** Porcentaje del bruto que ahorra en la asociación solidarista: 0.05 = 5%. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  tasaAhorroAsociacion?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  prestamoAsociacion?: number;
+}
+
+
+/**
+ * Lo que varía de un mes a otro para una persona.
+ *
+ * El salario base, los hijos o la pensión alimenticia viven en el empleado
+ * porque se repiten; las comisiones, las horas extra o unos viáticos son de
+ * ESTE mes y por eso viajan con la planilla.
+ */
+export class MovimientoPlanillaDto {
+  @IsUUID('4')
+  employeeId: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  comisiones?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  horasExtra?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  bonoFijo?: number;
+
+  /** No salarial: no cotiza ni paga renta, pero sí se entrega y sí es gasto. */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  viaticos?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  regalos?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  otrasDeducciones?: number;
 }
 
 export class ProcessPayrollDto {
@@ -61,6 +169,12 @@ export class ProcessPayrollDto {
   @IsArray()
   @IsUUID('4', { each: true })
   employeeIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MovimientoPlanillaDto)
+  movimientos?: MovimientoPlanillaDto[];
 }
 
 export class PreviewPayrollDto {
@@ -71,6 +185,12 @@ export class PreviewPayrollDto {
   @IsArray()
   @IsUUID('4', { each: true })
   employeeIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MovimientoPlanillaDto)
+  movimientos?: MovimientoPlanillaDto[];
 }
 
 /** @deprecated — kept for backward compat */
@@ -102,4 +222,46 @@ export class CalculatePayrollLineDto {
   @Min(0)
   @Max(1_000_000_000)
   bonus?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000_000)
+  comisiones?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  tieneConyuge?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  cantidadHijos?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  pensionAlimenticia?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  @Max(1)
+  tasaAhorroAsociacion?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  prestamoAsociacion?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  viaticos?: number;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  regalos?: number;
 }

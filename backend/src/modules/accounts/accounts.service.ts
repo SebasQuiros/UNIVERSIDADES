@@ -72,6 +72,15 @@ const CHART: Array<{
   { code:'2.1.04.02',  name:'CCSS por Pagar',                  type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
   { code:'2.1.04.03',  name:'Aguinaldo por Pagar',             type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
   { code:'2.1.04.04',  name:'Imp. Renta Retención por Pagar',  type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
+  // Una planilla costarricense separa lo que retiene al trabajador (10,83%)
+  // de lo que aporta el patrono (26,83%): son dos obligaciones distintas y
+  // así aparecen en la planilla que se le presenta a la CCSS.
+  { code:'2.1.04.05',  name:'CCSS Cuotas Obreras por Pagar',   type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
+  { code:'2.1.04.06',  name:'Vacaciones por Pagar',            type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
+  { code:'2.1.04.07',  name:'Pensión Alimenticia por Pagar',   type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
+  { code:'2.1.04.08',  name:'Ahorro Asociación por Pagar',     type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
+  { code:'2.1.04.09',  name:'Préstamos Asociación por Pagar',  type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
+  { code:'2.1.04.10',  name:'Póliza INS por Pagar',            type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.04', isHeader:false },
   { code:'2.1.05',     name:'Dividendos por Pagar',             type:'LIABILITY', normal:'CREDIT', level:3, parent:'2.1',     isHeader:true  },
   { code:'2.1.05.01',  name:'Dividendos Declarados por Pagar', type:'LIABILITY', normal:'CREDIT', level:4, parent:'2.1.05',  isHeader:false },
   { code:'2.2',        name:'Pasivo No Corriente',             type:'LIABILITY', normal:'CREDIT', level:2, parent:'2',       isHeader:true  },
@@ -144,6 +153,13 @@ const CHART: Array<{
   { code:'6.1.03.01',  name:'Aguinaldo — Provisión',           type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'6.1.03',  isHeader:false },
   { code:'6.1.04',     name:'Vacaciones y Otros',              type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'6.1',     isHeader:true  },
   { code:'6.1.04.01',  name:'Vacaciones — Provisión',          type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'6.1.04',  isHeader:false },
+  { code:'6.1.05',     name:'Riesgos del Trabajo y Otros',     type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'6.1',     isHeader:true  },
+  { code:'6.1.05.01',  name:'Póliza de Riesgos del Trabajo (INS)', type:'EXPENSE', normal:'DEBIT', level:4, parent:'6.1.05', isHeader:false },
+  // Viáticos y regalos NO son salario: no cotizan ni pagan renta, pero sí son
+  // gasto de la empresa y sí salen por banco.
+  { code:'6.1.06',     name:'Pagos No Salariales',             type:'EXPENSE',   normal:'DEBIT',  level:3, parent:'6.1',     isHeader:true  },
+  { code:'6.1.06.01',  name:'Viáticos (No Salarial)',          type:'EXPENSE',   normal:'DEBIT',  level:4, parent:'6.1.06',  isHeader:false },
+  { code:'6.1.06.02',  name:'Regalos y Atenciones (No Salarial)', type:'EXPENSE', normal:'DEBIT', level:4, parent:'6.1.06',  isHeader:false },
 
   // ── Subcuentas específicas adicionales (catálogo más detallado) ──────────
   // Bancos y efectivo

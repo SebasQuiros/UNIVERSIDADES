@@ -23,6 +23,12 @@ export const ACCOUNT_CODES = {
   CCSS_PAYABLE:         '2.1.04.02', // CCSS por pagar
   AGUINALDO_PAYABLE:    '2.1.04.03', // Aguinaldo por pagar
   RENTA_RETENIDA:       '2.1.04.04', // Imp. Renta retención por pagar
+  CCSS_OBRERA_PAYABLE:  '2.1.04.05', // CCSS cuotas obreras por pagar (10,83%)
+  VACACIONES_PAYABLE:   '2.1.04.06', // Vacaciones por pagar
+  PENSION_ALIM_PAYABLE: '2.1.04.07', // Pensión alimenticia por pagar
+  AHORRO_ASOC_PAYABLE:  '2.1.04.08', // Ahorro asociación solidarista por pagar
+  PRESTAMO_ASOC_PAYABLE:'2.1.04.09', // Préstamos de asociación por pagar
+  INS_PAYABLE:          '2.1.04.10', // Póliza de riesgos del trabajo por pagar
 
   // ── Ingresos ────────────────────────────────────────────────────
   REVENUE_SALES: '4.1.01.01', // Ventas
@@ -38,6 +44,10 @@ export const ACCOUNT_CODES = {
   WAGES_EXPENSE:        '6.1.01.01', // Sueldos y salarios
   CCSS_EXPENSE:         '6.1.02.01', // Cargas sociales patrono
   AGUINALDO_EXP:        '6.1.03.01', // Provisión aguinaldo
+  VACACIONES_EXP:       '6.1.04.01', // Provisión vacaciones
+  INS_EXPENSE:          '6.1.05.01', // Póliza de riesgos del trabajo (INS)
+  VIATICOS_EXPENSE:     '6.1.06.01', // Viáticos (no salarial)
+  REGALOS_EXPENSE:      '6.1.06.02', // Regalos y atenciones (no salarial)
 
   // ── Contra-activo ───────────────────────────────────────────────
   ACCUMULATED_DEPRECIATION: '1.2.02.02', // Depreciación acumulada (general)
