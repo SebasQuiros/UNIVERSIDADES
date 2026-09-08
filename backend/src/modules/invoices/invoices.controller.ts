@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Body, Param,
   Query, Request, UseGuards, HttpCode,
-  HttpStatus, Res,
+  HttpStatus, Res, NotFoundException,
 } from '@nestjs/common';
 import * as path from 'path';
 import { Response } from 'express';
@@ -76,11 +76,35 @@ export class InvoicesController {
     @Res() res: Response,
   ) {
     const pdfPath = await this.svc.getPdfPath(companyId, id);
+
+    // El PDF se guarda en uploads/pdfs/<companyId>/FE-xxx.pdf. Servirlo con
+    // path.basename() lo buscaba en uploads/pdfs/FE-xxx.pdf —sin la carpeta de
+    // la empresa— asi que NUNCA lo encontraba: la descarga fallaba para todas
+    // las facturas emitidas. El basename estaba ahi para cortar un ../, pero
+    // se llevo por delante tambien el segmento que hace falta.
+    //
+    // Se conserva la proteccion sin romper la ruta: se comprueba que el
+    // archivo caiga dentro de uploads/pdfs y se sirve relativo a esa raiz, de
+    // modo que un path manipulado no puede escaparse.
+    const raiz = path.resolve(path.join(process.cwd(), 'uploads', 'pdfs'));
+    const absoluto = path.resolve(pdfPath);
+    if (absoluto !== raiz && !absoluto.startsWith(raiz + path.sep)) {
+      throw new NotFoundException('El archivo PDF no se encontró en el servidor.');
+    }
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="factura-${id}.pdf"`);
-    const filename = path.basename(pdfPath); // only the filename, no directory traversal
-    const pdfDir = path.join(process.cwd(), 'uploads', 'pdfs');
-    res.sendFile(filename, { root: pdfDir });
+
+    // sendFile falla de forma asincrona: sin callback la peticion se queda
+    // colgada y quien descarga solo ve un spinner eterno.
+    res.sendFile(path.relative(raiz, absoluto), { root: raiz }, (err) => {
+      if (err && !res.headersSent) {
+        res.status(404).json({
+          statusCode: 404,
+          message: 'El archivo PDF no se encontró en el servidor.',
+        });
+      }
+    });
   }
 
   // GET — download Hacienda XML (v4.4)
