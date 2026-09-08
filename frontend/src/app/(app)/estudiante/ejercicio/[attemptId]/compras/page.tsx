@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import {
+  SelectorProveedor, asegurarProveedor, PROVEEDOR_VACIO, type ProveedorElegido,
+} from '@/components/modulo/SelectorProveedor';
 import toast from 'react-hot-toast';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -146,6 +149,8 @@ export default function ComprasPage() {
   const [showForm,  setShowForm]  = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [query, setQuery] = useState('');
+  // El proveedor se elige de la lista; ver components/modulo/SelectorProveedor.
+  const [prov, setProv] = useState<ProveedorElegido>(PROVEEDOR_VACIO);
 
   // ── Load company tied to this attempt ─────────────────────────────
   useEffect(() => {
@@ -209,16 +214,19 @@ export default function ComprasPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!company) return;
-    if (!form.supplierName.trim()) { toast.error('Nombre del proveedor requerido'); return; }
+    if (!prov.name.trim()) { toast.error('Elegí o escribí el proveedor'); return; }
     if (!form.invoiceNumber.trim()) { toast.error('Número de factura requerido'); return; }
     if (!form.date) { toast.error('Fecha requerida'); return; }
     if (subtotalNum <= 0) { toast.error('El subtotal debe ser mayor a cero'); return; }
 
     setSaving(true);
     try {
+      const ficha = await asegurarProveedor(company.id, prov);
+      if (ficha.avisoFicha) toast(ficha.avisoFicha, { icon: '⚠️' });
+
       await api.post(`/api/v1/companies/${company.id}/purchase-invoices`, {
-        supplierName:   form.supplierName.trim(),
-        supplierCedula: form.supplierCedula.trim() || undefined,
+        supplierName:   ficha.name,
+        supplierCedula: ficha.identification,
         invoiceNumber:  form.invoiceNumber.trim(),
         date:           form.date,
         subtotal:       subtotalNum,
@@ -227,7 +235,7 @@ export default function ComprasPage() {
         isAccepted:     true,
       });
       toast.success('Factura de compra registrada');
-      setForm(EMPTY_FORM);
+      setForm(EMPTY_FORM); setProv(PROVEEDOR_VACIO);
       setShowForm(false);
       loadInvoices();
       loadSummary();
@@ -357,31 +365,11 @@ export default function ComprasPage() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                {/* Proveedor */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                    Nombre del proveedor <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text" value={form.supplierName}
-                    onChange={e => setField('supplierName', e.target.value)}
-                    placeholder="Ej. Distribuidora ABC S.A."
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
-                    required
-                  />
-                </div>
-
-                {/* Cédula proveedor */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                    Cédula jurídica / física del proveedor
-                  </label>
-                  <input
-                    type="text" value={form.supplierCedula}
-                    onChange={e => setField('supplierCedula', e.target.value)}
-                    placeholder="3-101-000000"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
-                  />
+                {/* Proveedor: se elige de la lista, no se escribe a mano */}
+                <div className="md:col-span-2">
+                  {company && (
+                    <SelectorProveedor companyId={company.id} valor={prov} onCambio={setProv} />
+                  )}
                 </div>
 
                 {/* Número de factura */}

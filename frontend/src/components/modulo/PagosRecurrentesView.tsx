@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import {
+  SelectorProveedor, asegurarProveedor, PROVEEDOR_VACIO, type ProveedorElegido,
+} from './SelectorProveedor';
 import { getErrorMessage } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -290,7 +293,7 @@ export function PagosRecurrentesView() {
 function ModalNuevoPago({ companyId, onCerrar, onListo }: {
   companyId: string; onCerrar: () => void; onListo: () => void;
 }) {
-  const [proveedor, setProveedor]   = useState('');
+  const [prov, setProv]             = useState<ProveedorElegido>(PROVEEDOR_VACIO);
   const [desc, setDesc]             = useState('');
   const [monto, setMonto]           = useState('');
   const [tasa, setTasa]             = useState('13');
@@ -304,12 +307,15 @@ function ModalNuevoPago({ companyId, onCerrar, onListo }: {
   const total    = round2(montoNum + iva);
 
   async function guardar() {
-    if (!proveedor.trim()) { toast.error('Escribí el nombre del proveedor'); return; }
+    if (!prov.name.trim()) { toast.error('Elegí o escribí el proveedor'); return; }
     if (montoNum <= 0)     { toast.error('El monto debe ser mayor a cero'); return; }
     setGuardando(true);
     try {
+      const ficha = await asegurarProveedor(companyId, prov);
+      if (ficha.avisoFicha) toast(ficha.avisoFicha, { icon: '⚠️' });
+
       await api.post(`/api/v1/companies/${companyId}/recurring-payments`, {
-        supplierName: proveedor.trim(),
+        supplierName: ficha.name,
         description:  desc.trim() || undefined,
         amount:       montoNum,
         taxRate:      tasaNum,
@@ -331,11 +337,7 @@ function ModalNuevoPago({ companyId, onCerrar, onListo }: {
         </div>
 
         <div className="space-y-3">
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Proveedor *</label>
-            <input value={proveedor} onChange={(e) => setProveedor(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Ej.: Inmobiliaria Los Robles" />
-          </div>
+          <SelectorProveedor companyId={companyId} valor={prov} onCambio={setProv} />
 
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">Descripción</label>
