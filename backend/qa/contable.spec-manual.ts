@@ -15,13 +15,13 @@
  * Todo con prefijo __QA_ y limpieza al final, pase o falle.
  */
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './src/app.module';
-import { PrismaService } from './src/prisma/prisma.service';
-import { AccountsService } from './src/modules/accounts/accounts.service';
-import { ClientsService } from './src/modules/clients/clients.service';
-import { InvoicesService } from './src/modules/invoices/invoices.service';
-import { JournalService } from './src/modules/journal/journal.service';
-import { ReportsService } from './src/modules/reports/reports.service';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { AccountsService } from '../src/modules/accounts/accounts.service';
+import { ClientsService } from '../src/modules/clients/clients.service';
+import { InvoicesService } from '../src/modules/invoices/invoices.service';
+import { JournalService } from '../src/modules/journal/journal.service';
+import { ReportsService } from '../src/modules/reports/reports.service';
 
 const MARCA = '__QA_CONTA_';
 const HOY = new Date().toISOString().slice(0, 10);

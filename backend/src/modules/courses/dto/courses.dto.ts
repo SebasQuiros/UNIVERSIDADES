@@ -1,5 +1,5 @@
 import {
-  IsString, IsOptional, IsUUID, MaxLength, MinLength,
+  IsString, IsOptional, IsUUID, MaxLength, MinLength, IsBoolean,
 } from 'class-validator';
 
 export class CreateCourseDto {
@@ -67,6 +67,14 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsUUID()
   teacherId?: string;
+
+  /**
+   * Un curso terminado se desactiva, no se borra: sus notas y ejercicios
+   * tienen que seguir consultables.
+   */
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class EnrollStudentDto {

@@ -16,9 +16,10 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import type { Exercise } from '@/types';
 import toast from 'react-hot-toast';
+import { EditarCursoModal, type CursoEditable } from '@/components/admin/EditarCursoModal';
 import {
   ArrowLeft, Users, FileText, UserPlus, BookOpen,
-  Calendar, X, ChevronRight, Globe, Lock, Search,
+  Calendar, X, ChevronRight, Globe, Lock, Search, Pencil,
 } from 'lucide-react';
 
 interface CourseDetail {
@@ -179,6 +180,7 @@ export default function AdminCourseDetailPage() {
   const [exercises, setExercises] = useState<ExerciseWithCount[]>([]);
   const [loading, setLoading]     = useState(true);
   const [showEnroll, setShowEnroll] = useState(false);
+  const [editando, setEditando]     = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.universityId) return;
@@ -207,6 +209,15 @@ export default function AdminCourseDetailPage() {
 
   return (
     <div className="flex-1 p-6 lg:p-8 overflow-y-auto bg-[#FBF8F1]">
+      {editando && user?.universityId && course && (
+        <EditarCursoModal
+          universityId={user.universityId}
+          curso={course as unknown as CursoEditable}
+          onClose={() => setEditando(false)}
+          onGuardado={() => { setEditando(false); load(); }}
+        />
+      )}
+
       {showEnroll && user?.universityId && (
         <EnrollModal
           courseId={id} universityId={user.universityId} enrolled={enrolledIds}
@@ -232,9 +243,14 @@ export default function AdminCourseDetailPage() {
         iconTint="#2563EB"
         className="mb-6"
         actions={
-          <Button onClick={() => setShowEnroll(true)} className="cx-press">
-            <UserPlus className="w-4 h-4" /> Inscribir estudiante
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={() => setEditando(true)} className="cx-press">
+              <Pencil className="w-4 h-4" /> Editar curso
+            </Button>
+            <Button onClick={() => setShowEnroll(true)} className="cx-press">
+              <UserPlus className="w-4 h-4" /> Inscribir estudiante
+            </Button>
+          </div>
         }
       />
 

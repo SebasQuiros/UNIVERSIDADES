@@ -10,9 +10,9 @@
  * con un authId ficticio, porque lo que se prueba aqui es la logica de cursos.
  */
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './src/app.module';
-import { PrismaService } from './src/prisma/prisma.service';
-import { CoursesService } from './src/modules/courses/courses.service';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
+import { CoursesService } from '../src/modules/courses/courses.service';
 
 const MARCA = '__QA_CURSOS_';
 
@@ -162,6 +162,51 @@ async function main() {
         name: MARCA + 'Secuestrado',
       } as any),
       'solo el profesor del curso',
+    );
+
+    console.log('\n--- 7b. Editar toda la informacion del curso ---');
+    const editado: any = await cursos.update(uniA.id, c1.id, comoAdminA, {
+      name:        MARCA + 'Contabilidad I renombrada',
+      code:        'CONT-101',
+      period:      '2026-II',
+      description: 'Ciclo contable completo',
+    } as any);
+    chequear('cambia el nombre', editado.name.includes('renombrada'), editado.name);
+    chequear('cambia el codigo', editado.code === 'CONT-101', String(editado.code));
+    chequear('cambia el periodo', editado.period === '2026-II', String(editado.period));
+    chequear('cambia la descripcion', editado.description === 'Ciclo contable completo');
+
+    console.log('\n--- 7c. Desactivar y reactivar ---');
+    const desactivado: any = await cursos.update(uniA.id, c1.id, comoAdminA, { isActive: false } as any);
+    chequear('el curso se desactiva', desactivado.isActive === false);
+
+    // Lo critico: si la administracion no lo ve, no puede volver a activarlo.
+    const listaAdmin: any[] = await cursos.findAll(uniA.id, comoAdminA);
+    chequear('la administracion SIGUE viendo el curso desactivado',
+      listaAdmin.some((c) => c.id === c1.id),
+      'quedaria imposible reactivarlo');
+    chequear('y viene marcado como inactivo',
+      listaAdmin.find((c) => c.id === c1.id)?.isActive === false);
+
+    const listaAlumno: any[] = await cursos.findAll(uniA.id, {
+      id: alumnoA.id, role: 'STUDENT', universityId: uniA.id,
+    } as any);
+    chequear('un estudiante NO ve el curso desactivado',
+      !listaAlumno.some((c) => c.id === c1.id));
+
+    const reactivado: any = await cursos.update(uniA.id, c1.id, comoAdminA, { isActive: true } as any);
+    chequear('el curso se reactiva', reactivado.isActive === true);
+
+    console.log('\n--- 7d. La reasignacion respeta el aislamiento ---');
+    await debeFallar(
+      'reasignar a un profesor de OTRA institucion -> rechazado',
+      () => cursos.update(uniA.id, c1.id, comoAdminA, { teacherId: profeB.id } as any),
+      'no pertenece a esta institucion',
+    );
+    await debeFallar(
+      'reasignar a un estudiante -> rechazado',
+      () => cursos.update(uniA.id, c1.id, comoAdminA, { teacherId: alumnoA.id } as any),
+      'no tiene rol docente',
     );
 
     console.log('\n--- 8. Matricula de estudiantes ---');

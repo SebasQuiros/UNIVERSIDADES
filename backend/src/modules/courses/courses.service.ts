@@ -66,13 +66,22 @@ export class CoursesService {
   async findAll(universityId: string, caller: { role: string; universityId: string | null }) {
     this.assertTenantScope(caller, universityId);
     await this._checkUniversity(universityId);
+    // La administracion ve TODOS los cursos, activos e inactivos; el resto
+    // solo los activos.
+    //
+    // Filtrar siempre por isActive dejaba dos problemas: un curso que la
+    // administracion desactivara desaparecia del listado y ya no habia forma
+    // de volver a entrar para reactivarlo, y el contador de "inactivos" de esa
+    // pantalla daba cero SIEMPRE, porque contaba sobre una lista de la que ya
+    // se habian excluido.
+    const esAdministracion = caller.role === 'ADMIN' || caller.role === 'SUPERADMIN';
     return this.prisma.course.findMany({
-      where:   { universityId, isActive: true },
+      where:   { universityId, ...(esAdministracion ? {} : { isActive: true }) },
       include: {
         teacher: { select: { id: true, name: true, email: true } },
         _count:  { select: { enrollments: true, exercises: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isActive: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
@@ -187,6 +196,7 @@ export class CoursesService {
         ...(dto.description !== undefined && { description: dto.description }),
         ...(dto.code        !== undefined && { code:        dto.code        }),
         ...(dto.period      !== undefined && { period:      dto.period      }),
+        ...(dto.isActive    !== undefined && { isActive:    dto.isActive    }),
         updatedAt: new Date(),
       },
     });

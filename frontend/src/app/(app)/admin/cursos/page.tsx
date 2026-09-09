@@ -14,9 +14,10 @@ import toast from 'react-hot-toast';
 import Link from 'next/link';
 import {
   BookOpen, Users, FileText, Calendar, Search, ChevronRight, X, CheckCircle2,
-  GraduationCap, Plus, UserCog,
+  GraduationCap, Plus, UserCog, Pencil,
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
+import { EditarCursoModal, type CursoEditable } from '@/components/admin/EditarCursoModal';
 import { getErrorMessage } from '@/lib/utils';
 import type { Course } from '@/types';
 
@@ -180,6 +181,7 @@ export default function AdminCursosPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState('');
   const [showNuevo, setShowNuevo] = useState(false);
+  const [editando, setEditando] = useState<CursoEditable | null>(null);
 
   const load = useCallback(async () => {
     if (!user?.universityId) return;
@@ -216,6 +218,15 @@ export default function AdminCursosPage() {
           </Button>
         }
       />
+
+      {editando && user?.universityId && (
+        <EditarCursoModal
+          universityId={user.universityId}
+          curso={editando}
+          onClose={() => setEditando(null)}
+          onGuardado={() => { setEditando(null); load(); }}
+        />
+      )}
 
       {showNuevo && user?.universityId && (
         <NuevoCursoModal
@@ -344,11 +355,21 @@ export default function AdminCursosPage() {
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${course.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                   {course.isActive ? 'Activo' : 'Inactivo'}
                 </span>
-                <Link href={`/admin/cursos/${course.id}`}>
-                  <Button size="sm" variant="secondary" className="cx-press">
-                    Ver curso <ChevronRight className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2">
+                  {/* Reasignar el grupo a otro profesor es lo que mas se
+                      necesita a mitad de año, asi que va a un clic. */}
+                  <Button
+                    size="sm" variant="secondary" className="cx-press"
+                    onClick={() => setEditando(course as unknown as CursoEditable)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Editar
                   </Button>
-                </Link>
+                  <Link href={`/admin/cursos/${course.id}`}>
+                    <Button size="sm" variant="secondary" className="cx-press">
+                      Ver curso <ChevronRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           ))}
