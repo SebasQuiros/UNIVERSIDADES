@@ -69,7 +69,7 @@ export function StudentSidebar() {
   // (ver el efecto de abajo, que sí trae SU PROPIO intento con `mine=true`).
   const didMount = useRef(false);
   useEffect(() => {
-    api.get<any[]>('/api/v1/attempts').then(({ data }) => {
+    api.get<any[]>('/api/v1/attempts?mine=true').then(({ data }) => {
       const list = Array.isArray(data) ? data : [];
       if (user?.role === 'TEACHER') {
         setPending(list.filter((x) => x.status === 'IN_PROGRESS' || x.status === 'SUBMITTED').length);
@@ -100,7 +100,7 @@ export function StudentSidebar() {
   // inicial, que ya lo resolvió arriba con el mismo fetch).
   useEffect(() => {
     if (!didMount.current || user?.role !== 'TEACHER') return;
-    api.get<any[]>('/api/v1/attempts')
+    api.get<any[]>('/api/v1/attempts?mine=true')
       .then(({ data }) => setPending((Array.isArray(data) ? data : [])
         .filter((a) => a.status === 'IN_PROGRESS' || a.status === 'SUBMITTED').length))
       .catch(() => {});

@@ -35,7 +35,7 @@ export function useEmpresaActiva() {
         let id: string | undefined;
         let nombre = '';
         try {
-          const { data } = await api.get<any[]>('/api/v1/attempts');
+          const { data } = await api.get<any[]>('/api/v1/attempts?mine=true');
           const lista = Array.isArray(data) ? data : [];
           const activo = lista.find((x) => x.status === 'IN_PROGRESS' && x.company)
             ?? lista.find((x) => x.company);

@@ -286,7 +286,7 @@ export default function EstudianteDashboard() {
     try {
       // Cargamos en paralelo: attempts (INDIVIDUAL) + companies (incluye GROUP).
       const [aRes, cRes] = await Promise.all([
-        api.get<ExerciseAttempt[]>('/api/v1/attempts'),
+        api.get<ExerciseAttempt[]>('/api/v1/attempts?mine=true'),
         api.get<CompanyLite[]>('/api/v1/companies'),
       ]);
       setAttempts(aRes.data);

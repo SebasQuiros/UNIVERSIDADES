@@ -52,7 +52,7 @@ export function KardexView() {
     let alive = true;
     (async () => {
       try {
-        const { data } = await api.get<any[]>('/api/v1/attempts');
+        const { data } = await api.get<any[]>('/api/v1/attempts?mine=true');
         const list = Array.isArray(data) ? data : [];
         const active = list.find((x) => x.status === 'IN_PROGRESS') ?? list.find((x) => x.company) ?? list[0];
         const cId: string | undefined = active?.company?.id;

@@ -58,7 +58,17 @@ const DIFF_CONFIG: Record<ExerciseDifficulty, { label: string; variant: BadgePro
   ADVANCED:     { label: 'Avanzado',      variant: 'red'    },
 };
 
-export function DifficultyBadge({ difficulty }: { difficulty: ExerciseDifficulty }) {
-  const cfg = DIFF_CONFIG[difficulty];
+/**
+ * Insignia de dificultad.
+ *
+ * Tolera que `difficulty` no venga: hay respuestas del backend que no incluyen
+ * ese campo (por ejemplo el listado de intentos que ve un profesor), y leer
+ * `.variant` de undefined tumbaba el render del arbol completo — la pagina
+ * entera quedaba en "Algo salio mal". Una insignia no puede costar eso: si no
+ * sabe la dificultad, no se dibuja.
+ */
+export function DifficultyBadge({ difficulty }: { difficulty?: ExerciseDifficulty | null }) {
+  const cfg = difficulty ? DIFF_CONFIG[difficulty] : undefined;
+  if (!cfg) return null;
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
 }

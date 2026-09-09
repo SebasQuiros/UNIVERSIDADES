@@ -19,7 +19,7 @@ export function BitacoraView() {
 
   useEffect(() => {
     let alive = true;
-    api.get<any[]>('/api/v1/attempts')
+    api.get<any[]>('/api/v1/attempts?mine=true')
       .then(({ data }) => {
         if (!alive) return;
         const list = Array.isArray(data) ? data : [];

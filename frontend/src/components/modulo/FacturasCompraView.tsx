@@ -68,7 +68,7 @@ export function FacturasCompraView() {
       try {
         let cId: string | undefined;
         try {
-          const { data } = await api.get<any[]>('/api/v1/attempts');
+          const { data } = await api.get<any[]>('/api/v1/attempts?mine=true');
           const lista = Array.isArray(data) ? data : [];
           const activo = lista.find((x) => x.status === 'IN_PROGRESS') ?? lista.find((x) => x.company) ?? lista[0];
           cId = activo?.company?.id;

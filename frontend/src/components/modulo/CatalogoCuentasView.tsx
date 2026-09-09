@@ -104,7 +104,7 @@ export function CatalogoCuentasView() {
   const load = async () => {
     try {
       // 1) Resolver la empresa igual que el sidebar: attempt activo → company.
-      const { data } = await api.get<any[]>('/api/v1/attempts');
+      const { data } = await api.get<any[]>('/api/v1/attempts?mine=true');
       const list = Array.isArray(data) ? data : [];
       const active =
         list.find((x) => x.status === 'IN_PROGRESS') ??
