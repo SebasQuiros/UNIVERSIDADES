@@ -54,10 +54,17 @@ export function TarjetasPortada() {
             border: '1px solid rgba(27,46,110,0.08)',
           }}
         >
+          {/* Carga inmediata y con prioridad: estas tres imagenes son lo
+              primero que se ve al llegar. Con carga diferida aparecian unos
+              instantes despues y la portada abria con tres huecos blancos,
+              que es la peor primera impresion posible. */}
           <img
             src={src}
             alt={titulo}
-            loading="lazy"
+            loading="eager"
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            {...({ fetchpriority: 'high' } as any)}
+            decoding="async"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
 
