@@ -465,13 +465,20 @@ export default function Home() {
         gap: 16, transition: 'height 0.3s ease, box-shadow 0.3s ease',
       }}>
         {/* Marca escrita */}
-        <a href="#hero" style={{ textDecoration: 'none', flexShrink: 0, lineHeight: 1 }}>
-          <div style={{ fontSize: 'clamp(1.25rem,2.4vw,1.75rem)', fontWeight: 900, letterSpacing: '-0.035em', color: '#0B1A3A' }}>
-            Conta<span style={{ color: '#1D4ED8' }}>SJ</span>
-          </div>
-          <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.14em', color: '#64748B', marginTop: 3 }}>
-            CONTABILIDAD · COSTA RICA
-          </div>
+        <a href="#hero" style={{ textDecoration: 'none', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 11 }}>
+          <img
+            src="/sjqa-logo-transparente.png"
+            alt="SJQA GROUP"
+            style={{ height: navScrolled ? 34 : 42, width: 'auto', display: 'block', transition: 'height 0.3s ease' }}
+          />
+          <span style={{ display: 'block', lineHeight: 1 }}>
+            <span style={{ display: 'block', fontSize: 'clamp(1.15rem,2.2vw,1.6rem)', fontWeight: 900, letterSpacing: '-0.035em', color: '#0B1A3A' }}>
+              Conta<span style={{ color: '#1D4ED8' }}>SJ</span>
+            </span>
+            <span className="lp-marca-bajada" style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.14em', color: '#64748B', marginTop: 3 }}>
+              CONTABILIDAD · COSTA RICA
+            </span>
+          </span>
         </a>
 
         {/* Enlaces, sobre la franja tricolor */}
@@ -661,25 +668,18 @@ export default function Home() {
             Finanzas- compitiendo entre si en la primera pantalla. La portada
             es del producto: una sola marca, limpia, sin anillos dorados ni
             separadores. */}
-        <div className="lp-in lp-in-d1" style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 6 }}>
-          {/* El logo va sin disco ni marco: el PNG original trae el fondo
-              negro incrustado y sobre la portada blanca quedaba un circulo
-              negro flotando. Se publica una version con transparencia. */}
-          <img
-            src="/sjqa-logo-transparente.png"
-            alt="SJQA GROUP"
-            style={{ width: 'clamp(190px,24vw,280px)', height: 'auto', display: 'block' }}
-          />
-        </div>
+        {/* El logo de SJQA ya no va aquí: subio al navbar, junto a la marca.
+            Ocupaba la primera pantalla entera y empujaba las tarjetas fuera
+            de vista, que es justo lo que hay que ver al llegar. */}
 
         {/* Badge */}
-        <div className="lp-in lp-in-d2" style={{ position: 'relative', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(27,46,110,0.05)', border: '1px solid rgba(27,46,110,0.14)', borderRadius: 999, marginBottom: 22 }}>
+        <div className="lp-in lp-in-d2" style={{ position: 'relative', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(27,46,110,0.05)', border: '1px solid rgba(27,46,110,0.14)', borderRadius: 999, marginBottom: 14 }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#B8860B', display: 'inline-block' }} />
           <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#334155', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · Costa Rica 2026</span>
         </div>
 
         {/* Heading */}
-        <h1 className="lp-in lp-in-d3" style={{ position: 'relative', zIndex: 2, fontSize: 'clamp(2rem,5.5vw,3.8rem)', fontWeight: 900, color: '#0B1A3A', lineHeight: 1.1, letterSpacing: '-0.03em', margin: '0 0 22px', maxWidth: 780 }}>
+        <h1 className="lp-in lp-in-d3" style={{ position: 'relative', zIndex: 2, fontSize: 'clamp(2rem,5.5vw,3.8rem)', fontWeight: 900, color: '#0B1A3A', lineHeight: 1.1, letterSpacing: '-0.03em', margin: '0 0 14px', maxWidth: 820 }}>
           El sistema donde la{' '}
           <span style={{ color: '#1D4ED8' }}>contabilidad</span>{' '}
           se convierte en{' '}
@@ -689,12 +689,12 @@ export default function Home() {
         </h1>
 
         {/* Subtitle */}
-        <p className="lp-in lp-in-d4" style={{ position: 'relative', zIndex: 2, fontSize: 'clamp(1rem,2vw,1.15rem)', color: '#475569', maxWidth: 580, lineHeight: 1.7, margin: '0 0 44px' }}>
+        <p className="lp-in lp-in-d4" style={{ position: 'relative', zIndex: 2, fontSize: 'clamp(1rem,2vw,1.15rem)', color: '#475569', maxWidth: 620, lineHeight: 1.65, margin: '0 0 24px' }}>
           Ejercicios contables interactivos, facturación electrónica costarricense, evaluación automática y seguimiento de progreso — diseñado para colegios técnicos y universidades de Costa Rica.
         </p>
 
         {/* CTA */}
-        <div className="lp-in lp-in-d5" style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 52 }}>
+        <div className="lp-in lp-in-d5" style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
           <button
             onClick={handleEnter}
             style={{
@@ -715,7 +715,7 @@ export default function Home() {
         </div>
 
         {/* Trust badges */}
-        <div className="lp-in lp-in-d6" style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 'clamp(14px,3vw,28px)', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 40 }}>
+        <div className="lp-in lp-in-d6" style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 'clamp(14px,3vw,28px)', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 22 }}>
           {['Hacienda v4.4','Doble entrada NIIF'].map(l => (
             <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
               <CheckCircle size={14} color="#059669" strokeWidth={2.5} />

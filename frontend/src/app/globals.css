@@ -498,14 +498,17 @@ body {
 /* ── Ajustes responsivos por sección ───────────────────────────────────────── */
 
 /* Hero: padding vertical, trío de logos y separadores */
-.lp-hero { padding-top: 90px; padding-bottom: 80px; }
+/* El hero tiene que caber en una pantalla CON las tarjetas: son lo que
+   explica el producto de un vistazo. El relleno se ajusto para eso; la
+   barra mide 76 px, de ahi el margen superior. */
+.lp-hero { padding-top: 104px; padding-bottom: 28px; }
 .lp-hero-logos { gap: clamp(24px, 5vw, 56px); margin-bottom: 48px; }
 .lp-logo-side  { width: 148px; height: 148px; border-radius: 32px; }
 .lp-logo-main  { width: 172px; height: 172px; }
 .lp-logo-sep   { display: flex; }
 
 @media (max-width: 640px) {
-  .lp-hero { padding-top: 78px; padding-bottom: 54px; }
+  .lp-hero { padding-top: 92px; padding-bottom: 24px; }
   .lp-hero-logos { gap: 16px; margin-bottom: 30px; }
   .lp-logo-side { width: 94px; height: 94px; border-radius: 22px; }
   .lp-logo-main { width: 112px; height: 112px; }
@@ -784,4 +787,17 @@ body {
 @media (max-width: 600px) {
   .lp-tarjetas { grid-template-columns: 1fr; }
   .lp-tarjetas > :last-child { grid-column: auto; }
+}
+
+/* En pantallas bajas el titular compite con las tarjetas por el alto.
+   Gana la tarjeta: es la que muestra el producto. */
+@media (min-width: 901px) and (max-height: 820px) {
+  .lp-hero { padding-top: 96px; padding-bottom: 18px; }
+  .lp-hero h1 { font-size: clamp(1.7rem, 3.6vw, 2.6rem) !important; }
+}
+
+/* La bajada de la marca estorba en barras angostas. */
+.lp-marca-bajada { display: block; }
+@media (max-width: 520px) {
+  .lp-marca-bajada { display: none; }
 }
