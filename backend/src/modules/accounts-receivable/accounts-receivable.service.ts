@@ -9,6 +9,7 @@ import { JournalService } from '../journal/journal.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { JournalSource } from '@prisma/client';
 import { RegisterArPaymentDto, ArPaymentFilterDto } from './dto/ar.dto';
+import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
 import { BusinessEventsService } from '../business/business-events.service';
 import * as ExcelJS from 'exceljs';
 
@@ -391,17 +392,33 @@ export class AccountsReceivableService {
     };
   }
 
-  /** Asiento sugerido (no se persiste). Cuentas estándar del seed. */
+  /**
+   * Asiento sugerido para la estimación de incobrables (no se persiste).
+   *
+   * Los códigos tienen que existir en el catálogo. Apuntaban a 5.2.01.99 y
+   * 1.1.02.99, que NO existen: el comentario decía "si no existe, el
+   * estudiante la crea", pero en la práctica significaba que la estimación
+   * se calculaba bien, se mostraba bien, y al intentar registrarla fallaba.
+   * Desde afuera eso es "el análisis de cartera no funciona".
+   *
+   * Las cuentas reales del catálogo son:
+   *   5.2.01.29  Gastos por Cuentas Incobrables   (gasto del período)
+   *   1.1.02.03  Estimación para Cuentas Incobrables (correctora del activo)
+   */
   private _buildAllowanceJournalSpec(amount: number, method: string) {
     return {
       description: `Estimación de cuentas incobrables (${method})`,
       lines: amount > 0 ? [
-        // Gasto: cargo del período. Cuenta seedeada como 5.2.01.99 (otros gastos)
-        // si no existe, el frontend deja al estudiante elegir.
-        { accountCode: '5.2.01.99', side: 'DEBIT',  amount, description: 'Gasto por cuentas incobrables' },
-        // Contracuenta de Activos (cuenta correctora). Convención: 1.1.02.99
-        // si no existe en el seed, el estudiante la crea.
-        { accountCode: '1.1.02.99', side: 'CREDIT', amount, description: 'Estimación cuentas incobrables' },
+        {
+          accountCode: ACCOUNT_CODES.BAD_DEBT_EXPENSE,
+          side: 'DEBIT', amount,
+          description: 'Gasto por cuentas incobrables',
+        },
+        {
+          accountCode: ACCOUNT_CODES.ALLOWANCE_DOUBTFUL,
+          side: 'CREDIT', amount,
+          description: 'Estimación para cuentas incobrables',
+        },
       ] : [],
     };
   }

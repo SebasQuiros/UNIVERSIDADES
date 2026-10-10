@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Card } from '@/components/ui/Card';
 import { IconTile } from '@/components/ui/IconTile';
 import { SceneStudentDesk, SceneEmptyBox } from '@/components/illustrations';
+import { SelloInstitucional } from '@/components/layout/SelloInstitucional';
 import { ExecutiveDashboard } from '@/components/dashboard/ExecutiveDashboard';
 import type { ExerciseAttempt } from '@/types';
 import toast from 'react-hot-toast';
@@ -360,6 +361,12 @@ export default function EstudianteDashboard() {
           <SceneStudentDesk size={230} className="lp-drift" />
         </div>
         <div className="relative p-6 lg:p-8">
+          {/* Sello: la marca del sistema y la de la institución del usuario.
+              La institución se lee de su sesión, no está escrita en el código:
+              el producto se vende a varias y clavar un escudo concreto le
+              mostraría a un colegio el de otra institución. */}
+          <SelloInstitucional className="mb-5" />
+
           <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-gold-500 mb-2">
             Resumen académico
           </p>

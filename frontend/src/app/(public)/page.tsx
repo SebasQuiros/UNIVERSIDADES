@@ -1,5 +1,7 @@
 'use client';
 
+import { TabletPortada } from '@/components/landing/TabletPortada';
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -602,68 +604,27 @@ export default function Home() {
           <div className="lp-drift-2"><GlyphBars /></div>
         </div>
 
-        {/* Logos flotantes */}
-        <div className="lp-in lp-in-d1 lp-hero-logos" style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-
-          {/* UTN */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, animation: 'logo-float-a 5s ease-in-out infinite' }}>
-            <div className="lp-logo-side" style={{
-              overflow: 'hidden',
-              background: 'rgba(255,255,255,0.92)',
-              border: '2px solid rgba(180,150,80,0.35)',
-              boxShadow: '0 12px 40px rgba(120,90,30,0.18), 0 2px 8px rgba(0,0,0,0.10)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: 12,
-            }}>
-              <img src="/utn-logo.png" alt="UTN" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Univ. Técnica Nacional</span>
-          </div>
-
-          {/* Separador UTN → ContaSJ */}
-          <div className="lp-logo-sep" style={{ flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent)' }} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)' }}>×</span>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent)' }} />
-          </div>
-
-          {/* ContaSJ — logo central */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, animation: 'logo-float-c 4.5s ease-in-out infinite' }}>
-            <div className="lp-logo-main" style={{
+        {/* Marca. Antes habia tres logos -UTN, ContaSJ y Contabilidad &
+            Finanzas- compitiendo entre si en la primera pantalla. La portada
+            es del producto: una sola marca, limpia, sin anillos dorados ni
+            separadores. */}
+        <div className="lp-in lp-in-d1" style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 26 }}>
+          <div
+            className="lp-logo-main"
+            style={{
               borderRadius: '50%', overflow: 'hidden',
-              background: '#000000',
-              border: '3px solid rgba(180,140,40,0.7)',
-              boxShadow: '0 0 0 6px rgba(180,140,40,0.12), 0 16px 48px rgba(100,70,10,0.25)',
+              background: '#FFFFFF',
+              border: '1px solid rgba(255,255,255,0.55)',
+              boxShadow: '0 18px 50px rgba(0,0,0,0.35)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: 0,
-            }}>
-              <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>ContaSJ</span>
+              animation: 'logo-float-c 4.5s ease-in-out infinite',
+            }}
+          >
+            <img src="/sjqa-logo.png" alt="SJQA GROUP" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
-
-          {/* Separador ContaSJ → C&F */}
-          <div className="lp-logo-sep" style={{ flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent)' }} />
-            <span style={{ fontSize: '1.1rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)' }}>×</span>
-            <div style={{ width: 1, height: 60, background: 'linear-gradient(to bottom,transparent,rgba(255,255,255,0.25),transparent)' }} />
-          </div>
-
-          {/* C&F */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, animation: 'logo-float-b 6s ease-in-out infinite' }}>
-            <div className="lp-logo-side" style={{
-              overflow: 'hidden',
-              background: 'rgba(255,255,255,0.92)',
-              border: '2px solid rgba(180,150,80,0.35)',
-              boxShadow: '0 12px 40px rgba(120,90,30,0.18), 0 2px 8px rgba(0,0,0,0.10)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: 12,
-            }}>
-              <img src="/contabilidad-logo.png" alt="Contabilidad & Finanzas" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            </div>
-            <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Contabilidad & Finanzas</span>
-          </div>
-
+          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'rgba(255,255,255,0.82)', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
+            SJQA GROUP
+          </span>
         </div>
 
         {/* Badge */}
@@ -709,7 +670,7 @@ export default function Home() {
         </div>
 
         {/* Trust badges */}
-        <div className="lp-in lp-in-d6" style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 'clamp(14px,3vw,28px)', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div className="lp-in lp-in-d6" style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 'clamp(14px,3vw,28px)', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 40 }}>
           {['Hacienda v4.4','Doble entrada NIIF'].map(l => (
             <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
               <CheckCircle size={14} color="#34D399" strokeWidth={2.5} />
@@ -718,6 +679,11 @@ export default function Home() {
           ))}
         </div>
 
+        {/* Tablet con las imagenes del producto. Se dibuja sola cuando hay
+            archivos en public/portada/ (1.png, 2.png...); si no hay, no
+            aparece. */}
+        <TabletPortada />
+
         {/* Scroll hint */}
         <div className="lp-bounce" style={{ position: 'absolute', zIndex: 3, bottom: 28, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
           <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Descubrir</span>
@@ -725,24 +691,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── STATS BAR ──────────────────────────────────────────── */}
-      <section ref={statsSection.ref} style={{
-        background: 'linear-gradient(135deg, #1B2E6E 0%, #1E3A8A 50%, #0F2657 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Blobs animados de fondo */}
-        <div className="lp-blob-bg" style={{ opacity: 0.25 }} />
-        <div className={`lp-reveal-stagger lp-stats-grid ${statsSection.inView ? 'visible' : ''}`} style={{
-          maxWidth: 900, margin: '0 auto',
-          position: 'relative', zIndex: 1,
-        }}>
-          <StatItem icon={Users}    value={200} suffix="+" label="Estudiantes activos"    active={statsSection.inView} />
-          <StatItem icon={BookOpen} value={50}  suffix="+" label="Ejercicios prácticos"   active={statsSection.inView} />
-          <StatItem icon={Layers}   value={6}   suffix=""  label="Módulos académicos"     active={statsSection.inView} />
-          <StatItem icon={FileText} value={4}   suffix=""  label="Formularios tributarios" active={statsSection.inView} />
-        </div>
-      </section>
+      {/* La barra de estadisticas (200+ estudiantes, 50+ ejercicios...) se
+          quito: eran cifras inventadas en la primera pantalla, y un decano
+          que las lea y despues pregunte queda mal atendido. */}
 
       {/* ── CONVENIO ContaSJ × UTN ─────────────────────────────────── */}
       <section ref={convenioSection.ref} style={{
@@ -946,99 +897,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ───────────────────────────────────────── */}
-      <section id="como-funciona" ref={stepsSection.ref} style={{ padding: 'clamp(60px,8vw,100px) clamp(20px,5vw,60px)', background: '#FFFFFF' }}>
-        <div style={{ maxWidth: 940, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 60, opacity: stepsSection.inView ? 1 : 0, transform: stepsSection.inView ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.6s ease, transform 0.6s ease' }}>
-            {/* Eyebrow — kicker con icono en círculo y subrayado */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-              <span style={{ width: 30, height: 30, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(145deg,#2563EB,#1B2E6E)', boxShadow: '0 4px 12px rgba(27,46,110,0.3)' }}>
-                <Layers size={14} color="#FFFFFF" strokeWidth={2.2} />
-              </span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1B2E6E', letterSpacing: '0.12em', textTransform: 'uppercase', borderBottom: '2px solid rgba(184,134,11,0.4)', paddingBottom: 3 }}>
-                Cómo funciona
-              </span>
-            </div>
-            <h2 style={{ fontSize: 'clamp(1.7rem,3.5vw,2.4rem)', fontWeight: 900, color: '#0F172A', margin: '0 0 14px', letterSpacing: '-0.025em' }}>
-              Tres pasos para dominar la contabilidad
-            </h2>
-            <p style={{ fontSize: '1rem', color: '#64748B', maxWidth: 460, margin: '0 auto', lineHeight: 1.6 }}>
-              Desde tu primera sesión hasta estados financieros completos.
-            </p>
-          </div>
-          <div className="lp-steps" style={{ display: 'flex', gap: 'clamp(24px,4vw,48px)', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <StepCard number="1" title="Inicia sesión"      desc="Accede con las credenciales que te proporcionó tu institución o docente."                                  visible={stepsSection.inView} delay={0} />
-            <StepCard number="2" title="Elige un ejercicio" desc="Selecciona entre ejercicios de diario, facturación, declaraciones o casos empresariales integrales."       visible={stepsSection.inView} delay={150} />
-            <StepCard number="3" title="Aprende y evalúa"   desc="El sistema valida tu trabajo, califica automáticamente y muestra tu progreso en tiempo real."             visible={stepsSection.inView} delay={300} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── CREATOR ────────────────────────────────────────────── */}
-      <section id="creadores" ref={creatorSection.ref} style={{ padding: 'clamp(60px,8vw,100px) clamp(20px,5vw,60px)', background: '#F8FAFC' }}>
-        <div style={{ maxWidth: 820, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ opacity: creatorSection.inView ? 1 : 0, transform: creatorSection.inView ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
-            {/* Eyebrow — pill dorado con icono */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'linear-gradient(135deg,rgba(184,134,11,0.1),rgba(251,191,36,0.08))', border: '1px solid rgba(184,134,11,0.24)', borderRadius: 999, marginBottom: 20 }}>
-              <Code2 size={13} color="#B8860B" strokeWidth={2} />
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#8A6608', letterSpacing: '0.11em', textTransform: 'uppercase' }}>Creadores</span>
-            </div>
-            <h2 style={{ fontSize: 'clamp(1.7rem,3.5vw,2.4rem)', fontWeight: 900, color: '#0F172A', margin: '0 0 12px', letterSpacing: '-0.025em' }}>
-              Construido por estudiantes,<br />para estudiantes
-            </h2>
-            <p style={{ fontSize: '1rem', color: '#64748B', maxWidth: 480, margin: '0 auto 48px', lineHeight: 1.65 }}>
-              ContaSJ fue fundada como proyecto de graduación en la Universidad Técnica Nacional de Costa Rica.
-            </p>
-            <div className="lp-creator-card" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 24, background: '#FFFFFF', borderRadius: 28, border: '1px solid #E8EEF8', boxShadow: '0 12px 48px rgba(27,46,110,0.1)', position: 'relative', overflow: 'hidden' }}>
-              {/* acento decorativo superior */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg,#1B2E6E,#2563EB,#B8860B)' }} />
-
-              {/* Layout horizontal: foto + texto */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 40, flexWrap: 'wrap', justifyContent: 'center' }}>
-
-                {/* Foto — más cuerpo visible */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                  <div style={{
-                    width: 150, height: 198, borderRadius: 20, overflow: 'hidden',
-                    border: '3px solid #FFFFFF',
-                    boxShadow: '0 0 0 3px #1B2E6E, 0 16px 40px rgba(27,46,110,0.25)',
-                  }}>
-                    <img src="/founder.jpg" alt="Sebastián Quirós Arroyo"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 15%' }}
-                    />
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#0F172A' }}>Sebastián Quirós Arroyo</div>
-                    <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: 2 }}>Fundador</div>
-                  </div>
-                </div>
-
-                {/* Texto */}
-                <div style={{ maxWidth: 320, textAlign: 'left' }}>
-                  <div style={{ fontWeight: 900, fontSize: '1.3rem', color: '#0F172A', letterSpacing: '-0.02em', marginBottom: 6 }}>
-                    ContaSJ
-                  </div>
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16,
-                    padding: '4px 14px', borderRadius: 999,
-                    background: 'linear-gradient(135deg,rgba(27,46,110,0.07),rgba(37,99,235,0.07))',
-                    border: '1px solid rgba(27,46,110,0.14)',
-                  }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#1B2E6E' }}>CEO &amp; AI-Powered Project Architect</span>
-                  </div>
-                  <p style={{ fontSize: '0.88rem', color: '#475569', lineHeight: 1.7, margin: 0 }}>
-                    ContaSJ fue fundada a los 19 años con la visión de crear sistemas inteligentes que conecten la educación con entornos reales de negocio.
-                  </p>
-                  <p style={{ fontSize: '0.88rem', color: '#475569', lineHeight: 1.7, margin: '12px 0 0' }}>
-                    Esta plataforma representa un nuevo estándar en tecnología académica: práctica, escalable y orientada al futuro.
-                  </p>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Se quitaron las secciones "Tres pasos para dominar la contabilidad"
+          y "Construido por estudiantes": alargaban la portada sin aportar
+          nada que el visitante no entienda ya por las funcionalidades. */}
 
       {/* ── CTA FINAL ──────────────────────────────────────────── */}
       <section ref={ctaSection.ref} style={{ padding: 'clamp(60px,8vw,100px) clamp(20px,5vw,60px)', background: 'linear-gradient(160deg,#0F172A 0%,#1B2E6E 100%)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
@@ -1081,13 +942,24 @@ export default function Home() {
       {/* ── FOOTER ─────────────────────────────────────────────── */}
       <footer style={{ background: '#0F172A', padding: '28px clamp(20px,5vw,60px)', borderTop: '1px solid rgba(255,255,255,0.05)', position: 'relative' }}>
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, rgba(96,165,250,0.4), rgba(184,134,11,0.4), transparent)' }} />
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
           <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)' }}>
             Conta<span style={{ color: '#60A5FA' }}>SJ</span>
             <span style={{ fontWeight: 400, fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginLeft: 12 }}>Costa Rica</span>
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)' }}>
-            Desarrollado por <span style={{ color: 'rgba(96,165,250,0.6)', fontWeight: 600 }}>ContaSJ</span> · {new Date().getFullYear()}
+
+          {/* Autoria: quien desarrolla el sistema, con su marca. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+            <img
+              src="/sjqa-logo.png"
+              alt="SJQA GROUP"
+              style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+            />
+            <span>
+              Desarrollado por{' '}
+              <span style={{ color: 'rgba(255,255,255,0.72)', fontWeight: 700 }}>SJQA GROUP</span>
+              {' '}· Todos los derechos reservados · {new Date().getFullYear()}
+            </span>
           </div>
         </div>
       </footer>

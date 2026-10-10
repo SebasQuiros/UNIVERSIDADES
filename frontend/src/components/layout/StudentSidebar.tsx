@@ -287,6 +287,11 @@ export function StudentSidebar() {
 
   function renderGroup(g: Group, i: number) {
     const Icon = g.icon;
+    // Menú de texto: los iconos se quitaron de todas las secciones salvo
+    // Tributación. Un pictograma por renglón es el aspecto generico de
+    // cualquier panel; dejar uno solo lo convierte en acento y hace que esa
+    // seccion -la que el usuario quiso destacar- se encuentre de un vistazo.
+    const muestraIcono = g.key === 'tribu';
     const muted = g.needsExercise && !activeId;
     const delay = `${Math.min(i, 9) * 0.045}s`;   // entrada escalonada (lp-in)
 
@@ -302,7 +307,9 @@ export function StudentSidebar() {
           onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = '#fff'; } }}
           onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = muted ? TXT_FAINT : TXT; } }}>
           {active && <span aria-hidden className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full" style={{ background: GOLD_BAR, boxShadow: '0 0 8px rgba(251,191,36,0.5)' }} />}
-          <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: active ? '#fff' : 'rgba(96,165,250,0.75)' }} />
+          {muestraIcono && (
+            <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: active ? '#fff' : 'rgba(96,165,250,0.75)' }} />
+          )}
           <span className="flex-1">{g.label}</span>
           {g.isNotif && unread > 0 && (
             <span className="text-[11px] font-mono font-bold rounded px-1.5 py-0.5 min-w-[18px] text-center leading-none"
@@ -326,7 +333,9 @@ export function StudentSidebar() {
           style={{ color: gActive ? '#fff' : (muted ? TXT_FAINT : TXT) }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; }}>
-          <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: gActive ? '#93C5FD' : 'rgba(96,165,250,0.6)' }} />
+          {muestraIcono && (
+            <Icon className="flex-shrink-0" style={{ width: 18, height: 18, color: gActive ? '#93C5FD' : 'rgba(96,165,250,0.6)' }} />
+          )}
           <span className="flex-1 text-left">{g.label}</span>
           <ChevronDown className="w-4 h-4 flex-shrink-0 transition-transform" style={{ color: TXT_FAINT, transform: exp ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
         </button>

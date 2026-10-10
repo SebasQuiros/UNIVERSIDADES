@@ -9,15 +9,30 @@ import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PageSpinner } from '@/components/ui/Spinner';
-import { SceneWelcome } from '@/components/illustrations';
 import { getErrorMessage } from '@/lib/utils';
-import { Mail, Lock, BookOpen, TrendingUp, FileText, Award, AlertCircle } from 'lucide-react';
+import { Mail, Lock, BookOpen, TrendingUp, FileText, AlertCircle } from 'lucide-react';
 
+/**
+ * Tres cosas, con nombre y explicación. Antes eran cuatro etiquetas sueltas
+ * junto a un personaje de ilustración genérica; se cambió por texto que dice
+ * algo, que es lo que mira de verdad quien entra por primera vez.
+ */
 const FEATURES = [
-  { icon: BookOpen,   label: 'Ejercicios contables interactivos' },
-  { icon: FileText,   label: 'Facturación electrónica CR (Hacienda v4.4)' },
-  { icon: TrendingUp, label: 'Motor contable de doble entrada' },
-  { icon: Award,      label: 'Calificación automática con rúbricas' },
+  {
+    icon: BookOpen,
+    titulo: 'Práctica contable interactiva',
+    bajada: 'Ejercicios y casos reales, paso a paso.',
+  },
+  {
+    icon: TrendingUp,
+    titulo: 'Partida doble y estados financieros',
+    bajada: 'Desde el registro hasta el análisis.',
+  },
+  {
+    icon: FileText,
+    titulo: 'Normativa contable costarricense',
+    bajada: 'Facturación Hacienda v4.4, IVA y NIIF.',
+  },
 ];
 
 const ROLE_REDIRECT: Record<string, string> = {
@@ -112,69 +127,122 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex" style={{ background: '#EFF6FF' }}>
 
-      {/* ── Panel izquierdo: branding (solo desktop) ── */}
+      {/* ── Panel izquierdo: marca (solo escritorio) ── */}
+      {/*
+        Se quitó la ilustración de personaje: era exactamente el tipo de
+        imagen genérica que hace que un producto parezca una plantilla. En su
+        lugar, tipografía con jerarquía y tres afirmaciones concretas. El
+        fondo es una retícula de puntos y una curva sobria — nada que compita
+        con el texto ni que parezca decoración de relleno.
+      */}
       <div
-        className="hidden lg:flex flex-col justify-between w-1/2 p-12 relative overflow-hidden"
-        style={{ background: 'linear-gradient(160deg, #03080F 0%, #0F2657 60%, #1E3A8A 100%)' }}
+        className="relative hidden w-1/2 flex-col justify-between overflow-hidden p-12 lg:flex"
+        style={{ background: 'linear-gradient(160deg, #03080F 0%, #0F2657 58%, #16306B 100%)' }}
       >
-        {/* Textura de blobs sutiles */}
-        <div className="lp-blob-bg" aria-hidden />
-        {/* Retícula de puntos */}
-        <div aria-hidden className="absolute inset-0 pointer-events-none"
-          style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.045) 1px, transparent 1px)', backgroundSize: '26px 26px' }} />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
+            backgroundSize: '26px 26px',
+          }}
+        />
+        {/* Curva ascendente: alude a un gráfico sin dibujar uno de adorno. */}
+        <svg
+          aria-hidden
+          viewBox="0 0 600 400"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          style={{ opacity: 0.5 }}
+        >
+          <defs>
+            <linearGradient id="loginCurva" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stopColor="#60A5FA" stopOpacity="0" />
+              <stop offset="55%" stopColor="#60A5FA" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#FBBF24" stopOpacity="0.55" />
+            </linearGradient>
+          </defs>
+          <path d="M-20 360 C 140 330, 240 250, 340 190 S 520 70, 620 20"
+                fill="none" stroke="url(#loginCurva)" strokeWidth="1.6" />
+        </svg>
 
-        {/* Logo + marca */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 rounded-[11px] overflow-hidden flex items-center justify-center flex-shrink-0"
-            style={{ background: '#000', boxShadow: '0 0 20px rgba(59,130,246,0.4)' }}>
-            <Image src="/sjqa-logo.png" alt="ContaSJ" width={40} height={40} priority className="w-10 h-10 object-contain" />
+        {/* Marca */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl"
+            style={{ background: '#FFFFFF' }}
+          >
+            <Image src="/sjqa-logo.png" alt="ContaSJ" width={44} height={44} priority className="h-11 w-11 object-cover" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight leading-none" style={{ color: '#60A5FA' }}>
-              ContaSJ
+            <h1 className="text-2xl font-black leading-none tracking-tight text-white">
+              Conta<span style={{ color: '#60A5FA' }}>SJ</span>
             </h1>
-            <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] mt-1" style={{ color: '#FBBF24' }}>
+            <p className="mt-1 text-[0.62rem] font-bold uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.45)' }}>
               Plataforma educativa · Costa Rica
             </p>
           </div>
         </div>
 
-        {/* Contenido central */}
-        <div className="relative z-10 space-y-8 lp-in lp-in-d2">
-          <div>
-            <p className="text-[0.7rem] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: '#FBBF24' }}>
-              Aprende contabilidad
-            </p>
-            <p className="text-white font-extrabold leading-tight" style={{ fontSize: 'clamp(1.4rem,2.4vw,1.9rem)', letterSpacing: '-0.02em' }}>
-              Aprende contabilidad haciendo,{' '}
-              <span style={{ color: '#93C5FD' }}>no solo leyendo.</span>
-            </p>
+        {/* Mensaje */}
+        <div className="lp-in lp-in-d2 relative z-10">
+          <div className="mb-4 flex items-center gap-3">
+            <span style={{ display: 'block', width: 26, height: 2, background: '#FBBF24' }} />
+            <span className="text-[0.68rem] font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+              Aprendé contabilidad
+            </span>
           </div>
 
-          {/* Escena de personaje */}
-          <div className="flex justify-center lp-drift" aria-hidden>
-            <SceneWelcome size={260} />
-          </div>
+          <p
+            className="font-extrabold leading-[1.08] text-white"
+            style={{ fontSize: 'clamp(1.9rem,3.4vw,2.9rem)', letterSpacing: '-0.03em' }}
+          >
+            Aprendé contabilidad
+            <br />
+            <span style={{ color: '#60A5FA' }}>haciendo</span>
+            <span style={{ color: '#FBBF24' }}>.</span>
+          </p>
 
-          <div className="space-y-3">
-            {FEATURES.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(59,130,246,0.22)', border: '1px solid rgba(96,165,250,0.2)' }}>
-                  <Icon className="w-4 h-4" style={{ color: '#93C5FD' }} strokeWidth={1.9} />
+          <p className="mt-5 max-w-md text-[0.95rem] leading-relaxed" style={{ color: 'rgba(255,255,255,0.62)' }}>
+            Practicá con una empresa simulada, registrá operaciones reales y entendé
+            cómo cada decisión impacta los estados financieros.
+          </p>
+
+          <div className="mt-9 space-y-5">
+            {FEATURES.map(({ icon: Icon, titulo, bajada }) => (
+              <div key={titulo} className="flex items-start gap-3.5">
+                <div
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg"
+                  style={{ background: 'rgba(59,130,246,0.16)', border: '1px solid rgba(96,165,250,0.22)' }}
+                >
+                  <Icon className="h-4 w-4" style={{ color: '#93C5FD' }} strokeWidth={1.9} />
                 </div>
-                <span className="text-white/80 text-sm">{label}</span>
+                <div className="min-w-0">
+                  <p className="text-[0.92rem] font-bold leading-snug text-white">{titulo}</p>
+                  <p className="text-[0.8rem]" style={{ color: 'rgba(255,255,255,0.5)' }}>{bajada}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative z-10 flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[0.68rem] font-medium px-2.5 py-1 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(184,134,11,0.28)', color: 'rgba(253,230,138,0.9)' }}>
-            IVA 13% · Hacienda v4.4 · NIIF PYMES
+        {/* Pie del panel */}
+        <div className="relative z-10 flex flex-wrap items-center gap-3">
+          <span
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.7rem] font-semibold"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.75)' }}
+          >
+            {/* Bandera de Costa Rica, en tres franjas */}
+            <span aria-hidden style={{ display: 'inline-flex', flexDirection: 'column', width: 15, height: 11, borderRadius: 2, overflow: 'hidden', flexShrink: 0 }}>
+              <span style={{ flex: 1, background: '#002B7F' }} />
+              <span style={{ flex: 1.3, background: '#CE1126' }} />
+              <span style={{ flex: 1, background: '#FFFFFF' }} />
+            </span>
+            Normativa costarricense · Hacienda v4.4 · NIIF
           </span>
-          <span className="text-xs ml-auto" style={{ color: 'rgba(96,165,250,0.6)' }}>© 2026</span>
+          <span className="ml-auto text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            SJQA GROUP · {new Date().getFullYear()}
+          </span>
         </div>
       </div>
 
@@ -192,9 +260,9 @@ export default function LoginPage() {
                 <span style={{ color: '#2563EB' }}>ContaSJ</span>
               </h1>
             </div>
-            <div className="flex justify-center">
-              <SceneWelcome size={180} />
-            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              Aprendé contabilidad <span className="font-semibold text-gray-700">haciendo</span>.
+            </p>
           </div>
 
           <div className="mb-6">

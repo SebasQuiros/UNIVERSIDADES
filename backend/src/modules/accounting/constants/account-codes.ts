@@ -15,6 +15,9 @@ export const ACCOUNT_CODES = {
   // el banco nunca tocaba una cuenta bancaria, y por eso el modulo Bancos no
   // tenia con que conciliar.
   BANK:                '1.1.01.02',  // Banco Nacional de CR (colones)
+  // Estimacion de incobrables: la correctora del activo y su gasto.
+  ALLOWANCE_DOUBTFUL:  '1.1.02.03',  // Estimación para Cuentas Incobrables
+  BAD_DEBT_EXPENSE:    '5.2.01.29',  // Gastos por Cuentas Incobrables
   ACCOUNTS_RECEIVABLE: '1.1.02.01',  // Cuentas por cobrar — clientes
   INVENTORY:           '1.1.03.01',  // Inventario de mercaderías
   IVA_CREDIT:          '1.1.04.01',  // IVA crédito fiscal (compras)
