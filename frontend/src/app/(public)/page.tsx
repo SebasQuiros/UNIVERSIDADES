@@ -456,10 +456,11 @@ export default function Home() {
         {/* Nav links (escritorio) */}
         <div className="lp-nav-links" style={{ alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
           {[
+            // Al quitar las secciones "Cómo funciona" y "Creadores" sus
+            // enlaces quedaban apuntando al vacío: el menú se veía bien y no
+            // hacía nada al pulsarlo, que es peor que no tenerlo.
             { label: 'Inicio',           href: '#hero' },
             { label: 'Funcionalidades',  href: '#funcionalidades' },
-            { label: 'Cómo funciona',    href: '#como-funciona' },
-            { label: 'Creadores',        href: '#creadores' },
           ].map(({ label, href }) => (
             <a
               key={href}
@@ -547,10 +548,11 @@ export default function Home() {
         {/* Enlaces + CTA */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
+            // Al quitar las secciones "Cómo funciona" y "Creadores" sus
+            // enlaces quedaban apuntando al vacío: el menú se veía bien y no
+            // hacía nada al pulsarlo, que es peor que no tenerlo.
             { label: 'Inicio',           href: '#hero' },
             { label: 'Funcionalidades',  href: '#funcionalidades' },
-            { label: 'Cómo funciona',    href: '#como-funciona' },
-            { label: 'Creadores',        href: '#creadores' },
           ].map(({ label, href }) => (
             <a
               key={href}
