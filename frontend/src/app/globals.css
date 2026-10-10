@@ -767,3 +767,21 @@ body {
     margin: 14mm;
   }
 }
+
+/* ── Tarjetas de la portada ────────────────────────────────────────────── */
+/* Tres columnas en escritorio. En pantalla angosta se apilan: tres fotos
+   de 4:3 lado a lado en un teléfono quedan del tamaño de un sello y no se
+   lee ninguno de los rótulos. */
+.lp-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(12px, 1.6vw, 20px);
+}
+@media (max-width: 900px) {
+  .lp-tarjetas { grid-template-columns: 1fr 1fr; }
+  .lp-tarjetas > :last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .lp-tarjetas { grid-template-columns: 1fr; }
+  .lp-tarjetas > :last-child { grid-column: auto; }
+}

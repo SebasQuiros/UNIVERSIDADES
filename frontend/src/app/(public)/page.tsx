@@ -1,6 +1,6 @@
 'use client';
 
-import { TabletPortada } from '@/components/landing/TabletPortada';
+import { TarjetasPortada } from '@/components/landing/TarjetasPortada';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -365,6 +365,7 @@ export default function Home() {
   const [scrollY, setScrollY]         = useState(0);
   const [reduced, setReduced]         = useState(false);
   const [menuOpen, setMenuOpen]       = useState(false);
+  const [activeSection, setActiveSection] = useState('hero');
 
   const statsSection    = useInView(0.3);
   const convenioSection = useInView(0.15);
@@ -396,6 +397,24 @@ export default function Home() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => { clearInterval(t); window.removeEventListener('scroll', onScroll); };
+  }, []);
+
+  // Marca en el menú la sección que se está viendo. Sin esto el indicador
+  // azul de la maqueta seria decorativo: siempre en "Inicio".
+  useEffect(() => {
+    const ids = ['hero', 'conozcanos', 'funcionalidades'];
+    const calcular = () => {
+      const medio = window.innerHeight * 0.4;
+      let visible = ids[0];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= medio) visible = id;
+      }
+      setActiveSection(visible);
+    };
+    calcular();
+    window.addEventListener('scroll', calcular, { passive: true });
+    return () => window.removeEventListener('scroll', calcular);
   }, []);
 
   // Drawer móvil: bloquea el scroll del body y cierra con Escape mientras está abierto.
@@ -430,87 +449,115 @@ export default function Home() {
     }}>
 
       {/* ── NAVBAR ─────────────────────────────────────────────── */}
+      {/*
+        Barra clara con la marca escrita a la izquierda, los enlaces dentro
+        de una pildora blanca y la franja tricolor de Costa Rica detras.
+        Antes era un degradado azul oscuro de lado a lado: sobre el hero
+        blanco cortaba la pagina en dos en vez de coronarla.
+      */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
-        height: navScrolled ? 58 : 64,
-        background: navScrolled
-          ? 'linear-gradient(90deg, #0B1E4A 0%, #16265E 50%, #1A3277 100%)'
-          : 'linear-gradient(90deg, #0F2657 0%, #1B2E6E 50%, #1E3A8A 100%)',
-        boxShadow: navScrolled ? '0 6px 26px rgba(15,38,87,0.55)' : '0 2px 20px rgba(15,38,87,0.45)',
-        borderBottom: navScrolled ? '1px solid rgba(184,140,40,0.28)' : '1px solid transparent',
-        padding: '0 clamp(16px,4vw,48px)',
+        height: navScrolled ? 66 : 76,
+        background: '#FFFFFF',
+        boxShadow: navScrolled ? '0 4px 20px rgba(27,46,110,0.12)' : '0 1px 0 rgba(27,46,110,0.07)',
+        padding: '0 clamp(14px,3vw,34px)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: 16, transition: 'height 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease',
+        gap: 16, transition: 'height 0.3s ease, box-shadow 0.3s ease',
       }}>
-        {/* Logo + brand */}
+        {/* Marca escrita */}
+        <a href="#hero" style={{ textDecoration: 'none', flexShrink: 0, lineHeight: 1 }}>
+          <div style={{ fontSize: 'clamp(1.25rem,2.4vw,1.75rem)', fontWeight: 900, letterSpacing: '-0.035em', color: '#0B1A3A' }}>
+            Conta<span style={{ color: '#1D4ED8' }}>SJ</span>
+          </div>
+          <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.14em', color: '#64748B', marginTop: 3 }}>
+            CONTABILIDAD · COSTA RICA
+          </div>
+        </a>
+
+        {/* Enlaces, sobre la franja tricolor */}
+        <div className="lp-nav-links" style={{ position: 'relative', alignItems: 'center', flex: 1, justifyContent: 'center', minWidth: 0 }}>
+          {/* Franja de la bandera: azul, blanco, rojo, blanco, azul. */}
+          <div aria-hidden style={{
+            position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-50%)',
+            height: 46, borderRadius: 999, overflow: 'hidden',
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <span style={{ flex: 1, background: '#002B7F' }} />
+            <span style={{ flex: 0.45, background: '#FFFFFF' }} />
+            <span style={{ flex: 1.5, background: '#CE1126' }} />
+            <span style={{ flex: 0.45, background: '#FFFFFF' }} />
+            <span style={{ flex: 1, background: '#002B7F' }} />
+          </div>
+
+          {/* Pildora blanca con los enlaces */}
+          <div style={{
+            position: 'relative', zIndex: 1,
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: '#FFFFFF', borderRadius: 999,
+            padding: '6px 10px',
+            boxShadow: '0 2px 14px rgba(27,46,110,0.14)',
+          }}>
+            {[
+              { label: 'Inicio',          href: '#hero' },
+              { label: 'Conózcanos',      href: '#conozcanos' },
+              { label: 'Funcionalidades', href: '#funcionalidades' },
+            ].map((l, i) => {
+              const activo = activeSection === l.href.slice(1);
+              return (
+                <div key={l.href} style={{ display: 'flex', alignItems: 'center' }}>
+                  {i > 0 && <span aria-hidden style={{ width: 1, height: 16, background: 'rgba(27,46,110,0.14)', margin: '0 4px' }} />}
+                  <a
+                    href={l.href}
+                    style={{
+                      display: 'inline-block', padding: '8px 16px', borderRadius: 999,
+                      fontSize: '0.86rem', fontWeight: 700, textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                      background: activo ? '#1D4ED8' : 'transparent',
+                      color: activo ? '#FFFFFF' : '#1E293B',
+                      transition: 'background 0.2s ease, color 0.2s ease',
+                    }}
+                    onMouseEnter={e => { if (!activo) e.currentTarget.style.background = 'rgba(29,78,216,0.08)'; }}
+                    onMouseLeave={e => { if (!activo) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {l.label}
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Ingresar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 9, overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/sjqa-logo.png" alt="ContaSJ" style={{ width: 40, height: 40, objectFit: 'contain' }} />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1 }}>ContaSJ</div>
-            <div style={{ fontSize: '0.58rem', color: 'rgba(147,197,253,0.75)', lineHeight: 1.3 }}>Contabilidad · Costa Rica</div>
-          </div>
-        </div>
-
-        {/* Nav links (escritorio) */}
-        <div className="lp-nav-links" style={{ alignItems: 'center', gap: 4, flex: 1, justifyContent: 'center', flexWrap: 'nowrap', overflow: 'hidden' }}>
-          {[
-            // Al quitar las secciones "Cómo funciona" y "Creadores" sus
-            // enlaces quedaban apuntando al vacío: el menú se veía bien y no
-            // hacía nada al pulsarlo, que es peor que no tenerlo.
-            { label: 'Inicio',           href: '#hero' },
-            { label: 'Funcionalidades',  href: '#funcionalidades' },
-          ].map(({ label, href }) => (
-            <a
-              key={href}
-              href={href}
-              style={{
-                display: 'inline-flex', alignItems: 'center',
-                padding: '6px 14px', borderRadius: 8,
-                fontSize: '0.82rem', fontWeight: 600,
-                color: 'rgba(255,255,255,0.82)',
-                textDecoration: 'none',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = '#FFFFFF'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.82)'; }}
-            >
-              {label}
-            </a>
-          ))}
-        </div>
-
-        {/* CTAs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <button
             onClick={handleEnter}
-            className="lp-nav-cta"
             style={{
-              alignItems: 'center', gap: 8, flexShrink: 0,
-              padding: '9px 20px', borderRadius: 10,
-              background: 'rgba(255,255,255,0.15)',
-              color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.25)',
-              fontSize: '0.84rem', fontWeight: 700,
-              cursor: 'pointer', transition: 'all 0.2s',
-              backdropFilter: 'blur(8px)',
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '11px 24px', borderRadius: 10,
+              background: '#1D4ED8', color: '#FFFFFF', border: 'none',
+              fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(29,78,216,0.28)',
+              transition: 'background 0.2s ease, transform 0.2s ease',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.25)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1B2E6E'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1D4ED8'; e.currentTarget.style.transform = 'translateY(0)'; }}
           >
-            Ingresar <ArrowRight size={14} />
+            Ingresar <ArrowRight size={15} />
           </button>
 
-          {/* Hamburguesa (móvil/tablet) */}
+          {/* Menú móvil */}
           <button
-            className="lp-nav-hamburger"
-            onClick={() => setMenuOpen(true)}
+            className="lp-burger"
             aria-label="Abrir menú"
-            aria-expanded={menuOpen}
             aria-controls="lp-mobile-drawer"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(true)}
+            style={{
+              background: 'transparent', border: '1px solid rgba(27,46,110,0.18)',
+              borderRadius: 9, padding: 7, cursor: 'pointer', color: '#0B1A3A',
+            }}
           >
-            <Menu size={22} />
+            <Menu size={19} />
           </button>
         </div>
       </nav>
@@ -548,10 +595,8 @@ export default function Home() {
         {/* Enlaces + CTA */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
-            // Al quitar las secciones "Cómo funciona" y "Creadores" sus
-            // enlaces quedaban apuntando al vacío: el menú se veía bien y no
-            // hacía nada al pulsarlo, que es peor que no tenerlo.
             { label: 'Inicio',           href: '#hero' },
+            { label: 'Conózcanos',       href: '#conozcanos' },
             { label: 'Funcionalidades',  href: '#funcionalidades' },
           ].map(({ label, href }) => (
             <a
@@ -616,23 +661,15 @@ export default function Home() {
             Finanzas- compitiendo entre si en la primera pantalla. La portada
             es del producto: una sola marca, limpia, sin anillos dorados ni
             separadores. */}
-        <div className="lp-in lp-in-d1" style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, marginBottom: 26 }}>
-          <div
-            className="lp-logo-main"
-            style={{
-              borderRadius: '50%', overflow: 'hidden',
-              background: '#FFFFFF',
-              border: '1px solid rgba(27,46,110,0.10)',
-              boxShadow: '0 14px 40px rgba(27,46,110,0.16)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: 'logo-float-c 4.5s ease-in-out infinite',
-            }}
-          >
-            <img src="/sjqa-logo.png" alt="SJQA GROUP" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          </div>
-          <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1B2E6E', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
-            SJQA GROUP
-          </span>
+        <div className="lp-in lp-in-d1" style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 6 }}>
+          {/* El logo va sin disco ni marco: el PNG original trae el fondo
+              negro incrustado y sobre la portada blanca quedaba un circulo
+              negro flotando. Se publica una version con transparencia. */}
+          <img
+            src="/sjqa-logo-transparente.png"
+            alt="SJQA GROUP"
+            style={{ width: 'clamp(190px,24vw,280px)', height: 'auto', display: 'block' }}
+          />
         </div>
 
         {/* Badge */}
@@ -687,10 +724,8 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Tablet con las imagenes del producto. Se dibuja sola cuando hay
-            archivos en public/portada/ (1.png, 2.png...); si no hay, no
-            aparece. */}
-        <TabletPortada />
+        {/* Las tres tarjetas del producto, bajo el titular. */}
+        <TarjetasPortada />
 
         {/* Scroll hint */}
         <div className="lp-bounce" style={{ position: 'absolute', zIndex: 3, bottom: 28, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
@@ -704,7 +739,8 @@ export default function Home() {
           que las lea y despues pregunte queda mal atendido. */}
 
       {/* ── CONVENIO ContaSJ × UTN ─────────────────────────────────── */}
-      <section ref={convenioSection.ref} style={{
+      {/* Es el "Conózcanos" del menú: cuenta de dónde sale el sistema. */}
+      <section id="conozcanos" ref={convenioSection.ref} style={{
         padding: 'clamp(70px,9vw,110px) clamp(20px,5vw,60px)',
         background: '#FFFFFF',
         position: 'relative',
