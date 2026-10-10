@@ -8,7 +8,7 @@ import {
   ArrowRight, BookOpen, Award, Calculator,
   BarChart3, Receipt, FileText, GraduationCap,
   ChevronDown, CheckCircle, Quote,
-  Code2, Layers, Zap, Users, ShieldCheck, RefreshCw, Landmark,
+  Zap, Users, ShieldCheck, RefreshCw, Landmark,
   Menu, X,
 } from 'lucide-react';
 
@@ -30,21 +30,6 @@ function useInView(threshold = 0.15) {
   return { ref, inView };
 }
 
-function useCounter(target: number, duration = 1800, active = false) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!active) return;
-    let start: number;
-    const raf = (ts: number) => {
-      if (!start) start = ts;
-      const p = Math.min((ts - start) / duration, 1);
-      setVal(Math.floor((1 - Math.pow(1 - p, 3)) * target));
-      if (p < 1) requestAnimationFrame(raf);
-    };
-    requestAnimationFrame(raf);
-  }, [target, duration, active]);
-  return val;
-}
 
 // ─── Sistema unificado de iconos ────────────────────────────────────────────────
 // Un solo lenguaje: icono lucide (strokeWidth 1.75) dentro de un tile redondeado
@@ -144,62 +129,9 @@ function ArtGrowth({ w = 130 }: { w?: number }) {
 }
 
 // Glifos de línea (line-art) para textura del hero sobre fondo oscuro.
-function GlyphBalance() {
-  return (
-    <svg width="150" height="150" viewBox="0 0 120 120" fill="none" stroke="rgba(27,46,110,0.13)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="60" y1="26" x2="60" y2="86" />
-      <rect x="46" y="86" width="28" height="8" rx="3" />
-      <line x1="30" y1="36" x2="90" y2="36" />
-      <line x1="60" y1="26" x2="60" y2="36" />
-      <path d="M18 40 A16 12 0 0 0 42 40" />
-      <line x1="30" y1="36" x2="18" y2="40" /><line x1="30" y1="36" x2="42" y2="40" />
-      <path d="M78 40 A16 12 0 0 0 102 40" />
-      <line x1="90" y1="36" x2="78" y2="40" /><line x1="90" y1="36" x2="102" y2="40" />
-      <circle cx="60" cy="20" r="4" stroke="rgba(251,191,36,0.35)" />
-    </svg>
-  );
-}
-
-function GlyphBars() {
-  return (
-    <svg width="140" height="140" viewBox="0 0 120 120" fill="none" stroke="rgba(27,46,110,0.13)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="20" y1="96" x2="102" y2="96" />
-      <rect x="30" y="62" width="14" height="34" />
-      <rect x="53" y="44" width="14" height="52" />
-      <rect x="76" y="30" width="14" height="66" />
-      <path d="M30 74 L60 56 L83 42" strokeDasharray="3 5" stroke="rgba(251,191,36,0.3)" />
-      <circle cx="83" cy="42" r="3" stroke="rgba(251,191,36,0.4)" />
-    </svg>
-  );
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatItem({ icon: Icon, value, suffix, label, active }: {
-  icon: React.ElementType; value: number; suffix: string; label: string; active: boolean;
-}) {
-  const count = useCounter(value, 1800, active);
-  return (
-    <div style={{
-      textAlign: 'center', padding: '30px 16px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-    }}>
-      <div style={{
-        width: 44, height: 44, borderRadius: 13,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
-      }}>
-        <Icon size={20} color="#93C5FD" strokeWidth={1.75} />
-      </div>
-      <div style={{ fontSize: 'clamp(1.9rem, 4vw, 2.7rem)', fontWeight: 900, lineHeight: 1, color: '#FFFFFF' }}>
-        {count}{suffix}
-      </div>
-      <div style={{ fontSize: '0.76rem', fontWeight: 500, color: 'rgba(147,197,253,0.82)' }}>
-        {label}
-      </div>
-    </div>
-  );
-}
 
 const BENTO_CLASS = ['lp-b-a', 'lp-b-b', 'lp-b-c', 'lp-b-d', 'lp-b-e', 'lp-b-f'];
 
@@ -298,37 +230,6 @@ function BentoCard({ feature, index, visible, delay }: {
   );
 }
 
-function StepCard({ number, title, desc, visible, delay }: {
-  number: string; title: string; desc: string; visible: boolean; delay: number;
-}) {
-  return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      textAlign: 'center', gap: 14, padding: '0 16px', flex: 1, minWidth: 200,
-      position: 'relative', zIndex: 1,
-      opacity: visible ? 1 : 0,
-      transform: visible ? 'translateY(0)' : 'translateY(28px)',
-      transition: `opacity 0.6s cubic-bezier(.22,1,.36,1) ${delay}ms, transform 0.6s cubic-bezier(.22,1,.36,1) ${delay}ms`,
-    }}>
-      <div style={{ position: 'relative' }}>
-        <div style={{ position: 'absolute', inset: -8, borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.18), transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{
-          position: 'relative',
-          width: 60, height: 60, borderRadius: '50%',
-          background: 'linear-gradient(145deg,#2563EB,#1B2E6E)',
-          color: 'white', fontWeight: 900, fontSize: '1.35rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 10px 26px rgba(27,46,110,0.35)',
-          border: '3px solid #FFFFFF',
-        }}>
-          {number}
-        </div>
-      </div>
-      <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0F172A' }}>{title}</div>
-      <div style={{ fontSize: '0.83rem', color: '#64748B', lineHeight: 1.6, maxWidth: 240 }}>{desc}</div>
-    </div>
-  );
-}
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -362,17 +263,12 @@ export default function Home() {
   const [mounted, setMounted]         = useState(false);
   const [quoteIdx, setQuoteIdx]       = useState(0);
   const [navScrolled, setNavScrolled] = useState(false);
-  const [scrollY, setScrollY]         = useState(0);
   const [reduced, setReduced]         = useState(false);
   const [menuOpen, setMenuOpen]       = useState(false);
   const [activeSection, setActiveSection] = useState('hero');
-
-  const statsSection    = useInView(0.3);
   const convenioSection = useInView(0.15);
   const featSection     = useInView(0.05);
   const quoteSection    = useInView(0.3);
-  const stepsSection    = useInView(0.2);
-  const creatorSection  = useInView(0.2);
   const ctaSection      = useInView(0.3);
 
   useEffect(() => {
@@ -389,8 +285,7 @@ export default function Home() {
       if (!ticking) {
         ticking = true;
         requestAnimationFrame(() => {
-          const sy = window.scrollY;
-          setScrollY(sy < 1000 ? sy : 1000); // parallax solo en la zona del hero
+          const sy = window.scrollY; // parallax solo en la zona del hero
           ticking = false;
         });
       }
@@ -435,8 +330,6 @@ export default function Home() {
     setExiting(true);
     setTimeout(() => router.push('/login'), 380);
   }, [exiting, router]);
-
-  const par = (factor: number) => (reduced ? 0 : scrollY * factor);
   const q = QUOTES[quoteIdx];
 
   return (
@@ -641,33 +534,17 @@ export default function Home() {
         textAlign: 'center', position: 'relative', overflow: 'hidden',
         background: '#FFFFFF',
       }}>
-        {/* ── Fondo blanco ──
-            Antes el hero era azul noche con el texto en blanco. El fondo
-            claro deja respirar la marca y la tablet, y obliga a que el peso
-            visual lo lleve la tipografia y no un degradado.
+        {/* ── Fondo ──
+            Un solo degradado de papel y nada mas. Habia una balanza y unas
+            barras dibujadas flotando, dos lineas verticales y una reticula
+            de puntos: adorno que no decia nada y le robaba atencion a lo
+            unico que importa en la primera pantalla, que es el titular y
+            las tres tarjetas.
 
-            La decoracion es minima a proposito: un velo frio hacia los
-            bordes, un halo dorado muy tenue detras del titular y la misma
-            reticula de puntos, ahora en oscuro para que se vea. */}
+            El degradado se queda porque no es un objeto en pantalla: es el
+            color del fondo. */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #FFFFFF 0%, #FBFCFE 55%, #F4F7FC 100%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-58%)', width: '70%', height: '120%', borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(219,234,254,0.55) 0%, rgba(239,246,255,0.35) 45%, transparent 72%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-62%)', width: 560, height: 330, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(184,134,11,0.09) 0%, rgba(251,191,36,0.05) 50%, transparent 72%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(27,46,110,0.055) 1px, transparent 1px)', backgroundSize: '36px 36px', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: 0, left: '38%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent, rgba(184,134,11,0.16) 45%, rgba(27,46,110,0.10) 70%, transparent)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: 0, right: '38%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent, rgba(27,46,110,0.10) 50%, transparent)', pointerEvents: 'none' }} />
 
-        {/* Spot-art de línea (parallax sutil, detrás del contenido) */}
-        <div style={{ position: 'absolute', top: '17%', left: '7%', zIndex: 0, pointerEvents: 'none', transform: `translateY(${par(-0.06)}px)` }}>
-          <div className="lp-drift"><GlyphBalance /></div>
-        </div>
-        <div style={{ position: 'absolute', bottom: '15%', right: '8%', zIndex: 0, pointerEvents: 'none', transform: `translateY(${par(0.08)}px)` }}>
-          <div className="lp-drift-2"><GlyphBars /></div>
-        </div>
-
-        {/* Marca. Antes habia tres logos -UTN, ContaSJ y Contabilidad &
-            Finanzas- compitiendo entre si en la primera pantalla. La portada
-            es del producto: una sola marca, limpia, sin anillos dorados ni
-            separadores. */}
         {/* El logo de SJQA ya no va aquí: subio al navbar, junto a la marca.
             Ocupaba la primera pantalla entera y empujaba las tarjetas fuera
             de vista, que es justo lo que hay que ver al llegar. */}
