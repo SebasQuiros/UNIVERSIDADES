@@ -76,16 +76,37 @@ export interface PurchaseInput {
   debitAccountCode?: string;
 }
 
+/**
+ * Medio de pago. Decide SI la plata pasa por caja o por el banco, que es una
+ * distincion contable real: no es lo mismo tener el efectivo en la gaveta que
+ * tenerlo depositado, y la conciliacion bancaria depende de que el banco
+ * refleje solo lo que de verdad paso por el banco.
+ */
+export type MedioDePago = 'CASH' | 'TRANSFER' | 'CHECK' | 'CARD';
+
+/** Caja si fue efectivo; la cuenta bancaria en cualquier otro caso. */
+export function cuentaDeTesoreria(metodo?: MedioDePago | string | null): string {
+  return (metodo ?? 'TRANSFER') === 'CASH' ? ACCOUNT_CODES.CASH : ACCOUNT_CODES.BANK;
+}
+
+/** true si el movimiento pasa por el banco y debe aparecer en su libro. */
+export function pasaPorBanco(metodo?: MedioDePago | string | null): boolean {
+  return (metodo ?? 'TRANSFER') !== 'CASH';
+}
+
 export interface CollectionInput {
   amount:            number;
   documentReference: string;  // factura
   counterpartyLabel: string;  // cliente
+  /** Si no viene, se asume transferencia (lo mas comun en una cobranza). */
+  paymentMethod?:    MedioDePago | string;
 }
 
 export interface PaymentInput {
   amount:            number;
   documentReference: string;  // factura de compra
   counterpartyLabel: string;  // proveedor
+  paymentMethod?:    MedioDePago | string;
 }
 
 @Injectable()
@@ -208,16 +229,20 @@ export class RulesEngineService {
 
   /**
    * Cobro al cliente (collection): el cliente paga una cuenta por cobrar.
-   *   D Caja
+   *   D Caja o Banco, segun el medio de pago
    *   C Cuentas por cobrar
+   *
+   * Antes siempre debitaba Caja. El estudiante elegia "transferencia" y la
+   * plata entraba igual a la gaveta: la cuenta bancaria nunca se movia.
    */
   forCollection(input: CollectionInput): JournalEntrySpec {
+    const tesoreria = cuentaDeTesoreria(input.paymentMethod);
     return {
       sourceType:  'collection',
       description: `Cobro ${input.documentReference} — ${input.counterpartyLabel}`,
       lines: [
         {
-          accountCode: ACCOUNT_CODES.CASH,
+          accountCode: tesoreria,
           debit:       input.amount,
           credit:      0,
           description: `Cobro ${input.documentReference}`,
@@ -235,9 +260,10 @@ export class RulesEngineService {
   /**
    * Pago al proveedor (payment): pagamos una cuenta por pagar.
    *   D Cuentas por pagar
-   *   C Caja
+   *   C Caja o Banco, segun el medio de pago
    */
   forPayment(input: PaymentInput): JournalEntrySpec {
+    const tesoreria = cuentaDeTesoreria(input.paymentMethod);
     return {
       sourceType:  'payment',
       description: `Pago ${input.documentReference} — ${input.counterpartyLabel}`,
@@ -249,7 +275,7 @@ export class RulesEngineService {
           description: `Aplicación pago ${input.documentReference}`,
         },
         {
-          accountCode: ACCOUNT_CODES.CASH,
+          accountCode: tesoreria,
           debit:       0,
           credit:      input.amount,
           description: `Pago ${input.documentReference}`,

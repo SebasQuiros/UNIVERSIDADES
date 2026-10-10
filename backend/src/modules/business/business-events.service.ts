@@ -10,8 +10,7 @@ import {
   RulesEngineService,
   PaymentType,
   JournalEntrySpec,
-  JournalLineSpec,
-} from '../accounting/rules-engine.service';
+  JournalLineSpec, pasaPorBanco } from '../accounting/rules-engine.service';
 import { ACCOUNT_CODES } from '../accounting/constants/account-codes';
 import { AccountingModeResolver, AccountingMode } from '../accounting/accounting-mode.resolver';
 
@@ -91,6 +90,8 @@ export interface RecordCollectionInput extends BaseEventInput {
   consecutiveNumber: string;
   customerName:      string;
   amount:            number;
+  /** CASH | TRANSFER | CHECK | CARD. Decide si entra a caja o al banco. */
+  paymentMethod?:    string;
 }
 
 export interface RecordPaymentInput extends BaseEventInput {
@@ -98,6 +99,7 @@ export interface RecordPaymentInput extends BaseEventInput {
   invoiceNumber:     string;
   supplierName:      string;
   amount:            number;
+  paymentMethod?:    string;
 }
 
 /** Línea de nota (crédito o débito) — subconjunto de InvoiceItem que la
@@ -318,6 +320,53 @@ export class BusinessEventsService {
    *   HYBRID    → asiento isPending + reduce balance AR
    *   MANUAL    → nada
    */
+  /**
+   * Deja el movimiento en el libro de bancos.
+   *
+   * El libro de bancos existia pero nadie lo alimentaba: tenia un campo
+   * `source` que lista INVOICE/PURCHASE/PAYROLL y ninguna operacion lo
+   * escribia nunca. Resultado: el estudiante cobraba por transferencia y el
+   * libro seguia vacio, asi que la conciliacion bancaria no se podia
+   * practicar — no habia contra que conciliar.
+   *
+   * Solo se anota lo que pasa por el BANCO. Un cobro en efectivo va a caja y
+   * no tiene nada que hacer en el extracto bancario; meterlo ahi seria
+   * ensenar mal.
+   *
+   * Es best-effort a proposito: si falla, no se cae la operacion. El asiento
+   * ya esta hecho y es la fuente de verdad; el libro de bancos es un auxiliar
+   * y se puede reconstruir. Perder un cobro por no poder anotar su reflejo
+   * seria un mal negocio.
+   */
+  private async anotarEnBanco(
+    tx: any,
+    mov: {
+      companyId: string; metodo?: string | null; fecha: Date | string;
+      descripcion: string; monto: number; tipo: 'CREDIT' | 'DEBIT';
+      source: string; sourceId: string;
+    },
+  ): Promise<void> {
+    if (!pasaPorBanco(mov.metodo)) return;
+    try {
+      await tx.bankTransaction.create({
+        data: {
+          companyId:   mov.companyId,
+          date:        new Date(mov.fecha),
+          description: mov.descripcion,
+          amount:      mov.monto,
+          type:        mov.tipo,
+          source:      mov.source,
+          sourceId:    mov.sourceId,
+        },
+      });
+    } catch (e) {
+      this.logger?.warn?.(
+        `No se pudo anotar el movimiento en el libro de bancos (${mov.descripcion}): ` +
+        `${(e as Error).message}. El asiento contable sí quedó registrado.`,
+      );
+    }
+  }
+
   async recordCollection(input: RecordCollectionInput) {
     const mode = await this.modeResolver.forCompany(input.companyId);
 
@@ -325,6 +374,7 @@ export class BusinessEventsService {
       amount:            input.amount,
       documentReference: `FE-${input.consecutiveNumber}`,
       counterpartyLabel: input.customerName,
+      paymentMethod:     input.paymentMethod,
     });
 
     // sourceId único por cobro (no por factura) — un cliente puede pagar
@@ -344,6 +394,17 @@ export class BusinessEventsService {
           // en lugar de calcular sobre AR.balance (que podría desviarse).
           await this.arRecords.reconcileFromInvoice(input.invoiceId, tx);
         }
+        // El libro de bancos refleja lo que de verdad pasó por el banco.
+        await this.anotarEnBanco(tx, {
+          companyId:   input.companyId,
+          metodo:      input.paymentMethod,
+          fecha:       input.date ?? new Date(),
+          descripcion: `Cobro FE-${input.consecutiveNumber} — ${input.customerName}`,
+          monto:       input.amount,
+          tipo:        'CREDIT',
+          source:      'INVOICE',
+          sourceId:    input.invoiceId,
+        });
       },
     );
   }
@@ -361,6 +422,7 @@ export class BusinessEventsService {
       amount:            input.amount,
       documentReference: input.invoiceNumber,
       counterpartyLabel: input.supplierName,
+      paymentMethod:     input.paymentMethod,
     });
 
     const paymentSourceId = `${input.purchaseInvoiceId}:${Date.now()}`;
@@ -376,6 +438,16 @@ export class BusinessEventsService {
           // Reconciliamos contra PurchaseInvoice (fuente de verdad).
           await this.apRecords.reconcileFromPurchaseInvoice(input.purchaseInvoiceId, tx);
         }
+        await this.anotarEnBanco(tx, {
+          companyId:   input.companyId,
+          metodo:      input.paymentMethod,
+          fecha:       input.date ?? new Date(),
+          descripcion: `Pago ${input.invoiceNumber} — ${input.supplierName}`,
+          monto:       input.amount,
+          tipo:        'DEBIT',
+          source:      'PURCHASE',
+          sourceId:    input.purchaseInvoiceId,
+        });
       },
     );
   }

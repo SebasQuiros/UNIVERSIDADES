@@ -170,7 +170,23 @@ export interface ValidationCheck { field: string; status: 'ok' | 'missing' | 'in
 export interface ValidationResult { isValid: boolean; checks: ValidationCheck[]; }
 
 // ─── Bank types ───────────────────────────────────────────────────────────────
-export interface BankTx { id: string; date: string; description: string; amount: string | number; type: string; reference: string | null; isReconciled: boolean; }
+export interface BankTx { id: string; date: string; description: string; amount: string | number; type: string; reference: string | null; isReconciled: boolean; source?: string; }
+
+/**
+ * De dónde vino cada movimiento del libro de bancos, y si está en los libros.
+ *
+ * Importa distinguirlos: un extracto importado es lo que dice el BANCO y no
+ * se asienta —conciliar consiste justamente en cruzarlo contra lo propio—,
+ * mientras que un movimiento manual o el reflejo de un cobro sí están
+ * registrados. Sin esta marca no hay forma de saber cuál es cuál.
+ */
+export const ORIGEN_BANCO: Record<string, { etiqueta: string; clase: string; enLibros: boolean }> = {
+  MANUAL:   { etiqueta: 'Registrado',  clase: 'bg-emerald-50 text-emerald-700 border-emerald-200', enLibros: true  },
+  INVOICE:  { etiqueta: 'Cobro',       clase: 'bg-blue-50 text-blue-700 border-blue-200',          enLibros: true  },
+  PURCHASE: { etiqueta: 'Pago',        clase: 'bg-blue-50 text-blue-700 border-blue-200',          enLibros: true  },
+  PAYROLL:  { etiqueta: 'Planilla',    clase: 'bg-blue-50 text-blue-700 border-blue-200',          enLibros: true  },
+  IMPORT:   { etiqueta: 'Del extracto', clase: 'bg-amber-50 text-amber-800 border-amber-200',      enLibros: false },
+};
 
 // ─── Payroll helpers ──────────────────────────────────────────────────────────
 export const SALARIO_MINIMO_2026 = 381_000;
@@ -3131,7 +3147,11 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving]     = useState(false);
   const [importing, setImporting] = useState(false);
-  const [form, setForm]         = useState({ date: '', description: '', amount: '', type: 'CREDIT', reference: '' });
+  // La contrapartida es obligatoria: un movimiento de banco sin ella no es un
+  // hecho contable, es una nota. Antes el módulo no tocaba los libros.
+  const FORM_VACIO = { date: '', description: '', amount: '', type: 'CREDIT', reference: '', counterAccountCode: '' };
+  const [form, setForm]         = useState(FORM_VACIO);
+  const [cuentas, setCuentas]   = useState<Account[]>([]);
   const [query, setQuery]       = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
@@ -3148,19 +3168,35 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
 
   useEffect(() => { load(); }, [load]);
 
+  // Catálogo para elegir la contrapartida. Solo cuentas de movimiento
+  // (nivel 4): una cuenta de encabezado no recibe asientos. Y se excluye la
+  // propia cuenta bancaria, porque un asiento banco-contra-banco no dice nada.
+  useEffect(() => {
+    api.get<Account[]>(`/api/v1/companies/${companyId}/accounts`)
+      .then(({ data }) => setCuentas(
+        data.filter((c) => c.level === 4 && !c.isHeader && c.code !== '1.1.01.02'),
+      ))
+      .catch(() => { /* sin catálogo el formulario avisa solo */ });
+  }, [companyId]);
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!form.date || !form.description || !form.amount) { toast.error('Completa todos los campos'); return; }
+    if (!form.counterAccountCode) {
+      toast.error('Elegí contra qué cuenta se registra el movimiento');
+      return;
+    }
     setSaving(true);
     try {
       await api.post(`/api/v1/companies/${companyId}/bank`, {
         date: form.date, description: form.description,
         amount: Number(form.amount), type: form.type,
         reference: form.reference || undefined,
+        counterAccountCode: form.counterAccountCode,
       });
-      toast.success('Movimiento registrado');
+      toast.success('Movimiento registrado con su asiento contable');
       setShowModal(false);
-      setForm({ date: '', description: '', amount: '', type: 'CREDIT', reference: '' });
+      setForm(FORM_VACIO);
       load();
     } catch (err) { toast.error(getErrorMessage(err)); }
     finally { setSaving(false); }
@@ -3247,6 +3283,32 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
             </div>
             <Input label="Descripción *" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Ej. Depósito cliente" />
             <Input label="Monto *" type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
+            {/* Contrapartida: de dónde entró la plata o en qué se fue. Sin
+                esto el movimiento no se puede asentar, y antes se guardaba
+                igual — quedaba anotado en Bancos y ausente de los libros. */}
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                {form.type === 'CREDIT' ? '¿De dónde entró la plata? *' : '¿En qué se fue la plata? *'}
+              </label>
+              <select
+                value={form.counterAccountCode}
+                onChange={e => setForm({ ...form, counterAccountCode: e.target.value })}
+                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              >
+                <option value="">
+                  {cuentas.length ? 'Elegí la cuenta de contrapartida' : 'Cargando catálogo…'}
+                </option>
+                {cuentas.map((c) => (
+                  <option key={c.id} value={c.code}>{c.code} — {c.name}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                {form.type === 'CREDIT'
+                  ? 'Se registrará: debe Banco, haber esta cuenta.'
+                  : 'Se registrará: debe esta cuenta, haber Banco.'}
+              </p>
+            </div>
+
             <Input label="Referencia" value={form.reference} onChange={e => setForm({ ...form, reference: e.target.value })} placeholder="Número de transacción (opcional)" />
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)} className="flex-1">Cancelar</Button>
@@ -3347,7 +3409,22 @@ export function BankTab({ companyId, readonly }: { companyId: string; readonly: 
                   {filtered.map(tx => (
                     <tr key={tx.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-blue-50/40 transition-colors">
                       <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(tx.date)}</td>
-                      <td className="px-4 py-3 text-gray-900 font-semibold">{tx.description}</td>
+                      <td className="px-4 py-3 text-gray-900 font-semibold">
+                        {tx.description}
+                        {(() => {
+                          const o = ORIGEN_BANCO[tx.source ?? 'MANUAL'] ?? ORIGEN_BANCO.MANUAL;
+                          return (
+                            <span
+                              className={`ml-2 inline-block rounded border px-1.5 py-px text-[10px] font-semibold ${o.clase}`}
+                              title={o.enLibros
+                                ? 'Este movimiento está registrado en los libros'
+                                : 'Línea del extracto del banco: todavía no está en tus libros'}
+                            >
+                              {o.etiqueta}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-4 py-3 text-gray-400 text-xs font-mono">{tx.reference ?? '—'}</td>
                       <td className={`px-4 py-3 text-right font-mono tabular-nums font-semibold ${tx.type === 'CREDIT' ? 'text-emerald-700' : 'text-red-700'}`}>
                         {tx.type === 'DEBIT' ? '-' : '+'}{fmtMoney(tx.amount)}

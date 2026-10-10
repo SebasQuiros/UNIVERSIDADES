@@ -264,25 +264,80 @@ async function main() {
     await invariantes('planilla procesada');
 
     // ════════════════════════════════════════════════════════════════════
-    console.log('\n█ 9. Movimiento de banco  ← el punto a verificar');
-    asientos = await contarAsientos();
-    await app.get(BankService).create(companyId, userId, {
-      date: HOY, description: MARCA + 'Depósito', amount: 75_000, type: 'CREDIT',
-    } as any);
-    const trasBanco = await contarAsientos();
-    const bancoConecta = trasBanco > asientos;
-    chequear('un movimiento de banco genera asiento', bancoConecta,
-      'el módulo Bancos no toca los libros: lo que se registra ahí no existe para la contabilidad');
-    if (!bancoConecta) desconectadas.push('movimiento de banco');
+    console.log('\n█ 9. Tesorería: caja contra banco');
+    // Un cobro por transferencia tiene que entrar al BANCO, no a la gaveta.
+    const saldoCajaAntes  = await saldoMayor('1.1.01.01');
+    const saldoBancoAntes = await saldoMayor('1.1.01.02');
+    chequear('los cobros por transferencia movieron la cuenta bancaria',
+      saldoBancoAntes > 0,
+      `banco ${money(saldoBancoAntes)} — si está en cero, todo fue a parar a Caja`);
 
-    // ¿Y al revés? ¿Las operaciones alimentan el libro de bancos?
-    const movs = await prisma.bankTransaction.count({ where: { companyId } });
+    console.log('\n█ 9b. Un cobro EN EFECTIVO va a caja, no al banco');
+    const inv3: any = await app.get(InvoicesService).create(companyId, userId, {
+      clientId: cliente.id, issueDate: HOY, saleCondition: 'CREDIT', creditDays: 30,
+      lines: [{ description: 'Venta para cobro en efectivo', quantity: 1, unitPrice: 100_000, taxRate: 13, cabysCode: '2310100000000' }],
+    } as any);
+    await app.get(InvoicesService).issue(companyId, inv3.id, userId);
+    await app.get(AccountsReceivableService).registerPayment(companyId, {
+      invoiceId: inv3.id, amount: 50_000, paymentDate: HOY, method: 'CASH',
+    } as any, userId);
+    chequear('el cobro en efectivo entra a Caja',
+      igual(await saldoMayor('1.1.01.01'), saldoCajaAntes + 50_000),
+      `${money(saldoCajaAntes)} → ${money(await saldoMayor('1.1.01.01'))}`);
+    chequear('y NO toca la cuenta bancaria',
+      igual(await saldoMayor('1.1.01.02'), saldoBancoAntes),
+      `${money(saldoBancoAntes)} → ${money(await saldoMayor('1.1.01.02'))}`);
+    await invariantes('cobro en efectivo');
+
+    console.log('\n█ 9c. El libro de bancos se alimenta solo');
     const movsDeSistema = await prisma.bankTransaction.count({
       where: { companyId, source: { not: 'MANUAL' } },
     });
     chequear('las ventas y pagos alimentan el libro de bancos', movsDeSistema > 0,
-      `${movs} movimientos y ${movsDeSistema} provienen de una operación: el libro de bancos solo tiene lo que se teclea a mano`);
-    if (movsDeSistema === 0) desconectadas.push('libro de bancos (no recibe de ventas/compras/planilla)');
+      'el libro de bancos solo tendría lo que se teclea a mano');
+    if (movsDeSistema === 0) desconectadas.push('libro de bancos (no recibe de ventas/compras)');
+
+    const enEfectivo = await prisma.bankTransaction.count({
+      where: { companyId, description: { contains: 'cobro en efectivo' } },
+    });
+    chequear('lo cobrado en efectivo NO aparece en el libro de bancos', enEfectivo === 0,
+      'meter el efectivo en el extracto bancario sería enseñar mal');
+
+    console.log('\n█ 9d. Un movimiento manual de banco genera su asiento');
+    asientos = await contarAsientos();
+    await app.get(BankService).create(companyId, userId, {
+      date: HOY, description: MARCA + 'Comisión bancaria', amount: 5_000,
+      type: 'DEBIT', counterAccountCode: '5.2.01.09',
+    } as any).catch(async (e: any) => {
+      // Si esa cuenta de gasto no existe en el catálogo, se reintenta con una
+      // que sí: lo que se prueba es el enganche contable, no el código.
+      const alterna = await prisma.account.findFirst({
+        where: { companyId, type: 'EXPENSE', level: 4 }, select: { code: true },
+      });
+      if (!alterna) throw e;
+      return app.get(BankService).create(companyId, userId, {
+        date: HOY, description: MARCA + 'Comisión bancaria', amount: 5_000,
+        type: 'DEBIT', counterAccountCode: alterna.code,
+      } as any);
+    });
+    asientos = await debeGenerarAsiento('movimiento manual de banco', asientos);
+    await invariantes('movimiento manual de banco');
+
+    console.log('\n█ 9e. Sin contrapartida no se registra nada');
+    const antesDeFallar = await contarAsientos();
+    const movsAntes = await prisma.bankTransaction.count({ where: { companyId } });
+    try {
+      await app.get(BankService).create(companyId, userId, {
+        date: HOY, description: MARCA + 'Sin contrapartida', amount: 9_000, type: 'CREDIT',
+      } as any);
+      chequear('se rechaza un movimiento sin contrapartida', false, 'lo dejó pasar');
+    } catch (e) {
+      chequear('se rechaza un movimiento sin contrapartida',
+        /contra qué cuenta|contrapartida/i.test((e as Error).message), (e as Error).message.slice(0, 90));
+    }
+    chequear('el rechazo no dejó basura: ni asiento ni movimiento',
+      (await contarAsientos()) === antesDeFallar &&
+      (await prisma.bankTransaction.count({ where: { companyId } })) === movsAntes);
 
     // ════════════════════════════════════════════════════════════════════
     console.log('\n█ 10. Estado final de los libros');

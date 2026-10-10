@@ -194,8 +194,8 @@ export class AccountsPayableService {
     const paymentDate = new Date(dto.paymentDate);
     const method      = dto.method ?? 'TRANSFER';
 
-    // Determine cash/bank account from payment method
-    const cashAccountCode = method === 'CASH' ? '1.1.01.01' : '1.1.02.01';
+    // La cuenta de tesoreria la resuelve el motor de reglas segun el medio.
+    // Lo que habia aqui no se usaba y ademas apuntaba a Clientes (1.1.02.01).
 
     return this.prisma.$transaction(async (tx) => {
       // 2. Create ApPayment record
@@ -235,6 +235,7 @@ export class AccountsPayableService {
         supplierName:      inv.supplierName,
         amount:            payAmount.toNumber(),
         date:              paymentDate,
+        paymentMethod:     method,
       });
 
       return apPayment;

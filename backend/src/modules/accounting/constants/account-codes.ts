@@ -9,7 +9,12 @@
  */
 export const ACCOUNT_CODES = {
   // ── Activo ──────────────────────────────────────────────────────
-  CASH:                '1.1.01.01',  // Caja
+  CASH:                '1.1.01.01',  // Caja General
+  // Cuenta bancaria por defecto. Hasta ahora TODO cobro y TODO pago iba a
+  // Caja, aunque la persona eligiera "transferencia": la plata que pasaba por
+  // el banco nunca tocaba una cuenta bancaria, y por eso el modulo Bancos no
+  // tenia con que conciliar.
+  BANK:                '1.1.01.02',  // Banco Nacional de CR (colones)
   ACCOUNTS_RECEIVABLE: '1.1.02.01',  // Cuentas por cobrar — clientes
   INVENTORY:           '1.1.03.01',  // Inventario de mercaderías
   IVA_CREDIT:          '1.1.04.01',  // IVA crédito fiscal (compras)

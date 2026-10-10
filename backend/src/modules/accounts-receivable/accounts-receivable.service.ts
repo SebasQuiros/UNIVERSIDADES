@@ -444,8 +444,10 @@ export class AccountsReceivableService {
     const paymentDate  = new Date(dto.paymentDate);
     const method       = dto.method ?? 'TRANSFER';
 
-    // 2. Determine cash/bank account from payment method
-    const cashAccountCode = method === 'CASH' ? '1.1.01.01' : '1.1.02.01';
+    // El medio de pago decide la cuenta de tesoreria, y eso lo resuelve el
+    // motor de reglas. Aqui habia un `cashAccountCode` que ademas de no
+    // usarse nunca apuntaba a 1.1.02.01, que es Clientes Comerciales, no un
+    // banco: codigo muerto Y equivocado.
 
     return this.prisma.$transaction(async (tx) => {
       // 2.5 RESERVAR el saldo de forma atómica, antes de registrar nada.
@@ -511,6 +513,7 @@ export class AccountsReceivableService {
         customerName:      invoice.clientName,
         amount:            payAmount.toNumber(),
         date:              paymentDate,
+        paymentMethod:     method,
       });
 
       // Bitácora (best-effort)
