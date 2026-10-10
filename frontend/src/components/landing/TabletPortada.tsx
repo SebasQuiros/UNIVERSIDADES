@@ -25,10 +25,14 @@ const SEGUNDOS_POR_IMAGEN = 5;
 
 interface Manifiesto {
   imagenes?: string[];
+  /** Ancho/alto del marco. Lo calcula el script a partir de las imágenes. */
+  aspecto?: number;
 }
 
 export function TabletPortada() {
   const [imagenes, setImagenes] = useState<string[]>([]);
+  // 16:10 solo como respaldo: lo normal es que lo diga el manifiesto.
+  const [aspecto, setAspecto] = useState(1.6);
   const [actual, setActual] = useState(0);
 
   useEffect(() => {
@@ -38,6 +42,9 @@ export function TabletPortada() {
       .then((m: Manifiesto | null) => {
         if (!vivo || !m?.imagenes?.length) return;
         setImagenes(m.imagenes.filter((x) => typeof x === 'string' && x.trim()));
+        if (Number.isFinite(m.aspecto) && (m.aspecto as number) > 0) {
+          setAspecto(m.aspecto as number);
+        }
       })
       .catch(() => { /* sin manifiesto no hay tablet, y está bien */ });
     return () => { vivo = false; };
@@ -64,10 +71,11 @@ export function TabletPortada() {
         style={{
           borderRadius: 18,
           padding: 10,
-          background: 'linear-gradient(160deg, rgba(255,255,255,0.16), rgba(255,255,255,0.04))',
-          border: '1px solid rgba(255,255,255,0.18)',
-          boxShadow: '0 30px 80px rgba(0,0,0,0.45)',
-          backdropFilter: 'blur(6px)',
+          // Marco para fondo CLARO: el translúcido blanco que tenía antes
+          // desaparecía sobre la portada en blanco.
+          background: 'linear-gradient(160deg, #FFFFFF, #EEF2F9)',
+          border: '1px solid rgba(27,46,110,0.10)',
+          boxShadow: '0 24px 60px rgba(27,46,110,0.18)',
         }}
       >
         <div
@@ -76,7 +84,7 @@ export function TabletPortada() {
             borderRadius: 10,
             overflow: 'hidden',
             background: '#0B1220',
-            aspectRatio: '16 / 10',
+            aspectRatio: String(aspecto),
           }}
         >
           {imagenes.map((src, i) => (
@@ -114,7 +122,7 @@ export function TabletPortada() {
                 border: 'none',
                 cursor: 'pointer',
                 padding: 0,
-                background: i === actual ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.28)',
+                background: i === actual ? '#1B2E6E' : 'rgba(27,46,110,0.22)',
                 transition: 'all 300ms ease',
               }}
             />

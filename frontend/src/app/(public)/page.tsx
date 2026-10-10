@@ -146,7 +146,7 @@ function ArtGrowth({ w = 130 }: { w?: number }) {
 // Glifos de línea (line-art) para textura del hero sobre fondo oscuro.
 function GlyphBalance() {
   return (
-    <svg width="150" height="150" viewBox="0 0 120 120" fill="none" stroke="rgba(147,197,253,0.16)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="150" height="150" viewBox="0 0 120 120" fill="none" stroke="rgba(27,46,110,0.13)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <line x1="60" y1="26" x2="60" y2="86" />
       <rect x="46" y="86" width="28" height="8" rx="3" />
       <line x1="30" y1="36" x2="90" y2="36" />
@@ -162,7 +162,7 @@ function GlyphBalance() {
 
 function GlyphBars() {
   return (
-    <svg width="140" height="140" viewBox="0 0 120 120" fill="none" stroke="rgba(147,197,253,0.16)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="140" height="140" viewBox="0 0 120 120" fill="none" stroke="rgba(27,46,110,0.13)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <line x1="20" y1="96" x2="102" y2="96" />
       <rect x="30" y="62" width="14" height="34" />
       <rect x="53" y="44" width="14" height="52" />
@@ -587,16 +587,22 @@ export default function Home() {
         paddingLeft: 'clamp(20px,5vw,80px)',
         paddingRight: 'clamp(20px,5vw,80px)',
         textAlign: 'center', position: 'relative', overflow: 'hidden',
-        background: '#0A1535',
+        background: '#FFFFFF',
       }}>
-        {/* ── Fondo: blanco en bordes, azul marino profundo al centro ── */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(255,255,255,0.92) 0%, rgba(220,230,255,0.45) 22%, transparent 48%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, rgba(255,255,255,0.92) 0%, rgba(220,230,255,0.45) 22%, transparent 48%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '55%', height: '130%', borderRadius: '50%', background: 'radial-gradient(ellipse, #071030 0%, #0B1A42 45%, transparent 75%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-55%)', width: 520, height: 320, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(251,191,36,0.13) 0%, rgba(184,134,11,0.06) 50%, transparent 75%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)', backgroundSize: '36px 36px', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: 0, left: '38%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent, rgba(251,191,36,0.18) 45%, rgba(99,149,255,0.14) 70%, transparent)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: 0, right: '38%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent, rgba(99,149,255,0.14) 50%, transparent)', pointerEvents: 'none' }} />
+        {/* ── Fondo blanco ──
+            Antes el hero era azul noche con el texto en blanco. El fondo
+            claro deja respirar la marca y la tablet, y obliga a que el peso
+            visual lo lleve la tipografia y no un degradado.
+
+            La decoracion es minima a proposito: un velo frio hacia los
+            bordes, un halo dorado muy tenue detras del titular y la misma
+            reticula de puntos, ahora en oscuro para que se vea. */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #FFFFFF 0%, #FBFCFE 55%, #F4F7FC 100%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-58%)', width: '70%', height: '120%', borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(219,234,254,0.55) 0%, rgba(239,246,255,0.35) 45%, transparent 72%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-62%)', width: 560, height: 330, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(184,134,11,0.09) 0%, rgba(251,191,36,0.05) 50%, transparent 72%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(27,46,110,0.055) 1px, transparent 1px)', backgroundSize: '36px 36px', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, left: '38%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent, rgba(184,134,11,0.16) 45%, rgba(27,46,110,0.10) 70%, transparent)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, right: '38%', width: 1, height: '100%', background: 'linear-gradient(to bottom, transparent, rgba(27,46,110,0.10) 50%, transparent)', pointerEvents: 'none' }} />
 
         {/* Spot-art de línea (parallax sutil, detrás del contenido) */}
         <div style={{ position: 'absolute', top: '17%', left: '7%', zIndex: 0, pointerEvents: 'none', transform: `translateY(${par(-0.06)}px)` }}>
@@ -616,37 +622,37 @@ export default function Home() {
             style={{
               borderRadius: '50%', overflow: 'hidden',
               background: '#FFFFFF',
-              border: '1px solid rgba(255,255,255,0.55)',
-              boxShadow: '0 18px 50px rgba(0,0,0,0.35)',
+              border: '1px solid rgba(27,46,110,0.10)',
+              boxShadow: '0 14px 40px rgba(27,46,110,0.16)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               animation: 'logo-float-c 4.5s ease-in-out infinite',
             }}
           >
             <img src="/sjqa-logo.png" alt="SJQA GROUP" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
-          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'rgba(255,255,255,0.82)', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#1B2E6E', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
             SJQA GROUP
           </span>
         </div>
 
         {/* Badge */}
-        <div className="lp-in lp-in-d2" style={{ position: 'relative', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 999, marginBottom: 22, backdropFilter: 'blur(8px)' }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FBBF24', display: 'inline-block', boxShadow: '0 0 8px rgba(251,191,36,0.7)' }} />
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · Costa Rica 2026</span>
+        <div className="lp-in lp-in-d2" style={{ position: 'relative', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px', background: 'rgba(27,46,110,0.05)', border: '1px solid rgba(27,46,110,0.14)', borderRadius: 999, marginBottom: 22 }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#B8860B', display: 'inline-block' }} />
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#334155', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Plataforma Académica · Costa Rica 2026</span>
         </div>
 
         {/* Heading */}
-        <h1 className="lp-in lp-in-d3" style={{ position: 'relative', zIndex: 2, fontSize: 'clamp(2rem,5.5vw,3.8rem)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.1, letterSpacing: '-0.03em', margin: '0 0 22px', maxWidth: 780 }}>
+        <h1 className="lp-in lp-in-d3" style={{ position: 'relative', zIndex: 2, fontSize: 'clamp(2rem,5.5vw,3.8rem)', fontWeight: 900, color: '#0B1A3A', lineHeight: 1.1, letterSpacing: '-0.03em', margin: '0 0 22px', maxWidth: 780 }}>
           El sistema donde la{' '}
-          <span style={{ color: '#93C5FD' }}>contabilidad</span>{' '}
+          <span style={{ color: '#1D4ED8' }}>contabilidad</span>{' '}
           se convierte en{' '}
-          <span style={{ background: 'linear-gradient(135deg,#FBBF24,#F59E0B,#FDE68A)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ color: '#B8860B' }}>
             aprendizaje real
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="lp-in lp-in-d4" style={{ position: 'relative', zIndex: 2, fontSize: 'clamp(1rem,2vw,1.15rem)', color: 'rgba(255,255,255,0.72)', maxWidth: 580, lineHeight: 1.7, margin: '0 0 44px' }}>
+        <p className="lp-in lp-in-d4" style={{ position: 'relative', zIndex: 2, fontSize: 'clamp(1rem,2vw,1.15rem)', color: '#475569', maxWidth: 580, lineHeight: 1.7, margin: '0 0 44px' }}>
           Ejercicios contables interactivos, facturación electrónica costarricense, evaluación automática y seguimiento de progreso — diseñado para colegios técnicos y universidades de Costa Rica.
         </p>
 
@@ -674,8 +680,8 @@ export default function Home() {
         {/* Trust badges */}
         <div className="lp-in lp-in-d6" style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 'clamp(14px,3vw,28px)', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 40 }}>
           {['Hacienda v4.4','Doble entrada NIIF'].map(l => (
-            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: 'rgba(255,255,255,0.75)', fontWeight: 500 }}>
-              <CheckCircle size={14} color="#34D399" strokeWidth={2.5} />
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>
+              <CheckCircle size={14} color="#059669" strokeWidth={2.5} />
               {l}
             </div>
           ))}
@@ -688,8 +694,8 @@ export default function Home() {
 
         {/* Scroll hint */}
         <div className="lp-bounce" style={{ position: 'absolute', zIndex: 3, bottom: 28, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Descubrir</span>
-          <ChevronDown size={15} color="rgba(255,255,255,0.4)" />
+          <span style={{ fontSize: '0.62rem', color: 'rgba(27,46,110,0.45)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Descubrir</span>
+          <ChevronDown size={15} color="rgba(27,46,110,0.45)" />
         </div>
       </section>
 
