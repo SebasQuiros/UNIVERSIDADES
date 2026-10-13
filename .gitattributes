@@ -1,0 +1,17 @@
+# Archivos binarios: git NO debe tocarles los saltos de linea.
+#
+# Sin esto, en Windows git convierte LF a CRLF dentro del archivo y el binario
+# queda corrupto. Paso con el PDF del manual: se subia "bien" y al descargarlo
+# no abria.
+*.pdf   binary
+*.webp  binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.xlsx  binary
+*.docx  binary

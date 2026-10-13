@@ -29,6 +29,10 @@ backend/node_modules/.prisma/
 uploads/
 *.pdf
 *.xml
+# El manual SI se publica: es un archivo del producto, no un adjunto subido
+# por alguien. La regla *.pdf de arriba existe para no versionar las facturas
+# y comprobantes que genera el sistema, y se lo estaba tragando tambien.
+!frontend/public/manual-contasj.pdf
 
 # Logs
 *.log
