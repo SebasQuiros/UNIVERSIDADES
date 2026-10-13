@@ -1,7 +1,9 @@
+import { timingSafeEqual } from 'crypto';
 import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -40,7 +42,46 @@ export class OnboardingService {
   }
 
   // ── POST /onboarding/university ───────────────────────────────
+  /**
+   * Comprueba el codigo de invitacion.
+   *
+   * FALLA CERRADO: si no hay codigo configurado, el alta publica queda
+   * cerrada. Es deliberado — una variable de entorno que alguien olvide
+   * poner no puede traducirse en "que entre cualquiera".
+   *
+   * La comparacion es de tiempo constante para no filtrar el codigo
+   * caracter por caracter midiendo cuanto tarda la respuesta.
+   */
+  private verificarInvitacion(codigo: string) {
+    const esperado = (process.env.ONBOARDING_INVITE_CODE ?? '').trim();
+
+    if (!esperado) {
+      this.logger.warn(
+        'Intento de alta de institucion con ONBOARDING_INVITE_CODE sin configurar: ' +
+        'el registro publico esta cerrado.',
+      );
+      throw new ForbiddenException(
+        'El registro de instituciones no esta habilitado. Escribinos para abrir tu institucion.',
+      );
+    }
+
+    const recibido = (codigo ?? '').trim();
+    const a = Buffer.from(recibido);
+    const b = Buffer.from(esperado);
+    const iguales = a.length === b.length && timingSafeEqual(a, b);
+
+    if (!iguales) {
+      throw new ForbiddenException(
+        'El codigo de invitacion no es valido. Verificalo con quien te lo entrego.',
+      );
+    }
+  }
+
   async registerUniversity(dto: CreateUniversityOnboardingDto) {
+    // Lo primero, antes de tocar Supabase o la base: si el codigo no sirve,
+    // no se crea ni se consulta nada.
+    this.verificarInvitacion(dto.invitationCode);
+
     // 1. Validate terms accepted
     if (!dto.acceptedTerms) {
       throw new BadRequestException('Debe aceptar los términos y condiciones para continuar.');

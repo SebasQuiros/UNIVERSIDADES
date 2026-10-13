@@ -14,6 +14,18 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class CreateUniversityOnboardingDto {
   // ── Universidad ──────────────────────────────────────────────
   @ApiProperty({ example: 'Universidad Técnica Nacional' })
+  /**
+   * Codigo de invitacion entregado por SJQA GROUP.
+   *
+   * El alta de instituciones NO es autoservicio: el producto se vende con
+   * contrato. Sin este codigo cualquiera que diera con la direccion podia
+   * crear una institucion y usuarios administradores dentro de ella.
+   */
+  @IsString()
+  @MinLength(6)
+  @MaxLength(80)
+  invitationCode: string;
+
   @IsString()
   @MinLength(3)
   @MaxLength(200)

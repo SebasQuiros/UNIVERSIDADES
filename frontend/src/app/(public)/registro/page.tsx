@@ -17,6 +17,7 @@ import {
 
 interface FormData {
   // Paso 1 — Universidad
+  invitationCode: string;
   universityName: string;
   universityShortName: string;
   country: string;
@@ -175,6 +176,7 @@ export default function RegistroPage() {
   const [errors, setErrors]           = useState<StepErrors>({});
 
   const [form, setForm] = useState<FormData>({
+    invitationCode:      '',
     universityName:      '',
     universityShortName: '',
     country:             'Costa Rica',
@@ -196,7 +198,8 @@ export default function RegistroPage() {
     const errs: StepErrors = {};
 
     if (s === 0) {
-      if (!form.universityName.trim())      errs.universityName      = 'El nombre de la universidad es requerido.';
+      if (!form.invitationCode.trim())      errs.invitationCode      = 'Necesitás el código que te entregó SJQA GROUP.';
+    if (!form.universityName.trim())      errs.universityName      = 'El nombre de la universidad es requerido.';
       if (!form.universityShortName.trim()) errs.universityShortName = 'Las siglas son requeridas.';
       if (form.universityShortName.trim().length > 20)
         errs.universityShortName = 'Máximo 20 caracteres.';
@@ -234,6 +237,7 @@ export default function RegistroPage() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
+          invitationCode:      form.invitationCode.trim(),
           universityName:      form.universityName.trim(),
           universityShortName: form.universityShortName.trim(),
           country:             form.country,
@@ -481,6 +485,23 @@ ${successData.contrasenaTemporal}`)
                     <h3 className="text-base font-bold text-gray-900">Información de la universidad</h3>
                     <p className="text-sm text-gray-500 mt-0.5">Datos de tu institución educativa.</p>
                   </div>
+
+                  {/* El alta de instituciones no es autoservicio: el producto
+                      se vende con contrato. Sin el código, cualquiera que diera
+                      con esta dirección podía abrir una institución y crearse
+                      usuarios administradores dentro. */}
+                  <Field label="Código de invitación" required error={errors.invitationCode}>
+                    <input
+                      className={inputCls(!!errors.invitationCode)}
+                      value={form.invitationCode}
+                      onChange={e => set('invitationCode', e.target.value)}
+                      placeholder="El código que te entregó SJQA GROUP"
+                      autoComplete="off"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      ¿No tenés uno? Escribinos y abrimos tu institución.
+                    </p>
+                  </Field>
 
                   <Field label="Nombre completo de la universidad" required error={errors.universityName}>
                     <input
