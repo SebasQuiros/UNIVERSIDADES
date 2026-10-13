@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { MANUAL, MANUAL_META, ROL_NOMBRE, type Rol, type Seccion } from '@/content/manual';
-import { Search, Printer, X, AlertTriangle, BookOpen } from 'lucide-react';
+import { Search, Printer, X, AlertTriangle, BookOpen, Download } from 'lucide-react';
 
 /**
  * Manual de uso dentro del sistema.
@@ -71,12 +71,24 @@ export default function AyudaPage() {
               </div>
             </div>
 
-            <button
-              onClick={() => window.print()}
-              className="cx-press inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:border-blue-300 hover:text-blue-700 print:hidden"
-            >
-              <Printer className="h-4 w-4" /> Imprimir o guardar en PDF
-            </button>
+            <div className="flex flex-wrap items-center gap-2 print:hidden">
+              {/* El PDF es un archivo ya armado -con portada e indice- que se
+                  reparte en una capacitacion. Imprimir la pagina sirve para
+                  una copia rapida de un capitulo suelto. */}
+              <a
+                href="/manual-contasj.pdf"
+                download
+                className="cx-press inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1B2E6E]"
+              >
+                <Download className="h-4 w-4" /> Descargar el manual en PDF
+              </a>
+              <button
+                onClick={() => window.print()}
+                className="cx-press inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:border-blue-300 hover:text-blue-700"
+              >
+                <Printer className="h-4 w-4" /> Imprimir esta página
+              </button>
+            </div>
           </div>
 
           <p className="mt-5 text-sm leading-relaxed text-gray-600">
