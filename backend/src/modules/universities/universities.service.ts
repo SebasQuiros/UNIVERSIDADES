@@ -196,6 +196,74 @@ export class UniversitiesService {
   }
 
   /**
+   * Reinicia la contrasena de una persona de la institucion.
+   *
+   * Genera una temporal, la aplica en Supabase -donde vive de verdad la
+   * identidad- y la devuelve UNA sola vez, igual que al crear la cuenta.
+   *
+   * Hacia falta porque no habia ninguna via desde el sistema: quien olvidaba
+   * su contrasena dependia de que alguien entrara al panel de Supabase. Con
+   * cientos de usuarios eso no escala, y si quien olvida es la propia
+   * administracion, el sistema se queda sin nadie que pueda ayudar.
+   *
+   * No se puede usar contra alguien de OTRA institucion: `assertMismaInstitucion`
+   * lo corta antes. Sin eso, el administrador de un colegio podria reiniciarle
+   * la contrasena al de otro y entrar con ella.
+   */
+  async resetUserPassword(universityId: string, userId: string, caller?: Caller) {
+    this.assertMismaInstitucion(universityId, caller);
+    await this._findOneRaw(universityId);
+
+    const user = await this.prisma.user.findFirst({
+      where:  { id: userId, universityId },
+      select: { id: true, name: true, email: true, role: true, authId: true, isActive: true },
+    });
+    if (!user) throw new NotFoundException('La persona no pertenece a esta institucion');
+
+    // Un SUPERADMIN es global: no le pertenece a ninguna institucion y no se
+    // toca desde el panel de una. Su contrasena se cambia en Supabase.
+    if (user.role === 'SUPERADMIN') {
+      throw new ForbiddenException(
+        'La cuenta de superadministracion no se reinicia desde el panel de una institucion.',
+      );
+    }
+    if (!user.authId) {
+      throw new BadRequestException(
+        'Esta cuenta no tiene identidad en el proveedor de acceso. Volve a crearla.',
+      );
+    }
+
+    const tempPassword = generateTempPassword();
+    await this.supabaseAdmin.updatePassword(user.authId, tempPassword);
+
+    // Queda obligado a cambiarla al entrar: una temporal que sobrevive es una
+    // contrasena compartida esperando a que alguien la use.
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data:  { mustChangePassword: true },
+    });
+
+    // El correo va sin bloquear: la contrasena ya se devuelve abajo, asi que
+    // un fallo de SMTP no debe tumbar el reinicio. Pero SI se registra.
+    this.email.send(
+      user.email,
+      'SJQA GROUP — Tu contrasena fue reiniciada',
+      this.email.newUserCredentialsHtml(user.name, user.email, tempPassword),
+    ).catch((err) => {
+      this.logger.warn(
+        `No se pudo avisar a ${user.email} del reinicio: ${(err as Error).message}. ` +
+        'La contrasena temporal solo queda en la respuesta de esta peticion.',
+      );
+    });
+
+    return {
+      id: user.id, name: user.name, email: user.email, role: user.role,
+      temporaryPassword: tempPassword,
+      aviso: 'Esta contrasena se muestra una sola vez. Copiala antes de cerrar.',
+    };
+  }
+
+  /**
    * Alta MASIVA de usuarios.
    *
    * Una clase no se carga de a uno. Con 500 estudiantes, crear las cuentas a

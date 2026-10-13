@@ -88,6 +88,21 @@ export class UniversitiesController {
    * las demas, porque abortar 499 altas buenas por un correo repetido dejaria
    * al profesor sin saber cuales quedaron.
    */
+  /**
+   * Reinicia la contrasena de una persona y devuelve la temporal UNA vez.
+   * Es la via de soporte cuando alguien olvida su contrasena.
+   */
+  @Post(':id/users/:userId/reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Roles('ADMIN', 'SUPERADMIN')
+  resetUserPassword(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.svc.resetUserPassword(id, userId, user);
+  }
+
   @Post(':id/users/lote')
   @HttpCode(HttpStatus.CREATED)
   @Roles('ADMIN', 'SUPERADMIN')

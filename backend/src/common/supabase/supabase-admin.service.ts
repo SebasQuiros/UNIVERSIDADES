@@ -87,6 +87,30 @@ export class SupabaseAdminService implements OnModuleInit {
    * (GoTrue recorta `per_page`; una sola página rompe la idempotencia a escala).
    * Devuelve null si no existe.
    */
+  /**
+   * Cambia la contrasena de un usuario existente.
+   *
+   * La identidad vive en Supabase, no en nuestra base: cambiarla en la tabla
+   * `users` no haria absolutamente nada. Esta es la unica via.
+   *
+   * Se usa cuando alguien olvida su contrasena. Antes el unico camino era
+   * entrar al panel de Supabase, lo que con cientos de usuarios no es un
+   * camino: es un cuello de botella con una sola persona dentro.
+   */
+  async updatePassword(authId: string, password: string): Promise<void> {
+    const res = await fetch(`${this.url}/auth/v1/admin/users/${authId}`, {
+      method: 'PUT',
+      headers: this.headers(),
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) {
+      const detalle = await res.text().catch(() => '');
+      throw new Error(
+        `No se pudo cambiar la contrasena en Supabase (${res.status}). ${detalle.slice(0, 200)}`,
+      );
+    }
+  }
+
   async findIdByEmail(email: string): Promise<string | null> {
     const target = email.toLowerCase();
     const perPage = 200;

@@ -397,6 +397,7 @@ export default function UsuariosPage() {
   const [showLote, setShowLote]           = useState(false);
   const [createdUser, setCreatedUser]     = useState<CreatedUserResult | null>(null);
   const [togglingId, setTogglingId]       = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
 
   const universityId = user?.universityId ?? '';
 
@@ -418,6 +419,35 @@ export default function UsuariosPage() {
   // ── Inline role update ────────────────────────────────────────────────────────
   function handleUserUpdated(updated: UserItem) {
     setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u));
+  }
+
+  // ── Reiniciar contrasena ──────────────────────────────────────────────────────
+  //
+  // Hacia falta de verdad: quien olvidaba su contrasena dependia de que
+  // alguien entrara al panel de Supabase. Con cientos de usuarios eso no es
+  // un procedimiento, es un cuello de botella.
+  async function handleReset(u: UserItem) {
+    const seguro = window.confirm(
+      `¿Reiniciar la contraseña de ${u.name}?\n\n` +
+      'Se genera una nueva contraseña temporal y la actual deja de servir. ' +
+      'La vas a ver UNA sola vez.',
+    );
+    if (!seguro) return;
+
+    setResettingId(u.id);
+    try {
+      const { data } = await api.post<CreatedUserResult>(
+        `/api/v1/universities/${universityId}/users/${u.id}/reset-password`,
+      );
+      // Se reutiliza la misma tarjeta que al crear: muestra la contraseña con
+      // su boton de copiar y avisa que no se vuelve a ver.
+      setCreatedUser(data);
+      setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, mustChangePassword: true } : x));
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setResettingId(null);
+    }
   }
 
   // ── Toggle active / inactive ──────────────────────────────────────────────────
@@ -739,6 +769,15 @@ export default function UsuariosPage() {
                       <td className="px-6 py-3.5">
                         <div className="flex items-center justify-end gap-1">
                           {u.role !== 'SUPERADMIN' && (
+                            <>
+                            <button
+                              onClick={() => handleReset(u)}
+                              disabled={resettingId === u.id}
+                              title="Reiniciar contraseña"
+                              className="cx-press rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gold-50 hover:text-gold-900 disabled:opacity-50"
+                            >
+                              {resettingId === u.id ? <Spinner size="sm" /> : <KeyRound className="h-4 w-4" />}
+                            </button>
                             <button
                               onClick={() => handleToggle(u.id)}
                               disabled={togglingId === u.id}
@@ -757,6 +796,7 @@ export default function UsuariosPage() {
                                 <UserCheck className="w-4 h-4" />
                               )}
                             </button>
+                            </>
                           )}
                         </div>
                       </td>
