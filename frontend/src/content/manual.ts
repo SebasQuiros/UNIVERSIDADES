@@ -1,0 +1,645 @@
+/**
+ * Contenido del manual de uso de ContaSJ.
+ *
+ * Vive en UN solo lugar a propósito. De aquí salen las dos entregas que se
+ * pidieron —la página de Ayuda dentro del sistema y el PDF que se imprime y
+ * se reparte— porque mantener dos copias del mismo manual termina siempre
+ * igual: una se actualiza y la otra se queda mintiendo.
+ *
+ * Las capturas se nombran por su `captura` y viven en `public/manual/`.
+ * Una sección sin captura se muestra igual: el texto se vale por sí solo.
+ */
+
+export type Rol = 'ADMIN' | 'TEACHER' | 'STUDENT';
+
+export interface Seccion {
+  id: string;
+  titulo: string;
+  /** Una o dos frases: qué es y para qué sirve. */
+  resumen: string;
+  paraQuien: Rol[];
+  /** Nombre del archivo en public/manual/ (sin ruta). */
+  captura?: string;
+  /** Pasos numerados. Verbo primero, sin relleno. */
+  pasos?: string[];
+  /** Lo que conviene saber antes de equivocarse. */
+  avisos?: string[];
+}
+
+export interface Capitulo {
+  id: string;
+  numero: number;
+  titulo: string;
+  intro: string;
+  secciones: Seccion[];
+}
+
+export const ROL_NOMBRE: Record<Rol, string> = {
+  ADMIN:   'Administración',
+  TEACHER: 'Profesorado',
+  STUDENT: 'Estudiantes',
+};
+
+export const MANUAL_META = {
+  sistema: 'ContaSJ',
+  subtitulo: 'Plataforma contable educativa · Costa Rica',
+  empresa: 'SJQA GROUP',
+  version: '1.0',
+  // Se recalcula al generar el PDF; acá queda la fecha de la última revisión
+  // del contenido, que es lo que de verdad le importa a quien lo lee.
+  revisado: 'octubre de 2026',
+};
+
+export const MANUAL: Capitulo[] = [
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'inicio',
+    numero: 1,
+    titulo: 'Antes de empezar',
+    intro:
+      'Qué es ContaSJ, cómo está organizado y cómo se entra. Si es tu primera vez, leé este capítulo completo: te ahorra la mitad de las dudas.',
+    secciones: [
+      {
+        id: 'que-es',
+        titulo: 'Qué es ContaSJ',
+        resumen:
+          'Una plataforma donde el estudiante opera una empresa simulada: emite facturas, registra compras, lleva inventario, procesa planilla y produce estados financieros. Todo el ciclo contable, de la apertura al cierre.',
+        paraQuien: ['ADMIN', 'TEACHER', 'STUDENT'],
+        avisos: [
+          'Los documentos que genera el sistema son ejercicios académicos. No tienen validez fiscal ni legal y no deben presentarse ante el Ministerio de Hacienda.',
+          'Cada institución está aislada de las demás. Ninguna ve los datos, cursos ni estudiantes de otra.',
+        ],
+      },
+      {
+        id: 'espacios',
+        titulo: 'Los espacios del sistema',
+        resumen:
+          'El estudiante tiene espacios separados que no se mezclan entre sí. Lo que hace en uno no aparece en el otro, y eso es a propósito.',
+        paraQuien: ['TEACHER', 'STUDENT'],
+        pasos: [
+          'Espacio Educación: las empresas de los ejercicios que asigna el profesor. Es lo que se califica.',
+          'Espacio Contador: empresas de práctica que el estudiante arma por su cuenta, sin nota y sin fecha límite. Sirve para practicar libre.',
+          'Espacio Multiempresa: aulas donde varios grupos comercian entre sí. Se documenta aparte.',
+        ],
+        avisos: [
+          'Un movimiento del Espacio Contador NUNCA aparece en el panel de Educación. Si ves cifras que no reconocés, revisá en qué espacio estás parado.',
+        ],
+      },
+      {
+        id: 'ingreso',
+        titulo: 'Entrar al sistema',
+        resumen:
+          'Se entra con el correo institucional y la contraseña que entregó la administración.',
+        paraQuien: ['ADMIN', 'TEACHER', 'STUDENT'],
+        captura: 'login.webp',
+        pasos: [
+          'Abrí www.saascontablesjqa.com y pulsá «Ingresar».',
+          'Escribí tu correo institucional y tu contraseña.',
+          'Si es tu primer ingreso, cambiá la contraseña temporal por una propia.',
+        ],
+        avisos: [
+          'La contraseña temporal se muestra UNA sola vez a quien crea la cuenta. Si se perdió, la administración debe generar una nueva.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'administracion',
+    numero: 2,
+    titulo: 'Administración de la institución',
+    intro:
+      'Lo que hace la persona administradora: dar de alta al profesorado y al estudiantado, y armar la oferta de cursos.',
+    secciones: [
+      {
+        id: 'usuarios',
+        titulo: 'Crear usuarios',
+        resumen:
+          'Se crean uno por uno o por carga masiva. La carga masiva es la vía normal al inicio de un curso lectivo.',
+        paraQuien: ['ADMIN'],
+        captura: 'admin-usuarios.webp',
+        pasos: [
+          'Entrá a Administración → Usuarios.',
+          'Para uno solo: «Nuevo usuario», con nombre, correo y rol.',
+          'Para una clase entera: «Carga masiva», pegá la lista desde Excel y confirmá.',
+          'Descargá el archivo CSV con las contraseñas ANTES de cerrar la ventana.',
+        ],
+        avisos: [
+          'Las contraseñas temporales se muestran una sola vez. Si cerrás sin bajar el CSV, hay que borrar y volver a crear las cuentas.',
+          'Si el correo está configurado, cada persona recibe sus credenciales. Si no lo está, el CSV es el único respaldo.',
+        ],
+      },
+      {
+        id: 'cursos',
+        titulo: 'Crear y editar cursos',
+        resumen:
+          'La administración arma la oferta académica y le asigna a cada curso su persona responsable.',
+        paraQuien: ['ADMIN'],
+        captura: 'admin-cursos.webp',
+        pasos: [
+          'Entrá a Administración → Cursos y pulsá «Nuevo curso».',
+          'Escribí el nombre y elegí la persona responsable del profesorado.',
+          'Opcional: código y período (por ejemplo 2026-I).',
+          'Para cambiar el profesor después: abrí el curso y pulsá «Editar curso».',
+        ],
+        avisos: [
+          'Solo se puede asignar a alguien de la propia institución. El sistema rechaza un profesor de otra.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'profesor',
+    numero: 3,
+    titulo: 'Para el profesorado',
+    intro:
+      'Crear cursos propios, armar ejercicios, asignarlos y calificar.',
+    secciones: [
+      {
+        id: 'mis-cursos',
+        titulo: 'Mis cursos y matrícula',
+        resumen:
+          'Cada curso tiene su lista de estudiantes matriculados. De ahí salen los ejercicios.',
+        paraQuien: ['TEACHER'],
+        captura: 'profesor-cursos.webp',
+        pasos: [
+          'Entrá a Docencia → Mis cursos.',
+          'Abrí el curso y matriculá estudiantes, uno por uno o pegando una lista de correos.',
+        ],
+      },
+      {
+        id: 'ejercicios',
+        titulo: 'Crear un ejercicio',
+        resumen:
+          'El ejercicio define de qué se trata la empresa que va a constituir el estudiante. Es lo primero que lee.',
+        paraQuien: ['TEACHER'],
+        captura: 'profesor-ejercicio-nuevo.webp',
+        pasos: [
+          'Docencia → Mis ejercicios → «Nuevo ejercicio».',
+          'Elegí el curso, el tipo (ciclo completo, solo diario, solo facturación…) y la dificultad.',
+          'Escribí las INSTRUCCIONES: a qué se dedica la empresa, qué vende, qué operaciones hay que registrar.',
+          'Adjuntá los documentos del caso si los hay.',
+          'Publicá el ejercicio y asignalo al curso.',
+        ],
+        avisos: [
+          'Las instrucciones no son opcionales en la práctica: el estudiante no puede constituir su empresa hasta leerlas, porque de ellas depende el nombre y la actividad económica que elija.',
+        ],
+      },
+      {
+        id: 'calificar',
+        titulo: 'Calificar entregas',
+        resumen:
+          'Cuando el estudiante entrega, el ejercicio queda bloqueado y pasa a la cola de calificación.',
+        paraQuien: ['TEACHER'],
+        captura: 'profesor-pendientes.webp',
+        pasos: [
+          'Docencia → Pendientes de calificar.',
+          'Abrí la entrega: vas a ver sus libros, sus estados financieros y el avance automático.',
+          'Ajustá la nota y escribí la retroalimentación.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'constituir',
+    numero: 4,
+    titulo: 'Constituir la empresa',
+    intro:
+      'El primer paso del estudiante dentro de un ejercicio. Toda contabilidad empieza con una empresa.',
+    secciones: [
+      {
+        id: 'leer-enunciado',
+        titulo: 'Leer el enunciado primero',
+        resumen:
+          'Antes del formulario aparece el enunciado del ejercicio. Hay que leerlo y confirmarlo para que se habilite la constitución.',
+        paraQuien: ['STUDENT'],
+        captura: 'constituir-enunciado.webp',
+        pasos: [
+          'Abrí el ejercicio desde el panel o desde la notificación.',
+          'Leé la descripción, las instrucciones y los adjuntos.',
+          'Pulsá «Ya leí el enunciado».',
+        ],
+        avisos: [
+          'El enunciado queda a la vista mientras llenás el formulario: consultalo ahí mismo.',
+          'Si constituís una comercializadora cuando el ejercicio pedía una empresa de servicios, todo lo que registres después queda mal desde el asiento de apertura.',
+        ],
+      },
+      {
+        id: 'datos-empresa',
+        titulo: 'Datos de la empresa',
+        resumen:
+          'Los datos que vas a poner aparecen en tus facturas electrónicas y en tus estados financieros.',
+        paraQuien: ['STUDENT'],
+        captura: 'constituir-formulario.webp',
+        pasos: [
+          'Nombre de la empresa, acorde al ejercicio.',
+          'Tipo de cédula y número (01 física, 02 jurídica, 03 DIMEX, 04 NITE).',
+          'Actividad económica CIIU de seis dígitos.',
+          'Teléfono, correo y dirección (opcionales, pero salen en la factura).',
+          'Pulsá «Crear empresa».',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'ingresos',
+    numero: 5,
+    titulo: 'Ciclo de ingresos',
+    intro:
+      'Clientes, facturación electrónica y cobros. Es donde entra el dinero.',
+    secciones: [
+      {
+        id: 'clientes',
+        titulo: 'Clientes',
+        resumen:
+          'Antes de facturar hay que tener a quién facturarle. Cada cliente lleva su identificación, sus días de crédito y su límite.',
+        paraQuien: ['STUDENT'],
+        captura: 'clientes.webp',
+        pasos: [
+          'Ciclo de ingresos → Clientes → «Nuevo cliente».',
+          'Nombre, identificación y tipo.',
+          'Si le vas a vender a crédito, definí días de crédito y límite.',
+        ],
+      },
+      {
+        id: 'facturar',
+        titulo: 'Emitir una factura',
+        resumen:
+          'La factura nace en BORRADOR y no toca los libros. Solo al emitirla se genera el asiento, el XML y el PDF.',
+        paraQuien: ['STUDENT'],
+        captura: 'factura-nueva.webp',
+        pasos: [
+          'Ciclo de ingresos → Facturas emitidas → «Nueva factura».',
+          'Elegí el cliente y la condición de venta: contado o crédito.',
+          'Agregá las líneas: descripción, cantidad, precio, tarifa de IVA y código CABYS.',
+          'Revisá el total y guardá: queda en borrador.',
+          'Pulsá «Emitir». Ahí se genera el asiento, el consecutivo, el XML y el PDF.',
+        ],
+        avisos: [
+          'Una factura en borrador NO está en los libros. Si no aparece en el diario, revisá si la emitiste.',
+          'A crédito genera la cuenta por cobrar; de contado entra directo a caja.',
+        ],
+      },
+      {
+        id: 'cobros',
+        titulo: 'Registrar un cobro',
+        resumen:
+          'El cobro baja el saldo del cliente y entra a caja o al banco, según el medio de pago.',
+        paraQuien: ['STUDENT'],
+        captura: 'cobros.webp',
+        pasos: [
+          'Ciclo de ingresos → Cobros.',
+          'Elegí la factura pendiente y el monto (admite cobros parciales).',
+          'Elegí el medio: efectivo, transferencia, cheque o tarjeta.',
+        ],
+        avisos: [
+          'El medio de pago decide la cuenta: en efectivo entra a Caja; por transferencia, cheque o tarjeta entra al Banco y queda reflejado en el libro de bancos.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'egresos',
+    numero: 6,
+    titulo: 'Ciclo de egresos e inventario',
+    intro:
+      'Proveedores, compras, órdenes y existencias. Es donde sale el dinero y entra la mercadería.',
+    secciones: [
+      {
+        id: 'proveedores',
+        titulo: 'Proveedores',
+        resumen:
+          'El proveedor se elige de una lista, no se escribe a mano. Así las compras quedan atadas a su ficha.',
+        paraQuien: ['STUDENT'],
+        captura: 'proveedores.webp',
+        pasos: [
+          'Ciclo de egresos → Proveedores → «Nuevo proveedor».',
+          'Al registrar una compra, elegilo del desplegable. Si es nuevo, usá «Otro proveedor» y queda guardado para la próxima.',
+        ],
+      },
+      {
+        id: 'compras',
+        titulo: 'Registrar una compra',
+        resumen:
+          'La factura de compra genera su asiento y el crédito fiscal que se resta en el D-104.',
+        paraQuien: ['STUDENT'],
+        captura: 'compras.webp',
+        pasos: [
+          'Ciclo de egresos → Facturas recibidas → «Nueva factura de compra».',
+          'Elegí el proveedor, el número de factura y la fecha.',
+          'Escribí el subtotal y la tarifa de IVA: el sistema calcula el impuesto y el total.',
+        ],
+      },
+      {
+        id: 'inventario',
+        titulo: 'Inventario y kardex',
+        resumen:
+          'Los productos con control de inventario descuentan existencias al vender y registran su costo.',
+        paraQuien: ['STUDENT'],
+        captura: 'kardex.webp',
+        pasos: [
+          'Inventario → Catálogo de productos para dar de alta artículos.',
+          'Inventario → Kardex para ver entradas, salidas y saldo por producto.',
+          'Inventario → Ajustes cuando hay faltantes, sobrantes o mermas.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'tesoreria',
+    numero: 7,
+    titulo: 'Tesorería',
+    intro: 'El dinero en caja y en bancos, y la conciliación bancaria.',
+    secciones: [
+      {
+        id: 'bancos',
+        titulo: 'Bancos y movimientos',
+        resumen:
+          'El libro de bancos se alimenta solo de los cobros y pagos que pasan por el banco. También se pueden registrar movimientos a mano.',
+        paraQuien: ['STUDENT'],
+        captura: 'bancos.webp',
+        pasos: [
+          'Tesorería → Bancos y cajas.',
+          'Para un movimiento propio —una comisión, un depósito— pulsá «Nuevo movimiento».',
+          'Indicá contra qué cuenta se registra: el sistema arma el asiento solo.',
+        ],
+        avisos: [
+          'Un movimiento sin contrapartida no se puede asentar. Por eso el sistema la pide: un depósito siempre viene de algún lado.',
+          'Cada movimiento muestra su origen: «Cobro», «Pago», «Registrado» o «Del extracto». Los del extracto todavía NO están en tus libros.',
+        ],
+      },
+      {
+        id: 'conciliacion',
+        titulo: 'Conciliación bancaria',
+        resumen:
+          'Se cruza lo que dice el banco contra lo que registró la empresa, y se explican las diferencias.',
+        paraQuien: ['STUDENT'],
+        captura: 'conciliacion.webp',
+        pasos: [
+          'Tesorería → Conciliaciones bancarias.',
+          'Importá el extracto del banco.',
+          'Marcá las partidas que coinciden y explicá las que no.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'contabilidad',
+    numero: 8,
+    titulo: 'Registro contable',
+    intro:
+      'El diario, el mayor y los balances. Acá se ve el efecto de todo lo anterior.',
+    secciones: [
+      {
+        id: 'catalogo',
+        titulo: 'Catálogo de cuentas',
+        resumen:
+          'La empresa nace con un catálogo de 231 cuentas adaptado a Costa Rica. Se pueden agregar cuentas y poner el código del plan del curso.',
+        paraQuien: ['STUDENT', 'TEACHER'],
+        captura: 'catalogo-cuentas.webp',
+        avisos: [
+          'Solo las cuentas de nivel 4 reciben movimientos. Las de nivel 1 a 3 son encabezados y suman a sus hijas.',
+        ],
+      },
+      {
+        id: 'diario',
+        titulo: 'Libro diario',
+        resumen:
+          'Todos los asientos, automáticos y manuales, en orden. Cada asiento automático dice de qué documento salió.',
+        paraQuien: ['STUDENT'],
+        captura: 'diario.webp',
+        pasos: [
+          'Registro contable → Diario contable.',
+          'Para un asiento manual: «Nuevo asiento», al menos dos líneas, y debe = haber.',
+          'Para corregir uno ya registrado: reversarlo. No se borra.',
+        ],
+        avisos: [
+          'El diario muestra también los asientos reversados y su reversa. La contabilidad no se borra: se corrige dejando rastro.',
+        ],
+      },
+      {
+        id: 'mayor-balanza',
+        titulo: 'Mayor y balance de comprobación',
+        resumen:
+          'El mayor agrupa por cuenta; la balanza comprueba que la suma del debe iguale a la del haber.',
+        paraQuien: ['STUDENT'],
+        captura: 'balance-comprobacion.webp',
+        avisos: [
+          'Si la balanza no cuadra, hay un asiento mal hecho. El sistema no deja guardar asientos descuadrados, así que revisá los ajustes manuales.',
+        ],
+      },
+      {
+        id: 'cierre',
+        titulo: 'Ajustes y cierre',
+        resumen:
+          'Al final del período se registran los ajustes, se cierran las cuentas de resultado y queda la balanza post-cierre.',
+        paraQuien: ['STUDENT'],
+        captura: 'asientos-cierre.webp',
+        pasos: [
+          'Registro contable → Ajustes.',
+          'Registro contable → Asientos de cierre.',
+          'Registro contable → Balanza post-cierre: solo deben quedar cuentas de balance.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'planilla',
+    numero: 9,
+    titulo: 'Planilla',
+    intro:
+      'La planilla costarricense completa: cuotas obreras, cargas patronales, renta con créditos familiares, provisiones y póliza.',
+    secciones: [
+      {
+        id: 'empleados',
+        titulo: 'Fichas de empleados',
+        resumen:
+          'En la ficha va lo que se repite mes a mes: salario, situación familiar y deducciones fijas.',
+        paraQuien: ['STUDENT'],
+        captura: 'empleado-nuevo.webp',
+        pasos: [
+          'Planilla → «Nuevo empleado».',
+          'Nombre, cédula, puesto y salario bruto mensual.',
+          'Situación familiar: hijos menores o estudiantes, y si tiene cónyuge.',
+          'Deducciones fijas: pensión alimenticia, ahorro de asociación (en %) y préstamo.',
+        ],
+        avisos: [
+          'Los créditos familiares rebajan el impuesto de renta: ₡2.580 por cónyuge y ₡1.710 por cada hijo, al mes.',
+        ],
+      },
+      {
+        id: 'procesar',
+        titulo: 'Calcular y procesar la planilla',
+        resumen:
+          'Primero se calcula y se revisa; el asiento se registra al confirmar.',
+        paraQuien: ['STUDENT'],
+        captura: 'planilla-previa.webp',
+        pasos: [
+          'Planilla → elegí el período y pulsá «Calcular planilla».',
+          'Revisá la tabla y, si hace falta, mirá el desglose por persona.',
+          'Revisá el asiento que se va a registrar, que aparece abajo.',
+          'Pulsá «Confirmar y registrar planilla».',
+        ],
+        avisos: [
+          'Cuota obrera 10,83 % · cargas patronales 26,83 % · aguinaldo 8,33 % · vacaciones 4,16 % · póliza del INS 1,50 %.',
+          'El impuesto sobre la renta se calcula sobre el salario BRUTO, en cinco tramos, y después se restan los créditos familiares.',
+          'Se puede exportar a Excel, en dos hojas: la planilla y su asiento.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'estados',
+    numero: 10,
+    titulo: 'Estados financieros',
+    intro:
+      'El resultado de todo el ciclo, en el formato que se usa en Costa Rica.',
+    secciones: [
+      {
+        id: 'ver-estados',
+        titulo: 'Estado de Resultados y Situación Financiera',
+        resumen:
+          'El Estado de Resultados va escalonado; el de Situación Financiera va a dos columnas con la ecuación contable al pie.',
+        paraQuien: ['STUDENT', 'TEACHER'],
+        captura: 'estados-financieros.webp',
+        pasos: [
+          'Estados y análisis → Estados financieros.',
+          'Elegí el estado que querés ver.',
+          'Exportá a Excel o a PDF, o imprimí desde la misma pantalla.',
+        ],
+        avisos: [
+          'Los estados traen el período anterior al lado y la variación en monto y porcentaje, como exigen las NIIF.',
+        ],
+      },
+      {
+        id: 'cartera',
+        titulo: 'Análisis de cartera',
+        resumen:
+          'Antigüedad de saldos por cliente y estimación de cuentas incobrables.',
+        paraQuien: ['STUDENT'],
+        captura: 'cartera.webp',
+        pasos: [
+          'Cuentas por cobrar → Análisis de cartera.',
+          'Elegí el método: porcentaje de ventas o porcentaje por antigüedad.',
+          'El sistema propone el asiento de la estimación.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'tributacion',
+    numero: 11,
+    titulo: 'Tributación',
+    intro:
+      'Las declaraciones que se presentan en Costa Rica, simuladas con los datos reales de la empresa.',
+    secciones: [
+      {
+        id: 'declaraciones',
+        titulo: 'Presentar una declaración',
+        resumen:
+          'D-104 (IVA), D-101 (renta), D-103 y D-115. Se prellenan desde las operaciones registradas.',
+        paraQuien: ['STUDENT'],
+        captura: 'tributacion.webp',
+        pasos: [
+          'Tributación → elegí el formulario y el período.',
+          'Pulsá «Prellenar» para traer los datos de tus facturas y compras.',
+          'Revisá las casillas y presentá.',
+        ],
+        avisos: [
+          'Una vez presentada, la declaración queda bloqueada. Para corregirla se presenta una rectificativa.',
+        ],
+      },
+      {
+        id: 'comprobante',
+        titulo: 'Descargar el comprobante en PDF',
+        resumen:
+          'Cada declaración presentada tiene su comprobante en PDF con el número de referencia.',
+        paraQuien: ['STUDENT', 'TEACHER'],
+        captura: 'tributacion-pdf.webp',
+        pasos: [
+          'Tributación → mirá la lista de declaraciones.',
+          'En las que dicen «Presentada», pulsá el botón «PDF».',
+        ],
+        avisos: [
+          'Los borradores no tienen comprobante: primero hay que presentar la declaración.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'contador',
+    numero: 12,
+    titulo: 'Espacio Contador',
+    intro:
+      'Empresas de práctica, sin nota y sin fecha límite. Para ensayar sin el peso de una entrega.',
+    secciones: [
+      {
+        id: 'empresas-practica',
+        titulo: 'Mis empresas-cliente',
+        resumen:
+          'Se crean libremente y tienen los mismos módulos que una empresa de ejercicio.',
+        paraQuien: ['STUDENT', 'TEACHER'],
+        captura: 'contador.webp',
+        pasos: [
+          'Cambiá al Espacio Contador desde el menú lateral.',
+          'Pulsá «Nueva empresa-cliente» y completá sus datos.',
+          'Trabajá igual que en un ejercicio: clientes, facturas, diario, estados.',
+        ],
+        avisos: [
+          'Nada de lo que hagas acá se califica ni aparece en el panel de Educación.',
+        ],
+      },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  {
+    id: 'problemas',
+    numero: 13,
+    titulo: 'Problemas comunes',
+    intro: 'Lo que más se pregunta, con su respuesta corta.',
+    secciones: [
+      {
+        id: 'faq',
+        titulo: 'Preguntas frecuentes',
+        resumen: 'Si algo no aparece donde esperabas, empezá por acá.',
+        paraQuien: ['ADMIN', 'TEACHER', 'STUDENT'],
+        pasos: [
+          'Emití una factura y no está en el diario → revisá si quedó en borrador. Solo las emitidas entran a los libros.',
+          'No puedo crear la empresa → leé el enunciado y confirmá la lectura; el formulario se habilita después.',
+          'Veo cifras que no reconozco → fijate en qué espacio estás: Educación y Contador no se mezclan.',
+          'La balanza no cuadra → revisá los asientos manuales; los automáticos siempre cuadran.',
+          'Perdí la contraseña → la administración genera una nueva desde Usuarios.',
+          'No encuentro el PDF de una declaración → solo las presentadas lo tienen; los borradores no.',
+          'El profesor no ve mi entrega → confirmá que pulsaste «Enviar para calificar».',
+        ],
+      },
+    ],
+  },
+];
+
+/** Todas las capturas que el manual espera encontrar en public/manual/. */
+export function capturasEsperadas(): string[] {
+  return MANUAL.flatMap((c) => c.secciones.map((s) => s.captura).filter((x): x is string => !!x));
+}

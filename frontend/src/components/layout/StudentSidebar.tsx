@@ -197,6 +197,9 @@ export function StudentSidebar() {
     { key: 'emp',  label: 'Ejercicios asignados', icon: BookOpen,   href: '/estudiante/empresas',  path: '/estudiante/empresas' },
     { key: 'prog', label: 'Mi progreso',          icon: TrendingUp, href: '/estudiante/progreso',  path: '/estudiante/progreso' },
     { key: 'notif',label: 'Notificaciones',       icon: Bell,       href: '/estudiante/notificaciones', path: '/estudiante/notificaciones', isNotif: true },
+    // El manual se alcanza desde cualquier espacio: quien no sabe donde esta
+    // parado es justamente quien lo necesita.
+    { key: 'ayuda',label: 'Manual de uso',         icon: BookOpen,   href: '/ayuda', path: '/ayuda' },
   ];
 
   // ── Espacio Contador: menú "de contador real", contabilidad separada por
