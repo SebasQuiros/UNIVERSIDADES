@@ -20,6 +20,12 @@ export class ClassSessionsParticipantsController {
   // alfabeto de 32 símbolos (~10⁹ combinaciones). 10 intentos/min por IP hacen
   // la enumeración por fuerza bruta impracticable (defensa en profundidad sobre
   // el throttle global). Solo funciona en fase LOBBY, además.
+  /** Aulas en las que participa quien pregunta. Es la entrada a Multiempresa. */
+  @Get('class-sessions/mine')
+  misSesiones(@CurrentUser() user: AuthUser) {
+    return this.svc.misSesiones(user.id);
+  }
+
   @Post('class-sessions/join')
   @HttpCode(HttpStatus.OK)
   @Roles('STUDENT')

@@ -717,6 +717,70 @@ export class ClassSessionsService {
   //  Estudiante
   // ════════════════════════════════════════════════════════════
 
+  /**
+   * Las aulas en las que participa un estudiante.
+   *
+   * Hacia falta para el espacio Multiempresa: el estudiante podia unirse por
+   * codigo y trabajar dentro de un aula, pero no habia forma de preguntar
+   * "¿en cuales estoy?". Sin eso, perder el enlace significaba quedarse
+   * fuera hasta que el profesor volviera a dictar el codigo.
+   *
+   * Se devuelven tambien las finalizadas: el estudiante tiene que poder
+   * volver a ver lo que hizo y su calificacion.
+   */
+  async misSesiones(userId: string) {
+    const participaciones = await this.prisma.classSessionParticipant.findMany({
+      where: { studentId: userId },
+      include: {
+        classSession: {
+          include: {
+            exercise: {
+              select: {
+                id: true, title: true,
+                course: { select: { id: true, name: true } },
+                teacher: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { joinedAt: 'desc' },
+      take: 50,
+    });
+
+    // La empresa del grupo se asigna DESPUES de unirse, asi que puede venir
+    // en null: la pantalla lo muestra como "todavia sin grupo".
+    const companyIds = participaciones
+      .map((p) => p.companyId)
+      .filter((x): x is string => !!x);
+    const empresas = companyIds.length
+      ? await this.prisma.company.findMany({
+          where: { id: { in: companyIds } },
+          select: { id: true, name: true, legalId: true, _count: { select: { memberships: true } } },
+        })
+      : [];
+    const porEmpresa = new Map(empresas.map((e) => [e.id, e]));
+
+    return participaciones.map((p) => ({
+      participantId: p.id,
+      joinedAt:      p.joinedAt,
+      classSessionId: p.classSession.id,
+      code:          p.classSession.code,
+      status:        p.classSession.status,
+      minGroupSize:  p.classSession.minGroupSize,
+      maxGroupSize:  p.classSession.maxGroupSize,
+      exercise: p.classSession.exercise
+        ? {
+            id:      p.classSession.exercise.id,
+            title:   p.classSession.exercise.title,
+            course:  p.classSession.exercise.course,
+            teacher: p.classSession.exercise.teacher,
+          }
+        : null,
+      empresa: p.companyId ? porEmpresa.get(p.companyId) ?? null : null,
+    }));
+  }
+
   async join(user: AuthUser, dto: JoinClassSessionDto) {
     const session = await this.prisma.classSession.findUnique({
       where:   { code: dto.code.toUpperCase() },
