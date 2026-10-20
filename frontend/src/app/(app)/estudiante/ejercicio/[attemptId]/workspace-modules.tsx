@@ -486,9 +486,12 @@ export function ProductsTab({ companyId, readonly, attemptId }: { companyId: str
                   ...prev,
                   cabysCode: item.codigo,
                   cabysDesc: item.descripcion,
-                  taxRate: String(item.impuesto),
+                  // Si la tarifa no se pudo confirmar contra Hacienda (código
+                  // escrito a mano), se respeta la que eligió el estudiante.
+                  taxRate: item.tarifaConocida === false ? prev.taxRate : String(item.impuesto),
                 }));
               }}
+              onClear={() => setForm((prev) => ({ ...prev, cabysCode: '', cabysDesc: '' }))}
             />
             <div className="grid grid-cols-2 gap-3">
               <Input label="Precio unitario *" type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="0.00" />
@@ -1399,7 +1402,15 @@ export function InvoicesTab({ companyId, readonly, attemptId }: { companyId: str
                     <CabysSearch
                       value={line.cabysCode}
                       onSelect={(item: CabysItem) => setLines((prev) => prev.map((l, idx) =>
-                        idx === i ? { ...l, cabysCode: item.codigo, taxRate: String(item.impuesto) } : l))}
+                        idx === i
+                          ? {
+                              ...l,
+                              cabysCode: item.codigo,
+                              taxRate: item.tarifaConocida === false ? l.taxRate : String(item.impuesto),
+                            }
+                          : l))}
+                      onClear={() => setLines((prev) => prev.map((l, idx) =>
+                        idx === i ? { ...l, cabysCode: '' } : l))}
                     />
                   </div>
                 ))}
@@ -5313,7 +5324,15 @@ export function QuotesTab({ companyId, readonly, attemptId }: { companyId: strin
                     <CabysSearch
                       value={line.cabysCode}
                       onSelect={(item: CabysItem) => setLines((prev) => prev.map((l, idx) =>
-                        idx === i ? { ...l, cabysCode: item.codigo, taxRate: String(item.impuesto) } : l))}
+                        idx === i
+                          ? {
+                              ...l,
+                              cabysCode: item.codigo,
+                              taxRate: item.tarifaConocida === false ? l.taxRate : String(item.impuesto),
+                            }
+                          : l))}
+                      onClear={() => setLines((prev) => prev.map((l, idx) =>
+                        idx === i ? { ...l, cabysCode: '' } : l))}
                     />
                   </div>
                 ))}

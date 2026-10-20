@@ -11,12 +11,24 @@ export interface CabysItem {
   codigo: string;
   descripcion: string;
   impuesto: number;
+  /**
+   * false cuando el código se escribió a mano y no se pudo confirmar la tarifa
+   * contra Hacienda. Quien recibe el item NO debe pisar el IVA del formulario
+   * en ese caso: estaría inventando una tarifa.
+   */
+  tarifaConocida?: boolean;
 }
 
 interface CabysSearchProps {
   /** Called when the user selects a CABYS item */
   onSelect: (item: CabysItem) => void;
-  /** Currently selected CABYS code (controlled) */
+  /**
+   * Código CABYS actualmente asignado. Es la ÚNICA fuente de verdad de lo que
+   * se ve seleccionado: el componente no guarda una selección propia en
+   * paralelo. Antes sí lo hacía, y se desincronizaba —al borrar una línea de
+   * factura, la insignia verde quedaba mostrando el código de la línea
+   * borrada mientras el formulario no tenía ninguno.
+   */
   value?: string;
   /** Label shown above the input */
   label?: string;
@@ -24,6 +36,9 @@ interface CabysSearchProps {
   disabled?: boolean;
   /** Whether to show the manual fallback input when API fails */
   showManualFallback?: boolean;
+  /** Se llama al quitar el código. Sin esto, el botón X limpiaría la pantalla
+   *  pero dejaría el código viejo guardado en el formulario. */
+  onClear?: () => void;
 }
 
 // ── IVA badge color by rate ───────────────────────────────────────────────────
@@ -36,6 +51,8 @@ function ivaBadgeClass(rate: number): string {
   return 'bg-blue-100 text-blue-700';
 }
 
+const ES_CABYS = (c?: string) => !!c && /^\d{13}$/.test(c);
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function CabysSearch({
@@ -44,17 +61,49 @@ export function CabysSearch({
   label = 'Código CABYS',
   disabled = false,
   showManualFallback = true,
+  onClear,
 }: CabysSearchProps) {
-  const [query, setQuery]               = useState('');
-  const [results, setResults]           = useState<CabysItem[]>([]);
-  const [loading, setLoading]           = useState(false);
-  const [open, setOpen]                 = useState(false);
-  const [selected, setSelected]         = useState<CabysItem | null>(null);
-  const [apiError, setApiError]         = useState(false);
-  const [manualCode, setManualCode]     = useState('');
+  const [query, setQuery]           = useState('');
+  const [results, setResults]       = useState<CabysItem[]>([]);
+  const [loading, setLoading]       = useState(false);
+  const [open, setOpen]             = useState(false);
+  const [apiError, setApiError]     = useState(false);
+  const [manualCode, setManualCode] = useState('');
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Detalle (descripción + IVA) de los códigos que ya conocemos, por código.
+   * Es solo presentación: la selección vive en `value`. Sirve para que al
+   * abrir un producto ya guardado se vea de qué es el código y no un campo
+   * de búsqueda vacío.
+   */
+  const [detalles, setDetalles] = useState<Record<string, CabysItem>>({});
+
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // La selección se DERIVA del value que manda el formulario.
+  const selected: CabysItem | null = ES_CABYS(value)
+    ? detalles[value!] ?? { codigo: value!, descripcion: '', impuesto: 13, tarifaConocida: false }
+    : null;
+
+  const recordar = useCallback((item: CabysItem) => {
+    if (ES_CABYS(item.codigo)) setDetalles((prev) => ({ ...prev, [item.codigo]: item }));
+  }, []);
+
+  // ── Resolver el detalle de un código que llega ya asignado ────────────────
+  useEffect(() => {
+    if (!ES_CABYS(value) || detalles[value!]) return;
+    let vigente = true;
+    api
+      .get<{ item: CabysItem | null; found: boolean }>(`/api/v1/hacienda/cabys/${value}`)
+      .then(({ data }) => {
+        if (vigente && data?.item) {
+          recordar({ ...data.item, tarifaConocida: true });
+        }
+      })
+      .catch(() => { /* sin detalle se muestra solo el código; no es un fallo */ });
+    return () => { vigente = false; };
+  }, [value, detalles, recordar]);
 
   // ── Close dropdown when clicking outside ─────────────────────────────────
   useEffect(() => {
@@ -84,6 +133,9 @@ export function CabysSearch({
       setResults(data.cabys ?? []);
       setOpen(true);
     } catch {
+      // El backend responde 503 cuando Hacienda no contesta, y 200 con lista
+      // vacía cuando simplemente no hay coincidencias. Solo lo primero abre
+      // el ingreso manual.
       setApiError(true);
       setResults([]);
       setOpen(false);
@@ -102,7 +154,7 @@ export function CabysSearch({
 
   // ── Select an item ────────────────────────────────────────────────────────
   function handleSelect(item: CabysItem) {
-    setSelected(item);
+    recordar(item);
     setQuery('');
     setOpen(false);
     onSelect(item);
@@ -110,16 +162,35 @@ export function CabysSearch({
 
   // ── Clear selection ────────────────────────────────────────────────────────
   function handleClear() {
-    setSelected(null);
     setQuery('');
     setResults([]);
+    setOpen(false);
+    onClear?.();
   }
 
   // ── Manual code submit ────────────────────────────────────────────────────
-  function handleManualSubmit() {
-    if (!/^\d{13}$/.test(manualCode)) return;
-    const fallback: CabysItem = { codigo: manualCode, descripcion: 'Código ingresado manualmente', impuesto: 13 };
-    handleSelect(fallback);
+  //
+  // Se intenta igual resolver la tarifa: puede estar caída la búsqueda por
+  // texto y funcionar la consulta por código. Si tampoco se puede, se entrega
+  // el código marcado como tarifa no confirmada, para que el formulario deje
+  // el IVA que el estudiante haya puesto en vez de asumir 13%.
+  async function handleManualSubmit() {
+    if (!ES_CABYS(manualCode)) return;
+    let item: CabysItem = {
+      codigo: manualCode,
+      descripcion: 'Código ingresado manualmente',
+      impuesto: 13,
+      tarifaConocida: false,
+    };
+    try {
+      const { data } = await api.get<{ item: CabysItem | null }>(
+        `/api/v1/hacienda/cabys/${manualCode}`,
+      );
+      if (data?.item) item = { ...data.item, tarifaConocida: true };
+    } catch {
+      /* se usa el item sin confirmar */
+    }
+    handleSelect(item);
     setManualCode('');
   }
 
@@ -136,11 +207,15 @@ export function CabysSearch({
           <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 cx-tada" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-mono font-bold text-emerald-800 tracking-wider">{selected.codigo}</p>
-            <p className="text-xs text-emerald-700 truncate">{selected.descripcion}</p>
+            <p className="text-xs text-emerald-700 truncate">
+              {selected.descripcion || 'Consultando descripción…'}
+            </p>
           </div>
-          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${ivaBadgeClass(selected.impuesto)}`}>
-            IVA {selected.impuesto}%
-          </span>
+          {selected.tarifaConocida !== false && (
+            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${ivaBadgeClass(selected.impuesto)}`}>
+              IVA {selected.impuesto}%
+            </span>
+          )}
           {!disabled && (
             <button
               type="button"
@@ -178,7 +253,7 @@ export function CabysSearch({
                   <li key={item.codigo}>
                     <button
                       type="button"
-                      onClick={() => handleSelect(item)}
+                      onClick={() => handleSelect({ ...item, tarifaConocida: true })}
                       className="w-full text-left px-4 py-2.5 hover:bg-blue-50/60 transition-colors flex items-start gap-3 cx-press"
                     >
                       <div className="flex-1 min-w-0">
@@ -232,13 +307,6 @@ export function CabysSearch({
             </div>
           )}
         </div>
-      )}
-
-      {/* Current value indicator when value prop differs from selected */}
-      {!selected && value && /^\d{13}$/.test(value) && (
-        <p className="text-xs text-gray-500">
-          Código actual: <span className="font-mono font-semibold text-gray-700">{value}</span>
-        </p>
       )}
     </div>
   );

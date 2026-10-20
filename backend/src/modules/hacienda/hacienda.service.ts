@@ -1,6 +1,22 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 
+/**
+ * El catalogo CABYS no respondio.
+ *
+ * Existe para separar dos cosas que antes se veian iguales: "Hacienda no
+ * contesta" y "no hay resultados". Devolver [] en ambos casos hacia que la
+ * pantalla dijera "Sin resultados para arroz" cuando el servicio estaba
+ * caido, y el estudiante se quedaba sin la casilla para escribir el codigo
+ * a mano, que es justo lo que necesita en ese momento.
+ */
+export class CabysNoDisponibleError extends Error {
+  constructor(causa: string) {
+    super(`El catálogo CABYS de Hacienda no está disponible: ${causa}`);
+    this.name = 'CabysNoDisponibleError';
+  }
+}
+
 // ── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface CabysItem {
@@ -39,6 +55,33 @@ export class HaciendaService {
     @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
 
+  // ── Lectura de la respuesta de Hacienda ─────────────────────────────────
+
+  /**
+   * Saca la lista de items venga como venga.
+   *
+   * api.hacienda.go.cr NO responde igual en los dos casos:
+   *   /fe/cabys?q=arroz     -> { total, cantidad, cabys: [...] }
+   *   /fe/cabys?codigo=231  -> [ ... ]            (arreglo pelado)
+   *
+   * El codigo viejo leia siempre `data.cabys`, asi que la consulta por
+   * codigo devolvia undefined -> null SIEMPRE, incluso con codigos que
+   * existen. Se acepta cualquiera de las dos formas.
+   */
+  private listaDeItems(data: any): any[] {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.cabys)) return data.cabys;
+    return [];
+  }
+
+  private aItem(raw: any): CabysItem {
+    return {
+      codigo:      String(raw?.codigo ?? ''),
+      descripcion: String(raw?.descripcion ?? ''),
+      impuesto:    Number(raw?.impuesto ?? 0),
+    };
+  }
+
   // ── Public API ──────────────────────────────────────────────────────────────
 
   /**
@@ -55,18 +98,17 @@ export class HaciendaService {
     const url = `${this.HACIENDA_API}/fe/cabys?q=${encodeURIComponent(query.trim())}&top=${top}`;
 
     try {
-      const data = await this.fetchWithRetry<{ cabys: any[] }>(url);
-      const items: CabysItem[] = (data?.cabys ?? []).map((item) => ({
-        codigo:      String(item.codigo ?? ''),
-        descripcion: String(item.descripcion ?? ''),
-        impuesto:    Number(item.impuesto ?? 0),
-      }));
+      const data = await this.fetchWithRetry<any>(url);
+      const items = this.listaDeItems(data).map((item) => this.aItem(item));
 
       await this.setCache(cacheKey, items, 24 * 60 * 60); // 24 h
       return items;
     } catch (err: any) {
       this.logger.warn(`CABYS search failed for "${query}": ${err.message}`);
-      return [];
+      // Se avisa de la caida en vez de devolver [] como si no hubiera nada:
+      // la pantalla necesita saber la diferencia para ofrecer el ingreso
+      // manual del codigo.
+      throw new CabysNoDisponibleError(err.message ?? 'sin detalle');
     }
   }
 
@@ -84,21 +126,19 @@ export class HaciendaService {
     const url = `${this.HACIENDA_API}/fe/cabys?codigo=${codigo}`;
 
     try {
-      const data = await this.fetchWithRetry<{ cabys: any[] }>(url);
-      const raw = data?.cabys?.[0];
+      const data = await this.fetchWithRetry<any>(url);
+      // Hacienda busca por PREFIJO. Como aqui siempre entran 13 digitos -y los
+      // codigos CABYS tienen 13- solo puede coincidir el exacto, pero se
+      // confirma igual antes de darlo por bueno.
+      const raw = this.listaDeItems(data).find((x) => String(x?.codigo ?? '') === codigo);
       if (!raw) return null;
 
-      const item: CabysItem = {
-        codigo:      String(raw.codigo ?? ''),
-        descripcion: String(raw.descripcion ?? ''),
-        impuesto:    Number(raw.impuesto ?? 0),
-      };
-
+      const item = this.aItem(raw);
       await this.setCache(cacheKey, item, 24 * 60 * 60); // 24 h
       return item;
     } catch (err: any) {
       this.logger.warn(`CABYS lookup failed for code "${codigo}": ${err.message}`);
-      return null;
+      throw new CabysNoDisponibleError(err.message ?? 'sin detalle');
     }
   }
 

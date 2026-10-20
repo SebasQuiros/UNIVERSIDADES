@@ -1,10 +1,12 @@
 import {
   Controller, Get, Param, Query,
-  BadRequestException, UseGuards,
+  BadRequestException, ServiceUnavailableException, UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/auth.guards';
-import { HaciendaService, CabysItem, ExchangeRate } from './hacienda.service';
+import {
+  HaciendaService, CabysItem, ExchangeRate, CabysNoDisponibleError,
+} from './hacienda.service';
 
 @ApiTags('Hacienda CR')
 @ApiBearerAuth()
@@ -32,9 +34,19 @@ export class HaciendaController {
     }
 
     const limit = Math.min(Number(top) || 10, 50);
-    const items = await this.hacienda.searchCabys(q.trim(), limit);
 
-    return { cabys: items, total: items.length, cached: false };
+    try {
+      const items = await this.hacienda.searchCabys(q.trim(), limit);
+      return { cabys: items, total: items.length, cached: false };
+    } catch (err) {
+      // 503 y no 200 con lista vacia: la pantalla distingue "no hay nada que
+      // coincida" de "el catalogo no contesta", y en el segundo caso ofrece
+      // escribir el codigo a mano.
+      if (err instanceof CabysNoDisponibleError) {
+        throw new ServiceUnavailableException(err.message);
+      }
+      throw err;
+    }
   }
 
   // ── CABYS by code ─────────────────────────────────────────────────────────
@@ -53,8 +65,15 @@ export class HaciendaController {
       throw new BadRequestException('El código CABYS debe tener exactamente 13 dígitos numéricos');
     }
 
-    const item = await this.hacienda.getCabysByCode(codigo);
-    return { item, found: item !== null };
+    try {
+      const item = await this.hacienda.getCabysByCode(codigo);
+      return { item, found: item !== null };
+    } catch (err) {
+      if (err instanceof CabysNoDisponibleError) {
+        throw new ServiceUnavailableException(err.message);
+      }
+      throw err;
+    }
   }
 
   // ── Exchange rate ─────────────────────────────────────────────────────────
