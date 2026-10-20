@@ -41,6 +41,24 @@ async function main() {
     const cafe = await hacienda.searchCabys('café', 5);
     chequear('"café" con tilde encuentra algo', cafe.length > 0, `${cafe.length}`);
 
+    console.log('\n--- 2b. Escribir el CODIGO en el campo de busqueda ---');
+    // El campo se llama "Código CABYS (13 dígitos)": pegar el codigo es lo
+    // primero que hace cualquiera. Antes se buscaba siempre por descripcion y
+    // un codigo valido devolvia "Sin resultados".
+    const porCodigo = await hacienda.searchCabys('8419000000000', 10);
+    chequear('un codigo de 13 digitos en el buscador encuentra el item',
+      porCodigo.length > 0, `${porCodigo.length} resultados`);
+    if (porCodigo.length) {
+      console.log(`       ${porCodigo[0].codigo} | ${porCodigo[0].descripcion} | IVA ${porCodigo[0].impuesto}%`);
+      chequear('es exactamente el codigo pedido', porCodigo[0].codigo === '8419000000000');
+    }
+    const prefijo = await hacienda.searchCabys('841900000', 10);
+    chequear('un prefijo de 9 digitos tambien busca por codigo', prefijo.length > 0,
+      `${prefijo.length}`);
+    const corto = await hacienda.searchCabys('8419', 10);
+    chequear('un codigo a medio escribir devuelve vacio sin reventar', corto.length === 0,
+      `${corto.length}; Hacienda responde 400 con menos de 9 digitos`);
+
     console.log('\n--- 3. Consulta por codigo exacto (lo que usa la factura) ---');
     const codigo = arroz[0]?.codigo;
     if (!codigo) {

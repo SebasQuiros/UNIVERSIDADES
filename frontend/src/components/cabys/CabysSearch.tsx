@@ -52,6 +52,9 @@ function ivaBadgeClass(rate: number): string {
 }
 
 const ES_CABYS = (c?: string) => !!c && /^\d{13}$/.test(c);
+const ES_SOLO_DIGITOS = (t: string) => /^\d+$/.test(t);
+/** Mínimo que acepta api.hacienda.go.cr para buscar por código (ver backend). */
+const MIN_DIGITOS_CODIGO = 9;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -237,7 +240,7 @@ export function CabysSearch({
               value={query}
               onChange={handleQueryChange}
               disabled={disabled}
-              placeholder="Buscar producto o servicio..."
+              placeholder="Buscá por descripción o pegá el código"
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors disabled:opacity-50"
             />
             {loading && (
@@ -275,7 +278,16 @@ export function CabysSearch({
             <div className="absolute z-50 mt-1.5 w-full bg-white rounded-2xl border border-gray-200/70 shadow-card-hover px-4 py-4 text-center cx-pop">
               <SceneSearchEmpty size={120} className="mx-auto mb-2 lp-drift" />
               <p className="text-sm text-gray-600">Sin resultados para <span className="font-semibold">&laquo;{query}&raquo;</span></p>
-              <p className="text-xs text-gray-400 mt-1">Intente con otra palabra clave</p>
+              {/* Un código a medio escribir no es lo mismo que uno que no
+                  existe. Decirle «intente con otra palabra clave» a quien está
+                  pegando un número es mandarlo por el camino equivocado. */}
+              <p className="text-xs text-gray-400 mt-1">
+                {ES_SOLO_DIGITOS(query.trim())
+                  ? query.trim().length < MIN_DIGITOS_CODIGO
+                    ? `Para buscar por código escribí al menos ${MIN_DIGITOS_CODIGO} dígitos (llevás ${query.trim().length}).`
+                    : 'Ese código no está en el catálogo de Hacienda. Revisá los dígitos.'
+                  : 'Probá con otra palabra, o pegá el código CABYS.'}
+              </p>
             </div>
           )}
 

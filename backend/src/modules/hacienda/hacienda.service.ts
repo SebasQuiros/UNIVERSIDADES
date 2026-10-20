@@ -31,6 +31,12 @@ export interface ExchangeRate {
   fecha: string;
 }
 
+/**
+ * Minimo de digitos que api.hacienda.go.cr acepta para buscar por codigo.
+ * Con menos devuelve HTTP 400 (comprobado digito por digito).
+ */
+const MIN_DIGITOS_CODIGO = 9;
+
 // ── In-memory fallback cache ──────────────────────────────────────────────────
 
 interface CacheEntry<T> {
@@ -89,17 +95,35 @@ export class HaciendaService {
    * Results cached for 24 hours (they rarely change).
    */
   async searchCabys(query: string, top = 10): Promise<CabysItem[]> {
-    if (!query || query.trim().length < 2) return [];
+    const limpio = (query ?? '').trim();
+    if (limpio.length < 2) return [];
 
-    const cacheKey = `cabys:search:${query.toLowerCase().trim()}:${top}`;
+    // Si lo escrito son solo digitos es un CODIGO, no una descripcion.
+    //
+    // El buscador de Hacienda por texto (?q=) busca en la descripcion, asi que
+    // pegarle un codigo devolvia SIEMPRE cero resultados. En pantalla el campo
+    // se llama "Código CABYS (13 dígitos)", de modo que escribir el codigo es
+    // lo primero que hace cualquiera, y recibia "Sin resultados" con un codigo
+    // perfectamente valido.
+    const esCodigo = /^\d+$/.test(limpio);
+
+    // Hacienda rechaza (400) las consultas por codigo de menos de 9 digitos.
+    // Se corta antes de llamar: un 400 se traduciria en "catalogo caido", que
+    // es un mensaje equivocado para un codigo a medio escribir.
+    if (esCodigo && limpio.length < MIN_DIGITOS_CODIGO) return [];
+
+    const cacheKey = `cabys:search:${limpio.toLowerCase()}:${top}`;
     const cached = await this.getCache<CabysItem[]>(cacheKey);
     if (cached) return cached;
 
-    const url = `${this.HACIENDA_API}/fe/cabys?q=${encodeURIComponent(query.trim())}&top=${top}`;
+    const url = esCodigo
+      ? `${this.HACIENDA_API}/fe/cabys?codigo=${encodeURIComponent(limpio)}`
+      : `${this.HACIENDA_API}/fe/cabys?q=${encodeURIComponent(limpio)}&top=${top}`;
 
     try {
       const data = await this.fetchWithRetry<any>(url);
-      const items = this.listaDeItems(data).map((item) => this.aItem(item));
+      // La busqueda por codigo no admite `top`, asi que se recorta aqui.
+      const items = this.listaDeItems(data).slice(0, top).map((item) => this.aItem(item));
 
       await this.setCache(cacheKey, items, 24 * 60 * 60); // 24 h
       return items;

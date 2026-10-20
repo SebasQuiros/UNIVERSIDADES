@@ -167,7 +167,7 @@ export default function CabysPage() {
               type="text"
               value={query}
               onChange={handleChange}
-              placeholder="Buscar por nombre de producto o servicio... (ej: computadora, servicio consultoría)"
+              placeholder="Buscá por nombre (ej: computadora) o pegá el código CABYS"
               className="w-full pl-12 pr-14 py-3.5 rounded-2xl border border-gray-200 bg-white text-gray-900 text-sm placeholder-gray-400 shadow-card focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-colors"
               autoFocus
             />
@@ -218,7 +218,15 @@ export default function CabysPage() {
               <EmptyState
                 illustration={<SceneSearchEmpty size={200} className="lp-drift" />}
                 title="No se encontraron productos o servicios"
-                description="Prueba con palabras más generales, por ejemplo “servicio” o “equipo”."
+                /* Un código a medio escribir no es un código inexistente:
+                   el mensaje tiene que decir cuál de las dos cosas pasó. */
+                description={
+                  /^\d+$/.test(query.trim())
+                    ? query.trim().length < 9
+                      ? `Para buscar por código hacen falta al menos 9 dígitos (llevás ${query.trim().length}).`
+                      : 'Ese código no está en el catálogo de Hacienda. Revisá los dígitos.'
+                    : 'Probá con palabras más generales, por ejemplo “servicio” o “equipo”. También podés pegar el código CABYS.'
+                }
                 className="py-10"
               />
             ) : (
