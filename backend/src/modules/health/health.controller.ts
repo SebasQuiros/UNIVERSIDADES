@@ -65,6 +65,19 @@ export class HealthController {
       cache = 'down';
     }
 
+    // El catálogo CABYS es ahora una dependencia crítica: sin él, un
+    // estudiante no puede crear un producto y por lo tanto no puede
+    // facturar. Se carga solo al arrancar, así que hay una ventana en la que
+    // está a medias — y, sin mirarlo, eso se ve exactamente igual que un
+    // código que no existe. Ya pasó una vez: el fallo lo encontró un
+    // estudiante, no nosotros.
+    let cabys: number | null = null;
+    try {
+      cabys = await this.prisma.cabysItem.count();
+    } catch {
+      cabys = null;   // tabla aún no migrada
+    }
+
     return {
       // "degraded" solo si la base está caída: sin Redis el sistema responde
       // correcto, solo que más lento. Mentir con "ok" a secas escondería
@@ -78,6 +91,8 @@ export class HealthController {
       // Prisma toma (núcleos × 2 + 1) si nadie se lo dice, y con ese número
       // un grupo entero mirando reportes agota el pool.
       poolLimit: Number(process.env.DB_CONNECTION_LIMIT ?? 30),
+      cabys,                                  // códigos cargados (esperados: 20 506)
+      cabysListo: cabys !== null && cabys >= 20_000,
       ts: new Date().toISOString(),
     };
   }
