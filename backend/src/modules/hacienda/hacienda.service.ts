@@ -37,6 +37,17 @@ export interface ExchangeRate {
  */
 const MIN_DIGITOS_CODIGO = 9;
 
+/**
+ * Prefijo de las claves de cache. Lleva version A PROPOSITO.
+ *
+ * Las respuestas vacias se guardaban 24 h. Cuando la busqueda por codigo
+ * estaba rota, cada codigo que alguien tecleaba dejaba un [] guardado por un
+ * dia entero; al arreglar la busqueda, esas entradas seguian contestando
+ * "no hay nada" sin consultar a Hacienda. Subir la version descarta todo lo
+ * viejo al instante en vez de esperar a que caduque.
+ */
+const PREFIJO_CACHE = 'cabys:v2';
+
 // ── In-memory fallback cache ──────────────────────────────────────────────────
 
 interface CacheEntry<T> {
@@ -112,9 +123,12 @@ export class HaciendaService {
     // es un mensaje equivocado para un codigo a medio escribir.
     if (esCodigo && limpio.length < MIN_DIGITOS_CODIGO) return [];
 
-    const cacheKey = `cabys:search:${limpio.toLowerCase()}:${top}`;
+    const cacheKey = `${PREFIJO_CACHE}:search:${limpio.toLowerCase()}:${top}`;
     const cached = await this.getCache<CabysItem[]>(cacheKey);
-    if (cached) return cached;
+    // `cached.length` y no solo `cached`: un arreglo vacio es VERDADERO en
+    // JavaScript, asi que un [] guardado se devolvia como si fuera un
+    // resultado bueno. Ver el porque mas abajo, donde se guarda.
+    if (cached && cached.length) return cached;
 
     const url = esCodigo
       ? `${this.HACIENDA_API}/fe/cabys?codigo=${encodeURIComponent(limpio)}`
@@ -125,7 +139,11 @@ export class HaciendaService {
       // La busqueda por codigo no admite `top`, asi que se recorta aqui.
       const items = this.listaDeItems(data).slice(0, top).map((item) => this.aItem(item));
 
-      await this.setCache(cacheKey, items, 24 * 60 * 60); // 24 h
+      // Solo se guarda lo que tiene contenido. Un "no encontre nada" no es
+      // una respuesta que valga la pena recordar un dia entero: o el catalogo
+      // cambio, o la consulta estaba mal armada de nuestro lado, y en ambos
+      // casos conviene volver a preguntar.
+      if (items.length) await this.setCache(cacheKey, items, 24 * 60 * 60); // 24 h
       return items;
     } catch (err: any) {
       this.logger.warn(`CABYS search failed for "${query}": ${err.message}`);
@@ -143,7 +161,7 @@ export class HaciendaService {
   async getCabysByCode(codigo: string): Promise<CabysItem | null> {
     if (!codigo || !/^\d{13}$/.test(codigo)) return null;
 
-    const cacheKey = `cabys:code:${codigo}`;
+    const cacheKey = `${PREFIJO_CACHE}:code:${codigo}`;
     const cached = await this.getCache<CabysItem>(cacheKey);
     if (cached) return cached;
 

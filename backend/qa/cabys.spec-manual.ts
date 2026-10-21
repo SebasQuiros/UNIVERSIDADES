@@ -118,6 +118,37 @@ async function main() {
       (global as any).fetch = fetchReal;
     }
 
+    console.log('\n--- 6b. Un resultado vacio NO se guarda en cache ---');
+    // Esto fue un fallo real en produccion: con la busqueda por codigo rota,
+    // cada codigo tecleado dejaba un [] guardado 24 h. Al arreglar la
+    // busqueda, esas entradas seguian contestando "no hay nada" sin preguntar
+    // a Hacienda. El arreglo pasa por no guardar vacios Y por no tratar un
+    // arreglo vacio como si fuera un resultado (en JS [] es verdadero).
+    const inexistente = '9999999999999';
+    const v1 = await hacienda.searchCabys(inexistente, 10);
+    chequear('un codigo inexistente no devuelve nada', v1.length === 0);
+
+    // Se simula que Hacienda ahora SI lo conoce. Si el vacio se hubiera
+    // guardado, esta segunda llamada devolveria [] sin consultar nada.
+    const fetchOriginal = global.fetch;
+    let consultoDeNuevo = false;
+    (global as any).fetch = async () => {
+      consultoDeNuevo = true;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => [{ codigo: inexistente, descripcion: 'Prueba', impuesto: 13 }],
+      } as any;
+    };
+    try {
+      const v2 = await hacienda.searchCabys(inexistente, 10);
+      chequear('vuelve a consultar en vez de repetir el vacio guardado', consultoDeNuevo,
+        'uso la cache: el vacio quedo guardado y tapa resultados nuevos');
+      chequear('y entrega el resultado nuevo', v2.length === 1, `${v2.length}`);
+    } finally {
+      (global as any).fetch = fetchOriginal;
+    }
+
     console.log('\n--- 7. Tipo de cambio ---');
     const tc = await hacienda.getExchangeRate();
     console.log(`       venta ₡${tc.venta} | compra ₡${tc.compra} | ${tc.fecha}`);
