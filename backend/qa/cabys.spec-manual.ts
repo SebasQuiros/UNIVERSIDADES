@@ -55,9 +55,12 @@ async function main() {
     const prefijo = await hacienda.searchCabys('841900000', 10);
     chequear('un prefijo de 9 digitos tambien busca por codigo', prefijo.length > 0,
       `${prefijo.length}`);
+    // Contra el catalogo local un prefijo corto SI sirve. El minimo de 9
+    // digitos era una limitacion de la API de Hacienda, no nuestra, y ahora
+    // solo rige cuando hay que caer a ella.
     const corto = await hacienda.searchCabys('8419', 10);
-    chequear('un codigo a medio escribir devuelve vacio sin reventar', corto.length === 0,
-      `${corto.length}; Hacienda responde 400 con menos de 9 digitos`);
+    chequear('un prefijo corto tambien encuentra candidatos', corto.length > 0,
+      `${corto.length}`);
 
     console.log('\n--- 3. Consulta por codigo exacto (lo que usa la factura) ---');
     const codigo = arroz[0]?.codigo;
@@ -93,10 +96,21 @@ async function main() {
       paraProbar.length > 0 && encontrados === paraProbar.length,
       `${encontrados}/${paraProbar.length}`);
 
-    console.log('\n--- 6. Si Hacienda no contesta se AVISA, no se finge vacio ---');
+    console.log('\n--- 6. El respaldo a Hacienda (instalacion sin catalogo) ---');
+    // Se simula un despliegue recien hecho, antes de importar el catalogo:
+    // ahi el sistema todavia depende de Hacienda y ese camino tiene que
+    // seguir sano. `catalogoListo` es la decision que toma el servicio la
+    // primera vez que mira la tabla.
+    const listoOriginal = (hacienda as any).catalogoListo;
+    const revisionOriginal = (hacienda as any).proximaRevision;
     const fetchReal = global.fetch;
-    (global as any).fetch = async () => { throw new Error('simulacion: red caida'); };
+    (hacienda as any).catalogoListo = false;
+    // Tambien se empuja la proxima revision: si no, el servicio vuelve a
+    // mirar la tabla, encuentra el catalogo y la simulacion se deshace sola.
+    (hacienda as any).proximaRevision = Date.now() + 600_000;
     try {
+      (global as any).fetch = async () => { throw new Error('simulacion: red caida'); };
+
       let aviso = false;
       try {
         // Termino nuevo, para que no lo resuelva la cache de una prueba previa.
@@ -104,7 +118,7 @@ async function main() {
       } catch (e) {
         aviso = e instanceof CabysNoDisponibleError;
       }
-      chequear('la busqueda avisa que el catalogo no esta disponible', aviso,
+      chequear('sin catalogo local, si Hacienda cae se AVISA', aviso,
         'devolvio vacio en silencio: con el servicio caido la pantalla diria "sin resultados"');
 
       let aviso2 = false;
@@ -114,39 +128,32 @@ async function main() {
         aviso2 = e instanceof CabysNoDisponibleError;
       }
       chequear('la consulta por codigo tambien avisa', aviso2);
-    } finally {
-      (global as any).fetch = fetchReal;
-    }
 
-    console.log('\n--- 6b. Un resultado vacio NO se guarda en cache ---');
-    // Esto fue un fallo real en produccion: con la busqueda por codigo rota,
-    // cada codigo tecleado dejaba un [] guardado 24 h. Al arreglar la
-    // busqueda, esas entradas seguian contestando "no hay nada" sin preguntar
-    // a Hacienda. El arreglo pasa por no guardar vacios Y por no tratar un
-    // arreglo vacio como si fuera un resultado (en JS [] es verdadero).
-    const inexistente = '9999999999999';
-    const v1 = await hacienda.searchCabys(inexistente, 10);
-    chequear('un codigo inexistente no devuelve nada', v1.length === 0);
+      console.log('\n--- 6b. Un resultado vacio NO se guarda en cache ---');
+      // Fallo real en produccion: con la busqueda rota, cada codigo tecleado
+      // dejaba un [] guardado 24 h. Y en JS un arreglo vacio es VERDADERO,
+      // asi que `if (cached) return cached` lo devolvia como si fuera bueno.
+      const termino = `zz${Date.now()}`;
+      (global as any).fetch = async () => ({ ok: true, status: 200, json: async () => [] }) as any;
+      const v1 = await hacienda.searchCabys(termino, 10);
+      chequear('la primera busqueda no devuelve nada', v1.length === 0, `${v1.length}`);
 
-    // Se simula que Hacienda ahora SI lo conoce. Si el vacio se hubiera
-    // guardado, esta segunda llamada devolveria [] sin consultar nada.
-    const fetchOriginal = global.fetch;
-    let consultoDeNuevo = false;
-    (global as any).fetch = async () => {
-      consultoDeNuevo = true;
-      return {
-        ok: true,
-        status: 200,
-        json: async () => [{ codigo: inexistente, descripcion: 'Prueba', impuesto: 13 }],
-      } as any;
-    };
-    try {
-      const v2 = await hacienda.searchCabys(inexistente, 10);
+      // Se simula que ahora SI existe. Si el vacio se hubiera guardado, esta
+      // segunda llamada devolveria [] sin consultar nada.
+      let consultoDeNuevo = false;
+      (global as any).fetch = async () => {
+        consultoDeNuevo = true;
+        return { ok: true, status: 200,
+          json: async () => [{ codigo: '1234567890123', descripcion: 'Prueba', impuesto: 13 }] } as any;
+      };
+      const v2 = await hacienda.searchCabys(termino, 10);
       chequear('vuelve a consultar en vez de repetir el vacio guardado', consultoDeNuevo,
         'uso la cache: el vacio quedo guardado y tapa resultados nuevos');
       chequear('y entrega el resultado nuevo', v2.length === 1, `${v2.length}`);
     } finally {
-      (global as any).fetch = fetchOriginal;
+      (global as any).fetch = fetchReal;
+      (hacienda as any).catalogoListo = listoOriginal;
+      (hacienda as any).proximaRevision = revisionOriginal;
     }
 
     console.log('\n--- 7. Tipo de cambio ---');

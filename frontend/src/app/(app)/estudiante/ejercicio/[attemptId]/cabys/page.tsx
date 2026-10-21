@@ -222,9 +222,7 @@ export default function CabysPage() {
                    el mensaje tiene que decir cuál de las dos cosas pasó. */
                 description={
                   /^\d+$/.test(query.trim())
-                    ? query.trim().length < 9
-                      ? `Para buscar por código hacen falta al menos 9 dígitos (llevás ${query.trim().length}).`
-                      : 'Ese código no está en el catálogo de Hacienda. Revisá los dígitos.'
+                    ? 'Ese código no está en el catálogo. Revisá los dígitos.'
                     : 'Probá con palabras más generales, por ejemplo “servicio” o “equipo”. También podés pegar el código CABYS.'
                 }
                 className="py-10"

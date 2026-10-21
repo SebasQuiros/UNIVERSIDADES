@@ -53,8 +53,6 @@ function ivaBadgeClass(rate: number): string {
 
 const ES_CABYS = (c?: string) => !!c && /^\d{13}$/.test(c);
 const ES_SOLO_DIGITOS = (t: string) => /^\d+$/.test(t);
-/** Mínimo que acepta api.hacienda.go.cr para buscar por código (ver backend). */
-const MIN_DIGITOS_CODIGO = 9;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -283,9 +281,7 @@ export function CabysSearch({
                   pegando un número es mandarlo por el camino equivocado. */}
               <p className="text-xs text-gray-400 mt-1">
                 {ES_SOLO_DIGITOS(query.trim())
-                  ? query.trim().length < MIN_DIGITOS_CODIGO
-                    ? `Para buscar por código escribí al menos ${MIN_DIGITOS_CODIGO} dígitos (llevás ${query.trim().length}).`
-                    : 'Ese código no está en el catálogo de Hacienda. Revisá los dígitos.'
+                  ? 'Ese código no está en el catálogo. Revisá los dígitos.'
                   : 'Probá con otra palabra, o pegá el código CABYS.'}
               </p>
             </div>

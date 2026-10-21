@@ -1,5 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { REDIS_CLIENT } from '../../redis/redis.module';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * El catalogo CABYS no respondio.
@@ -70,7 +71,87 @@ export class HaciendaService {
 
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: any,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /** Minuscula y sin tildes, igual que al importar: "cafe" encuentra "Café". */
+  private normalizar(t: string): string {
+    return t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+
+  /**
+   * Busca en NUESTRO catalogo. Es la fuente principal.
+   *
+   * Antes cada tecleo salia a api.hacienda.go.cr. Eso ponia un servicio que
+   * no controlamos en el camino critico: sin codigo CABYS no hay producto, y
+   * sin producto no hay factura. Con cientos de estudiantes a la misma hora,
+   * depender de eso no era sostenible.
+   */
+  private async buscarLocal(limpio: string, esCodigo: boolean, top: number): Promise<CabysItem[]> {
+    const sel = { codigo: true, descripcion: true, impuesto: true } as const;
+
+    if (esCodigo) {
+      // Por prefijo, igual que Hacienda: el estudiante ve candidatos mientras
+      // termina de escribir en vez de esperar a los 13 digitos exactos.
+      const filas = await this.prisma.cabysItem.findMany({
+        where: { codigo: { startsWith: limpio } },
+        select: sel, orderBy: { codigo: 'asc' }, take: top,
+      });
+      return filas;
+    }
+
+    // Todas las palabras deben aparecer. Buscar con "o" en 20 500 filas
+    // devuelve cualquier cosa; con "y" la busqueda se afina al escribir mas,
+    // que es como la gente espera que funcione.
+    const palabras = this.normalizar(limpio).split(/\s+/).filter((p) => p.length >= 2).slice(0, 6);
+    if (!palabras.length) return [];
+
+    const filas = await this.prisma.cabysItem.findMany({
+      where: { AND: palabras.map((p) => ({ busqueda: { contains: p } })) },
+      select: { ...sel, descripcion: true },
+      take: top * 4,
+    });
+
+    // Primero lo que coincide en el NOMBRE del item; despues lo que solo
+    // coincide por la categoria a la que pertenece. Entre iguales, la
+    // descripcion mas corta suele ser la mas general y la mas util.
+    const enNombre = (d: string) => palabras.every((p) => this.normalizar(d).includes(p));
+    return filas
+      .sort((a, b) => {
+        const d = Number(enNombre(b.descripcion)) - Number(enNombre(a.descripcion));
+        return d !== 0 ? d : a.descripcion.length - b.descripcion.length;
+      })
+      .slice(0, top);
+  }
+
+  /**
+   * ¿Esta cargado el catalogo?
+   *
+   * El "si" se recuerda para siempre -un catalogo cargado no se descarga-,
+   * pero el "no" caduca: CabysCatalogoService lo llena en segundo plano
+   * mientras el sistema ya atiende, y sin esto el servicio se quedaria
+   * consultando a Hacienda hasta el proximo reinicio aunque el catalogo ya
+   * estuviera completo.
+   */
+  private catalogoListo = false;
+  private proximaRevision = 0;
+  private async hayCatalogoLocal(): Promise<boolean> {
+    if (this.catalogoListo) return true;
+    if (Date.now() < this.proximaRevision) return false;
+
+    this.proximaRevision = Date.now() + 30_000;
+    try {
+      this.catalogoListo = (await this.prisma.cabysItem.count()) > 0;
+      if (!this.catalogoListo) {
+        this.logger.warn(
+          'El catalogo CABYS local esta vacio: se consultara a Hacienda mientras tanto.',
+        );
+      }
+    } catch {
+      this.catalogoListo = false;   // tabla aun no migrada
+    }
+    return this.catalogoListo;
+  }
 
   // ── Lectura de la respuesta de Hacienda ─────────────────────────────────
 
@@ -118,17 +199,38 @@ export class HaciendaService {
     // perfectamente valido.
     const esCodigo = /^\d+$/.test(limpio);
 
-    // Hacienda rechaza (400) las consultas por codigo de menos de 9 digitos.
-    // Se corta antes de llamar: un 400 se traduciria en "catalogo caido", que
-    // es un mensaje equivocado para un codigo a medio escribir.
-    if (esCodigo && limpio.length < MIN_DIGITOS_CODIGO) return [];
-
     const cacheKey = `${PREFIJO_CACHE}:search:${limpio.toLowerCase()}:${top}`;
     const cached = await this.getCache<CabysItem[]>(cacheKey);
     // `cached.length` y no solo `cached`: un arreglo vacio es VERDADERO en
     // JavaScript, asi que un [] guardado se devolvia como si fuera un
     // resultado bueno. Ver el porque mas abajo, donde se guarda.
     if (cached && cached.length) return cached;
+
+    // ── 1. Nuestro catalogo ──
+    if (await this.hayCatalogoLocal()) {
+      try {
+        const locales = await this.buscarLocal(limpio, esCodigo, top);
+        if (locales.length) {
+          await this.setCache(cacheKey, locales, 24 * 60 * 60);
+          return locales;
+        }
+        // Sin coincidencias no se cae a Hacienda: el catalogo local ES el
+        // catalogo oficial completo. Si no esta aqui, no existe, y preguntar
+        // afuera solo agregaria una espera para el mismo "no hay".
+        return [];
+      } catch (err: any) {
+        // Si falla la base seguimos a Hacienda en vez de dejar al estudiante
+        // sin poder facturar.
+        this.logger.warn(`Busqueda local de CABYS fallo, se consulta a Hacienda: ${err.message}`);
+      }
+    }
+
+    // ── 2. Respaldo: Hacienda ──
+    //
+    // Hacienda rechaza (400) las consultas por codigo de menos de 9 digitos.
+    // Es limitacion SUYA, no nuestra: contra el catalogo local un prefijo de
+    // dos digitos funciona bien. Por eso el corte vive aqui y no arriba.
+    if (esCodigo && limpio.length < MIN_DIGITOS_CODIGO) return [];
 
     const url = esCodigo
       ? `${this.HACIENDA_API}/fe/cabys?codigo=${encodeURIComponent(limpio)}`
@@ -164,6 +266,22 @@ export class HaciendaService {
     const cacheKey = `${PREFIJO_CACHE}:code:${codigo}`;
     const cached = await this.getCache<CabysItem>(cacheKey);
     if (cached) return cached;
+
+    if (await this.hayCatalogoLocal()) {
+      try {
+        const local = await this.prisma.cabysItem.findUnique({
+          where: { codigo },
+          select: { codigo: true, descripcion: true, impuesto: true },
+        });
+        if (local) {
+          await this.setCache(cacheKey, local, 24 * 60 * 60);
+          return local;
+        }
+        return null;
+      } catch (err: any) {
+        this.logger.warn(`Consulta local de CABYS fallo, se consulta a Hacienda: ${err.message}`);
+      }
+    }
 
     const url = `${this.HACIENDA_API}/fe/cabys?codigo=${codigo}`;
 

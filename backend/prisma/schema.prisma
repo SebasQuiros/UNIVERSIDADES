@@ -2645,3 +2645,43 @@ model DeliveryNoteLine {
   @@index([deliveryNoteId])
   @@map("delivery_note_lines")
 }
+
+// ================================================================
+//  CATÁLOGO CABYS (Costa Rica)
+// ================================================================
+
+/// Catálogo oficial de Bienes y Servicios del BCCR, completo y local.
+///
+/// Antes cada búsqueda salía en vivo contra api.hacienda.go.cr. Eso ponía
+/// un servicio que no controlamos en el camino crítico del estudiante: sin
+/// código CABYS no puede crear un producto, y sin producto no puede
+/// facturar. Si Hacienda se demoraba o fallaba, se caía el ejercicio
+/// entero — y con cientos de estudiantes a la misma hora, eso no es una
+/// hipótesis.
+///
+/// La tabla es de solo lectura para la aplicación: se llena con el script
+/// de importación desde el Excel del BCCR. No lleva companyId a propósito;
+/// es un catálogo nacional, igual para todas las instituciones.
+model CabysItem {
+  codigo      String @id @db.VarChar(13)
+  descripcion String
+  /// Tarifa de IVA en porcentaje entero (0, 1, 2, 4, 8, 13).
+  impuesto    Int
+
+  /// Ruta completa de categorías, de lo general a lo específico. Se guarda
+  /// porque el estudiante necesita ver EN QUÉ se está clasificando, no solo
+  /// el nombre final.
+  jerarquia String
+
+  /// Descripción + jerarquía en minúscula y sin tildes. Es la columna contra
+  /// la que se busca: así "cafe" encuentra "Café" y "arroz" encuentra
+  /// "Harina de arroz". Buscar sobre el texto con tildes obligaría a
+  /// escribirlas exactas.
+  busqueda String
+
+  version   String   @default("2025")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([busqueda])
+  @@map("cabys_items")
+}
