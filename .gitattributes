@@ -15,3 +15,5 @@
 *.ttf   binary
 *.xlsx  binary
 *.docx  binary
+*.gz    binary
+*.zip   binary
