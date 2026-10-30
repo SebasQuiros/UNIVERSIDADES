@@ -25,6 +25,7 @@ import { SceneEmptyBox } from '@/components/illustrations';
 import type { DashboardResponse } from './types';
 import { PhaseDraft } from './PhaseDraft';
 import { PhaseLobby } from './PhaseLobby';
+import { ConfigurarAula } from './ConfigurarAula';
 import { PhaseInProgress } from './PhaseInProgress';
 import { PhaseTributacion } from './PhaseTributacion';
 import { PhaseAudit } from './PhaseAudit';
@@ -176,6 +177,17 @@ export default function SesionControlPage() {
             }
           />
 
+          {/* La configuración del aula va ANTES de armar grupos: define el tipo
+              de negocio y con qué arrancan todas las empresas. Solo se puede
+              tocar antes de empezar — después, cambiar el capital dejaría a
+              unos grupos operando sobre una base y a otros sobre otra. */}
+          {(session.status === 'DRAFT' || session.status === 'LOBBY') && (
+            <ConfigurarAula
+              sessionId={session.id}
+              inicial={{ tipoNegocio: session.tipoNegocio, escenarioInicial: session.escenarioInicial }}
+              onSaved={refresh}
+            />
+          )}
           {session.status === 'DRAFT' && <PhaseDraft sessionId={session.id} onChanged={refresh} />}
           {session.status === 'LOBBY' && <PhaseLobby session={session} onChanged={refresh} />}
           {session.status === 'EN_CURSO' && <PhaseInProgress session={session} onChanged={refresh} />}

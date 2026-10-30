@@ -17,6 +17,17 @@ import { EscenarioInicialService } from '../src/modules/class-sessions/escenario
 
 const MARCA = '__QA_AULA_';
 
+/** Capital acreditado en 3.1.01.01, venga de la siembra que venga. */
+async function capitalDe(prisma: any, companyId: string): Promise<number> {
+  const lineas = await prisma.journalLine.findMany({
+    where:   { entry: { companyId } },
+    include: { account: { select: { code: true } } },
+  });
+  return lineas
+    .filter((l: any) => l.account.code === '3.1.01.01')
+    .reduce((s: number, l: any) => s + Number(l.credit ?? 0), 0);
+}
+
 let ok = 0, fallos = 0;
 const detalle: string[] = [];
 function chequear(nombre: string, cond: boolean, extra = '') {
@@ -138,6 +149,38 @@ async function main() {
     })).filter(l => l.account.code === '3.1.01.01').reduce((s, l) => s + Number(l.credit ?? 0), 0);
     chequear('el capital no se duplicó', capitalDespues === r0.capital,
       `${capitalDespues} vs ${r0.capital}`);
+
+    console.log('\n--- 4b. Cada empresa conoce a las otras (comercio del aula) ---');
+    const contras: any = await sesiones.contrapartes(sesionId, creados[0]);
+    chequear('ve a las otras dos empresas', contras.length === 2, `${contras.length}`);
+    const cli = await prisma.client.findMany({
+      where:  { companyId: creados[0] },
+      select: { name: true, identification: true },
+    });
+    console.log(`       empresa 1 tiene ${cli.length} clientes: ${cli.map(c => c.name).join(', ')}`);
+    chequear('las otras quedaron cargadas como clientes', cli.length >= 2, `${cli.length}`);
+
+    // El motor de comercio entre empresas resuelve al comprador por
+    // identification == legalId. Si no coincide, la factura sale como venta a
+    // un desconocido y el espejo nunca ocurre, EN SILENCIO.
+    const legales = await prisma.company.findMany({
+      where: { id: { in: creados.slice(1) } }, select: { legalId: true },
+    });
+    const idsCliente = new Set(cli.map(c => c.identification));
+    chequear('la cédula del cliente coincide con la de la empresa real',
+      legales.every(l => !!l.legalId && idsCliente.has(l.legalId)),
+      `clientes: ${[...idsCliente].join(',')} vs empresas: ${legales.map(l => l.legalId).join(',')}`);
+
+    console.log('\n--- 4c. Arrancar el aula NO duplica el capital ---');
+    // Son dos siembras con marcas distintas: la del escenario y la vieja de
+    // initialCapital. Si no se vieran entre si, la empresa saldria al mundo
+    // con el patrimonio inflado sin que nadie lo notara.
+    const antesDeArrancar = await capitalDe(prisma, creados[0]);
+    await (sesiones as any).seedInitialCapital(sesionId, 2_000_000, profeId);
+    const despuesDeArrancar = await capitalDe(prisma, creados[0]);
+    chequear('el capital no cambia tras la siembra de arranque',
+      despuesDeArrancar === antesDeArrancar,
+      `${antesDeArrancar} -> ${despuesDeArrancar}`);
 
     console.log('\n--- 5. Lo que no debe pasar ---');
     await debeFallar('más efectivo en caja que capital se rechaza',

@@ -32,6 +32,14 @@ export interface DashboardResponse {
   groups: DashboardGroup[];
   participantsCount: number;
   findingsTotal: number;
+  /** Tipo de negocio que definió la persona docente (texto libre). */
+  tipoNegocio?: string | null;
+  /** Escenario con el que arrancan TODAS las empresas del aula. */
+  escenarioInicial?: {
+    capital?: number;
+    enCaja?: number;
+    productos?: Array<{ nombre: string; cabysCode?: string; precio: number; costo: number; stock: number; iva?: number }>;
+  };
 }
 
 export interface AuditAssignmentPair {

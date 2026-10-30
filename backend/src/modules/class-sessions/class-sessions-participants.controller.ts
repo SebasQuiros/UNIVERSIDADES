@@ -1,6 +1,5 @@
 import {
-  Controller, Get, Post, Param, Body, UseGuards, HttpCode, HttpStatus,
-} from '@nestjs/common';
+  Controller, Get, Post, Param, Body, UseGuards, HttpCode, HttpStatus, Query} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ClassSessionsService } from './class-sessions.service';
 import { JwtAuthGuard, RolesGuard } from '../auth/guards/auth.guards';
@@ -74,6 +73,15 @@ export class ClassSessionsParticipantsController {
   }
 
   // Anuncios/noticias de la sesión — visibles a participantes y staff.
+  /** Las otras empresas del aula: con quiénes se puede comerciar. */
+  @Get('class-sessions/:id/contrapartes')
+  contrapartes(
+    @Param('id') id: string,
+    @Query('companyId') companyId: string,
+  ) {
+    return this.svc.contrapartes(id, companyId);
+  }
+
   @Get('class-sessions/:id/announcements')
   @Roles('STUDENT', 'TEACHER', 'ADMIN', 'SUPERADMIN')
   @UseGuards(ClassSessionGuard)

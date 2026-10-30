@@ -8,7 +8,7 @@ import { CurrentUser, Roles } from '../auth/decorators/auth.decorators';
 import { ClassSessionGuard } from './guards/class-session-access.guard';
 import {
   CreateClassSessionDto, CreateSessionGroupDto, UpdateArchetypeDto,
-  StartSessionDto, CancelSessionDto, ConfigurarAulaDto,
+  StartSessionDto, CancelSessionDto, ConfigurarAulaDto, AsignarParticipanteDto,
 } from './dto/class-sessions.dto';
 
 type AuthUser = { id: string; role: string; universityId?: string | null };
@@ -85,6 +85,16 @@ export class ClassSessionsController {
   @Post('class-sessions/:id/groups/auto-assign')
   autoAssign(@Param('id') id: string) {
     return this.svc.autoAssign(id);
+  }
+
+  /** Mover un estudiante a otra empresa (o dejarlo sin grupo con null). */
+  @Patch('class-sessions/:id/participants/:participantId/empresa')
+  asignarParticipante(
+    @Param('id') id: string,
+    @Param('participantId') participantId: string,
+    @Body() dto: AsignarParticipanteDto,
+  ) {
+    return this.svc.asignarParticipante(id, participantId, dto.companyId ?? null);
   }
 
   @Delete('class-sessions/:id/participants/:participantId')

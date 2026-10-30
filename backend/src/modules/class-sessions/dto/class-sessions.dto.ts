@@ -135,3 +135,9 @@ export class ConfigurarAulaDto {
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ProductoInicialDto)
   productos?: ProductoInicialDto[];
 }
+
+export class AsignarParticipanteDto {
+  /** `null` o ausente deja al estudiante sin grupo. */
+  @IsOptional() @IsString()
+  companyId?: string | null;
+}

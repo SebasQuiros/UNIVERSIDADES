@@ -42,7 +42,6 @@ const ONLINE_DOT: Record<string, string> = {
 function NewGroupForm({ sessionId, onCreated }: { sessionId: string; onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
-  const [archetype, setArchetype] = useState<ClassSessionArchetype>('FERRETERIA');
   const [legalId, setLegalId] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -51,13 +50,14 @@ function NewGroupForm({ sessionId, onCreated }: { sessionId: string; onCreated: 
     if (!name.trim()) { toast.error('Ponele un nombre a la empresa'); return; }
     setSaving(true);
     try {
+      // Sin arquetipo: el tipo de negocio lo define la profe una vez para
+      // toda el aula, arriba, en la configuración.
       await api.post(`/api/v1/class-sessions/${sessionId}/groups`, {
         name: name.trim(),
-        archetype,
         legalId: legalId.trim() || undefined,
       });
       toast.success('Empresa creada');
-      setName(''); setLegalId(''); setArchetype('FERRETERIA'); setOpen(false);
+      setName(''); setLegalId(''); setOpen(false);
       onCreated();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -91,13 +91,6 @@ function NewGroupForm({ sessionId, onCreated }: { sessionId: string; onCreated: 
         placeholder="Nombre de la empresa"
         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40"
       />
-      <select
-        value={archetype}
-        onChange={(e) => setArchetype(e.target.value as ClassSessionArchetype)}
-        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40"
-      >
-        {ARCHETYPE_KEYS.map((k) => <option key={k} value={k}>{ARCHETYPE_LABELS[k]}</option>)}
-      </select>
       <input
         value={legalId}
         onChange={(e) => setLegalId(e.target.value)}
@@ -114,6 +107,7 @@ function NewGroupForm({ sessionId, onCreated }: { sessionId: string; onCreated: 
 export function PhaseLobby({ session, onChanged }: { session: DashboardResponse; onChanged: () => void }) {
   const [savingArchetype, setSavingArchetype] = useState<string | null>(null);
   const [autoAssigning, setAutoAssigning] = useState(false);
+  const [asignando, setAsignando] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [force, setForce] = useState(false);
@@ -129,6 +123,21 @@ export function PhaseLobby({ session, onChanged }: { session: DashboardResponse;
       toast.error(getErrorMessage(err));
     } finally {
       setSavingArchetype(null);
+    }
+  }
+
+  async function asignar(participantId: string, companyId: string | null) {
+    setAsignando(participantId);
+    try {
+      await api.patch(
+        `/api/v1/class-sessions/${session.id}/participants/${participantId}/empresa`,
+        { companyId },
+      );
+      onChanged();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setAsignando(null);
     }
   }
 
@@ -289,11 +298,23 @@ export function PhaseLobby({ session, onChanged }: { session: DashboardResponse;
                   <span className={`h-1.5 w-1.5 rounded-full ${ONLINE_DOT[p.onlineStatus]}`} />
                   {ONLINE_STATUS_LABELS[p.onlineStatus]}
                 </span>
-                {p.companyId ? (
-                  <Badge variant="blue">{session.groups.find((g) => g.companyId === p.companyId)?.name ?? 'Asignado'}</Badge>
-                ) : (
-                  <Badge variant="slate">Sin grupo</Badge>
-                )}
+                {/* Selector, no insignia. El reparto automático es round-robin
+                    y sirve para empezar, pero una clase real no lo es: la profe
+                    sabe quién trabaja bien con quién y qué grupo quedó corto.
+                    Antes, corregir un reparto exigía expulsar al estudiante y
+                    que volviera a entrar. */}
+                <select
+                  value={p.companyId ?? ''}
+                  onChange={(e) => asignar(p.participantId, e.target.value || null)}
+                  disabled={asignando === p.participantId || session.groups.length === 0}
+                  className="flex-shrink-0 rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                  title="Mover a otra empresa"
+                >
+                  <option value="">Sin grupo</option>
+                  {session.groups.map((g) => (
+                    <option key={g.companyId} value={g.companyId}>{g.name}</option>
+                  ))}
+                </select>
                 <button
                   onClick={() => removeParticipant(p.participantId)}
                   disabled={removing === p.participantId}

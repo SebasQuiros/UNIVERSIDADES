@@ -256,6 +256,90 @@ export class ClassSessionsService {
     return { ...actualizada, empresasSembradas: sembradas, empresasTotales: empresas.length };
   }
 
+  // ════════════════════════════════════════════════════════════
+  //  Comercio dentro del aula
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * Deja a cada empresa del aula con las DEMÁS cargadas como clientes y como
+   * proveedores.
+   *
+   * El motor de comercio entre empresas ya existía, pero reconoce a la
+   * contraparte por `client.identification == company.legalId`. O sea: para
+   * venderle a otro grupo, alguien tenía que escribir a mano la cédula
+   * jurídica de la otra empresa, sin equivocarse en un dígito. Nadie iba a
+   * hacer eso, y si se equivocaban la factura salía como venta a un
+   * desconocido y el espejo nunca ocurría — en silencio.
+   *
+   * Dejándolas cargadas, el estudiante elige del mismo selector de siempre y
+   * el comercio entre empresas pasa solo. Los clientes "de fuera" siguen
+   * funcionando igual: esto AGREGA contrapartes, no las reemplaza.
+   *
+   * Idempotente: se puede correr cada vez que se suma un grupo.
+   */
+  async sincronizarContrapartes(id: string): Promise<{ clientes: number; proveedores: number }> {
+    const empresas = await this.prisma.classSessionCompany.findMany({
+      where:   { classSessionId: id },
+      include: { company: { select: { id: true, name: true, legalId: true } } },
+    });
+    if (empresas.length < 2) return { clientes: 0, proveedores: 0 };
+
+    let clientes = 0, proveedores = 0;
+    for (const propia of empresas) {
+      for (const otra of empresas) {
+        if (otra.companyId === propia.companyId) continue;
+        const legalId = otra.company.legalId;
+        if (!legalId) continue;
+
+        const yaCliente = await this.prisma.client.findFirst({
+          where:  { companyId: propia.companyId, identification: legalId },
+          select: { id: true },
+        });
+        if (!yaCliente) {
+          await this.prisma.client.create({
+            data: {
+              companyId:      propia.companyId,
+              name:           otra.company.name,
+              identification: legalId,
+              idType:         '02',          // jurídica
+              creditDays:     30,
+            },
+          });
+          clientes++;
+        }
+
+        const yaProveedor = await this.prisma.supplier.findFirst({
+          where:  { companyId: propia.companyId, identification: legalId },
+          select: { id: true },
+        }).catch(() => null);
+        if (!yaProveedor) {
+          await this.prisma.supplier.create({
+            data: {
+              companyId:      propia.companyId,
+              name:           otra.company.name,
+              identification: legalId,
+              idType:         '02',
+            } as any,
+          }).then(() => { proveedores++; }).catch(() => { /* el modelo puede diferir */ });
+        }
+      }
+    }
+
+    this.logger.log(`Aula ${id}: ${clientes} clientes y ${proveedores} proveedores enlazados entre empresas.`);
+    return { clientes, proveedores };
+  }
+
+  /** Las otras empresas del aula, para mostrarlas en pantalla. */
+  async contrapartes(id: string, companyId?: string) {
+    const empresas = await this.prisma.classSessionCompany.findMany({
+      where:   { classSessionId: id },
+      include: { company: { select: { id: true, name: true, legalId: true } } },
+    });
+    return empresas
+      .filter(e => e.companyId !== companyId)
+      .map(e => ({ companyId: e.companyId, nombre: e.company.name, cedula: e.company.legalId }));
+  }
+
   async createGroup(id: string, user: AuthUser, dto: CreateSessionGroupDto) {
     const session = await this.loadOrThrow(id);
     if (session.status !== ClassSessionStatus.LOBBY) {
@@ -283,6 +367,13 @@ export class ClassSessionsService {
       );
     } catch (e: any) {
       this.logger?.warn?.(`No se pudo sembrar el escenario en ${company.id}: ${e.message}`);
+    }
+
+    // La empresa nueva tiene que conocer a las que ya estaban, y ellas a ella.
+    try {
+      await this.sincronizarContrapartes(id);
+    } catch (e: any) {
+      this.logger.warn(`No se pudieron enlazar las contrapartes del aula ${id}: ${e.message}`);
     }
 
     return { company, classSessionCompany: link };
@@ -341,6 +432,66 @@ export class ClassSessionsService {
       assigned++;
     }
     return { assigned, groups: groups.length };
+  }
+
+  /**
+   * La persona docente mueve a un estudiante a la empresa que quiera.
+   *
+   * El reparto automatico es round-robin y sirve para empezar, pero una clase
+   * real no es round-robin: la profe sabe quien trabaja bien con quien, quien
+   * falto el dia del armado, y que grupo quedo corto. Sin esto, la unica forma
+   * de corregir un reparto era sacar al estudiante y que volviera a entrar.
+   *
+   * `companyId` en null lo deja sin grupo.
+   */
+  async asignarParticipante(id: string, participantId: string, companyId: string | null) {
+    const session = await this.loadOrThrow(id);
+    if (session.status !== ClassSessionStatus.LOBBY) {
+      throw new ConflictException('Los grupos solo se pueden mover durante el lobby.');
+    }
+
+    const participante = await this.prisma.classSessionParticipant.findFirst({
+      where:  { id: participantId, classSessionId: id },
+      select: { id: true, studentId: true, companyId: true },
+    });
+    if (!participante) {
+      throw new NotFoundException('Ese participante no es de esta sesión.');
+    }
+
+    if (companyId) {
+      // La empresa tiene que ser de ESTA sesion. Sin este control, un id de
+      // otra aula metido a mano daria acceso a una empresa ajena.
+      const deLaSesion = await this.prisma.classSessionCompany.findFirst({
+        where:  { classSessionId: id, companyId },
+        select: { companyId: true },
+      });
+      if (!deLaSesion) {
+        throw new BadRequestException('Esa empresa no pertenece a esta sesión.');
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Sale de la empresa anterior: si no, quedaria con acceso a los libros
+      // de un grupo del que ya no forma parte.
+      if (participante.companyId && participante.companyId !== companyId) {
+        await tx.companyMembership.deleteMany({
+          where: { companyId: participante.companyId, userId: participante.studentId },
+        });
+      }
+      await tx.classSessionParticipant.update({
+        where: { id: participantId },
+        data:  { companyId },
+      });
+      if (companyId) {
+        await tx.companyMembership.upsert({
+          where:  { companyId_userId: { companyId, userId: participante.studentId } },
+          create: { companyId, userId: participante.studentId, role: 'MEMBER' },
+          update: {},
+        });
+      }
+    });
+
+    return { ok: true, participantId, companyId };
   }
 
   async removeParticipant(id: string, participantId: string) {
@@ -448,6 +599,15 @@ export class ClassSessionsService {
     // EN_CURSO para que ninguna empresa opere sin su aporte.
     const capitalSeeded = await this.seedInitialCapital(id, session.initialCapital, session.teacherId);
 
+    // Que cada empresa tenga a las demas cargadas ANTES de que se pueda
+    // facturar: si no, el primer intento de venderle a otro grupo termina
+    // como venta a un desconocido y el espejo nunca ocurre.
+    try {
+      await this.sincronizarContrapartes(id);
+    } catch (e: any) {
+      this.logger.warn(`No se pudieron enlazar las contrapartes al arrancar ${id}: ${e.message}`);
+    }
+
     await this.transition(id, ClassSessionStatus.LOBBY, ClassSessionStatus.EN_CURSO, {
       startedAt: new Date(),
     });
@@ -493,8 +653,20 @@ export class ClassSessionsService {
       const sourceId = `${sessionId}:${g.companyId}`;
 
       // ¿Ya tiene su aporte? Entonces esto es un reintento.
+      //
+      // Se miran LAS DOS marcas. Este camino viejo siembra solo capital contra
+      // banco; el escenario del aula -capital, caja e inventario- siembra con
+      // su propia marca. Si cada uno mirara solo la suya, un aula configurada
+      // con escenario recibiria el capital DOS VECES al arrancar, y la empresa
+      // saldria al mundo con el patrimonio inflado sin que nadie lo notara.
       const yaTiene = await this.prisma.journalEntry.findFirst({
-        where:  { companyId: g.companyId, sourceType: 'SESSION_INITIAL_CAPITAL', sourceId },
+        where: {
+          companyId: g.companyId,
+          OR: [
+            { sourceType: 'SESSION_INITIAL_CAPITAL', sourceId },
+            { sourceType: 'class_session_seed' },
+          ],
+        },
         select: { id: true },
       });
       if (yaTiene) continue;
@@ -778,6 +950,9 @@ export class ClassSessionsService {
       })),
       participantsCount: participants.length,
       findingsTotal: findings.reduce((s, f) => s + (f._count as number), 0),
+      // Para que el panel pueda mostrar y reeditar la configuración del aula.
+      tipoNegocio: session.tipoNegocio ?? null,
+      escenarioInicial: session.escenarioInicial ?? {},
     };
   }
 
