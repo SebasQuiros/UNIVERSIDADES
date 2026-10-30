@@ -19,6 +19,7 @@ import {
   FileMinus, FilePlus, AlertTriangle, Plus, Trash2, X,
   Send, Info, ReceiptText, Coins, Search, FileClock,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 // ── Tipos del backend real ─────────────────────────────────────
 // GET /api/v1/companies/:companyId/credit-notes  (y .../debit-notes)
@@ -627,6 +628,7 @@ export function NotasView({ kind }: { kind: Kind }) {
 
       {/* ── Modal: nueva nota ─────────────────────────────────── */}
       {showModal && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal} />
           <div className="relative bg-white border border-gray-200 shadow-xl rounded-card w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -828,6 +830,7 @@ export function NotasView({ kind }: { kind: Kind }) {
             </form>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

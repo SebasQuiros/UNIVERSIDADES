@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/Input';
 import { EditarCursoModal, type CursoEditable } from '@/components/admin/EditarCursoModal';
 import { getErrorMessage } from '@/lib/utils';
 import type { Course } from '@/types';
+import { Portal } from '@/components/ui/Portal';
 
 interface Docente { id: string; name: string; email: string; role: string; isActive: boolean }
 
@@ -90,6 +91,7 @@ function NuevoCursoModal({
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -172,6 +174,7 @@ function NuevoCursoModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }
 

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { SceneEmptyBox } from '@/components/illustrations';
 import { useEmpresaActiva } from './ModuloWorkspace';
 import { Warehouse, Plus, X, MapPin, Star, Search, Pencil, Trash2 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface Bodega {
   id: string;
@@ -246,6 +247,7 @@ function ModalBodega({ companyId, bodega, onCerrar, onListo }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCerrar}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
@@ -303,5 +305,6 @@ function ModalBodega({ companyId, bodega, onCerrar, onListo }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

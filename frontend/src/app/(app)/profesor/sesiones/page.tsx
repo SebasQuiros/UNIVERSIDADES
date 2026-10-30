@@ -34,6 +34,7 @@ import {
   Presentation, Plus, X, Radio, Activity, ShieldCheck, Trophy, Ban,
   CheckCircle2, Building2, ChevronRight, BookOpen, Wifi, ArrowRight, FileClock,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 const PHASE_ICON: Record<ClassSessionStatus, typeof Radio> = {
   DRAFT:        FileClock,
@@ -118,6 +119,7 @@ function NewSessionModal({
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-lg rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -178,6 +180,7 @@ function NewSessionModal({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

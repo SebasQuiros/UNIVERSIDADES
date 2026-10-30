@@ -20,6 +20,7 @@ import {
   TrendingUp, FileText, BarChart2, Eye,
 } from 'lucide-react';
 import { ExamActivityLog } from '@/components/exam';
+import { Portal } from '@/components/ui/Portal';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface StudentRow {
@@ -150,6 +151,7 @@ export default function LiveDashboardPage() {
 
       {/* Modal de mensaje masivo */}
       {showBroadcast && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={() => setShowBroadcast(false)} />
           <div className="relative w-full max-w-md rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -190,6 +192,7 @@ export default function LiveDashboardPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Breadcrumb */}

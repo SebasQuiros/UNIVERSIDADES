@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeftRight, Send, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface Concept { key: string; label: string; envia: string; recibe: string; }
 interface Transfer {
@@ -123,6 +124,7 @@ function NewTransferModal({ sessionId, fromCompanyId, companies, concepts, onClo
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
@@ -168,5 +170,6 @@ function NewTransferModal({ sessionId, fromCompanyId, companies, concepts, onClo
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

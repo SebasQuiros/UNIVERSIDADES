@@ -12,6 +12,7 @@ import {
   LogOut, Menu, X, ChevronRight, Award,
 } from 'lucide-react';
 import { useState } from 'react';
+import { Portal } from '@/components/ui/Portal';
 
 const NAV_ITEMS = [
   { href: '/admin',              label: 'Dashboard',    icon: LayoutDashboard, exact: true },

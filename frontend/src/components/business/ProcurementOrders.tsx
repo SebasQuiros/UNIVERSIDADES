@@ -18,6 +18,7 @@ import {
   Truck, PackageCheck, Plus, X, ShoppingCart, Receipt, CreditCard,
   Ban, Building2, Check, Search, Wallet, Clock,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Órdenes de aprovisionamiento (F2.3 "Modo ERP") entre dos empresas del mismo
@@ -505,6 +506,7 @@ function NewOrderModal({
   };
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-csq-dark/60 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}>
       <div
@@ -629,5 +631,6 @@ function NewOrderModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }

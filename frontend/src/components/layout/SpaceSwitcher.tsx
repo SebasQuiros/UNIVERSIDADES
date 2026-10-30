@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { GraduationCap, Calculator, Users, Presentation, ChevronDown, Check } from 'lucide-react';
+import { esEspacioMultiempresa } from '@/lib/aula';
 
 type SpaceKey = 'educacion' | 'contador' | 'multiempresa' | 'docencia';
 
@@ -31,6 +32,7 @@ const SPACES: Space[] = [
  */
 export function SpaceSwitcher() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -38,10 +40,13 @@ export function SpaceSwitcher() {
   const isTeacher = user?.role === 'TEACHER';
   const visible = SPACES.filter((s) => s.key !== 'docencia' || isTeacher);
 
+  // Misma regla que el menú lateral (lib/aula). Cuando cada uno tenía la suya,
+  // el menú decía "Espacio Multiempresa" y este selector, al lado, decía
+  // "Educación" en la misma pantalla.
   const currentKey: SpaceKey =
-    pathname.startsWith('/profesor')                ? 'docencia'
-    : pathname.startsWith('/estudiante/contador')   ? 'contador'
-    : pathname.startsWith('/estudiante/multiempresa') ? 'multiempresa'
+    pathname.startsWith('/profesor')                 ? 'docencia'
+    : pathname.startsWith('/estudiante/contador')    ? 'contador'
+    : esEspacioMultiempresa(pathname, searchParams)  ? 'multiempresa'
     : 'educacion';
   const current = SPACES.find((s) => s.key === currentKey)!;
 

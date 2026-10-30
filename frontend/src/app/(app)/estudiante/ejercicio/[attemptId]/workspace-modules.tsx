@@ -35,6 +35,7 @@ import {
   PackagePlus, PackageMinus, ArrowRightCircle,
   TrendingUp, TrendingDown, Minus, Award, AlertTriangle,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 // ─── Brand palette (azul-noche + dorado) ──────────────────────────────────────
 const BRAND_BLUE   = '#2563EB';
@@ -116,6 +117,7 @@ export const TYPE_LABELS: Record<string, string> = {
 // ─── Modal wrapper ────────────────────────────────────────────────────────────
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white border border-gray-200 shadow-xl rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -126,6 +128,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         <div className="p-5">{children}</div>
       </div>
     </div>
+    </Portal>
   );
 }
 

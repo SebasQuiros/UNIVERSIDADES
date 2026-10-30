@@ -19,6 +19,7 @@ import {
   X, Calendar, Hash, Building2, ChevronDown, ChevronUp,
   Trash2, AlertTriangle, GraduationCap,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 // Textura de puntos sutil para la banda hero (fondo azul noche).
 const DOT_TEXTURE: React.CSSProperties = {
@@ -75,6 +76,7 @@ function CreateCourseModal({
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white border border-gray-200/70 shadow-card-hover rounded-card w-full max-w-md cx-pop">
@@ -163,6 +165,7 @@ function CreateCourseModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -178,6 +181,7 @@ function DeleteCourseModal({
   loading: boolean;
 }) {
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-card shadow-card-hover border border-gray-200/70 w-full max-w-sm p-6 cx-pop">
@@ -204,6 +208,7 @@ function DeleteCourseModal({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { IconTile } from '@/components/ui/IconTile';
 import { SceneWelcome } from '@/components/illustrations';
 import { cn } from '@/lib/utils';
+import { Portal } from '@/components/ui/Portal';
 
 interface Step {
   icon: React.ElementType;

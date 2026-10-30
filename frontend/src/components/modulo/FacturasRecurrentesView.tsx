@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { SceneEmptyBox } from '@/components/illustrations';
 import { useEmpresaActiva } from '@/components/modulo/ModuloWorkspace';
 import { Repeat, Plus, X, CalendarClock, Zap, Play, Pause, Trash2 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface ClienteLite { id: string; name: string; identification?: string | null }
 
@@ -305,6 +306,7 @@ function ModalNuevaRecurrente({ companyId, onCerrar, onListo }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCerrar}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
@@ -377,5 +379,6 @@ function ModalNuevaRecurrente({ companyId, onCerrar, onListo }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

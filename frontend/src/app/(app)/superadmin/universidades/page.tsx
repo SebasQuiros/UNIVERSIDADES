@@ -17,6 +17,7 @@ import {
   Building2, Plus, Search, X, Users, BookOpen, Globe,
   ToggleLeft, ToggleRight, Eye, CheckCircle2, GraduationCap,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -100,6 +101,7 @@ function CreateUniversityModal({
 
   if (created) {
     return (
+      <Portal>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" />
         <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-sm shadow-card-hover p-7 text-center cx-pop">
@@ -123,10 +125,12 @@ function CreateUniversityModal({
           <Button onClick={() => { onCreated(); }} className="w-full cx-press">Entendido</Button>
         </div>
       </div>
+      </Portal>
     );
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-lg shadow-card-hover overflow-y-auto max-h-[90vh] cx-pop">
@@ -246,6 +250,7 @@ function CreateUniversityModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }
 

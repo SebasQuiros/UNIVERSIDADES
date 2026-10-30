@@ -27,6 +27,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import { exportToExcelMultiSheet } from '@/lib/excel';
+import { Portal } from '@/components/ui/Portal';
 
 // Textura de puntos sutil para la banda hero (fondo azul noche).
 const DOT_TEXTURE: React.CSSProperties = {
@@ -121,6 +122,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -179,6 +181,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -223,6 +226,7 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-lg rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -325,6 +329,7 @@ function BulkEnrollModal({ courseId, universityId, onClose, onDone }: {
         )}
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -766,6 +771,7 @@ function TemplateModal({ courseId, onClose, onCreated }: {
   };
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-lg rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -815,6 +821,7 @@ function TemplateModal({ courseId, onClose, onCreated }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -857,6 +864,7 @@ function BaseCourseTemplateModal({ courseId, onClose, onApplied }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-lg rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -914,6 +922,7 @@ function BaseCourseTemplateModal({ courseId, onClose, onApplied }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

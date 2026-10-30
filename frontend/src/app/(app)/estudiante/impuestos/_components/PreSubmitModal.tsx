@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import type { Attachment } from './AttachmentPanel';
 import type { PerfilTributarioData } from './PerfilTributario';
+import { Portal } from '@/components/ui/Portal';
 
 interface CheckItem {
   id: string;
@@ -255,6 +256,7 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
   const saldoFavor    = keys ? Number(result?.[keys.favor] ?? 0) : 0;
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-csq-dark/70 p-4 backdrop-blur-sm">
       <div className="cx-pop my-4 w-full max-w-lg overflow-hidden rounded-card bg-white shadow-soft">
 
@@ -370,5 +372,6 @@ export function PreSubmitModal({ type, period, form, attachments, perfil, result
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

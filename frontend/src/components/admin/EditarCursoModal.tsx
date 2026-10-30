@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { IconTile } from '@/components/ui/IconTile';
 import toast from 'react-hot-toast';
 import { BookOpen, X, UserCog, AlertTriangle } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 /**
  * Edición de un curso desde administración.
@@ -126,6 +127,7 @@ export function EditarCursoModal({
     'w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50';
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -245,5 +247,6 @@ export function EditarCursoModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }

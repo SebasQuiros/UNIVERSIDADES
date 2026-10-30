@@ -21,6 +21,7 @@ import {
   ChevronDown, RefreshCw, UserCheck, UserX,
   KeyRound, Download, Upload,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 // ── CSV export helper ─────────────────────────────────────────────────────────
 function exportUsersCSV(users: UserItem[], universityName: string) {
@@ -137,6 +138,7 @@ function CreateUserModal({
   const hasErrors = Object.keys(errors).length > 0;
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
       <div className={`relative bg-white border border-gray-200/70 rounded-card w-full max-w-md shadow-card-hover cx-pop ${hasErrors ? 'cx-shake' : ''}`}>
@@ -203,6 +205,7 @@ function CreateUserModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -232,6 +235,7 @@ function CredentialsModal({
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" />
       <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-md shadow-card-hover cx-pop">
@@ -311,6 +315,7 @@ function CredentialsModal({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -364,6 +369,7 @@ function RoleEditor({
       </button>
       {open && (
         <>
+          <Portal>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute left-0 top-full mt-1 z-20 bg-white border border-gray-200/70 rounded-xl shadow-card-hover py-1 min-w-[140px] cx-pop">
             {['STUDENT', 'TEACHER', 'ADMIN'].map((r) => (
@@ -378,6 +384,7 @@ function RoleEditor({
               </button>
             ))}
           </div>
+          </Portal>
         </>
       )}
     </div>

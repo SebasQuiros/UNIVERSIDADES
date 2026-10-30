@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { SceneEmptyBox } from '@/components/illustrations';
 import { Coins, Plus, X, Wallet, Clock } from 'lucide-react';
 import { useEmpresaActiva } from './ModuloWorkspace';
+import { Portal } from '@/components/ui/Portal';
 
 interface Pago {
   id: string;
@@ -187,6 +188,7 @@ function ModalCobro({ companyId, pendientes, onCerrar, onListo }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCerrar}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
@@ -261,5 +263,6 @@ function ModalCobro({ companyId, pendientes, onCerrar, onListo }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

@@ -21,6 +21,7 @@ import {
   CheckCircle2, ChevronRight, Send, BarChart2, Trash2, Archive,
   AlertTriangle, X, Radio, Settings, ClipboardCheck, Hourglass, Eye, Paperclip,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 // Textura de puntos sutil para la banda hero (fondo azul noche).
 const DOT_TEXTURE: React.CSSProperties = {
@@ -167,6 +168,7 @@ export default function ExerciseDetailPage() {
 
       {/* Modal de eliminar / archivar */}
       {showDeleteModal && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
           <div className="relative w-full max-w-md rounded-card border border-gray-200/70 bg-white shadow-card-hover cx-pop">
@@ -220,6 +222,7 @@ export default function ExerciseDetailPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Breadcrumb */}

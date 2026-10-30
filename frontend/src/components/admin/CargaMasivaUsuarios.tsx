@@ -25,6 +25,7 @@ import { getErrorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import toast from 'react-hot-toast';
 import { X, Upload, Download, AlertTriangle, CheckCircle2, Users } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface FilaLeida { name: string; email: string; role: string; }
 interface Creado   { fila: number; nombre: string; email: string; rol: string; contrasenaTemporal: string; }
@@ -136,6 +137,7 @@ export function CargaMasivaUsuarios({
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={intentarCerrar} />
       <div className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-card bg-white shadow-xl">
@@ -287,5 +289,6 @@ export function CargaMasivaUsuarios({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

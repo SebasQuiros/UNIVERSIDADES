@@ -19,6 +19,7 @@ import {
   FileText, Plus, Globe, Lock, ChevronRight, BookOpen, Users,
   Trash2, AlertTriangle, X, ClipboardList,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface ExerciseWithCourse extends Exercise {
   courseId: string;
@@ -38,6 +39,7 @@ function DeleteModal({
   loading: boolean;
 }) {
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-card border border-gray-200/70 bg-white p-6 shadow-card-hover cx-pop">
@@ -64,6 +66,7 @@ function DeleteModal({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

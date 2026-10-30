@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSondeoVisible } from '@/hooks/useSondeoVisible';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
@@ -51,6 +51,16 @@ function archetypeBlurb(archetype: keyof typeof ARCHETYPE_LABELS) {
 
 export default function MiSesionPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  /**
+   * Entrar al aula tiene que dejar al estudiante EN LOS LIBROS de su empresa,
+   * igual que Educación o Contador. Antes caía en este tablero de resumen y
+   * tenía que buscar un botón para llegar a trabajar — se sentía otra cosa,
+   * no un espacio. El tablero no desaparece: pasa a ser "Mercado del aula" en
+   * el menú, que lo abre con ?panel=1 y por eso no redirige.
+   */
+  const esPanel = searchParams.get('panel') === '1';
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -68,6 +78,11 @@ export default function MiSesionPage() {
   }, [id]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    if (esPanel || !me?.attemptId || !me?.companyId) return;
+    router.replace(`/estudiante/ejercicio/${me.attemptId}?aula=${id}`);
+  }, [esPanel, me?.attemptId, me?.companyId, id, router]);
 
   // Se sondea SOLO con la pestaña a la vista: con la clase entera dejando la
   // pantalla abierta, sondear lo invisible multiplica la carga sin que nadie

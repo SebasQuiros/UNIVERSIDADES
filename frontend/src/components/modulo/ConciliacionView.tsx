@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { SceneEmptyBox } from '@/components/illustrations';
 import { Landmark, Plus, X, Wand2, Check, EyeOff, Scale } from 'lucide-react';
 import { useEmpresaActiva } from './ModuloWorkspace';
+import { Portal } from '@/components/ui/Portal';
 
 interface CuentaBanco { id: string; name: string; bankName: string; accountNumber?: string | null; currency?: string }
 interface Extracto   { id: string; periodStart: string; periodEnd: string; status: string; closingBalance?: number | string }
@@ -294,6 +295,7 @@ function ModalCuenta({ companyId, onCerrar, onListo }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCerrar}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
@@ -323,5 +325,6 @@ function ModalCuenta({ companyId, onCerrar, onListo }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

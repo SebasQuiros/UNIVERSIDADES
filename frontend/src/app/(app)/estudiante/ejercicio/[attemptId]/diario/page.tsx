@@ -18,6 +18,7 @@ import {
   Sparkles, Search, Pencil, BookOpen, ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Portal } from '@/components/ui/Portal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Status = 'PENDING' | 'CONFIRMED' | 'REJECTED';
@@ -119,6 +120,7 @@ function RejectModal({
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-csq-dark/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-card shadow-card-hover w-full max-w-md ring-1 ring-gray-900/5 cx-pop">
         <div className="flex items-center justify-between px-7 pt-6 pb-5 border-b border-gray-100">
@@ -156,6 +158,7 @@ function RejectModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }
 

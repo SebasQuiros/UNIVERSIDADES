@@ -24,6 +24,7 @@ import { WizardStepper } from '../_components/WizardStepper';
 import { TribuHeader } from '../_components/TribuHeader';
 import { downloadDeclarationPdf } from '../_components/downloadPdf';
 import { calcD101, type D101Result } from '../_components/calc';
+import { Portal } from '@/components/ui/Portal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -775,6 +776,7 @@ export default function D101Page() {
 
       {/* Success receipt modal */}
       {showResult && status === 'SUBMITTED' && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-csq-dark/70 p-4 backdrop-blur-sm">
           <div className="cx-pop w-full max-w-lg rounded-card bg-white p-6 shadow-soft">
             <div className="mb-5 text-center">
@@ -842,6 +844,7 @@ export default function D101Page() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

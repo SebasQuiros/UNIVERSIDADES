@@ -10,6 +10,7 @@ import {
   Bell, UserCircle, Sparkles, Ticket, KeyRound, FileSearch,
 } from 'lucide-react';
 import { SceneSearchEmpty } from '@/components/illustrations';
+import { Portal } from '@/components/ui/Portal';
 
 interface Cmd {
   label: string;
@@ -152,6 +153,7 @@ export function CommandPalette() {
   });
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[12vh] px-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-[cmdkFade_.14s_ease]" onClick={close} />
       <div
@@ -229,6 +231,7 @@ export function CommandPalette() {
         @keyframes cmdkFade { from { opacity: 0 } to { opacity: 1 } }
       `}</style>
     </div>
+    </Portal>
   );
 }
 

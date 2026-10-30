@@ -10,6 +10,7 @@ import {
   LayoutDashboard, Building2, Users, DollarSign, Activity,
   LogOut, Menu, X, ChevronRight, ShieldCheck,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 const NAV_ITEMS = [
   { href: '/superadmin',               label: 'Dashboard',     icon: LayoutDashboard, exact: true },

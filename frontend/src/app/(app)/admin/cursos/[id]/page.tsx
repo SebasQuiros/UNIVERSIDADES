@@ -21,6 +21,7 @@ import {
   ArrowLeft, Users, FileText, UserPlus, BookOpen,
   Calendar, X, ChevronRight, Globe, Lock, Search, Pencil,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface CourseDetail {
   id: string; name: string; code: string | null; period: string | null;
@@ -80,6 +81,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white border border-gray-200/70 shadow-card-hover rounded-card w-full max-w-md cx-pop">
@@ -155,6 +157,7 @@ function EnrollModal({ courseId, universityId, enrolled, onClose, onEnrolled }: 
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

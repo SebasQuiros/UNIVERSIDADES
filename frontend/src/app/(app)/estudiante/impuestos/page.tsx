@@ -24,6 +24,7 @@ import { ArtFiscalCalendar, SceneEmptyBox } from '@/components/illustrations';
 import { cn } from '@/lib/utils';
 import { usePerfilTributario } from './_components/PerfilTributario';
 import { downloadDeclarationPdf } from './_components/downloadPdf';
+import { Portal } from '@/components/ui/Portal';
 
 // Textura de puntos de la banda hero (lenguaje visual compartido).
 const DOT_TEXTURE: React.CSSProperties = {
@@ -39,6 +40,7 @@ function DeleteDeclarationModal({
   loading: boolean;
 }) {
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/60 backdrop-blur-sm" onClick={onClose} />
       <div className="cx-pop relative w-full max-w-sm rounded-card bg-white p-6 shadow-soft">
@@ -67,6 +69,7 @@ function DeleteDeclarationModal({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

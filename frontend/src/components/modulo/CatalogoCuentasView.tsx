@@ -15,6 +15,7 @@ import { SceneEmptyBox, SceneSearchEmpty } from '@/components/illustrations';
 import { BookOpen, AlertTriangle, FolderTree, Plus, X, Upload, Download, Loader2, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { exportToExcel } from '@/lib/excel';
+import { Portal } from '@/components/ui/Portal';
 
 // ── Tipos del endpoint real ────────────────────────────────────
 // GET /api/v1/companies/:companyId/accounts
@@ -499,6 +500,7 @@ function NewAccountModal({
   };
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}>
       <div className="bg-white w-full max-w-lg rounded-card shadow-card-hover my-8" onClick={(e) => e.stopPropagation()}>
@@ -564,5 +566,6 @@ function NewAccountModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }

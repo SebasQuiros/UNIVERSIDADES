@@ -17,6 +17,7 @@ import {
   Users, Search, X, UserCheck, UserX, KeyRound, Trash2, AlertTriangle,
   GraduationCap, BookOpen, ShieldCheck,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ function ResetPwdModal({ user, onClose }: { user: UserItem; onClose: () => void 
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-sm shadow-card-hover p-6 cx-pop">
@@ -100,6 +102,7 @@ function ResetPwdModal({ user, onClose }: { user: UserItem; onClose: () => void 
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -130,6 +133,7 @@ function DeleteModal({
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-csq-dark/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white border border-gray-200/70 rounded-card w-full max-w-sm shadow-card-hover p-6 cx-pop">
@@ -158,6 +162,7 @@ function DeleteModal({
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 

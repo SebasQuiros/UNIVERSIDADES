@@ -17,6 +17,7 @@ import {
   Calculator, Building2, Plus, ChevronRight, Receipt, FileText, Users,
   Search, Trash2, X, Briefcase, Contact, CalendarDays, ArrowRight,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface PracticeCompany {
   id: string;
@@ -329,6 +330,7 @@ function NewPracticeModal({
   };
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}>
       <div className="bg-white w-full max-w-lg rounded-card shadow-card-hover my-8 lp-pop" onClick={(e) => e.stopPropagation()}>
@@ -395,6 +397,7 @@ function NewPracticeModal({
         </form>
       </div>
     </div>
+    </Portal>
   );
 }
 

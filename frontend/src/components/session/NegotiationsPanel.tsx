@@ -8,6 +8,7 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Handshake, Plus, Send, Tag, X, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface Entry {
   id: string; authorCompanyId: string; kind: string;
@@ -210,6 +211,7 @@ export function NewNegotiationModal({ sessionId, buyerCompanyId, companies, pres
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
@@ -245,5 +247,6 @@ export function NewNegotiationModal({ sessionId, buyerCompanyId, companies, pres
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

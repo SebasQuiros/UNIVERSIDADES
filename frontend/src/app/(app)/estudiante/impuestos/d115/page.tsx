@@ -23,6 +23,7 @@ import { WizardStepper } from '../_components/WizardStepper';
 import { TribuHeader } from '../_components/TribuHeader';
 import { downloadDeclarationPdf } from '../_components/downloadPdf';
 import { calcD115, type D115Result } from '../_components/calc';
+import { Portal } from '@/components/ui/Portal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -534,6 +535,7 @@ export default function D115Page() {
       )}
 
       {showResult && isSubmitted && (
+        <Portal>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-csq-dark/70 p-4 backdrop-blur-sm">
           <div className="cx-pop w-full max-w-md rounded-card bg-white p-6 shadow-soft">
             <div className="mb-5 text-center">
@@ -590,6 +592,7 @@ export default function D115Page() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

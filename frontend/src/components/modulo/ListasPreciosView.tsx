@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { SceneEmptyBox } from '@/components/illustrations';
 import { useEmpresaActiva } from '@/components/modulo/ModuloWorkspace';
 import { Tags, Plus, X, Star, Trash2, Package, ListChecks, Check } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 interface Lista {
   id: string;
@@ -375,6 +376,7 @@ function ModalNuevaLista({ companyId, onCerrar, onListo }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCerrar}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
@@ -411,6 +413,7 @@ function ModalNuevaLista({ companyId, onCerrar, onListo }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
 
@@ -433,6 +436,7 @@ function ModalAgregarProducto({ productos, onCerrar, onListo }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCerrar}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
@@ -484,5 +488,6 @@ function ModalAgregarProducto({ productos, onCerrar, onListo }: {
         )}
       </div>
     </div>
+    </Portal>
   );
 }

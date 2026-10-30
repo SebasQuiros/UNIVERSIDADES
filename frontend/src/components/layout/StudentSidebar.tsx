@@ -13,6 +13,8 @@ import {
   GraduationCap, Calculator, Users,
   LayoutDashboard, FileText, ClipboardCheck, Presentation, ArrowLeft,
 } from 'lucide-react';
+import { detectarAula, esEspacioMultiempresa } from '@/lib/aula';
+import { Portal } from '@/components/ui/Portal';
 
 // ── Paleta de marca (azul noche + acento dorado) ───────────────
 const ACCENT = '#3B82F6';                                       // azul de marca (badges)
@@ -115,12 +117,7 @@ export function StudentSidebar() {
    * Ahora el aula viaja en la URL (?aula=) y acompaña al estudiante por todo
    * el espacio, incluidos los libros de su empresa.
    */
-  const aulaId = (() => {
-    const m = pathname.match(/^\/estudiante\/sesion\/([0-9a-fA-F-]{36})/);
-    if (m) return m[1];
-    const q = searchParams.get('aula');
-    return q && /^[0-9a-fA-F-]{36}$/.test(q) ? q : null;
-  })();
+  const aulaId = detectarAula(pathname, searchParams);
 
   // Espacio Contador: empresa-cliente de práctica abierta (si estamos en su workspace).
   const contadorCompanyId = (() => {
@@ -258,7 +255,10 @@ export function StudentSidebar() {
   // ellos, no el sistema.
   const MULTIEMPRESA_TOP: Group[] = aulaId
     ? [
-        { key: 'm-aula', label: 'Mi aula',     icon: Users,     href: `/estudiante/sesion/${aulaId}`, path: `/estudiante/sesion/${aulaId}`, exact: true },
+        // El tablero del aula -mercado, negociaciones, transferencias- es una
+        // herramienta del menú, no la pantalla de entrada. Entrar al aula deja
+        // al estudiante en los libros, igual que en Educación o Contador.
+        { key: 'm-mer',  label: 'Mercado del aula', icon: Users, href: `/estudiante/sesion/${aulaId}?panel=1`, path: `/estudiante/sesion/${aulaId}` },
         { key: 'm-aud',  label: 'Auditoría',   icon: ClipboardCheck, href: `/estudiante/sesion/${aulaId}/auditoria`, path: `/estudiante/sesion/${aulaId}/auditoria` },
         { key: 'm-sal',  label: 'Salir del aula', icon: ArrowLeft, href: '/estudiante/multiempresa', path: '/estudiante/multiempresa', exact: true },
       ]
@@ -311,8 +311,7 @@ export function StudentSidebar() {
 
   const inExercise = pathname.includes('/ejercicio/');
 
-  const isMultiempresa =
-    pathname.startsWith('/estudiante/multiempresa') || !!aulaId;
+  const isMultiempresa = esEspacioMultiempresa(pathname, searchParams);
   const isContador = pathname.startsWith('/estudiante/contador');
   const isDocencia = pathname.startsWith('/profesor');
   const isTeacher = user?.role === 'TEACHER';

@@ -11,6 +11,7 @@ import {
   LayoutDashboard, BookOpen, FileText, ClipboardCheck, Presentation,
   LogOut, Menu, X, ChevronRight, GraduationCap, UserCircle,
 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 export function TeacherSidebar() {
   const pathname               = usePathname();

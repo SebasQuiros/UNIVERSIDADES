@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { SceneEmptyBox } from '@/components/illustrations';
 import { useEmpresaActiva } from '@/components/modulo/ModuloWorkspace';
 import { Truck, Plus, X, PackageCheck, Send, Ban, Trash2, Search, Info } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 type EstadoRemision = 'DRAFT' | 'DISPATCHED' | 'DELIVERED' | 'INVOICED' | 'CANCELLED';
 
@@ -327,6 +328,7 @@ function ModalNuevaRemision({ companyId, onCerrar, onListo }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCerrar}>
       <div
         className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-card-hover"
@@ -414,5 +416,6 @@ function ModalNuevaRemision({ companyId, onCerrar, onListo }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { Eye, Lock, Loader2 } from 'lucide-react';
 import { ExamTimer } from './ExamTimer';
 import { TabSwitchDetector } from './TabSwitchDetector';
+import { Portal } from '@/components/ui/Portal';
 
 interface ExamModeWrapperProps {
   attemptId: string;
@@ -91,6 +92,7 @@ export function ExamModeWrapper({
 
       {/* ── Overlay de tiempo agotado ─────────────────────────────────────── */}
       {timeUp && (
+        <Portal>
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-csq-dark/80 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-sm rounded-card border border-red-200 bg-white p-10 text-center shadow-card-hover cx-pop">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-200 bg-red-50">
@@ -112,6 +114,7 @@ export function ExamModeWrapper({
             )}
           </div>
         </div>
+        </Portal>
       )}
     </>
   );

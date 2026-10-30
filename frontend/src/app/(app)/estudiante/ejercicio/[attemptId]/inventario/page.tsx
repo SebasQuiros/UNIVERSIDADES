@@ -30,6 +30,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ArtInventory, SceneEmptyBox } from '@/components/illustrations';
 import { getErrorMessage } from '@/lib/utils';
+import { Portal } from '@/components/ui/Portal';
 
 interface ValuationItem {
   productId: string;
@@ -254,6 +255,7 @@ export default function InventarioPage() {
 
       {/* Drawer de detalle */}
       {selected && (
+        <Portal>
         <div className="fixed inset-0 z-40 flex" onClick={() => setSelected(null)}>
           <div className="flex-1 bg-csq-dark/40 backdrop-blur-[2px]" />
           <div
@@ -352,6 +354,7 @@ export default function InventarioPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
     </div>
   );

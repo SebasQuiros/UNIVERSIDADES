@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Store, Handshake, Building2, X, Package } from 'lucide-react';
 import { ARCHETYPE_LABELS } from '@/lib/classSession';
 import { NewNegotiationModal } from './NegotiationsPanel';
+import { Portal } from '@/components/ui/Portal';
 
 interface MarketRow {
   companyId: string; name: string; archetype: string;
@@ -143,6 +144,7 @@ function CompanyProfileModal({ sessionId, companyId, onClose, onNegotiate, canNe
   const dims = p ? [p.dimensiones.entrega, p.dimensiones.pago, p.dimensiones.seriedad] : [];
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-card-hover"
         onClick={(e) => e.stopPropagation()}>
@@ -244,5 +246,6 @@ function CompanyProfileModal({ sessionId, companyId, onClose, onNegotiate, canNe
         )}
       </div>
     </div>
+    </Portal>
   );
 }

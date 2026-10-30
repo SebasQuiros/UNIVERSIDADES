@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { SceneEmptyBox } from '@/components/illustrations';
 import { useEmpresaActiva } from '@/components/modulo/ModuloWorkspace';
 import { CalendarClock, Plus, X, Repeat, Wallet, AlertCircle, Play, Pause, Trash2 } from 'lucide-react';
+import { Portal } from '@/components/ui/Portal';
 
 type Frecuencia =
   | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'BIMONTHLY'
@@ -329,6 +330,7 @@ function ModalNuevoPago({ companyId, onCerrar, onListo }: {
   }
 
   return (
+    <Portal>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onCerrar}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-card-hover" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
@@ -396,5 +398,6 @@ function ModalNuevoPago({ companyId, onCerrar, onListo }: {
         </div>
       </div>
     </div>
+    </Portal>
   );
 }
