@@ -94,9 +94,9 @@ export interface AnalyzeResult {
  *
  * ── successProbability (0–100), score ponderado documentado ───────────────────
  *  Combina 5 señales, cada una normalizada a 0–1 y ponderada:
- *    · margin  (peso 25): grossMarginPct escalado — 0% → 0, ≥50% → 1
- *    · profit  (peso 25): monthlyProfit relativo a costos fijos — ≥1× fijos → 1
- *    · payback (peso 20): 1 si ≤12m, decae linealmente hasta 0 a 36m; null → 0
+ *    · margin  (peso 25): saturar(grossMarginPct, 35) — 35% vale 0.5
+ *    · profit  (peso 25): saturar(monthlyProfit / costos fijos, 1) — 1× vale 0.5
+ *    · payback (peso 20): 12/(12+meses) — 12m vale 0.5; null → 0
  *    · demand  (peso 15): demandIndex mapeado de [0.7,1.3] → [0,1]
  *    · edge    (peso 15): balance innovación-vs-competencia
  *                         (innovationLevel − competitionLevel + 4) / 8
@@ -253,28 +253,52 @@ export class FinancialSimulatorService {
     };
   }
 
+  /**
+   * Curva que crece siempre, cada vez menos: x/(x+medio).
+   *
+   * Reemplaza a los cortes duros que tenía el score. El problema era real y
+   * se veía así: con los valores por defecto, margen 60 %, utilidad 5 veces
+   * los fijos y recuperación en un mes, TRES de las cinco señales ya estaban
+   * clavadas en su tope (50 %, 1× fijos, 12 meses). Eso dejaba 70 de los 100
+   * puntos fijos, y el estudiante podía subir el precio, bajar los costos o
+   * multiplicar el mercado por cien: la nota seguía en 86. El simulador se
+   * sentía roto porque, para cualquier modelo medianamente sano, lo estaba.
+   *
+   * Con esta curva mejorar SIEMPRE suma, pero cada vez menos — que es la
+   * forma honesta de decir que pasar de un margen de 20 % a 40 % importa
+   * mucho más que pasar de 80 % a 100 %.
+   *
+   * `medio` es el valor que vale exactamente medio punto.
+   */
+  private saturar(x: number, medio: number): number {
+    if (!(x > 0)) return 0;
+    return x / (x + medio);
+  }
+
   // ── Score de probabilidad de éxito (0–100) ──────────────────────────────────
   private successProbability(
     dto: AnalyzeCompanyDto,
     base: Projection,
     demandIndex: number,
   ): number {
-    // margin: 0% → 0, ≥50% → 1
-    const marginSignal = this.clamp(base.grossMarginPct / 50, 0, 1);
+    // margin: 35% vale medio punto; sigue subiendo después, cada vez menos.
+    const marginSignal = this.saturar(base.grossMarginPct, 35);
 
-    // profit: relativo a los costos fijos; ≥1× fijos → 1, ≤0 → 0
+    // profit: relativo a los costos fijos. Ganar lo mismo que se gasta en
+    // fijos vale medio punto; ganar el triple vale más, no lo mismo.
     const profitSignal =
       dto.monthlyFixedCosts > 0
-        ? this.clamp(base.monthlyProfit / dto.monthlyFixedCosts, 0, 1)
+        ? this.saturar(base.monthlyProfit / dto.monthlyFixedCosts, 1)
         : base.monthlyProfit > 0
           ? 1
           : 0;
 
-    // payback: ≤12m → 1, ≥36m → 0, lineal en medio; sin recuperación → 0
+    // payback: acá menos es mejor. 12 meses vale medio punto; recuperar en 2
+    // vale casi uno, y 36 meses pesa poco. Sin recuperación → 0.
     const paybackSignal =
-      base.paybackMonths == null
-        ? 0
-        : this.clamp((36 - base.paybackMonths) / (36 - 12), 0, 1);
+      base.paybackMonths == null || base.paybackMonths <= 0
+        ? base.paybackMonths === 0 ? 1 : 0
+        : 12 / (12 + base.paybackMonths);
 
     // demand: [0.7,1.3] → [0,1]
     const demandSignal = this.clamp((demandIndex - 0.7) / (1.3 - 0.7), 0, 1);

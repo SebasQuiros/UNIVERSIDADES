@@ -336,7 +336,12 @@ function AnalyticsTab({ courseId, universityId }: { courseId: string; university
   useEffect(() => {
     api.get<Analytics>(`/api/v1/universities/${universityId}/courses/${courseId}/analytics`)
       .then(({ data: d }) => setData(d))
-      .catch(() => toast.error('Error al cargar analytics'))
+      .catch((err) => {
+        // Antes se tragaba el error entero. El detalle es lo único que
+        // permite arreglarlo sin reproducirlo a ciegas.
+        console.error('[analítica del curso] falló:', err);
+        toast.error(getErrorMessage(err) || 'Error al cargar analytics');
+      })
       .finally(() => setLoading(false));
   }, [courseId, universityId]);
 

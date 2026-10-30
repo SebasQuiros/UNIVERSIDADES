@@ -183,7 +183,6 @@ export function StudentSidebar() {
         { label: 'Activos fijos',           tab: 'fixed-assets',   slug: 'activos' },
         { label: 'Nómina',                  tab: 'payroll' },
         { label: 'Bitácora de acciones',    slug: 'bitacora' },
-        { label: 'Tutor IA',                tab: 'tutor' },
       ],
     },
     { key: 'reportes', label: 'Estados y análisis', icon: BarChart2, children: [

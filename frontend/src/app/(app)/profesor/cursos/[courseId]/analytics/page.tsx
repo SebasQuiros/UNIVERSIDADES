@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { getErrorMessage } from '@/lib/utils';
 import { buttonClasses } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -172,22 +173,31 @@ export default function CourseAnalyticsPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const [data, setData]       = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // We need universityId from the course detail first, then call analytics
   useEffect(() => {
     async function load() {
+      // Son DOS llamadas encadenadas y antes compartían un `catch` mudo: el
+      // mensaje era el mismo tanto si fallaba buscar el curso como si fallaba
+      // el análisis, y no decía por qué. Con un solo "Error al cargar" no hay
+      // forma de arreglar nada sin reproducirlo a ciegas.
+      let paso = 'buscar el curso';
       try {
-        // Step 1: get basic course info (uses /api/v1/courses/:id which returns universityId)
         const courseRes = await api.get<{ id: string; universityId: string; name: string }>(`/api/v1/courses/${courseId}`);
         const uniId = courseRes.data.universityId;
+        if (!uniId) throw new Error('El curso no trae institución asociada.');
 
-        // Step 2: get analytics
+        paso = 'calcular el análisis';
         const analyticsRes = await api.get<AnalyticsData>(
           `/api/v1/universities/${uniId}/courses/${courseId}/analytics`,
         );
         setData(analyticsRes.data);
-      } catch {
-        toast.error('Error al cargar el análisis del curso');
+      } catch (err) {
+        const detalle = getErrorMessage(err);
+        setErrorMsg(`No se pudo ${paso}. ${detalle}`);
+        toast.error(`No se pudo ${paso}`);
+        console.error(`[analítica del curso] falló al ${paso}:`, err);
       } finally {
         setLoading(false);
       }
@@ -221,7 +231,7 @@ export default function CourseAnalyticsPage() {
           <EmptyState
             illustration={<SceneSearchEmpty size={200} className="cx-float" />}
             title="No se pudo cargar el análisis"
-            description="Vuelve a intentarlo o regresa al curso."
+            description={errorMsg ?? 'Vuelve a intentarlo o regresa al curso.'}
             action={
               <Link
                 href={`/profesor/cursos/${courseId}`}

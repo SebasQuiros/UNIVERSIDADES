@@ -34,7 +34,6 @@ import {
   Trophy, PlayCircle, Receipt, FolderOpen, XCircle, Target,
   FileSignature, PackageCheck, SlidersHorizontal, Paperclip,
 } from 'lucide-react';
-import { SocraticTutorPanel } from '@/components/pedagogy/SocraticTutorPanel';
 import {
   ClientsTab, ProductsTab, SuppliersTab, InvoicesTab, JournalTab, LedgerTab,
   ReportsTab, BankTab, MayorizacionTab, BalanceComprobacionTab, SpecialJournalTab,
@@ -1097,7 +1096,6 @@ export default function ExerciseWorkspacePage() {
     // Feature 7: Nómina
     { id: 'payroll'              as Tab, label: 'Nómina',                 icon: Users          },
     // Aprendizaje: Tutor socrático (profe IA)
-    { id: 'tutor'                as Tab, label: 'Tutor IA',              icon: GraduationCap  },
   ];
 
   // ── Exam mode config (from exercise settings) ─────────────────────────────
@@ -1209,7 +1207,6 @@ export default function ExerciseWorkspacePage() {
             {activeTab === 'activity'           && <ActivityTab          attemptId={attemptId} />}
             {activeTab === 'fixed-assets'       && <FixedAssetsTab       companyId={company.id} />}
             {activeTab === 'payroll'            && <PayrollTab           companyId={company.id} />}
-            {activeTab === 'tutor'              && <SocraticTutorPanel   attemptId={attemptId} companyId={company.id} />}
             </TabErrorBoundary>
 
             {/* Sección "Entregar ejercicio" — solo en el Resumen (parte final), no en el header */}

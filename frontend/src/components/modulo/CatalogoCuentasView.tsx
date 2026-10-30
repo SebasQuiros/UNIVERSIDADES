@@ -65,17 +65,48 @@ export function CatalogoCuentasView() {
   const [query, setQuery] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Baja el catálogo COMPLETO de la empresa, no una muestra.
+   *
+   * Antes esto exportaba ocho filas de ejemplo escritas a mano acá. El botón
+   * decía "Plantilla" y la gente esperaba su catálogo para editarlo y volver a
+   * subirlo; lo que recibía era un archivo que no tenía nada que ver con sus
+   * cuentas. Las columnas son las que reconoce el importador (`codigo`,
+   * `nombre`, `tipo`, `naturaleza`, `codigo profesor`), así que lo que se baja
+   * se puede editar y volver a subir tal cual.
+   */
   function downloadTemplate() {
-    exportToExcel('plantilla-catalogo-cuentas', [
-      { codigo: '1',          nombre: 'ACTIVOS',            tipo: 'Activo',     naturaleza: 'Debe'  },
-      { codigo: '1.1',        nombre: 'Activo Corriente',   tipo: 'Activo',     naturaleza: 'Debe'  },
-      { codigo: '1.1.01',     nombre: 'Caja y Bancos',      tipo: 'Activo',     naturaleza: 'Debe'  },
-      { codigo: '1.1.01.01',  nombre: 'Caja General',       tipo: 'Activo',     naturaleza: 'Debe'  },
-      { codigo: '2.1.01.01',  nombre: 'Proveedores',        tipo: 'Pasivo',     naturaleza: 'Haber' },
-      { codigo: '3.1.01.01',  nombre: 'Capital Social',     tipo: 'Patrimonio', naturaleza: 'Haber' },
-      { codigo: '4.1.01.01',  nombre: 'Ventas',             tipo: 'Ingreso',    naturaleza: 'Haber' },
-      { codigo: '5.1.01.01',  nombre: 'Costo de Ventas',    tipo: 'Gasto',      naturaleza: 'Debe'  },
-    ]);
+    const cuentas = state.phase === 'ready' ? state.accounts : [];
+
+    if (!cuentas.length) {
+      // Sin catálogo todavía: se entrega un ejemplo mínimo para arrancar, y se
+      // dice que ES un ejemplo, no el catálogo de nadie.
+      exportToExcel('ejemplo-catalogo-cuentas', [
+        { codigo: '1',          nombre: 'ACTIVOS',          tipo: 'Activo',     naturaleza: 'Debe',  'codigo profesor': '' },
+        { codigo: '1.1',        nombre: 'Activo Corriente', tipo: 'Activo',     naturaleza: 'Debe',  'codigo profesor': '' },
+        { codigo: '1.1.01',     nombre: 'Caja y Bancos',    tipo: 'Activo',     naturaleza: 'Debe',  'codigo profesor': '' },
+        { codigo: '1.1.01.01',  nombre: 'Caja General',     tipo: 'Activo',     naturaleza: 'Debe',  'codigo profesor': '' },
+        { codigo: '2.1.01.01',  nombre: 'Proveedores',      tipo: 'Pasivo',     naturaleza: 'Haber', 'codigo profesor': '' },
+        { codigo: '3.1.01.01',  nombre: 'Capital Social',   tipo: 'Patrimonio', naturaleza: 'Haber', 'codigo profesor': '' },
+        { codigo: '4.1.01.01',  nombre: 'Ventas',           tipo: 'Ingreso',    naturaleza: 'Haber', 'codigo profesor': '' },
+        { codigo: '5.1.01.01',  nombre: 'Costo de Ventas',  tipo: 'Gasto',      naturaleza: 'Debe',  'codigo profesor': '' },
+      ]);
+      toast('Todavía no hay catálogo: se descargó un ejemplo para empezar.', { icon: 'ℹ️' });
+      return;
+    }
+
+    exportToExcel('catalogo-de-cuentas', cuentas.map((a) => ({
+      codigo:             a.code,
+      nombre:             a.name,
+      tipo:               TYPE_META[a.type].label,
+      naturaleza:         a.normalBalance === 'DEBIT' ? 'Debe' : 'Haber',
+      'codigo profesor':  a.altCode ?? '',
+      nivel:              a.level,
+      encabezado:         a.isHeader ? 'Sí' : 'No',
+      activa:             a.isActive ? 'Sí' : 'No',
+      descripcion:        a.description ?? '',
+    })));
+    toast.success(`Catálogo descargado: ${cuentas.length} cuentas.`);
   }
 
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -146,7 +177,7 @@ export function CatalogoCuentasView() {
           <div className="flex flex-wrap items-center gap-2">
             <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
             <Button variant="secondary" onClick={downloadTemplate} className="cx-press">
-              <Download className="w-4 h-4" /> Plantilla
+              <Download className="w-4 h-4" /> Descargar catálogo
             </Button>
             <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={importing} className="cx-press">
               {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Importar Excel
