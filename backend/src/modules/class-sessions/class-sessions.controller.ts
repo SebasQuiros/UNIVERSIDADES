@@ -8,7 +8,7 @@ import { CurrentUser, Roles } from '../auth/decorators/auth.decorators';
 import { ClassSessionGuard } from './guards/class-session-access.guard';
 import {
   CreateClassSessionDto, CreateSessionGroupDto, UpdateArchetypeDto,
-  StartSessionDto, CancelSessionDto,
+  StartSessionDto, CancelSessionDto, ConfigurarAulaDto,
 } from './dto/class-sessions.dto';
 
 type AuthUser = { id: string; role: string; universityId?: string | null };
@@ -46,6 +46,21 @@ export class ClassSessionsController {
   @Post('class-sessions/:id/lobby/open')
   openLobby(@Param('id') id: string) {
     return this.svc.openLobby(id);
+  }
+
+  /**
+   * La persona docente define el tipo de negocio del aula y el escenario con
+   * el que arrancan TODAS las empresas: capital, cuánto queda en caja y el
+   * inventario de salida. Uno solo para toda la clase, para que ningún grupo
+   * salga con ventaja.
+   */
+  @Patch('class-sessions/:id/configuracion')
+  configurarAula(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ConfigurarAulaDto,
+  ) {
+    return this.svc.configurarAula(id, user, dto);
   }
 
   @Post('class-sessions/:id/groups')

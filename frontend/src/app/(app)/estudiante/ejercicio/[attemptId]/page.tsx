@@ -996,6 +996,12 @@ export default function ExerciseWorkspacePage() {
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const searchParams = useSearchParams();
+  // Aula de Multiempresa desde la que se abrió este workspace, si aplica.
+  // Sin esto, cualquier salida (error, ejercicio ajeno, "volver") devolvía al
+  // estudiante al espacio Educación — que es justo lo que no debe pasar: si
+  // entró por Multiempresa, ahí se queda.
+  const aulaId = searchParams.get('aula');
+  const salida = aulaId ? `/estudiante/sesion/${aulaId}` : '/estudiante';
   const pingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Deep-link a una pestaña vía ?tab= (para el menú lateral)
@@ -1012,13 +1018,13 @@ export default function ExerciseWorkspacePage() {
       const owner = (data as any).student?.id;
       if (user && user.role === 'STUDENT' && owner && owner !== user.id) {
         toast.error('Ese ejercicio no es tuyo. Te llevamos a tus ejercicios asignados.');
-        router.push('/estudiante/empresas');
+        router.push(aulaId ? salida : '/estudiante/empresas');
         return;
       }
       setAttempt(data);
-    } catch { toast.error('Error al cargar el ejercicio'); router.push('/estudiante'); }
+    } catch { toast.error('Error al cargar el ejercicio'); router.push(salida); }
     finally { setLoading(false); }
-  }, [attemptId, router, user]);
+  }, [attemptId, router, user, aulaId, salida]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -1244,10 +1250,10 @@ export default function ExerciseWorkspacePage() {
             description="Inicia el ejercicio desde el panel principal para crear tu empresa y empezar a registrar operaciones."
             action={
               <Link
-                href="/estudiante"
+                href={salida}
                 className={buttonClasses({ variant: 'primary', className: 'cx-press' })}
               >
-                <ArrowLeft className="w-4 h-4" /> Volver al panel
+                <ArrowLeft className="w-4 h-4" /> {aulaId ? 'Volver al aula' : 'Volver al panel'}
               </Link>
             }
           />

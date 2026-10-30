@@ -4,6 +4,7 @@ import { ClassSessionsParticipantsController } from './class-sessions-participan
 import { ClassSessionsAuditController } from './class-sessions-audit.controller';
 import { ClassSessionsService } from './class-sessions.service';
 import { ClassSessionsOracleService } from './class-sessions-oracle.service';
+import { EscenarioInicialService } from './escenario-inicial.service';
 import { ClassSessionGuard } from './guards/class-session-access.guard';
 import { AuditAssignmentGuard } from './guards/audit-assignment.guard';
 import { CompanyMembershipsModule } from '../company-memberships/company-memberships.module';
@@ -26,9 +27,10 @@ import { JournalModule } from '../journal/journal.module';
   providers: [
     ClassSessionsService,
     ClassSessionsOracleService,
+    EscenarioInicialService,
     ClassSessionGuard,
     AuditAssignmentGuard,
   ],
-  exports: [ClassSessionsService, ClassSessionsOracleService],
+  exports: [ClassSessionsService, ClassSessionsOracleService, EscenarioInicialService],
 })
 export class ClassSessionsModule {}

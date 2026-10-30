@@ -135,7 +135,7 @@ export default function MiSesionPage() {
         <MiEmpresaPhase me={me} waitingToStart />
       )}
       {me.status === 'EN_CURSO' && <MiEmpresaPhase me={me} sessionId={id} />}
-      {me.status === 'TRIBUTACION' && <TributacionPhase me={me} />}
+      {me.status === 'TRIBUTACION' && <TributacionPhase sessionId={id} me={me} />}
       {me.status === 'AUDITORIA' && <AuditoriaPhase sessionId={id} me={me} />}
       {(me.status === 'CALIFICACION' || me.status === 'FINALIZADA') && <ResultsPendingPhase me={me} />}
     </div>
@@ -314,7 +314,7 @@ function MiEmpresaPhase({ me, waitingToStart, sessionId }: { me: MeResponse; wai
               <p className="text-sm text-gray-500 mb-4">
                 Tu grupo ya tiene un ejercicio abierto para {me.company.name}. Ahí registrás facturas, inventario, asientos y todo el ciclo contable.
               </p>
-              <Link href={`/estudiante/ejercicio/${me.attemptId}`}>
+              <Link href={`/estudiante/ejercicio/${me.attemptId}?aula=${sessionId}`}>
                 <Button variant="gold" className="w-full sm:w-auto">
                   Ir al workspace contable <ExternalLink className="w-4 h-4" />
                 </Button>
@@ -339,7 +339,7 @@ const DECLARACIONES = [
   { code: 'd115', label: 'D-115 Dividendos' },
 ] as const;
 
-function TributacionPhase({ me }: { me: MeResponse }) {
+function TributacionPhase({ sessionId, me }: { sessionId: string; me: MeResponse }) {
   return (
     <div className="flex flex-col gap-5">
       <MiEmpresaPhase me={me} />
@@ -367,7 +367,7 @@ function TributacionPhase({ me }: { me: MeResponse }) {
             {DECLARACIONES.map(d => (
               <Link
                 key={d.code}
-                href={`/estudiante/impuestos/${d.code}?companyId=${me.companyId}`}
+                href={`/estudiante/impuestos/${d.code}?companyId=${me.companyId}&aula=${sessionId}`}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gold-300 hover:bg-gold-50"
               >
                 <ExternalLink className="h-4 w-4 text-gold-700" /> {d.label}

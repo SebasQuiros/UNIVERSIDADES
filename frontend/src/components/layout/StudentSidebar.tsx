@@ -11,7 +11,7 @@ import {
   Receipt, LineChart, TrendingUp, Building2, Bell, BarChart2,
   LogOut, Menu, X, ChevronDown, UserCircle,
   GraduationCap, Calculator, Users,
-  LayoutDashboard, FileText, ClipboardCheck, Presentation,
+  LayoutDashboard, FileText, ClipboardCheck, Presentation, ArrowLeft,
 } from 'lucide-react';
 
 // ── Paleta de marca (azul noche + acento dorado) ───────────────
@@ -106,13 +106,51 @@ export function StudentSidebar() {
       .catch(() => {});
   }, [pathname, user?.role]);
 
+  /**
+   * Aula de Multiempresa en la que está parado el estudiante, si hay una.
+   *
+   * El espacio antes se reconocia SOLO por /estudiante/multiempresa, asi que
+   * en cuanto entraba al aula o a los libros de su grupo el menu volvia a
+   * Educacion y el estudiante sentia que el sistema lo sacaba del modulo.
+   * Ahora el aula viaja en la URL (?aula=) y acompaña al estudiante por todo
+   * el espacio, incluidos los libros de su empresa.
+   */
+  const aulaId = (() => {
+    const m = pathname.match(/^\/estudiante\/sesion\/([0-9a-fA-F-]{36})/);
+    if (m) return m[1];
+    const q = searchParams.get('aula');
+    return q && /^[0-9a-fA-F-]{36}$/.test(q) ? q : null;
+  })();
+
   // Espacio Contador: empresa-cliente de práctica abierta (si estamos en su workspace).
   const contadorCompanyId = (() => {
     const m = pathname.match(/^\/estudiante\/contador\/([0-9a-fA-F-]{36})/);
     return m ? m[1] : null;
   })();
 
-  const base = activeId ? `/estudiante/ejercicio/${activeId}` : null;
+  // Intento del aula: los libros que opera el grupo. NO es el mismo que el
+  // "intento activo" de Educación — un estudiante puede tener su ejercicio
+  // individual abierto y además estar en un aula. Mezclarlos haría que el
+  // menú del aula navegara la empresa equivocada.
+  const [aulaAttemptId, setAulaAttemptId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!aulaId) { setAulaAttemptId(null); return; }
+    let vivo = true;
+    api.get<{ attemptId: string | null }>(`/api/v1/class-sessions/${aulaId}/me`)
+      .then(({ data }) => { if (vivo) setAulaAttemptId(data?.attemptId ?? null); })
+      .catch(() => { if (vivo) setAulaAttemptId(null); });
+    return () => { vivo = false; };
+  }, [aulaId]);
+
+  const base = aulaId
+    ? (aulaAttemptId ? `/estudiante/ejercicio/${aulaAttemptId}` : null)
+    : (activeId ? `/estudiante/ejercicio/${activeId}` : null);
+
+  /** Pega el aula a la URL para que el espacio no se pierda al navegar. */
+  const conAula = (href: string): string => {
+    if (!aulaId || href.includes('aula=')) return href;
+    return href + (href.includes('?') ? '&' : '?') + `aula=${aulaId}`;
+  };
   const subHref = (s: Sub): string => {
     // Espacio Contador → navega los libros de la empresa-cliente ABIERTA (por tab).
     if (isContador) {
@@ -121,8 +159,11 @@ export function StudentSidebar() {
       return '/estudiante/contador';
     }
     // Con ejercicio activo → pestaña/subruta real del ejercicio.
-    if (base && s.endsWith) return `${base}${s.endsWith}`;
-    if (base && s.tab)      return `${base}?tab=${s.tab}${s.sub ? `&sub=${s.sub}` : ''}`;
+    if (base && s.endsWith) return conAula(`${base}${s.endsWith}`);
+    if (base && s.tab)      return conAula(`${base}?tab=${s.tab}${s.sub ? `&sub=${s.sub}` : ''}`);
+    // Dentro del aula sin libros todavía (sin grupo asignado) el menú no debe
+    // mandar al ejercicio individual: se queda en el aula.
+    if (aulaId) return `/estudiante/sesion/${aulaId}`;
     // Sin ejercicio (o ítem sólo-base) → su página base.
     if (s.path) return s.path;
     if (s.slug) return `/estudiante/modulo/${s.slug}`;
@@ -208,10 +249,22 @@ export function StudentSidebar() {
     { key: 'c-emp', label: 'Mis empresas-cliente', icon: Building2, href: '/estudiante/contador', path: '/estudiante/contador', exact: true },
     { key: 'c-res', label: 'Resumen de mis empresas', icon: TrendingUp, href: '/estudiante/contador/resumen', path: '/estudiante/contador/resumen' },
   ];
-  // ── Espacio Multiempresa: grupos de práctica + comercio entre empresas.
-  const MULTIEMPRESA_TOP: Group[] = [
-    { key: 'm-grp', label: 'Grupos de práctica', icon: Users, href: '/estudiante/multiempresa', path: '/estudiante/multiempresa', exact: true },
-  ];
+  // ── Espacio Multiempresa ───────────────────────────────────────────────────
+  //
+  // Dentro de un aula el estudiante tiene que ver LO MISMO que en Educación:
+  // ciclo de ingresos, egresos, inventario, tesorería, registro contable. No
+  // un resumen con un botón que lo manda a otro lado. Varios compañeros operan
+  // la MISMA empresa a la vez y todos ven todo; el reparto de tareas lo hacen
+  // ellos, no el sistema.
+  const MULTIEMPRESA_TOP: Group[] = aulaId
+    ? [
+        { key: 'm-aula', label: 'Mi aula',     icon: Users,     href: `/estudiante/sesion/${aulaId}`, path: `/estudiante/sesion/${aulaId}`, exact: true },
+        { key: 'm-aud',  label: 'Auditoría',   icon: ClipboardCheck, href: `/estudiante/sesion/${aulaId}/auditoria`, path: `/estudiante/sesion/${aulaId}/auditoria` },
+        { key: 'm-sal',  label: 'Salir del aula', icon: ArrowLeft, href: '/estudiante/multiempresa', path: '/estudiante/multiempresa', exact: true },
+      ]
+    : [
+        { key: 'm-grp', label: 'Aulas activas', icon: Users, href: '/estudiante/multiempresa', path: '/estudiante/multiempresa', exact: true },
+      ];
   // ── Espacio Docencia (solo profesor): sus herramientas de docencia. El profe
   //    tiene TODO lo del estudiante (los otros 3 espacios) MÁS estos accesos,
   //    para ver el sistema tal como lo usa un estudiante.
@@ -257,7 +310,9 @@ export function StudentSidebar() {
   ];
 
   const inExercise = pathname.includes('/ejercicio/');
-  const isMultiempresa = pathname.startsWith('/estudiante/multiempresa');
+
+  const isMultiempresa =
+    pathname.startsWith('/estudiante/multiempresa') || !!aulaId;
   const isContador = pathname.startsWith('/estudiante/contador');
   const isDocencia = pathname.startsWith('/profesor');
   const isTeacher = user?.role === 'TEACHER';
@@ -433,9 +488,22 @@ export function StudentSidebar() {
       ) : isMultiempresa ? (
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">
           <div className="mx-0.5 mt-1 mb-3 px-2.5 py-2 rounded-md text-[10.5px] leading-snug" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)', color: '#C4B5FD' }}>
-            Multiempresa — formá grupos con otros contadores y comerciá entre sus empresas de práctica (compra/venta, inventario, CxC/CxP y asientos reales).
+            {aulaId
+              ? 'Estás dentro de tu aula. Este menú opera los libros de la empresa de tu grupo; tus compañeros ven y operan lo mismo.'
+              : 'Multiempresa — entrá a tu aula para operar la empresa de tu grupo y comerciar con las demás empresas de la clase.'}
           </div>
-          <div className="space-y-0.5">{MULTIEMPRESA_TOP.map(renderGroup)}</div>
+          <div className="space-y-0.5 mb-4">{MULTIEMPRESA_TOP.map(renderGroup)}</div>
+          {/* Dentro del aula, el menú es el MISMO de Educación: el estudiante
+              tiene que poder hacer todo el ciclo contable sobre la empresa de
+              su grupo, no mirar un resumen. */}
+          {aulaId && (
+            <>
+              <p className="px-2.5 mb-1.5 text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: GOLD_EYEBROW }}>
+                Empresa del grupo
+              </p>
+              <div className="space-y-0.5">{GROUPS.filter((g) => g.key !== 'inicio').map(renderGroup)}</div>
+            </>
+          )}
         </nav>
       ) : isContador ? (
         <nav className="flex-1 px-2.5 py-2 overflow-y-auto">

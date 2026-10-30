@@ -1923,6 +1923,20 @@ model ClassSession {
   commercialCloseAt DateTime?          @map("commercial_close_at") // cierre del período comercial (cronómetro)
   initialCapital    Decimal?           @map("initial_capital") @db.Decimal(14, 2)
   currency          String             @default("CRC")
+
+  /// Tipo de negocio que define la persona docente, en sus palabras:
+  /// "Panadería", "Taller mecánico", "Librería"...
+  ///
+  /// Reemplaza al enum cerrado de cuatro arquetipos. El catálogo fijo obligaba
+  /// a que toda aula fuera una ferretería, una agencia, un bufete o un
+  /// distribuidor, y una clase de panadería no es ninguna de las cuatro.
+  tipoNegocio       String?            @map("tipo_negocio")
+
+  /// Escenario con el que arrancan TODAS las empresas del aula. Es uno solo a
+  /// propósito: si cada grupo partiera de un capital o un inventario distinto,
+  /// la nota mediría la suerte del reparto y no el trabajo. Forma:
+  ///   { capital, enCaja, productos: [{ nombre, cabysCode, precio, costo, stock, iva }] }
+  escenarioInicial  Json               @default("{}") @map("escenario_inicial")
   startedAt         DateTime?          @map("started_at")
   closedOpsAt       DateTime?          @map("closed_ops_at")
   snapshotAt        DateTime?          @map("snapshot_at")
@@ -2036,7 +2050,10 @@ model ClassSessionCompany {
   id             String                @id @default(uuid()) @db.Uuid
   classSessionId String                @map("class_session_id") @db.Uuid
   companyId      String                @unique @map("company_id") @db.Uuid // la Company GROUP ya existe
-  archetype      ClassSessionArchetype
+  /// Opcional desde que el tipo de negocio lo define la persona docente en
+  /// ClassSession.tipoNegocio. Se conserva para las aulas viejas y porque la
+  /// fase de auditoría todavía lo usa para rotular.
+  archetype      ClassSessionArchetype?
 
   // Snapshot inmutable — se llenan UNA vez en publish-snapshot, nunca se sobreescriben.
   snapshotTrialBalance    Json?     @map("snapshot_trial_balance")

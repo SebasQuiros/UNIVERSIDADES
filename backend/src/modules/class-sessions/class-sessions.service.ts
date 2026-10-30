@@ -9,12 +9,13 @@ import { ReportsService } from '../reports/reports.service';
 import { CompaniesService } from '../companies/companies.service';
 import { ClassSessionsOracleService } from './class-sessions-oracle.service';
 import { JournalService } from '../journal/journal.service';
+import { EscenarioInicialService } from './escenario-inicial.service';
 import { REDIS_CLIENT } from '../../redis/redis.module';
 import { ringAssignments } from './class-sessions.logic';
 import {
   CreateClassSessionDto, CreateSessionGroupDto, UpdateArchetypeDto,
   StartSessionDto, CancelSessionDto, JoinClassSessionDto,
-  SubmitFindingDto, UpdateFindingDto, FINDING_SECTIONS,
+  SubmitFindingDto, UpdateFindingDto, FINDING_SECTIONS, ConfigurarAulaDto,
 } from './dto/class-sessions.dto';
 
 type AuthUser = { id: string; role: string; universityId?: string | null };
@@ -43,6 +44,7 @@ export class ClassSessionsService {
     private readonly oracle: ClassSessionsOracleService,
     private readonly companies: CompaniesService,
     private readonly journal: JournalService,
+    private readonly escenarios: EscenarioInicialService,
     @Inject(REDIS_CLIENT) private readonly redis: any,
   ) {}
 
@@ -203,6 +205,57 @@ export class ClassSessionsService {
     return this.loadOrThrow(id);
   }
 
+  /**
+   * La persona docente define el tipo de negocio del aula y el escenario con
+   * el que arrancan todas las empresas.
+   *
+   * Solo durante el lobby: una vez que la sesion arranco, cambiar el capital o
+   * el inventario de arranque dejaria a unos grupos operando sobre una base y
+   * a otros sobre otra.
+   */
+  async configurarAula(id: string, user: AuthUser, dto: ConfigurarAulaDto) {
+    // La propiedad de la sesion la valida ClassSessionGuard en el controlador.
+    const session = await this.loadOrThrow(id);
+    if (session.status !== ClassSessionStatus.DRAFT && session.status !== ClassSessionStatus.LOBBY) {
+      throw new ConflictException(
+        'El aula ya arrancó. El escenario inicial solo se puede definir antes de empezar.',
+      );
+    }
+
+    const escenario = this.escenarios.validar({
+      capital:   dto.capital,
+      enCaja:    dto.enCaja,
+      productos: dto.productos as any,
+    });
+
+    const actualizada = await this.prisma.classSession.update({
+      where: { id },
+      data: {
+        ...(dto.tipoNegocio !== undefined && { tipoNegocio: dto.tipoNegocio?.trim() || null }),
+        escenarioInicial: escenario as any,
+        ...(escenario.capital ? { initialCapital: escenario.capital } : {}),
+      },
+      select: { id: true, tipoNegocio: true, escenarioInicial: true, status: true },
+    });
+
+    // Si ya hay empresas creadas, se siembran ahora para que no queden atras.
+    // La siembra es idempotente: las que ya tenian apertura no se tocan.
+    const empresas = await this.prisma.classSessionCompany.findMany({
+      where: { classSessionId: id }, select: { companyId: true },
+    });
+    let sembradas = 0;
+    for (const e of empresas) {
+      try {
+        await this.escenarios.sembrar(e.companyId, escenario, user.id);
+        sembradas++;
+      } catch (err: any) {
+        this.logger.warn(`No se pudo sembrar ${e.companyId}: ${err.message}`);
+      }
+    }
+
+    return { ...actualizada, empresasSembradas: sembradas, empresasTotales: empresas.length };
+  }
+
   async createGroup(id: string, user: AuthUser, dto: CreateSessionGroupDto) {
     const session = await this.loadOrThrow(id);
     if (session.status !== ClassSessionStatus.LOBBY) {
@@ -215,8 +268,23 @@ export class ClassSessionsService {
     } as any);
 
     const link = await this.prisma.classSessionCompany.create({
-      data: { classSessionId: id, companyId: company.id, archetype: dto.archetype },
+      data: { classSessionId: id, companyId: company.id, archetype: dto.archetype ?? null },
     });
+
+    // Todas las empresas del aula arrancan igual. Se siembra acá, al crear el
+    // grupo, para que el escenario este listo antes de que entre nadie; si
+    // falla, la empresa queda creada igual y se puede reintentar al arrancar
+    // la sesion (la siembra es idempotente).
+    try {
+      await this.escenarios.sembrar(
+        company.id,
+        (session.escenarioInicial ?? {}) as any,
+        user.id,
+      );
+    } catch (e: any) {
+      this.logger?.warn?.(`No se pudo sembrar el escenario en ${company.id}: ${e.message}`);
+    }
+
     return { company, classSessionCompany: link };
   }
 
